@@ -37,6 +37,39 @@ function bridgeCall(payload) {
 }
 const b64encodeUnicode = s => btoa(unescape(encodeURIComponent(s)));
 
+/* ── SSO session (Android APK only) ─────────────────────────────
+ * Ruijie account login through the native SSO dialog. Session requests go
+ * through the portal's internal webproxy API using SSO cookies — this is
+ * the only path that supports voucher delete (the public Open API has no
+ * delete endpoint). Responses come back base64-encoded via
+ * window._ssoResolve(id, b64); login/logout events via window._ssoEvent.
+ */
+let _ssoSeq = 0;
+const _ssoPending = {};
+window._ssoResolve = (id, b64) => {
+  const p = _ssoPending[id];
+  delete _ssoPending[id];
+  if (!p) return;
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    p.resolve(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch (e) { p.reject(e); }
+};
+window._ssoEvent = (name) => {
+  document.dispatchEvent(new CustomEvent('ruijie-sso', { detail: name }));
+};
+const hasSso = () => !!(window.RuijieBridge && window.RuijieBridge.ssoRequest);
+function ssoCall(apiPath, envelope) {
+  return new Promise((resolve, reject) => {
+    if (!hasSso()) return reject(new Error('SSO login ကို Android app မှာပဲ သုံးလို့ရပါတယ်'));
+    const id = 's' + (++_ssoSeq) + '_' + Date.now();
+    _ssoPending[id] = { resolve, reject };
+    try { window.RuijieBridge.ssoRequest(id, apiPath, JSON.stringify(envelope)); }
+    catch (e) { delete _ssoPending[id]; reject(e); }
+    setTimeout(() => { if (_ssoPending[id]) { delete _ssoPending[id]; reject(new Error('SSO request timeout')); } }, 45000);
+  });
+}
+
 const Api = {
   cfg: null,
 
@@ -157,11 +190,50 @@ const Api = {
   },
   /**
    * Voucher delete.
-   * NOTE: The public Ruijie Cloud API manual (V2.0.3) documents NO voucher
-   * delete endpoint. This stays disabled until Ruijie publishes one.
+   *
+   * The public Ruijie Cloud API manual (V2.0.3) documents NO voucher delete
+   * endpoint, so the Open API path stays disabled. Delete works only through
+   * an SSO session (Ruijie account login in the Android app), which uses the
+   * portal's internal webproxy API.
    */
-  async voucherDelete(/* groupId, voucher */) {
-    throw new Error('Ruijie public API မှာ voucher ဖျက်တဲ့ endpoint မပါဝင်သေးပါ။');
+  async voucherDelete(groupId, voucher) {
+    if (this.ssoLoggedIn()) return this.voucherDeleteSso(voucher);
+    throw new Error('SSO_REQUIRED');
+  },
+
+  /** True when the Android APK holds a Ruijie SSO session. */
+  ssoLoggedIn() {
+    if (!hasSso()) return false;
+    try { return !!JSON.parse(window.RuijieBridge.ssoStatus()).loggedIn; }
+    catch (e) { return false; }
+  },
+
+  /**
+   * Portal webproxy envelope for voucher delete (internal API, undocumented).
+   * Shape follows the portal's intlSamVoucher v2 delete contract:
+   * POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/intlSamVoucher/v2/delete
+   */
+  ssoDeleteEnvelope(code, uuid) {
+    return {
+      api: '/intlSamVoucher/v2/delete',
+      method: 'DELETE',
+      module: 'common',
+      params: [{ voucherCode: code, codeNo: code }],
+      querys: { ids: uuid || code },
+    };
+  },
+
+  /** Delete one voucher through the SSO session. Throws on portal error. */
+  async voucherDeleteSso(voucher) {
+    const code = voucher.voucherCode || voucher.codeNo || voucher.code || '';
+    const uuid = voucher.uuid || voucher.id || '';
+    const env = this.ssoDeleteEnvelope(code, uuid);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('ဖျက်မရပါ (code ' + c + ')'));
+    }
+    return j;
   },
 
   // ── 2.4 Auth accounts ──

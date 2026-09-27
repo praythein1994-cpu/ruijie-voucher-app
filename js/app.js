@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.3.4';
+const APP_VERSION = '1.4.0';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -74,6 +74,16 @@ const I18N = {
   'del.confirm': { my: '"{code}" ကို ဖျက်မှာသေချာပါသလား?', en: 'Delete "{code}"?' },
   'del.done': { my: 'ဖျက်ပြီးပါပြီ', en: 'Deleted' },
   'del.unsupported': { my: 'ဖျက်မရပါ — Ruijie Open API မှာ voucher ဖျက်တဲ့လုပ်ဆောင်ချက်မပါဝင်ပါ', en: 'Cannot delete — the Ruijie Open API has no voucher-delete operation' },
+  'del.needSso': { my: 'ဖျက်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Deleting needs Ruijie account login (Settings → Ruijie account)' },
+  'sso.title': { my: 'Ruijie အကောင့်', en: 'Ruijie account' },
+  'sso.sub': { my: 'ဝင်ထားမှ voucher ဖျက်လို့ရမယ်', en: 'Log in to enable voucher delete' },
+  'sso.login': { my: 'အကောင့်ဝင်မယ်', en: 'Log in' },
+  'sso.logout': { my: 'ထွက်မယ်', en: 'Log out' },
+  'sso.connected': { my: '✓ ချိတ်ဆက်ထားပြီး — voucher ဖျက်လို့ရပြီ', en: '✓ Connected — voucher delete is available' },
+  'sso.notConnected': { my: 'မဝင်ရသေးပါ', en: 'Not logged in' },
+  'sso.onlyAndroid': { my: 'Ruijie အကောင့်ဝင်တာကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Ruijie account login is only available in the Android app' },
+  'sso.welcome': { my: 'Ruijie အကောင့် ဝင်ပြီးပါပြီ', en: 'Logged in to Ruijie account' },
+  'sso.bye': { my: 'အကောင့်ထွက်ပြီးပါပြီ', en: 'Logged out' },
   'err.pkgList': { my: 'Package list ရမလာ: ', en: "Couldn't load packages: " },
   'err.pickPkg': { my: 'Package ရွေးပါ', en: 'Choose a package' },
   'btn.generating': { my: 'ထုတ်နေသည်…', en: 'Generating…' },
@@ -648,10 +658,14 @@ async function deleteVoucher() {
   if (!confirm(tx('del.confirm', { code: vCode(v) }))) return;
   try {
     await Api.voucherDelete(S.projectId, v);
+    closeModal('modal');
+    modalVoucher = null;
     toast(t('del.done'));
+    loadVouchers();
   } catch (e) {
-    // Honest: Ruijie Open Platform has no voucher-delete endpoint (portal uses internal SSO API)
-    toast(e.message || t('del.unsupported'), true);
+    // Ruijie Open API has no delete endpoint; delete needs an SSO session
+    // (Ruijie account login in the Android app).
+    toast(e.message === 'SSO_REQUIRED' ? t('del.needSso') : (e.message || t('del.unsupported')), true);
   }
 }
 
@@ -1501,6 +1515,35 @@ function fillSettings() {
   $('set-appid').value = c.appid || '';
   $('set-proxy').value = c.proxy || '';
   $('set-secret').value = '';
+  refreshSsoCard();
+}
+
+/* ── SSO session (Ruijie account login, Android APK only) ───────
+ * Needed for voucher delete, which the public Open API does not offer. */
+function refreshSsoCard() {
+  const card = $('sso-card');
+  if (!card) return;
+  const statusEl = $('sso-status'), btn = $('btn-sso');
+  if (!hasSso()) {
+    statusEl.textContent = t('sso.onlyAndroid');
+    btn.classList.add('hidden');
+    return;
+  }
+  btn.classList.remove('hidden');
+  const loggedIn = Api.ssoLoggedIn();
+  statusEl.textContent = loggedIn ? t('sso.connected') : t('sso.notConnected');
+  btn.querySelector('span').textContent = loggedIn ? t('sso.logout') : t('sso.login');
+  btn.dataset.mode = loggedIn ? 'logout' : 'login';
+}
+function onSsoButton() {
+  if (!hasSso()) { toast(t('sso.onlyAndroid'), true); return; }
+  const btn = $('btn-sso');
+  if (btn.dataset.mode === 'logout') {
+    window.RuijieBridge.ssoLogout();
+  } else {
+    try { window.RuijieBridge.ssoLogin(); }
+    catch (e) { toast(t('sso.onlyAndroid'), true); }
+  }
 }
 async function loadAccountInfo() {
   try {
@@ -1654,6 +1697,13 @@ function init() {
   }));
 
   $('btn-save-settings').addEventListener('click', saveSettings);
+  $('btn-sso').addEventListener('click', onSsoButton);
+  // SSO login/logout events from the native dialog
+  document.addEventListener('ruijie-sso', (e) => {
+    refreshSsoCard();
+    if (e.detail === 'login') toast(t('sso.welcome'));
+    if (e.detail === 'logout') toast(t('sso.bye'));
+  });
   $('btn-disconnect').addEventListener('click', () => {
     if (!confirm(t('confirm.signout'))) return;
     Api.clearCfg();
