@@ -37,6 +37,39 @@ function bridgeCall(payload) {
 }
 const b64encodeUnicode = s => btoa(unescape(encodeURIComponent(s)));
 
+/* ── SSO session (Android APK only) ─────────────────────────────
+ * Ruijie account login through the native SSO dialog. Session requests go
+ * through the portal's internal webproxy API using SSO cookies — this is
+ * the only path that supports voucher delete (the public Open API has no
+ * delete endpoint). Responses come back base64-encoded via
+ * window._ssoResolve(id, b64); login/logout events via window._ssoEvent.
+ */
+let _ssoSeq = 0;
+const _ssoPending = {};
+window._ssoResolve = (id, b64) => {
+  const p = _ssoPending[id];
+  delete _ssoPending[id];
+  if (!p) return;
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    p.resolve(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch (e) { p.reject(e); }
+};
+window._ssoEvent = (name) => {
+  document.dispatchEvent(new CustomEvent('ruijie-sso', { detail: name }));
+};
+const hasSso = () => !!(window.RuijieBridge && window.RuijieBridge.ssoRequest);
+function ssoCall(apiPath, envelope) {
+  return new Promise((resolve, reject) => {
+    if (!hasSso()) return reject(new Error('SSO login ကို Android app မှာပဲ သုံးလို့ရပါတယ်'));
+    const id = 's' + (++_ssoSeq) + '_' + Date.now();
+    _ssoPending[id] = { resolve, reject };
+    try { window.RuijieBridge.ssoRequest(id, apiPath, JSON.stringify(envelope)); }
+    catch (e) { delete _ssoPending[id]; reject(e); }
+    setTimeout(() => { if (_ssoPending[id]) { delete _ssoPending[id]; reject(new Error('SSO request timeout')); } }, 45000);
+  });
+}
+
 const Api = {
   cfg: null,
 
@@ -132,13 +165,18 @@ const Api = {
     }
     return all;
   },
-  async voucherCreate(groupId, { quantity, profile, userGroupId, firstName, lastName, email, phone, comment }) {
+  async voucherCreate(groupId, { quantity, profile, userGroupId, firstName, lastName, email, phone, comment, createCodeType, codeSize, packageName }) {
     const body = { quantity, profile, userGroupId };
     if (firstName) body.firstName = firstName;
     if (lastName) body.lastName = lastName;
     if (email) body.email = email;
     if (phone) body.phone = phone;
     if (comment) body.comment = comment;
+    // Confirmed working mapping (verified against a production-tested implementation):
+    // createCodeType "1" = alphanumeric, "2" = alphabetic, "3" = numeric; codeSize = 6-9.
+    if (createCodeType) body.createCodeType = createCodeType;
+    if (codeSize) body.codeSize = codeSize;
+    if (packageName) { body.packageName = packageName; body.profileName = packageName; body.userGroupName = packageName; }
     const j = await this.call('POST', `open/auth/voucher/create/${groupId}`, {}, body);
     const inner = this.unwrap(j, 'voucherData');
     return inner.list || [];
@@ -152,11 +190,61 @@ const Api = {
   },
   /**
    * Voucher delete.
-   * NOTE: The public Ruijie Cloud API manual (V2.0.3) documents NO voucher
-   * delete endpoint. This stays disabled until Ruijie publishes one.
+   *
+   * The public Ruijie Cloud API manual (V2.0.3) documents NO voucher delete
+   * endpoint, so the Open API path stays disabled. Delete works only through
+   * an SSO session (Ruijie account login in the Android app), which uses the
+   * portal's internal webproxy API.
    */
-  async voucherDelete(/* groupId, voucher */) {
-    throw new Error('Ruijie public API မှာ voucher ဖျက်တဲ့ endpoint မပါဝင်သေးပါ။');
+  async voucherDelete(groupId, voucher) {
+    if (this.ssoLoggedIn()) return this.voucherDeleteSso(groupId, voucher);
+    throw new Error('SSO_REQUIRED');
+  },
+
+  /** True when the Android APK holds a Ruijie SSO session. */
+  ssoLoggedIn() {
+    if (!hasSso()) return false;
+    try { return !!JSON.parse(window.RuijieBridge.ssoStatus()).loggedIn; }
+    catch (e) { return false; }
+  },
+
+  /**
+   * Portal webproxy envelope for voucher delete (internal API, undocumented).
+   * EXACT shape captured from the live Ruijie portal (Chrome DevTools, 2026-09-27):
+   * POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/intlSamVoucher/v2/delete
+   *   {"api":"/intlSamVoucher/v2/delete",
+   *    "authParams":{"api":"/intlSamVoucher/v2/delete","method":"DELETE"},
+   *    "method":"DELETE","module":"default",
+   *    "params":[{"voucherCode":"<code>"}],
+   *    "querys":{"ids":"<voucher uuid>","group_id":<project group id>,"lang":"en"}}
+   * Success response: {"code":0,"msg":"Success.","voucherData":{"code":0,"msg":"OK."}}
+   * Notes: module is "default" (not "common"); params carries ONLY voucherCode
+   * (no codeNo); querys.ids is the voucher uuid; group_id is numeric.
+   */
+  ssoDeleteEnvelope(code, uuid, groupId) {
+    const api = '/intlSamVoucher/v2/delete';
+    const gid = Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'DELETE' },
+      method: 'DELETE',
+      module: 'default',
+      params: [{ voucherCode: code }],
+      querys: { ids: uuid, group_id: Number.isFinite(gid) ? gid : groupId, lang: 'en' },
+    };
+  },
+
+  /** Delete one voucher through the SSO session. Throws on portal error. */
+  async voucherDeleteSso(groupId, voucher) {
+    const code = voucher.voucherCode || voucher.codeNo || voucher.code || '';
+    const uuid = voucher.uuid || voucher.id || '';
+    const env = this.ssoDeleteEnvelope(code, uuid, groupId);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('ဖျက်မရပါ (code ' + c + ')'));
+    }
+    return j;
   },
 
   // ── 2.4 Auth accounts ──
@@ -195,6 +283,8 @@ const Api = {
   },
 
   // ── Devices ──
+  // Manual §2.x: common_type is MANDATORY (AP / Switch / Gateway).
+  // Response carries the array under "deviceList".
   async deviceList(groupId, commonType = '', page = 0, perPage = 50, key = '') {
     const q = { group_id: groupId, page, per_page: perPage };
     if (commonType) q.common_type = commonType;
@@ -202,12 +292,13 @@ const Api = {
     const j = await this.call('GET', 'maint/devices', q);
     const d = this.unwrap(j);
     const inner = d.data || d;
-    return Array.isArray(inner) ? inner : (inner.list || inner.devices || []);
+    return Array.isArray(inner) ? inner : (inner.list || inner.devices || inner.deviceList || []);
   },
 
   // ── Clients (online) ──
+  // Manual: staType is MANDATORY — "currentUser" = current online data.
   async onlineClients(groupId, pageIndex = 0, pageSize = 50) {
-    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize });
+    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize, staType: 'currentUser' });
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },
