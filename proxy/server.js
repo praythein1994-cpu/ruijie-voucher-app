@@ -151,8 +151,11 @@ async function handleRuijie(req, res) {
 
   try {
     let r = await attempt(token);
-    // code 4 (per Ruijie docs) ~ token invalid/expired -> refresh once and retry
-    if (r.json && r.json.code === 4) {
+    // code 4 (per Ruijie docs) ~ token invalid/expired -> refresh once and retry.
+    // "Login timeout" is Ruijie's answer when a cached token died server-side
+    // (secret rotated / token expired early) — same recovery.
+    const loginTimeout = r.json && typeof r.json.msg === 'string' && r.json.msg.toLowerCase() === 'login timeout';
+    if ((r.json && r.json.code === 4) || loginTimeout) {
       token = await getToken(cloud, appid, secret, true);
       r = await attempt(token);
     }
