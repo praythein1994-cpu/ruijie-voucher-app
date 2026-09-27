@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.4';
+const APP_VERSION = '1.5.5';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -75,6 +75,7 @@ const I18N = {
   'del.done': { my: 'ဖျက်ပြီးပါပြီ', en: 'Deleted' },
   'del.unsupported': { my: 'ဖျက်မရပါ — Ruijie Open API မှာ voucher ဖျက်တဲ့လုပ်ဆောင်ချက်မပါဝင်ပါ', en: 'Cannot delete — the Ruijie Open API has no voucher-delete operation' },
   'del.needSso': { my: 'ဖျက်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Deleting needs Ruijie account login (Settings → Ruijie account)' },
+  'del.rejected': { my: 'Ruijie က ဖျက်ခြင်းကို ငြင်းဆိုလိုက်ပါတယ် (403) — အကောင့်တော့ ဝင်ထားဆဲပါ', en: 'Ruijie rejected the delete (403) — you are still logged in' },
   'sso.title': { my: 'Ruijie အကောင့်', en: 'Ruijie account' },
   'sso.sub': { my: 'ဝင်ထားမှ voucher ဖျက်လို့ရမယ်', en: 'Log in to enable voucher delete' },
   'sso.login': { my: 'အကောင့်ဝင်မယ်', en: 'Log in' },
@@ -716,7 +717,10 @@ async function deleteVoucher() {
   } catch (e) {
     // Ruijie Open API has no delete endpoint; delete needs an SSO session
     // (Ruijie account login in the Android app).
-    toast(e.message === 'SSO_REQUIRED' ? t('del.needSso') : (e.message || t('del.unsupported')), true);
+    const m = e.message || '';
+    if (m === 'SSO_REQUIRED') toast(t('del.needSso'), true);
+    else if (/HTTP 403/.test(m)) toast(t('del.rejected') + ' — ' + m.replace(/^SSO request failed:\s*/, ''), true);
+    else toast(m || t('del.unsupported'), true);
   }
 }
 
