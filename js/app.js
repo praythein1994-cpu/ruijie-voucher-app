@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.14';
+const APP_VERSION = '1.5.15';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -326,6 +326,7 @@ const I18N = {
   'md.rebootFail': { my: 'ပြန်ဖွင့်မရပါ', en: 'Reboot failed' },
   'md.total': { my: 'စုစုပေါင်း {n} လုံး', en: 'Total {n} devices' },
   'md.partial': { my: 'အချို့စက်များ မရသေးပါ', en: 'Some device types failed to load' },
+  'md.needSsoHint': { my: 'Switch/Gateway အပြည့်အစုံမြင်ရရန် Settings မှာ Ruijie အကောင့်ဝင်ပါ', en: 'Log in to your Ruijie account in Settings to see Switch/Gateway' },
   'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
@@ -1793,14 +1794,19 @@ async function moreDevices() {
       <button class="chip" data-t="AP">AP</button>
       <button class="chip" data-t="Switch">Switch</button>
       <button class="chip" data-t="Gateway">Gateway</button>
-    </div><div id="md-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
+    </div>${Api.ssoLoggedIn() ? '' : `<p class="muted small">${t('md.needSsoHint')}</p>`}<div id="md-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
   S.moreFn = moreDevices;
   const DEV_TYPES = ['AP', 'Switch', 'Gateway'];
   const load = async (type) => {
     $('md-list').innerHTML = `<p class="muted">${t('more.loading')}</p>`;
-    // v1.5.14: allSettled — one failing type (Switch/Gateway 404) must not kill the whole list
-    const types = type ? [type] : DEV_TYPES;
-    const results = await Promise.allSettled(types.map(tp => Api.deviceList(S.projectId, tp, 0, 100)));
+    // v1.5.15: SSO webproxy device list (portal API — every type works).
+    // Open API fallback (no SSO): only AP works, Switch/Gateway 404.
+    const sso = Api.ssoLoggedIn();
+    const ssoType = tp => tp === 'Switch' ? 'SWITCH' : tp === 'Gateway' ? 'GATEWAY' : (tp || '');
+    const types = type ? [type] : (sso ? [''] : DEV_TYPES);
+    const results = await Promise.allSettled(types.map(tp =>
+      sso ? Api.deviceListSso(S.projectId, ssoType(tp), 1, 100)
+          : Api.deviceList(S.projectId, tp, 0, 100)));
     const seen = new Set(), list = [], errs = [];
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') {
@@ -1817,7 +1823,7 @@ async function moreDevices() {
         <tr><th>${t('md.sn')}</th><th>${t('md.model')}</th><th>${t('md.status')}</th><th>${t('md.action')}</th></tr>
         ${list.map(d => {
           const sn = d.serialNumber || d.sn || '';
-          const nm = d.alias || d.deviceAliasName || d.name || sn;
+          const nm = d.aliasName || d.alias || d.deviceAliasName || d.name || sn;
           const st = devStatus(d);
           return `<tr><td>${esc(nm)}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>

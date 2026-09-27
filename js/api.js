@@ -335,6 +335,30 @@ const Api = {
     return Array.isArray(inner) ? inner : (inner.list || inner.devices || inner.deviceList || []);
   },
 
+  /* ── Device list via Cloud portal webproxy (SSO) · v1.5.15 ──
+     Portal capture (read-only): POST .../webproxy/common/api?/maint/devices/list
+     body {"api":"/maint/devices/list?page={p}&per_page={pp}&cloudType=smb",
+           "method":"POST","params":{"groupId":<numeric>,"commonType":"<TAB>"},
+           "querys":{"lang":"en"},"module":"default"}
+     commonType: "" = All, "AP", "SWITCH", "GATEWAY", "WR" (Home Router)…
+     Response {code,msg,deviceList[],totalCount}; device.onlineStatus is
+     "ON" / "OFF" / "NEVER_ONLINE". Works for every type (the Open API
+     404s on Switch/Gateway). Android-APK-only (needs SSO session). */
+  async deviceListSso(groupId, commonType = '', page = 1, perPage = 100) {
+    const env = {
+      api: `/maint/devices/list?page=${page}&per_page=${perPage}&cloudType=smb`,
+      method: 'POST',
+      params: { groupId: Number(groupId), commonType },
+      module: 'default',
+      querys: { lang: 'en' },
+    };
+    const j = await ssoCall('/maint/devices/list', env);
+    if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
+    const code = Number(j.code);
+    if (code !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + code)));
+    return Array.isArray(j.deviceList) ? j.deviceList : [];
+  },
+
   // ── Clients (online) ──
   // Manual: staType is MANDATORY — "currentUser" = current online data.
   async onlineClients(groupId, pageIndex = 0, pageSize = 50) {
