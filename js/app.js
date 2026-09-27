@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.11';
+const APP_VERSION = '1.5.12';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -358,6 +358,7 @@ const I18N = {
   'fmt.day': { my: ' ရက်', en: 'd' },
   'fmt.hour': { my: ' နာရီ', en: 'h' },
   'fmt.min': { my: ' မိနစ်', en: 'm' },
+  'fmt.sec': { my: ' စက္ကန့်', en: 's' },
   'fmt.unlimited': { my: 'အကန့်အသတ်မရှိ', en: 'Unlimited' },
   'peek': { my: 'ပြမယ်/ဖုံးမယ်', en: 'Show/hide' },
 };
@@ -438,7 +439,20 @@ const fmtRemain = mins => {
   if (m || !p.length) p.push(m + t('fmt.min'));
   return p.join(' ');
 };
-/* Remaining data/time — computed from the cloud's own quota/used numbers, never invented. */
+/* Live ticking variant with seconds: "18h 12m 45s". Driven by the local clock
+   from the cloud snapshot — time always passes at 1s/s, so this is exact. */
+const fmtRemainSecs = secs => {
+  secs = Math.max(0, Math.round(Number(secs)));
+  if (!isFinite(secs)) return '—';
+  const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600),
+        m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  const p = [];
+  if (d) p.push(d + t('fmt.day'));
+  if (h || d) p.push(h + t('fmt.hour'));
+  p.push(m + t('fmt.min'));
+  p.push(s + t('fmt.sec'));
+  return p.join(' ');
+};
 const remQuotaTxt = v => {
   if (v.quota === null || v.quota === undefined || v.quota === '') return '—';
   const q = Number(v.quota);
@@ -504,6 +518,7 @@ function initTheme() {
 function closeModal(id) {
   const m = $(id);
   if (!m || m.classList.contains('hidden')) return;
+  if (id === 'modal') stopVoucherLive();
   m.classList.add('closing');
   setTimeout(() => { m.classList.add('hidden'); m.classList.remove('closing'); }, 200);
 }
@@ -754,14 +769,14 @@ function openVoucherDetail(uuid) {
     [t('d.status'), `<span class="badge s${esc(v.status)}">${esc(statusTxt(v.status))}</span>`],
     [t('d.pkg'), esc(v.packageName || v.userGroupName || '—')],
     [t('d.validity'), esc(fmtPeriod(v.timePeriod))],
-    [t('d.usedTime'), v.usedTime ? fmtPeriod(v.usedTime) : '—'],
-    [t('d.remTime'), esc(remTimeTxt(v))],
+    [t('d.usedTime'), `<span id="live-usedtime">${v.usedTime ? esc(fmtPeriod(v.usedTime)) : '—'}</span>`],
+    [t('d.remTime'), `<span id="live-remtime">${esc(remTimeTxt(v))}</span><span class="live-dot" title="live"></span>`],
     [t('d.created'), esc(fmtDate(v.createTime))],
     [t('d.activated'), (() => { const at = voucherActivatedTime(v); return at ? esc(fmtDate(at)) : '—'; })()],
     [t('d.expiry'), esc(fmtDate(v.expiryTime))],
     [t('d.quota'), esc(fmtQuota(v.quota))],
-    [t('d.usedQuota'), esc(fmtQuota(v.usedQuota))],
-    [t('d.remQuota'), esc(remQuotaTxt(v))],
+    [t('d.usedQuota'), `<span id="live-usedquota">${esc(fmtQuota(v.usedQuota))}</span>`],
+    [t('d.remQuota'), `<span id="live-remquota">${esc(remQuotaTxt(v))}</span><span id="live-age" class="muted small"></span>`],
     [t('d.maxClients'), esc(v.maxClients || '—')],
     [t('d.curClients'), esc(v.currentClients || 0)],
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
@@ -773,6 +788,55 @@ function openVoucherDetail(uuid) {
   $('modal-body').innerHTML = `<dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
+  startVoucherLive(v);
+}
+
+/* Live voucher detail: remaining time ticks every second from the local clock
+   (exact — time passes at 1s/s from the cloud snapshot). Data usage can only
+   change in the cloud, so it is re-fetched from the cloud every 45s while the
+   detail is open; nothing is ever interpolated or invented. */
+let liveTimer = null, livePoller = null, liveBase = null;
+function startVoucherLive(v) {
+  stopVoucherLive();
+  liveBase = { uuid: v.uuid, at: Date.now(), usedTimeMin: Number(v.usedTime) || 0, timePeriodMin: Number(v.timePeriod) || 0, dataAt: 0 };
+  const tick = () => {
+    if (!modalVoucher || !liveBase || modalVoucher.uuid !== liveBase.uuid) return stopVoucherLive();
+    const elapsedMin = (Date.now() - liveBase.at) / 60000;
+    const el = $('live-remtime');
+    if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
+    const age = $('live-age');
+    if (age) age.textContent = liveBase.dataAt ? ' · ' + Math.max(0, Math.round((Date.now() - liveBase.dataAt) / 1000)) + t('fmt.sec') + ' ago' : '';
+  };
+  const poll = async () => {
+    if (!liveBase) return;
+    try {
+      const fresh = await Api.voucherListAll(S.projectId);
+      if (!liveBase || !fresh) return;
+      S.vouchers = fresh;
+      const fv = fresh.find(x => x.uuid === liveBase.uuid);
+      if (fv && modalVoucher && modalVoucher.uuid === liveBase.uuid) {
+        Object.assign(modalVoucher, { usedTime: fv.usedTime, usedQuota: fv.usedQuota, status: fv.status, expiryTime: fv.expiryTime });
+        liveBase.usedTimeMin = Number(fv.usedTime) || 0;
+        liveBase.timePeriodMin = Number(modalVoucher.timePeriod) || 0;
+        liveBase.at = Date.now();
+        liveBase.dataAt = Date.now();
+        const uq = $('live-usedquota'), rq = $('live-remquota'), ut = $('live-usedtime');
+        if (uq) uq.textContent = fmtQuota(fv.usedQuota);
+        if (rq) rq.textContent = remQuotaTxt(modalVoucher);
+        if (ut) ut.textContent = fv.usedTime ? fmtPeriod(fv.usedTime) : '—';
+        tick();
+      }
+    } catch (e) { /* keep the last good snapshot on poll failure */ }
+  };
+  liveTimer = setInterval(tick, 1000);
+  tick();
+  livePoller = setInterval(poll, 45000);
+  setTimeout(poll, 15000);
+}
+function stopVoucherLive() {
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  if (livePoller) { clearInterval(livePoller); livePoller = null; }
+  liveBase = null;
 }
 
 async function deleteVoucher() {
