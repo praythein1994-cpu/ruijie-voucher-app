@@ -93,6 +93,13 @@
       <path d="M5 6V4h14v2h-6v12h-3V6H5z"/>
       <path d="M17.5 14.5 21 15.7l-.9 4.8h-2l.4-2.6-2.4-.6"/>
     </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 21h18"/>
+      <path d="M6 21v-7"/>
+      <path d="M11 21V8"/>
+      <path d="M16 21v-11"/>
+      <path d="M21 21V5"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -165,7 +172,7 @@
 
     <!-- GENERATE -->
     <section id="view-generate" class="view hidden">
-      <div class="large-title" data-i18n="g.title">ဗောက်ချာထုတ်မယ်</div>
+      <div class="large-title hidden" data-i18n="g.title">ဗောက်ချာထုတ်မယ်</div>
       <div class="grid-2">
         <div class="card">
           <h2><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="g.new">ဗောက်ချာအသစ်ထုတ်မယ်</span></h2>
@@ -222,13 +229,14 @@
         <div class="row">
           <button id="btn-gen-print-all" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="g.printAll">အားလုံးပရင့်ထုတ်မယ်</span></button>
           <button id="btn-gen-queue-all" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="g.queueAll">Print queue ထဲထည့်မယ်</span></button>
+          <button id="btn-gen-logsale" class="btn"><svg class="ic"><use href="#i-chart"/></svg><span data-i18n="g.logSale">ရောင်းရငွေစာရင်းသွင်းမယ်</span></button>
         </div>
       </div>
     </section>
 
     <!-- PRINTER -->
     <section id="view-printer" class="view hidden">
-      <div class="large-title" data-i18n="p.title">ပရင်တာ</div>
+      <div class="large-title hidden" data-i18n="p.title">ပရင်တာ</div>
       <div class="grid-2">
         <div class="card">
           <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.settings">ပရင့်ဆက်တင်</span></h2>
@@ -277,20 +285,21 @@
 
     <!-- MORE -->
     <section id="view-more" class="view hidden">
-      <div class="large-title" data-i18n="m.title">နောက်ထပ်</div>
+      <div class="large-title hidden" data-i18n="m.title">နောက်ထပ်</div>
       <div class="menu-grid" id="more-menu">
         <button class="menu-item" data-more="accounts"><svg class="ic lg"><use href="#i-user"/></svg><span data-i18n="m.accounts">Auth Accounts</span><small data-i18n="m.accountsSub">အသုံးပြုသူများ</small></button>
         <button class="menu-item" data-more="usergroups"><svg class="ic lg"><use href="#i-box"/></svg><span data-i18n="m.usergroups">User Groups</span><small data-i18n="m.usergroupsSub">အုပ်စုများ</small></button>
         <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
         <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
         <button class="menu-item" data-more="networks"><svg class="ic lg"><use href="#i-globe"/></svg><span data-i18n="m.networks">Networks</span><small data-i18n="m.networksSub">ကွန်ရက်များ</small></button>
+        <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
       </div>
       <div id="more-content"></div>
     </section>
 
     <!-- SETTINGS -->
     <section id="view-settings" class="view hidden">
-      <div class="large-title" data-i18n="s.title">ဆက်တင်များ</div>
+      <div class="large-title hidden" data-i18n="s.title">ဆက်တင်များ</div>
       <div class="card">
         <h2><svg class="ic"><use href="#i-user"/></svg><span data-i18n="s.account">အကောင့်အချက်အလက်</span></h2>
         <div id="account-info" class="kv"></div>
