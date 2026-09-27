@@ -533,3 +533,108 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
   #voucher-list { grid-template-columns: 1fr 1fr 1fr; }
   #tabbar { max-width: 680px; }
 }
+
+/* ═══════════ v1.3.0 — Generate redesign · Layout & Typography modals ═══════════ */
+.fld { margin-bottom: 14px; }
+.fld-label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+.live-label { color: var(--blue, #0a84ff); font-size: 13px; letter-spacing: .4px; }
+.sec-title { margin: 18px 0 10px; font-size: 17px; }
+
+/* Voucher code-type cards */
+.codetype-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.codetype {
+  border: 2px solid var(--hairline, #e5e5ea); background: var(--card); border-radius: 14px;
+  padding: 12px 6px; cursor: pointer; font-family: inherit; display: flex; flex-direction: column; gap: 4px; align-items: center;
+  transition: border-color .18s, background .18s;
+}
+.codetype b { font-size: 14px; color: var(--label); }
+.codetype small { font-size: 12px; color: var(--gray); }
+.codetype.active { border-color: var(--blue, #0a84ff); background: rgba(10, 132, 255, .08); }
+.codetype.active b { color: var(--blue, #0a84ff); }
+
+/* Quantity preset buttons */
+.qty-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.qty-grid button {
+  border: 1.5px solid var(--hairline, #e5e5ea); background: var(--card); color: var(--label);
+  border-radius: 10px; padding: 10px 4px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.qty-grid button.active { background: var(--blue, #0a84ff); border-color: var(--blue, #0a84ff); color: #fff; }
+
+/* API note (green) */
+.api-note {
+  display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45;
+  color: #1a7f37; background: rgba(52, 199, 89, .1); border-radius: 10px; padding: 10px 12px; margin: 4px 0 14px;
+}
+.api-note .ic { flex: none; margin-top: 1px; }
+
+/* Printer paper row with icon buttons */
+.paper-row { display: flex; gap: 8px; align-items: center; }
+.paper-row .segmented { flex: 1; margin-bottom: 0; }
+
+/* Wide modals */
+.modal-box.wide { max-width: 560px; }
+.modal-body-scroll { overflow-y: auto; max-height: 78vh; max-height: 78dvh; padding: 4px 2px 8px; }
+
+/* Live ticket preview inside modals */
+.live-preview {
+  background: #fff; color: #111; border: 1px solid var(--hairline, #e5e5ea); border-radius: 12px;
+  padding: 14px 12px; margin: 4px auto 6px; max-width: 300px;
+}
+.live-preview .lv { margin: 0; word-break: break-word; }
+.live-preview hr { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+
+/* Chip groups */
+.chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1.5px solid var(--hairline, #e5e5ea); background: var(--card); color: var(--label);
+  border-radius: 20px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.chip.active { background: var(--blue, #0a84ff); border-color: var(--blue, #0a84ff); color: #fff; font-weight: 600; }
+
+/* Color swatches */
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch {
+  width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.swatch.active { border-color: var(--blue, #0a84ff); box-shadow: 0 0 0 2px rgba(10,132,255,.35); }
+.swatch svg { width: 16px; height: 16px; color: #fff; }
+.swatch.auto { background: var(--fill-bg); color: var(--gray); font-size: 10px; font-weight: 700; }
+
+/* Sliders */
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider-row b { min-width: 52px; text-align: right; font-size: 14px; }
+input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px; }
+
+/* Field tabs */
+.tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; }
+.tabs .tab2 {
+  flex: none; border: 1.5px solid var(--hairline, #e5e5ea); background: var(--card); color: var(--label);
+  border-radius: 10px; padding: 8px 14px; font-size: 14px; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.tabs .tab2.active { background: var(--blue, #0a84ff); border-color: var(--blue, #0a84ff); color: #fff; font-weight: 600; }
+
+/* Per-field layout cards */
+.field-card { border: 1px solid var(--hairline, #e5e5ea); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.field-card .fc-head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 15px; }
+.field-card .fc-body { margin-top: 10px; display: grid; gap: 10px; }
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--blue, #0a84ff); }
+.mini-seg { display: flex; background: var(--fill-bg); border-radius: 8px; padding: 2px; gap: 2px; }
+.mini-seg button {
+  flex: 1; border: none; background: none; color: var(--label); font-size: 13px; font-weight: 500;
+  padding: 6px 4px; border-radius: 6px; cursor: pointer; font-family: inherit;
+}
+.mini-seg button.active { background: var(--card); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+
+.btn.small { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+
+/* Size stepper inside typo field config */
+.size-stepper { display: flex; align-items: center; gap: 10px; }
+.size-stepper .stepper { margin-top: 0; }
+.size-stepper .stepper input { width: 64px; text-align: center; }
+
+@media (min-width: 768px) {
+  .modal-box.wide { max-width: 640px; }
+  .codetype-grid { gap: 12px; }
+}
