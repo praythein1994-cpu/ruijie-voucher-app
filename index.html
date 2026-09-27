@@ -130,12 +130,14 @@
     <div class="avatar" id="topbar-avatar">မ</div>
     <div class="topbar-title"><svg class="ic"><use href="#i-wifi"/></svg><span id="topbar-account">Ruijie</span></div>
     <select id="project-select" aria-label="Project"></select>
+    <button class="tool-btn" id="btn-search" data-i18n-aria="search.label" aria-label="ရှာဖွေမယ်"><svg class="ic"><use href="#i-search"/></svg></button>
+    <button class="tool-btn refresh-btn" id="btn-refresh-vouchers" data-i18n-aria="search.refresh" aria-label="Refresh"><svg class="ic"><use href="#i-refresh"/></svg></button>
   </header>
 
   <main id="main">
     <!-- VOUCHERS -->
     <section id="view-vouchers" class="view">
-      <div class="large-title" data-i18n="v.title">ဗောက်ချာများ</div>
+      <div class="large-title hidden" data-i18n="v.title">ဗောက်ချာများ</div>
       <div class="stat-grid">
         <div class="stat g"><div class="n" id="stat-active">–</div><div class="l" data-i18n="stat.active">မသုံးရသေး</div></div>
         <div class="stat a"><div class="n" id="stat-used">–</div><div class="l" data-i18n="stat.used">သုံးနေဆဲ</div></div>
@@ -144,12 +146,10 @@
       </div>
       <div class="toolbar">
         <div class="toolbar-row">
-          <button class="tool-btn" id="btn-search" data-i18n-aria="search.label" aria-label="ရှာဖွေမယ်"><svg class="ic"><use href="#i-search"/></svg></button>
           <div class="search-wrap" id="search-wrap">
             <input id="voucher-search" type="search" data-i18n-ph="search.ph" placeholder="ကုဒ်နံပါတ်ရှာမယ်…" autocomplete="off">
             <button class="clear" id="search-clear" data-i18n-aria="search.clear" aria-label="ရှင်းမယ်"><svg class="ic sm"><use href="#i-x"/></svg></button>
           </div>
-          <button class="tool-btn refresh-btn" id="btn-refresh-vouchers" data-i18n-aria="search.refresh" aria-label="Refresh"><svg class="ic"><use href="#i-refresh"/></svg></button>
         </div>
         <div class="chips" id="voucher-status-chips">
           <button class="chip active" data-s=""><span data-i18n="chip.all">အားလုံး</span></button>
@@ -214,18 +214,6 @@
             <button id="btn-generate-print" class="btn primary big"><svg class="ic"><use href="#i-printer"/></svg><span id="btn-generate-print-label" data-i18n="g.btnPrint">Generate &amp; Print</span></button>
           </div>
           <p id="gen-err" class="err hidden"></p>
-        </div>
-        <div class="card">
-          <h2><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="g.custom">စိတ်ကြိုက်ကုဒ်နံပါတ်ထုတ်မယ်</span></h2>
-          <p class="muted small" data-i18n="g.customHelp">ပုံစံ: xxxx-xxxx (သို့) xxxx-xxxx-xxxx</p>
-          <label><span data-i18n="g.customCode">ကုဒ်နံပါတ်</span>
-            <input id="gen-custom-code" type="text" data-i18n-ph="g.customCodePh" placeholder="ဥပမာ ab12-cd34" autocomplete="off">
-          </label>
-          <label><span data-i18n="g.package2">Package ရွေးပါ</span>
-            <select id="gen-custom-package"></select>
-          </label>
-          <button id="btn-generate-custom" class="btn big"><svg class="ic"><use href="#i-plus"/></svg><span id="btn-generate-custom-label" data-i18n="g.customBtn">စိတ်ကြိုက်ကုဒ်ထုတ်မယ်</span></button>
-          <p id="gen-custom-err" class="err hidden"></p>
         </div>
       </div>
       <div id="gen-result" class="card hidden">
