@@ -137,7 +137,7 @@
 <div id="app" class="hidden">
   <header id="topbar">
     <div class="avatar" id="topbar-avatar">မ</div>
-    <div class="topbar-title"><img src="icon.svg" class="app-logo" alt=""><span id="topbar-account">Ruijie</span></div>
+    <div class="topbar-title"><span id="topbar-account">Ruijie</span></div>
     <select id="project-select" aria-label="Project"></select>
     <button class="tool-btn" id="btn-search" data-i18n-aria="search.label" aria-label="ရှာဖွေမယ်"><svg class="ic"><use href="#i-search"/></svg></button>
     <button class="tool-btn refresh-btn" id="btn-refresh-vouchers" data-i18n-aria="search.refresh" aria-label="Refresh"><svg class="ic"><use href="#i-refresh"/></svg></button>
@@ -239,6 +239,20 @@
     <section id="view-printer" class="view hidden">
       <div class="large-title hidden" data-i18n="p.title">ပရင်တာ</div>
       <div class="grid-2">
+        <div class="card" id="bt-card">
+          <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.bt">ဘလူးတုသ် ပရင်တာ</span></h2>
+          <div id="bt-status" class="muted small" style="margin:0 0 10px" data-i18n="p.btIdle">ပရင်တာမချိတ်ရသေးပါ</div>
+          <div id="bt-devices" class="code-list" style="margin-bottom:10px"></div>
+          <div class="row">
+            <button id="btn-bt-scan" class="btn"><svg class="ic"><use href="#i-search"/></svg><span data-i18n="p.btScan">စက်ရှာမယ်</span></button>
+            <button id="btn-bt-disconnect" class="btn danger-ghost"><span data-i18n="p.btDisconnect">ဖြုတ်မယ်</span></button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button id="btn-bt-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.btPrint">ဘလူးတုသ်နဲ့ထုတ်မယ်</span></button>
+            <button id="btn-bt-test" class="btn"><span data-i18n="p.btTest">စမ်းထုတ်မယ်</span></button>
+          </div>
+          <div id="bt-progress" class="muted small" style="margin-top:8px"></div>
+        </div>
         <div class="card">
           <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.settings">ပရင့်ဆက်တင်</span></h2>
           <label><span data-i18n="p.paper">စာရွက်အကျယ်</span>
