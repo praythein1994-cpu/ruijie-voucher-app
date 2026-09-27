@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.5.4';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -84,6 +84,22 @@ const I18N = {
   'sso.onlyAndroid': { my: 'Ruijie အကောင့်ဝင်တာကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Ruijie account login is only available in the Android app' },
   'sso.welcome': { my: 'Ruijie အကောင့် ဝင်ပြီးပါပြီ', en: 'Logged in to Ruijie account' },
   'sso.bye': { my: 'အကောင့်ထွက်ပြီးပါပြီ', en: 'Logged out' },
+  'diag.title': { my: 'စစ်ဆေးမှုများ', en: 'Diagnostics' },
+  'diag.sub': { my: 'ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်', en: 'Select which part to test' },
+  'diag.login': { my: 'Login စစ်မယ်', en: 'Test login' },
+  'diag.loginSub': { my: 'App ID/Secret နဲ့ Ruijie အကောင့်', en: 'App ID/Secret and Ruijie account' },
+  'diag.voucher': { my: 'Voucher စစ်မယ်', en: 'Test vouchers' },
+  'diag.voucherSub': { my: 'စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)', en: 'Listing and delete readiness (nothing is deleted)' },
+  'diag.run': { my: 'စစ်မယ်', en: 'Run tests' },
+  'diag.save': { my: 'Report သိမ်းမယ်', en: 'Save report' },
+  'diag.running': { my: 'စစ်နေသည်…', en: 'Testing…' },
+  'diag.pickOne': { my: 'အနည်းဆုံး တစ်ခုရွေးပါ', en: 'Select at least one' },
+  'diag.pass': { my: 'အောင်မြင်သည်', en: 'PASS' },
+  'diag.fail': { my: 'မအောင်မြင်ပါ', en: 'FAIL' },
+  'diag.skip': { my: 'ကျော်သွားသည်', en: 'SKIP' },
+  'diag.saved': { my: 'Report သိမ်းပြီးပါပြီ', en: 'Report saved' },
+  'diag.saveCancel': { my: 'မသိမ်းပါ', en: 'Save cancelled' },
+  'diag.saveFail': { my: 'သိမ်းမရပါ: ', en: 'Save failed: ' },
   'err.pkgList': { my: 'Package list ရမလာ: ', en: "Couldn't load packages: " },
   'err.pickPkg': { my: 'Package ရွေးပါ', en: 'Choose a package' },
   'btn.generating': { my: 'ထုတ်နေသည်…', en: 'Generating…' },
@@ -1753,6 +1769,157 @@ function onSsoButton() {
     catch (e) { toast(t('sso.onlyAndroid'), true); }
   }
 }
+
+/* ═══════════ DIAGNOSTICS (Settings → စစ်ဆေးမှုများ) ═══════════
+ * Login tests and voucher tests run separately (user picks which part
+ * is broken). Read-only: nothing is created, deleted or changed.
+ * The report is saved as .txt through the Android system file picker
+ * (SAF), so the user chooses where it goes. */
+const Diag = { results: [], running: false };
+
+function diagAdd(section, name, status, detail) {
+  Diag.results.push({ section, name, status, detail: String(detail || '') });
+  renderDiagResults();
+}
+function diagStatusBadge(s) {
+  const label = s === 'pass' ? t('diag.pass') : s === 'fail' ? t('diag.fail') : t('diag.skip');
+  const color = s === 'pass' ? '#16a34a' : s === 'fail' ? '#dc2626' : '#9ca3af';
+  const icon = s === 'pass' ? '✓' : s === 'fail' ? '✗' : '–';
+  return `<span style="display:inline-block;min-width:86px;text-align:center;font-size:12px;font-weight:700;color:#fff;background:${color};border-radius:20px;padding:3px 10px;margin-right:8px">${icon} ${esc(label)}</span>`;
+}
+function renderDiagResults() {
+  const box = $('diag-results');
+  if (!box) return;
+  if (!Diag.results.length) { box.innerHTML = ''; return; }
+  box.innerHTML = Diag.results.map(r =>
+    `<div style="display:flex;align-items:flex-start;gap:4px;padding:8px 0;border-top:1px solid var(--hair, #eee)">`
+    + `<div style="flex-shrink:0;padding-top:1px">${diagStatusBadge(r.status)}</div>`
+    + `<div style="min-width:0"><div style="font-weight:600;font-size:13px">${esc(r.name)}</div>`
+    + (r.detail ? `<div class="muted small" style="word-break:break-word">${esc(r.detail)}</div>` : '')
+    + `</div></div>`
+  ).join('');
+}
+async function runDiagnostics() {
+  if (Diag.running) return;
+  const doLogin = $('diag-login') && $('diag-login').checked;
+  const doVoucher = $('diag-voucher') && $('diag-voucher').checked;
+  if (!doLogin && !doVoucher) { toast(t('diag.pickOne'), true); return; }
+  Diag.running = true;
+  Diag.results = [];
+  renderDiagResults();
+  const runBtn = $('btn-diag-run'), saveBtn = $('btn-diag-save');
+  runBtn.disabled = true;
+  runBtn.querySelector('span').textContent = t('diag.running');
+  saveBtn.classList.add('hidden');
+
+  if (doLogin) {
+    // L1 — Open API auth (App ID/Secret)
+    try {
+      await Api.testConnection();
+      diagAdd('login', 'App ID / App Secret', 'pass', t('toast.connected'));
+    } catch (e) { diagAdd('login', 'App ID / App Secret', 'fail', e.message); }
+    // L2/L3 — SSO (Android only)
+    if (hasSso()) {
+      let loggedIn = false;
+      try { loggedIn = Api.ssoLoggedIn(); } catch (e) { /* ignore */ }
+      diagAdd('login', 'Ruijie အကောင့် (SSO cookie)', loggedIn ? 'pass' : 'fail',
+        loggedIn ? t('sso.connected') : t('sso.notConnected'));
+      try {
+        const info = JSON.parse(window.RuijieBridge.diagCookieInfo());
+        const parts = [];
+        for (const u of Object.keys(info)) {
+          const host = u.replace('https://', '');
+          const names = info[u] || [];
+          parts.push(host + ': ' + (names.length ? names.join(', ') : '—'));
+        }
+        diagAdd('login', 'SSO cookie domains', 'pass', parts.join('  |  '));
+      } catch (e) { diagAdd('login', 'SSO cookie domains', 'fail', e.message); }
+    } else {
+      diagAdd('login', 'Ruijie အကောင့် (SSO)', 'skip', t('sso.onlyAndroid'));
+    }
+  }
+
+  if (doVoucher) {
+    // V1 — voucher list (read-only, first page)
+    if (S.projectId) {
+      try {
+        const { count, list } = await Api.voucherListPage(S.projectId, 0, 5);
+        const sample = (list[0] && (list[0].voucherCode || list[0].codeNo)) || '';
+        diagAdd('voucher', 'Voucher စာရင်း', 'pass',
+          'count=' + count + (sample ? ', sample=' + sample : ''));
+      } catch (e) { diagAdd('voucher', 'Voucher စာရင်း', 'fail', e.message); }
+    } else {
+      diagAdd('voucher', 'Voucher စာရင်း', 'skip', 'project not selected');
+    }
+    // V2 — delete readiness: LOCAL check only, no request is sent
+    try {
+      const ssoOk = hasSso() && Api.ssoLoggedIn();
+      const env = Api.ssoDeleteEnvelope('TESTCODE', 'TEST-UUID', S.projectId || 1);
+      const shapeOk = env.api === '/intlSamVoucher/v2/delete'
+        && env.authParams && env.authParams.method === 'DELETE'
+        && env.method === 'DELETE' && env.module === 'default'
+        && env.params && env.params[0] && env.params[0].voucherCode === 'TESTCODE'
+        && env.querys && env.querys.ids === 'TEST-UUID' && env.querys.lang === 'en';
+      if (ssoOk && shapeOk) diagAdd('voucher', 'ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု', 'pass', 'SSO ok · envelope ok (တကယ်မဖျက်ပါ)');
+      else diagAdd('voucher', 'ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု', 'fail',
+        [!ssoOk ? t('sso.notConnected') : '', !shapeOk ? 'envelope shape' : ''].filter(Boolean).join(' · '));
+    } catch (e) { diagAdd('voucher', 'ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု', 'fail', e.message); }
+  }
+
+  saveBtn.classList.remove('hidden');
+  runBtn.disabled = false;
+  runBtn.querySelector('span').textContent = t('diag.run');
+  Diag.running = false;
+}
+function diagReportText() {
+  const L = [];
+  L.push('Ruijie Voucher App — Diagnostic Report');
+  L.push('Date: ' + new Date().toLocaleString());
+  L.push('App version: ' + APP_VERSION + ' (Android APK)');
+  try { L.push('Project: ' + (S.projectId || '—')); } catch (e) { /* ignore */ }
+  L.push('');
+  let sec = '';
+  for (const r of Diag.results) {
+    const s = r.section === 'login' ? 'Login' : 'Voucher';
+    if (s !== sec) { sec = s; L.push('[' + s + ']'); }
+    L.push('  ' + r.status.toUpperCase() + ' — ' + r.name + (r.detail ? ': ' + r.detail : ''));
+  }
+  L.push('');
+  L.push('Note: read-only checks; nothing was created, deleted or changed.');
+  return L.join('\n');
+}
+function diagB64(s) {
+  return btoa(unescape(encodeURIComponent(s)));
+}
+function saveDiagReport() {
+  if (!Diag.results.length) return;
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const fname = 'ruijie-diagnostic-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
+    + '-' + p(d.getHours()) + p(d.getMinutes()) + '.txt';
+  const b64 = diagB64(diagReportText());
+  if (window.RuijieBridge && window.RuijieBridge.diagSaveReport) {
+    // Android: system file picker — the user chooses where the .txt goes.
+    try { window.RuijieBridge.diagSaveReport(fname, b64); }
+    catch (e) { toast(t('diag.saveFail') + e.message, true); }
+  } else {
+    // Web fallback: direct download.
+    const blob = new Blob([diagReportText()], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    toast(t('diag.saved'));
+  }
+}
+// Native file-picker result → toast. Registered once at startup.
+window._diagEvent = function (name) {
+  if (name === 'saved') toast(t('diag.saved'));
+  else if (name === 'cancel') toast(t('diag.saveCancel'));
+  else toast(t('diag.saveFail'), true);
+};
 async function loadAccountInfo() {
   try {
     const info = S.account || await Api.getAccountInfo();
@@ -1912,6 +2079,8 @@ function init() {
 
   $('btn-save-settings').addEventListener('click', saveSettings);
   $('btn-sso').addEventListener('click', onSsoButton);
+  $('btn-diag-run').addEventListener('click', runDiagnostics);
+  $('btn-diag-save').addEventListener('click', saveDiagReport);
   // SSO login/logout events from the native dialog
   document.addEventListener('ruijie-sso', (e) => {
     refreshSsoCard();
