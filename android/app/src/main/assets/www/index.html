@@ -331,6 +331,23 @@
         </div>
         <button id="btn-sso" class="btn primary"><svg class="ic"><use href="#i-lock"/></svg><span>အကောင့်ဝင်မယ်</span></button>
       </div>
+      <div class="card" id="diag-card">
+        <h2><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.title">စစ်ဆေးမှုများ</span></h2>
+        <p class="muted small" style="margin:0 0 10px" data-i18n="diag.sub">ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်</p>
+        <div class="switch-row">
+          <div><div style="font-weight:700" data-i18n="diag.login">Login စစ်မယ်</div><div class="muted small" data-i18n="diag.loginSub">App ID/Secret နဲ့ Ruijie အကောင့်</div></div>
+          <label class="switch"><input type="checkbox" id="diag-login" checked><span class="track"></span></label>
+        </div>
+        <div class="switch-row" style="margin-top:10px">
+          <div><div style="font-weight:700" data-i18n="diag.voucher">Voucher စစ်မယ်</div><div class="muted small" data-i18n="diag.voucherSub">စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)</div></div>
+          <label class="switch"><input type="checkbox" id="diag-voucher" checked><span class="track"></span></label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button id="btn-diag-run" class="btn primary"><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.run">စစ်မယ်</span></button>
+          <button id="btn-diag-save" class="btn hidden"><svg class="ic"><use href="#i-folder"/></svg><span data-i18n="diag.save">Report သိမ်းမယ်</span></button>
+        </div>
+        <div id="diag-results" style="margin-top:12px"></div>
+      </div>
       <div class="card">
         <h2><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="s.appearance">အသွင်အပြင်</span></h2>
         <div class="switch-row">
