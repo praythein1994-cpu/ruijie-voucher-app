@@ -12,22 +12,25 @@ PLATFORM="$SDK/platforms/android-34"
 APP=app/src/main
 OUT=build/apk
 KS="$HOME/.ruijie-voucher.keystore"
-VERSION_CODE=6
-VERSION_NAME="1.3.2"
+VERSION_CODE=9
+VERSION_NAME="1.4.0"
 OUT_NAME="ruijie-voucher-${VERSION_NAME}.apk"
 
 echo "== 1. sync web app into assets =="
 rm -rf "$APP/assets/www"
 mkdir -p "$APP/assets/www"
 cp ../index.html "$APP/assets/www/"
+cp ../icon.svg ../apple-touch-icon.png "$APP/assets/www/"
 cp -r ../css ../js "$APP/assets/www/"
 
-echo "== 2. aapt2 link =="
+echo "== 2. aapt2 compile res + link =="
 rm -rf build && mkdir -p "$OUT"
+"$BT/aapt2" compile --dir "$APP/res" -o build/res.zip
 "$BT/aapt2" link -o "$OUT/base.apk" \
   -I "$PLATFORM/android.jar" \
   --manifest "$APP/AndroidManifest.xml" \
   -A "$APP/assets" \
+  -R build/res.zip \
   --min-sdk-version 24 --target-sdk-version 34 \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME"
 
@@ -37,16 +40,11 @@ mkdir -p build/classes
   -classpath "$PLATFORM/android.jar" \
   -d build/classes \
   "$APP/java/com/ruijie/voucher/MainActivity.java" \
-  "$APP/java/com/ruijie/voucher/RuijieBridge.java"
+  "$APP/java/com/ruijie/voucher/RuijieBridge.java" \
+  "$APP/java/com/ruijie/voucher/SsoSession.java"
 
 echo "== 4. d8 (dex) =="
 mkdir -p build/dex
-"$BT/d8" --lib "$PLATFORM/android.jar" --min-api 24 \
-  --output build/dex \
-  build/classes/com/ruijie/voucher/MainActivity.class \
-  build/classes/com/ruijie/voucher/RuijieBridge.class \
-  "build/classes/com/ruijie/voucher/RuijieBridge\$1.class" \
-  "build/classes/com/ruijie/voucher/RuijieBridge\$TokenEntry.class" 2>/dev/null || \
 "$BT/d8" --lib "$PLATFORM/android.jar" --min-api 24 \
   --output build/dex \
   $(find build/classes -name "*.class")
