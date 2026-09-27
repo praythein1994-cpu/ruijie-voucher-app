@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.2';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -109,7 +109,7 @@ const I18N = {
   'g.ctAlnum': { my: 'Alphanumeric', en: 'Alphanumeric' },
   'g.ctAlpha': { my: 'Alphabetic', en: 'Alphabetic' },
   'g.ctNum': { my: 'Numeric', en: 'Numeric' },
-  'g.apiNote': { my: 'Ruijie Cloud API က မူလအတိုင်း alphanumeric ကုဒ်များ ထုတ်ပေးပါသည်။ Parameter mapping ကို Cloud သို့ ပို့ပေးထားသည်။', en: 'Ruijie Cloud API creates alphanumeric codes by default. Parameter mapping is sent to Cloud.' },
+  'g.apiNote': { my: 'အရှည်နှင့် စာလုံးအမျိုးအစား ရွေးချယ်မှုများကို Cloud သို့ တိုက်ရိုက်ပို့ပေးသည် (6–9 လုံး / Alphanumeric·Alphabetic·Numeric)။', en: 'Length and code-type choices are sent to Cloud (6–9 chars / Alphanumeric·Alphabetic·Numeric).' },
   'g.qty2': { my: 'ဗောက်ချာ အရေအတွက်', en: 'Number of Vouchers' },
   'g.customQty': { my: 'စိတ်ကြိုက် အရေအတွက်', en: 'Custom Quantity' },
   'g.btnPrint': { my: 'ထုတ်ပြီး ပရင့်မယ်', en: 'Generate & Print' },
@@ -644,19 +644,36 @@ async function ensurePackages() {
     toast(t('err.pkgList') + e.message, true);
   }
 }
+/* Package field mapping — verified against a production-tested implementation.
+   Ruijie user-group/package items vary in shape; resolve with fallbacks:
+   profile: authprofileid -> authProfileId -> uuid -> profileId -> packageId -> id
+   userGroupId: userGroupId -> id
+   name: packageName -> profileName -> userGroupName -> name -> groupName */
+function pkgProfileId(p) {
+  const v = p.authprofileid || p.authProfileId || p.uuid || p.profileId || p.packageId || p.id;
+  return v === undefined || v === null || v === '' ? '' : String(v);
+}
+function pkgGroupId(p) {
+  const v = (p.userGroupId !== undefined && p.userGroupId !== null && p.userGroupId !== '') ? p.userGroupId : p.id;
+  return v === undefined || v === null || v === '' ? '' : String(v);
+}
+function pkgName(p) {
+  return p.packageName || p.profileName || p.userGroupName || p.name || p.groupName || 'Package';
+}
 function fillPackageSelects() {
   const opts = S.packages.map(p => {
-    const pid = p.authprofileid || p.profileId || '';
-    const label = `${p.name || p.groupName || 'Package'} — ${fmtPeriod(p.timePeriod)} · ${fmtQuota(p.quota)}`;
-    return `<option value="${esc(p.id)}|${esc(pid)}" data-pid="${esc(pid)}">${esc(label)}</option>`;
+    const uid = pkgGroupId(p), pid = pkgProfileId(p);
+    const label = `${pkgName(p)} — ${fmtPeriod(p.timePeriod)} · ${fmtQuota(p.quota)}`;
+    return `<option value="${esc(uid)}|${esc(pid)}">${esc(label)}</option>`;
   }).join('');
   $('gen-package').innerHTML = opts || '<option value="">—</option>';
 }
 function selectedPackage(selId) {
   const sel = $(selId);
-  const [id, pid] = (sel.value || '').split('|');
-  const pkg = S.packages.find(p => String(p.id) === id);
-  return { id: id ? Number(id) : null, profile: pid || null, pkg };
+  const [uid, pid] = (sel.value || '').split('|');
+  const pkg = S.packages.find(p => pkgGroupId(p) === uid);
+  const idNum = uid ? Number(uid) : NaN;
+  return { id: Number.isFinite(idNum) ? idNum : null, profile: pid || null, pkg };
 }
 
 /* ═══════════ PRINT STYLE (Layout + Typography) · v1.3.0 ═══════════ */
@@ -781,6 +798,9 @@ function genQty() {
 }
 function markCustomPreset() { S.genOpts.presetTouched = true; }
 
+/* Confirmed working code-type mapping (verified against production-tested implementation):
+   Alphanumeric -> "1", Alphabetic -> "2", Numeric -> "3"; length via codeSize (6-9). */
+const CODE_TYPE_MAP = { alnum: '1', alpha: '2', numeric: '3' };
 async function generateVouchers(btnId, lblId) {
   const { id, profile, pkg } = selectedPackage('gen-package');
   const qty = genQty();
@@ -792,9 +812,11 @@ async function generateVouchers(btnId, lblId) {
   try {
     const list = await Api.voucherCreate(S.projectId, {
       quantity: qty, profile, userGroupId: id,
-      codeLength: S.genOpts.vlen, codeType: S.genOpts.vtype,
+      createCodeType: CODE_TYPE_MAP[S.genOpts.vtype] || '1',
+      codeSize: S.genOpts.vlen,
+      packageName: pkg ? pkgName(pkg) : '',
     });
-    const items = list.map(v => ({ code: vCode(v), pkg: pkg && (pkg.name || pkg.groupName), period: v.timePeriod, quota: v.quota }));
+    const items = list.map(v => ({ code: vCode(v), pkg: pkg && pkgName(pkg), period: v.timePeriod, quota: v.quota }));
     showGenResult(items);
     S.vouchers = []; // refresh list next time
     toast(tx('toast.generated', { n: list.length }));

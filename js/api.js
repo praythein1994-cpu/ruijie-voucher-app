@@ -132,16 +132,18 @@ const Api = {
     }
     return all;
   },
-  async voucherCreate(groupId, { quantity, profile, userGroupId, firstName, lastName, email, phone, comment, codeLength, codeType }) {
+  async voucherCreate(groupId, { quantity, profile, userGroupId, firstName, lastName, email, phone, comment, createCodeType, codeSize, packageName }) {
     const body = { quantity, profile, userGroupId };
     if (firstName) body.firstName = firstName;
     if (lastName) body.lastName = lastName;
     if (email) body.email = email;
     if (phone) body.phone = phone;
     if (comment) body.comment = comment;
-    // Parameter mapping is sent to Cloud; Ruijie API creates alphanumeric codes by default and may ignore these.
-    if (codeLength) body.codeLength = codeLength;
-    if (codeType) body.codeType = codeType;
+    // Confirmed working mapping (verified against a production-tested implementation):
+    // createCodeType "1" = alphanumeric, "2" = alphabetic, "3" = numeric; codeSize = 6-9.
+    if (createCodeType) body.createCodeType = createCodeType;
+    if (codeSize) body.codeSize = codeSize;
+    if (packageName) { body.packageName = packageName; body.profileName = packageName; body.userGroupName = packageName; }
     const j = await this.call('POST', `open/auth/voucher/create/${groupId}`, {}, body);
     const inner = this.unwrap(j, 'voucherData');
     return inner.list || [];
