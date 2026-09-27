@@ -178,6 +178,10 @@
       <div class="grid-2">
         <div class="card">
           <h2><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="g.new">ဗောက်ချာအသစ်ထုတ်မယ်</span></h2>
+          <div class="printer-line">
+            <span class="printer-dot" data-printer-dot><svg class="ic sm"><use href="#i-printer"/></svg><span class="pd"></span></span>
+            <span class="muted small" data-printer-label></span>
+          </div>
           <label><span data-i18n="g.usergroup">User Group</span>
             <select id="gen-usergroup"></select>
           </label>
@@ -224,6 +228,15 @@
           </div>
           <p id="gen-err" class="err hidden"></p>
         </div>
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-inbox"/></svg><span data-i18n="g.recent">နောက်ဆုံးထုတ်ထားသောများ</span></h2>
+          <p id="gen-recent-sub" class="muted small" style="margin:-6px 0 10px"></p>
+          <div id="gen-recent-list" class="code-list" style="margin-bottom:10px"></div>
+          <div class="row">
+            <button id="btn-recent-print-all" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="g.printAll">အားလုံးပရင့်ထုတ်မယ်</span></button>
+            <button id="btn-recent-queue-all" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="g.queueAll">Print queue ထဲထည့်မယ်</span></button>
+          </div>
+        </div>
       </div>
       <div id="gen-result" class="card hidden">
         <h2><svg class="ic"><use href="#i-check"/></svg><span><span data-i18n="g.result">ထုတ်ပြီးသား ဗောက်ချာများ</span> (<span id="gen-result-count"></span>)</span></h2>
@@ -240,7 +253,7 @@
       <div class="large-title hidden" data-i18n="p.title">ပရင်တာ</div>
       <div class="grid-2">
         <div class="card" id="bt-card">
-          <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.bt">ဘလူးတုသ် ပရင်တာ</span></h2>
+          <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.bt">ဘလူးတုသ် ပရင်တာ</span><span class="printer-dot" data-printer-dot style="margin-left:auto"><svg class="ic sm"><use href="#i-printer"/></svg><span class="pd"></span></span></h2>
           <div id="bt-status" class="muted small" style="margin:0 0 10px" data-i18n="p.btIdle">ပရင်တာမချိတ်ရသေးပါ</div>
           <div id="bt-devices" class="code-list" style="margin-bottom:10px"></div>
           <div class="row">
