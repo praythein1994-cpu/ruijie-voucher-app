@@ -112,8 +112,14 @@ public class RuijieBridge {
         String qs = buildQuery(query) + "&access_token=" + URLEncoder.encode(token, "UTF-8");
         String url = cloud + "/service/api/" + path + "?" + qs;
         String resp = httpsJson(url, method, "POST".equals(method) ? (body != null ? body.toString() : "{}") : null);
-        int code = new JSONObject(resp).optInt("code", -1);
-        if (code == 4 && !retried) { // token invalid -> refresh once and retry
+        JSONObject rj = new JSONObject(resp);
+        int code = rj.optInt("code", -1);
+        // code 4 = token invalid per Ruijie docs. "Login timeout" is Ruijie's
+        // answer when a cached token died server-side (e.g. secret rotated or
+        // token expired before our 25-day TTL) — refresh and retry once
+        // instead of failing forever.
+        boolean tokenBad = code == 4 || "Login timeout".equalsIgnoreCase(rj.optString("msg", ""));
+        if (tokenBad && !retried) { // token invalid -> refresh once and retry
             token = getToken(cloud, appid, secret, true);
             String qs2 = buildQuery(query) + "&access_token=" + URLEncoder.encode(token, "UTF-8");
             resp = httpsJson(cloud + "/service/api/" + path + "?" + qs2, method,

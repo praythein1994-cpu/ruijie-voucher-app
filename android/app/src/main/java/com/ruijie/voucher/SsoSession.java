@@ -95,12 +95,18 @@ public class SsoSession {
         c.setRequestProperty("Accept", "application/json, text/plain, */*");
         c.setRequestProperty("User-Agent",
                 "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36");
+        // Look like the portal's own XHR (see the DevTools capture): some
+        // Ruijie endpoints 403 requests that don't carry these.
+        c.setRequestProperty("X-Requested-With", "XMLHttpRequest");
+        c.setRequestProperty("Origin", "https://cloud-as.ruijienetworks.com");
+        c.setRequestProperty("Referer", "https://cloud-as.ruijienetworks.com/");
         String cookies = null;
         try {
-            cookies = CookieManager.getInstance().getCookie("https://cloud-as.ruijienetworks.com");
-            if (cookies == null || cookies.isEmpty()) {
-                cookies = CookieManager.getInstance().getCookie("https://cloud.ruijienetworks.com");
-            }
+            // Merge both Ruijie domains: CAS login happens on
+            // cloud.ruijienetworks.com while the portal lives on cloud-as.
+            cookies = mergeCookies(
+                    CookieManager.getInstance().getCookie("https://cloud-as.ruijienetworks.com"),
+                    CookieManager.getInstance().getCookie("https://cloud.ruijienetworks.com"));
         } catch (Exception ignored) { /* no cookies */ }
         if (cookies != null && !cookies.isEmpty()) c.setRequestProperty("Cookie", cookies);
         byte[] bytes = envelopeJson.getBytes(StandardCharsets.UTF_8);
@@ -118,11 +124,39 @@ public class SsoSession {
                 while ((line = br.readLine()) != null) sb.append(line);
             }
         }
-        if (status == 401 || status == 403) {
+        if (status == 401) {
             // Session is dead server-side — drop the stale cookies so
             // ssoStatus() stops reporting "Connected" for a dead session.
             try { logout(); } catch (Exception ignored) {}
-            throw new SecurityException("Session expired (HTTP " + status + ") — please log in again");
+            throw new SecurityException("Session expired (HTTP 401) — please log in again");
+        }
+        if (status == 403) {
+            // 403 is NOT treated as a dead session: minutes after a fresh
+            // login the session is alive, so the request itself was rejected
+            // (missing header/cookie/permission). Keep the session and
+            // surface Ruijie's answer instead of logging the user out.
+            String detail = sb.toString();
+            if (detail.length() > 200) detail = detail.substring(0, 200);
+            throw new Exception("Ruijie rejected the request (HTTP 403)" + (detail.isEmpty() ? "" : ": " + detail));
+        }
+        return sb.toString();
+    }
+
+    /** Merge two CookieManager cookie strings; first arg wins on name clash. */
+    private static String mergeCookies(String a, String b) {
+        java.util.LinkedHashMap<String, String> map = new java.util.LinkedHashMap<>();
+        for (String src : new String[]{b, a}) {
+            if (src == null) continue;
+            for (String part : src.split(";")) {
+                String p = part.trim();
+                int eq = p.indexOf('=');
+                if (eq > 0) map.put(p.substring(0, eq).trim(), p);
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String v : map.values()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append(v);
         }
         return sb.toString();
     }
@@ -230,7 +264,10 @@ public class SsoSession {
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 progress.setVisibility(View.VISIBLE);
-                checkAuth(url);
+                // NOTE: auth is checked in onPageFinished only. Checking here
+                // (or in shouldOverrideUrlLoading) dismisses the dialog before
+                // the portal page finishes loading, which can cut off the
+                // portal session cookies the webproxy delete needs.
             }
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -239,13 +276,11 @@ public class SsoSession {
             }
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                checkAuth(request.getUrl().toString());
                 return false;
             }
             @Override
             @SuppressWarnings("deprecation")
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                checkAuth(url);
                 return false;
             }
         });
