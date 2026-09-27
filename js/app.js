@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.8';
+const APP_VERSION = '1.5.9';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -61,6 +61,7 @@ const I18N = {
   'd.usedTime': { my: 'သုံးပြီးချိန်', en: 'Used time' },
   'd.created': { my: 'ထုတ်လုပ်ချိန်', en: 'Created' },
   'd.expiry': { my: 'သက်တမ်းကုန်ချိန်', en: 'Expires' },
+  'd.activated': { my: 'စတင်သုံးချိန်', en: 'First used' },
   'd.quota': { my: 'ဒေတာပမာဏ', en: 'Data quota' },
   'd.usedQuota': { my: 'သုံးပြီးဒေတာ', en: 'Data used' },
   'd.maxClients': { my: 'တစ်ပြိုင်သုံးနိုင်သူ', en: 'Max clients' },
@@ -280,6 +281,16 @@ const I18N = {
   'sl.noneAuto': { my: 'ဒီကာလမှာ ရောင်းပြီးဗောက်ချာ မရှိပါ။', en: 'No sold vouchers in this period.' },
   'sl.unknownPkg': { my: 'အမည်မသိ', en: 'Unknown' },
   'sl.dateNote': { my: 'ရက်စွဲအခြေခံ: ဗောက်ချာထုတ်လုပ်ချိန် (createTime) — သုံးပြီးချိန်က မိနစ်အရေအတွက်ဖြစ်လို့ ရက်စွဲအဖြစ် သုံးမရပါ။', en: 'Date basis: voucher creation time (usedTime is a duration in minutes, not a date).' },
+  'sl.day1': { my: 'နောက်ဆုံး ၁ ရက်', en: 'Last 1 Day' },
+  'sl.day7': { my: 'နောက်ဆုံး ၇ ရက်', en: 'Last 7 Days' },
+  'sl.day30': { my: 'နောက်ဆုံး ၃၀ ရက်', en: 'Last 30 Days' },
+  'sl.no': { my: 'စဉ်', en: 'No.' },
+  'sl.profile': { my: 'Profile အမည်', en: 'Profile Name' },
+  'sl.made': { my: 'ထုတ်လုပ်ပြီး', en: 'Quantity' },
+  'sl.activated': { my: 'စတင်သုံးစွဲသူ', en: 'Activated Accounts' },
+  'sl.totalPrice': { my: 'စုစုပေါင်းတန်ဖိုး', en: 'Total Price' },
+  'sl.total': { my: 'စုစုပေါင်း', en: 'Total' },
+  'sl.dateNote2': { my: 'ရက်စွဲအခြေခံ: ကတ်စတင်သုံးစွဲသည့်ရက် (သက်တမ်းကုန်ချိန် − သက်တမ်းကာလ) — ထုတ်လုပ်သည့်ရက်မဟုတ်ပါ။ တွက်ချက်၍မရသောကတ်များကိုသာ ထုတ်လုပ်သည့်ရက်ဖြင့် ထည့်သွင်းထားပါတယ်။', en: 'Date basis: the day each voucher was first used (expiry time − validity period), not the creation day. Vouchers where this cannot be derived fall back to creation time.' },
   'more.back': { my: 'ပြန်သွားမယ်', en: 'Back' },
   'more.loading': { my: 'ဆွဲနေသည်…', en: 'Loading…' },
   'ma.title': { my: 'Auth Accounts', en: 'Auth Accounts' },
@@ -537,6 +548,9 @@ function enterApp() {
   document.querySelectorAll('#paper-seg button').forEach(b =>
     b.classList.toggle('active', b.dataset.paper === pp));
   loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; });
+  // Vouchers start immediately with the stored project (in parallel with
+  // the project list) instead of waiting for it — the list reconciles after.
+  if (S.projectId) loadVouchers();
   loadAccountInfo();
 }
 
@@ -544,7 +558,7 @@ function switchView(id, push) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   $(id).classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(tb => tb.classList.toggle('active', tb.dataset.view === id));
-  if (id === 'view-vouchers' && S.vouchers.length === 0) loadVouchers();
+  if (id === 'view-vouchers' && S.vouchers.length === 0 && !S._vouchersLoading) loadVouchers();
   if (id === 'view-generate') ensurePackages();
   if (id === 'view-printer') renderQueue();
   if (id === 'view-settings') fillSettings();
@@ -587,6 +601,10 @@ function flattenProjects(nodes, out = []) {
 }
 
 async function loadProjects() {
+  const st0 = Store.load();
+  // Optimistic: use the stored project immediately so vouchers can start
+  // loading in parallel with the group-tree request (startup ~5s → ~1.5s).
+  if (st0.projectId && !S.projectId) S.projectId = st0.projectId;
   try {
     const tree = await Api.getGroupTree('BUILDING');
     const nodes = Array.isArray(tree) ? tree : [tree];
@@ -598,8 +616,15 @@ async function loadProjects() {
   const sel = $('project-select');
   sel.innerHTML = S.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') || '<option value="">—</option>';
   const st = Store.load();
-  S.projectId = st.projectId && S.projects.some(p => p.id === st.projectId) ? st.projectId : (S.projects[0] && S.projects[0].id);
-  if (S.projectId) sel.value = S.projectId;
+  const validId = st.projectId && S.projects.some(p => p.id === st.projectId) ? st.projectId : (S.projects[0] && S.projects[0].id);
+  if (validId !== S.projectId) {
+    // Stored project is gone — switch and reload vouchers for the right one.
+    S.projectId = validId;
+    S.vouchers = []; S.packages = [];
+    if (S.projectId) { sel.value = S.projectId; loadVouchers(); }
+  } else if (S.projectId) {
+    sel.value = S.projectId;
+  }
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
 }
@@ -616,20 +641,29 @@ function onProjectChange() {
 /* ═══════════ VOUCHERS ═══════════ */
 async function loadVouchers() {
   if (!S.projectId) return;
+  // Generation guard: a newer load (e.g. project switch mid-flight)
+  // supersedes this one — stale results are discarded, never rendered.
+  const gen = (S._voucherGen = (S._voucherGen || 0) + 1);
+  S._vouchersLoading = true;
   const listEl = $('voucher-list');
   $('voucher-count').textContent = '';
   // iOS-style skeleton shimmer
   listEl.innerHTML = Array.from({ length: 6 }, () =>
     '<div class="skel"><div class="bar" style="width:52%"></div><div class="bar" style="width:34%"></div></div>').join('');
   try {
-    S.vouchers = await Api.voucherListAll(S.projectId, (done, total) => {
-      $('voucher-count').textContent = `${t('v.loading')} ${done}/${total}`;
+    const all = await Api.voucherListAll(S.projectId, (done, total) => {
+      if (gen === S._voucherGen) $('voucher-count').textContent = `${t('v.loading')} ${done}/${total}`;
     });
+    if (gen !== S._voucherGen) return; // superseded — discard
+    S.vouchers = all;
     // newest first
     S.vouchers.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
     renderVouchers();
   } catch (e) {
+    if (gen !== S._voucherGen) return; // superseded — discard
     listEl.innerHTML = `<div class="empty"><div class="big">${ic('alert', 'xl')}</div><p><b>${t('v.loadFail')}</b></p><p class="small">${esc(e.message)}</p></div>`;
+  } finally {
+    if (gen === S._voucherGen) S._vouchersLoading = false;
   }
 }
 
@@ -690,6 +724,7 @@ function openVoucherDetail(uuid) {
     [t('d.validity'), esc(fmtPeriod(v.timePeriod))],
     [t('d.usedTime'), v.usedTime ? fmtPeriod(v.usedTime) : '—'],
     [t('d.created'), esc(fmtDate(v.createTime))],
+    [t('d.activated'), (() => { const at = voucherActivatedTime(v); return at ? esc(fmtDate(at)) : '—'; })()],
     [t('d.expiry'), esc(fmtDate(v.expiryTime))],
     [t('d.quota'), esc(fmtQuota(v.quota))],
     [t('d.usedQuota'), esc(fmtQuota(v.usedQuota))],
@@ -1644,11 +1679,22 @@ async function moreNetworks() {
   });
 }
 
-/* ═══════════ SALES LEDGER (ရောင်းရငွေစာရင်း) · v1.3.4 ═══════════
-   AUTO ONLY: vouchers with status used (2) or expired (3) count as sold;
-   revenue = sold count × package price (matched from the package list).
-   Sale-date basis = voucher createTime (usedTime is a duration in minutes,
-   not a timestamp). Filter: all / today / last 7 days / custom range. */
+/* ═══════════ SALES LEDGER (ရောင်းရငွေစာရင်း) · v1.5.9 ═══════════
+   Official portal "Voucher Report" style: No. | Profile Name | Price |
+   Quantity (made) | Activated Accounts (sold) | Total Price, with
+   Last 1/7/30 Days + Custom filters and a Total row.
+   Sale-day rule: a voucher counts on the day it was FIRST USED
+   (activation), whether it is now used or expired. Ruijie validity
+   starts at first authentication, so activation = expiryTime − timePeriod.
+   Falls back to createTime only when underivable (disclosed in UI). */
+function voucherActivatedTime(v) {
+  const exp = Number(v.expiryTime), per = Number(v.timePeriod);
+  if (exp > 0 && per > 0) {
+    const t = exp - per * 60000; // timePeriod is in minutes
+    if (t > 946684800000 && t <= Date.now() + 86400000) return t; // sanity: after 2000, not future
+  }
+  return null;
+}
 const fmtMoney = n => `${Number(n || 0).toLocaleString('en-US')} Ks`;
 function pkgPriceNum(p) {
   const n = parseFloat(String(p.price || p.packagePrice || '').replace(/[^0-9.]/g, ''));
@@ -1660,69 +1706,84 @@ async function moreSales() {
   const todayStr = new Date().toISOString().slice(0, 10);
   moreShell(`${ic('chart', 'sm')} ${esc(t('sl.title'))}`,
     `<div class="chips" id="sl-chips">
-       <button class="chip active" data-r="all">${t('sl.all')}</button>
-       <button class="chip" data-r="today">${t('sl.today')}</button>
-       <button class="chip" data-r="week">${t('sl.week')}</button>
+       <button class="chip active" data-r="day1">${t('sl.day1')}</button>
+       <button class="chip" data-r="day7">${t('sl.day7')}</button>
+       <button class="chip" data-r="day30">${t('sl.day30')}</button>
        <button class="chip" data-r="custom">${t('sl.custom')}</button>
      </div>
      <div id="sl-custom" class="row hidden" style="margin-top:10px">
        <label style="flex:1">${t('sl.from')} <input type="date" id="sl-from" value="${todayStr}"></label>
        <label style="flex:1">${t('sl.to')} <input type="date" id="sl-to" value="${todayStr}"></label>
      </div>
-     <div class="stat-grid" id="sl-stats" style="grid-template-columns:repeat(2,1fr);margin-top:10px"></div>
      <div id="sl-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>
      <div class="row"><button class="btn" id="sl-refresh">${ic('refresh', 'sm')}<span>${t('sl.refreshV')}</span></button></div>
-     <p class="muted small">${t('sl.dateNote')}</p>`);
+     <p class="muted small">${t('sl.dateNote2')}</p>`);
   S.moreFn = () => moreSales();
   await ensurePackages();
   const priceByPkg = {};
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
 
-  let range = 'all';
+  let range = 'day1';
   const dayMs = 864e5;
+  const startOfToday = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); };
   const rangeBounds = () => {
-    const now = new Date();
-    if (range === 'today') {
-      const s = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      return [s, s + dayMs];
-    }
-    if (range === 'week') {
-      const s = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - 6 * dayMs;
-      return [s, s + 7 * dayMs];
-    }
+    const s0 = startOfToday(), now = Date.now();
+    if (range === 'day1') return [s0, now];
+    if (range === 'day7') return [s0 - 6 * dayMs, now];
+    if (range === 'day30') return [s0 - 29 * dayMs, now];
     if (range === 'custom') {
       const f = $('sl-from').value, tt = $('sl-to').value;
       const s = f ? new Date(f + 'T00:00:00').getTime() : 0;
-      const e = tt ? new Date(tt + 'T00:00:00').getTime() + dayMs : Date.now() + dayMs;
+      const e = tt ? new Date(tt + 'T00:00:00').getTime() + dayMs : now + dayMs;
       return [s, e];
     }
     return [0, Infinity];
   };
+  // Sale day = day the voucher was FIRST USED (activation), whether it is
+  // now used (2) or expired (3). Falls back to creation time when the
+  // activation cannot be derived (disclosed in the note below the table).
+  const saleTimeOf = v => voucherActivatedTime(v) || (v.createTime || 0);
 
   const render = () => {
     const [rs, re] = rangeBounds();
-    const sold = S.vouchers.filter(v =>
-      (String(v.status) === '2' || String(v.status) === '3') &&
-      (v.createTime || 0) >= rs && (v.createTime || 0) < re);
     const byPkg = {};
-    sold.forEach(v => {
+    const grp = v => {
       const nm = voucherPkgName(v) || t('sl.unknownPkg');
-      if (!byPkg[nm]) byPkg[nm] = { used: 0, expired: 0 };
-      if (String(v.status) === '2') byPkg[nm].used++; else byPkg[nm].expired++;
+      if (!byPkg[nm]) byPkg[nm] = { made: 0, sold: 0 };
+      return byPkg[nm];
+    };
+    // Quantity: vouchers created in the period (any status)
+    S.vouchers.forEach(v => {
+      const ct = v.createTime || 0;
+      if (ct >= rs && ct < re) grp(v).made++;
     });
-    let tq = 0, tr = 0;
-    const rows = Object.keys(byPkg).sort().map(nm => {
-      const g = byPkg[nm], q = g.used + g.expired, price = priceByPkg[nm] || 0, rev = q * price;
-      tq += q; tr += rev;
-      return `<tr><td>${esc(nm)}</td><td>${g.used}</td><td>${g.expired}</td><td><b>${q}</b></td>` +
-        `<td>${price ? esc(fmtMoney(price)) : '—'}</td><td><b>${price ? esc(fmtMoney(rev)) : '—'}</b></td></tr>`;
+    // Activated Accounts: used/expired vouchers whose FIRST USE falls in the period
+    S.vouchers.forEach(v => {
+      const st = String(v.status);
+      if (st !== '2' && st !== '3') return;
+      const stime = saleTimeOf(v);
+      if (stime >= rs && stime < re) grp(v).sold++;
+    });
+    let tm = 0, ts = 0, tr = 0;
+    const rows = Object.keys(byPkg).sort().map((nm, i) => {
+      const g = byPkg[nm], price = priceByPkg[nm] || 0, rev = g.sold * price;
+      tm += g.made; ts += g.sold; tr += rev;
+      return `<tr><td>${i + 1}</td><td>${esc(nm)}</td>` +
+        `<td class="num">${price ? esc(fmtMoney(price)) : '—'}</td>` +
+        `<td class="num">${g.made.toLocaleString()}</td>` +
+        `<td class="num"><b>${g.sold.toLocaleString()}</b></td>` +
+        `<td class="num"><b>${price ? esc(fmtMoney(rev)) : '—'}</b></td></tr>`;
     }).join('');
-    $('sl-stats').innerHTML =
-      `<div class="stat a"><div class="n">${tq.toLocaleString()}</div><div class="l">${t('sl.soldAuto')}</div></div>` +
-      `<div class="stat g"><div class="n">${esc(fmtMoney(tr))}</div><div class="l">${t('sl.revenue')}</div></div>`;
-    $('sl-list').innerHTML = sold.length
-      ? `<div class="wrap-scroll"><table class="data"><tr><th>${t('sl.pkg')}</th><th>${t('sl.used')}</th><th>${t('sl.expired')}</th><th>${t('sl.qty')}</th><th>${t('sl.price')}</th><th>${t('sl.revenue')}</th></tr>${rows}</table></div><p class="muted small">${t('sl.autoNote')}</p>`
-      : `<p class="muted">${t('sl.noneAuto')}</p>`;
+    $('sl-list').innerHTML =
+      `<div class="wrap-scroll"><table class="data">` +
+      `<tr><th>${t('sl.no')}</th><th>${t('sl.profile')}</th><th class="num">${t('sl.price')}</th>` +
+      `<th class="num">${t('sl.made')}</th><th class="num">${t('sl.activated')}</th><th class="num">${t('sl.totalPrice')}</th></tr>` +
+      rows +
+      `<tr><td colspan="3"><b>${t('sl.total')}</b></td>` +
+      `<td class="num"><b>${tm.toLocaleString()}</b></td>` +
+      `<td class="num"><b>${ts.toLocaleString()}</b></td>` +
+      `<td class="num"><b>${esc(fmtMoney(tr))}</b></td></tr>` +
+      `</table></div>`;
   };
 
   document.querySelectorAll('#sl-chips .chip').forEach(c => c.addEventListener('click', () => {
