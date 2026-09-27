@@ -84,6 +84,15 @@
     <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M20 6 9 17l-5-5"/>
     </symbol>
+    <symbol id="i-roller" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="12" height="5" rx="1.5"/>
+      <path d="M15 6.5h4a1 1 0 0 1 1 1V10a1 1 0 0 1-1 1h-6v2"/>
+      <rect x="11" y="13" width="4" height="8" rx="1.5"/>
+    </symbol>
+    <symbol id="i-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 6V4h14v2h-6v12h-3V6H5z"/>
+      <path d="M17.5 14.5 21 15.7l-.9 4.8h-2l.4-2.6-2.4-.6"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -160,27 +169,50 @@
       <div class="grid-2">
         <div class="card">
           <h2><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="g.new">ဗောက်ချာအသစ်ထုတ်မယ်</span></h2>
-          <label><span data-i18n="g.package">Package ရွေးပါ</span>
+          <label><span data-i18n="g.usergroup">User Group</span>
+            <select id="gen-usergroup"></select>
+          </label>
+          <label><span data-i18n="g.profile">Profile (Package)</span>
             <select id="gen-package"></select>
           </label>
-          <label><span data-i18n="g.qty">အရေအတွက် (၁–၅၀၀)</span>
-            <div class="stepper">
-              <button type="button" id="qty-minus" aria-label="−">−</button>
-              <input id="gen-qty" type="number" min="1" max="500" value="10" inputmode="numeric">
-              <button type="button" id="qty-plus" aria-label="+">+</button>
+          <div class="fld"><span class="fld-label" data-i18n="g.length">Voucher Length</span>
+            <div class="segmented" id="vlen-seg" role="group" aria-label="Voucher Length">
+              <button type="button" data-vlen="6">6</button>
+              <button type="button" data-vlen="7">7</button>
+              <button type="button" data-vlen="8" class="active">8</button>
+              <button type="button" data-vlen="9">9</button>
             </div>
+          </div>
+          <div class="fld"><span class="fld-label" data-i18n="g.codetype">Voucher Code Type</span>
+            <div class="codetype-grid" id="vtype-grid" role="group" aria-label="Voucher Code Type">
+              <button type="button" data-vtype="alnum" class="codetype active">
+                <b data-i18n="g.ctAlnum">Alphanumeric</b><small>(0-9a-z)</small>
+              </button>
+              <button type="button" data-vtype="alpha" class="codetype">
+                <b data-i18n="g.ctAlpha">Alphabetic</b><small>(a-z)</small>
+              </button>
+              <button type="button" data-vtype="numeric" class="codetype">
+                <b data-i18n="g.ctNum">Numeric</b><small>(0-9)</small>
+              </button>
+            </div>
+          </div>
+          <p class="api-note"><svg class="ic sm"><use href="#i-alert"/></svg><span data-i18n="g.apiNote">Ruijie Cloud API creates alphanumeric codes by default. Parameter mapping is sent to Cloud.</span></p>
+          <div class="fld"><span class="fld-label" data-i18n="g.qty2">Number of Vouchers</span>
+            <div class="qty-grid" id="qty-presets" role="group" aria-label="Number of Vouchers">
+              <button type="button" data-qty="10" class="active">10</button>
+              <button type="button" data-qty="20">20</button>
+              <button type="button" data-qty="30">30</button>
+              <button type="button" data-qty="50">50</button>
+              <button type="button" data-qty="100">100</button>
+            </div>
+          </div>
+          <label><span data-i18n="g.customQty">Custom Quantity</span>
+            <input id="gen-qty" type="number" min="1" max="500" value="10" inputmode="numeric">
           </label>
-          <label><span data-i18n="g.comment">မှတ်ချက် (optional)</span>
-            <input id="gen-comment" type="text" data-i18n-ph="g.commentPh" placeholder="ဥပမာ ဆိုင်အမည် / ဧည့်သည်အမည်">
-          </label>
-          <details class="advanced">
-            <summary data-i18n="g.advanced">အပိုအချက်အလက် (optional)</summary>
-            <label>First name <input id="gen-first" type="text"></label>
-            <label>Last name <input id="gen-last" type="text"></label>
-            <label>Email <input id="gen-email" type="email"></label>
-            <label>Phone <input id="gen-phone" type="tel"></label>
-          </details>
-          <button id="btn-generate" class="btn primary big"><svg class="ic"><use href="#i-plus"/></svg><span id="btn-generate-label" data-i18n="g.btn">ထုတ်မယ်</span></button>
+          <div class="row">
+            <button id="btn-generate" class="btn big"><svg class="ic"><use href="#i-plus"/></svg><span id="btn-generate-label" data-i18n="g.btn">ထုတ်မယ်</span></button>
+            <button id="btn-generate-print" class="btn primary big"><svg class="ic"><use href="#i-printer"/></svg><span id="btn-generate-print-label" data-i18n="g.btnPrint">Generate &amp; Print</span></button>
+          </div>
           <p id="gen-err" class="err hidden"></p>
         </div>
         <div class="card">
@@ -213,9 +245,13 @@
         <div class="card">
           <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.settings">ပရင့်ဆက်တင်</span></h2>
           <label><span data-i18n="p.paper">စာရွက်အကျယ်</span>
-            <div class="segmented" id="paper-seg" role="group" aria-label="စာရွက်အကျယ်">
-              <button type="button" data-paper="80" class="active">80mm</button>
-              <button type="button" data-paper="58">58mm</button>
+            <div class="paper-row">
+              <div class="segmented" id="paper-seg" role="group" aria-label="စာရွက်အကျယ်">
+                <button type="button" data-paper="80" class="active">80mm</button>
+                <button type="button" data-paper="58">58mm</button>
+              </div>
+              <button type="button" class="icon-btn" id="btn-print-layout" data-i18n-aria="pl.openLayout" aria-label="Print Layout & Spacing" title="Print Layout & Spacing"><svg class="ic"><use href="#i-roller"/></svg></button>
+              <button type="button" class="icon-btn" id="btn-print-typo" data-i18n-aria="ty.openTypo" aria-label="Typography / Font Settings" title="Typography / Font Settings"><svg class="ic"><use href="#i-text"/></svg></button>
             </div>
             <select id="print-paper" class="hidden" aria-hidden="true" tabindex="-1">
               <option value="80">80mm (thermal)</option>
@@ -345,6 +381,125 @@
     <div id="preview-body"></div>
     <div class="row modal-actions">
       <button id="btn-preview-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="preview.print">ပရင့်ထုတ်မယ်</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT LAYOUT & SPACING MODAL -->
+<div id="layout-modal" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <h2><svg class="ic"><use href="#i-roller"/></svg> <span data-i18n="pl.title">Print Layout &amp; Spacing</span></h2>
+      <div class="row" style="margin:0">
+        <button id="layout-reset" class="btn small"><span data-i18n="pl.reset">Reset Defaults</span></button>
+        <button id="layout-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+    <div class="modal-body-scroll">
+      <div class="fld">
+        <span class="fld-label live-label" data-i18n="pl.live">LIVE OUTPUT PREVIEW (58mm / 384 dots):</span>
+        <div id="layout-preview" class="live-preview"></div>
+      </div>
+      <button id="layout-open-typo" class="btn big"><svg class="ic"><use href="#i-text"/></svg><span data-i18n="pl.advTypo">Advanced Typography &amp; Fonts</span></button>
+      <h4 class="sec-title" data-i18n="pl.spacing">Spacing Configuration</h4>
+      <div class="fld">
+        <span class="fld-label" data-i18n="pl.between">Between Voucher Blank Lines</span>
+        <small class="muted" data-i18n="pl.betweenSub">Feed blank lines between printed vouchers</small>
+        <div class="slider-row"><input type="range" id="layout-between" min="0" max="5" step="1" value="1"><b id="layout-between-val">1</b></div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="pl.inside">Inside Voucher Spacing</span>
+        <small class="muted" data-i18n="pl.insideSub">Vertical spacing between fields inside each voucher</small>
+        <div class="slider-row"><input type="range" id="layout-inside" min="0" max="8" step="1" value="0"><b id="layout-inside-val">0</b></div>
+      </div>
+      <div id="layout-fields"></div>
+      <div class="row modal-actions">
+        <button id="layout-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
+        <button id="layout-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="pl.save">Save Layout</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TYPOGRAPHY / FONT SETTINGS MODAL -->
+<div id="typo-modal" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <div>
+        <h2><svg class="ic"><use href="#i-text"/></svg> <span data-i18n="ty.title">Typography / Font Settings</span></h2>
+        <small class="muted" data-i18n="ty.sub">Configure fonts, sizes, and layout styles</small>
+      </div>
+      <div class="row" style="margin:0">
+        <button id="typo-reset-colors" class="btn small"><span data-i18n="ty.resetColors">Reset Colors</span></button>
+        <button id="typo-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+    <div class="modal-body-scroll">
+      <div class="fld">
+        <span class="fld-label live-label"><span data-i18n="ty.live">LIVE VOUCHER PREVIEW (58mm)</span> <span id="typo-real-badge" class="badge hidden" data-i18n="ty.realBadge">REAL CLOUD VOUCHER</span></span>
+        <div id="typo-preview" class="live-preview"></div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.presets">Typography Presets</span>
+        <div class="chip-grid" id="typo-presets" role="group">
+          <button type="button" data-preset="default" class="chip active" data-i18n="ty.pDefault">Default</button>
+          <button type="button" data-preset="compact" class="chip" data-i18n="ty.pCompact">Compact</button>
+          <button type="button" data-preset="bold" class="chip" data-i18n="ty.pBold">Bold Voucher</button>
+          <button type="button" data-preset="large" class="chip" data-i18n="ty.pLarge">Large Voucher</button>
+          <button type="button" data-preset="custom" class="chip" data-i18n="ty.pCustom">Custom</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.fontFamily">Global Font Family</span>
+        <div class="chip-grid" id="typo-fontfamily" role="group">
+          <button type="button" data-ff="default" class="chip active" data-i18n="ty.ffDefault">Default</button>
+          <button type="button" data-ff="sans" class="chip">Sans Serif</button>
+          <button type="button" data-ff="serif" class="chip">Serif</button>
+          <button type="button" data-ff="mono" class="chip">Monospace</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.align">Alignment</span>
+        <div class="segmented" id="typo-align" role="group">
+          <button type="button" data-align="left" data-i18n="ty.left">Left</button>
+          <button type="button" data-align="center" class="active" data-i18n="ty.center">Center</button>
+          <button type="button" data-align="right" data-i18n="ty.right">Right</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.color">Text Color</span>
+        <div class="swatches" id="typo-colors"></div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.letterSpacing">Letter Spacing (Voucher Code &amp; Fields)</span>
+        <div class="chip-grid" id="typo-ls" role="group">
+          <button type="button" data-ls="compact" class="chip" data-i18n="ty.lsCompact">Compact</button>
+          <button type="button" data-ls="normal" class="chip active" data-i18n="ty.lsNormal">Normal</button>
+          <button type="button" data-ls="wide" class="chip" data-i18n="ty.lsWide">Wide</button>
+          <button type="button" data-ls="custom" class="chip" data-i18n="ty.lsCustom">Custom</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.lineSpacing">Extra Line Spacing</span>
+        <div class="slider-row"><input type="range" id="typo-linespacing" min="0" max="12" step="1" value="0"><b id="typo-linespacing-val">+0 px</b></div>
+      </div>
+      <div class="switch-row">
+        <div><div style="font-weight:700" data-i18n="ty.shadow">Text Shadow</div><div class="muted small" data-i18n="ty.shadowSub">Rendered in preview; thermal print output remains crisp and safe.</div></div>
+        <label class="switch"><input type="checkbox" id="typo-shadow"><span class="track"></span></label>
+      </div>
+      <div class="switch-row">
+        <div><div style="font-weight:700" data-i18n="ty.outline">Text Outline / Stroke</div><div class="muted small" data-i18n="ty.outlineSub">Accents text edges cleanly.</div></div>
+        <label class="switch"><input type="checkbox" id="typo-outline"><span class="track"></span></label>
+      </div>
+      <h4 class="sec-title" data-i18n="ty.fieldTitle">Field Typography &amp; Styling</h4>
+      <div class="tabs" id="typo-tabs" role="tablist"></div>
+      <div id="typo-field-config"></div>
+      <div class="row modal-actions">
+        <button id="typo-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
+        <button id="typo-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="ty.save">Save Typography</span></button>
+      </div>
     </div>
   </div>
 </div>
