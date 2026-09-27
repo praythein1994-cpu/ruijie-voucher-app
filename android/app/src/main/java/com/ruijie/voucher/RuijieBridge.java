@@ -461,10 +461,12 @@ public class RuijieBridge {
     public void ssoRequest(final String callId, final String apiPath, final String envelopeJson) {
         pool.execute(() -> {
             String result;
+            boolean sessionDead = false;
             try {
                 result = SsoSession.getInstance().webProxy(apiPath, envelopeJson);
             } catch (SecurityException se) {
                 result = "{\"code\":401,\"msg\":\"" + se.getMessage().replace("\"", "'") + "\"}";
+                sessionDead = true; // stale cookies cleared; refresh the Settings card
             } catch (Exception e) {
                 String m = e.getMessage() == null ? "unknown error" : e.getMessage().replace("\"", "'");
                 result = "{\"code\":-97,\"msg\":\"SSO request failed: " + m + "\"}";
@@ -472,8 +474,13 @@ public class RuijieBridge {
             String b64 = Base64.encodeToString(result.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
             final String out = b64;
             final String safeId = callId.replaceAll("[^A-Za-z0-9_]", "");
-            webView.post(() -> webView.evaluateJavascript(
-                    "window._ssoResolve('" + safeId + "','" + out + "')", null));
+            final boolean fireLogout = sessionDead;
+            webView.post(() -> {
+                webView.evaluateJavascript(
+                        "window._ssoResolve('" + safeId + "','" + out + "')", null);
+                if (fireLogout) webView.evaluateJavascript(
+                        "window._ssoEvent&&window._ssoEvent('logout')", null);
+            });
         });
     }
 

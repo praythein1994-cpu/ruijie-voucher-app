@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -117,6 +119,9 @@ public class SsoSession {
             }
         }
         if (status == 401 || status == 403) {
+            // Session is dead server-side — drop the stale cookies so
+            // ssoStatus() stops reporting "Connected" for a dead session.
+            try { logout(); } catch (Exception ignored) {}
             throw new SecurityException("Session expired (HTTP " + status + ") — please log in again");
         }
         return sb.toString();
@@ -202,6 +207,12 @@ public class SsoSession {
 
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
+        // SSO/CAS login hops across Ruijie domains — without third-party
+        // cookies the handshake session is dropped and login never completes.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cm.setAcceptThirdPartyCookies(webView, true);
+        }
+        webView.setWebChromeClient(new WebChromeClient());
 
         final Dialog dlgRef = dialog;
         final LoginCallback cbRef = cb;
