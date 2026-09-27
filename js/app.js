@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -78,7 +78,6 @@ const I18N = {
   'err.pickPkg': { my: 'Package ရွေးပါ', en: 'Choose a package' },
   'btn.generating': { my: 'ထုတ်နေသည်…', en: 'Generating…' },
   'toast.generated': { my: '{n} ခု ထုတ်ပြီးပါပြီ', en: '{n} vouchers generated' },
-  'err.codeFmt': { my: 'ပုံစံမှားနေသည်: xxxx-xxxx (သို့) xxxx-xxxx-xxxx', en: 'Invalid format: xxxx-xxxx or xxxx-xxxx-xxxx' },
   'toast.genDone': { my: 'ထုတ်ပြီးပါပြီ', en: 'Generated' },
   'toast.copied': { my: 'ကူးပြီးပါပြီ', en: 'Copied' },
   'toast.copyFail': { my: 'ကူးမရပါ', en: 'Copy failed' },
@@ -95,17 +94,11 @@ const I18N = {
   'g.title': { my: 'ဗောက်ချာထုတ်မယ်', en: 'Generate Vouchers' },
   'g.new': { my: 'ဗောက်ချာအသစ်ထုတ်မယ်', en: 'Generate new vouchers' },
   'g.package': { my: 'Package ရွေးပါ', en: 'Choose a package' },
-  'g.package2': { my: 'Package ရွေးပါ', en: 'Choose a package' },
   'g.qty': { my: 'အရေအတွက် (၁–၅၀၀)', en: 'Quantity (1–500)' },
   'g.comment': { my: 'မှတ်ချက် (optional)', en: 'Note (optional)' },
   'g.commentPh': { my: 'ဥပမာ ဆိုင်အမည် / ဧည့်သည်အမည်', en: 'e.g. shop name / guest name' },
   'g.advanced': { my: 'အပိုအချက်အလက် (optional)', en: 'Extra info (optional)' },
   'g.btn': { my: 'ထုတ်မယ်', en: 'Generate' },
-  'g.custom': { my: 'စိတ်ကြိုက်ကုဒ်နံပါတ်ထုတ်မယ်', en: 'Generate a custom code' },
-  'g.customHelp': { my: 'ပုံစံ: xxxx-xxxx (သို့) xxxx-xxxx-xxxx', en: 'Format: xxxx-xxxx or xxxx-xxxx-xxxx' },
-  'g.customCode': { my: 'ကုဒ်နံပါတ်', en: 'Code' },
-  'g.customCodePh': { my: 'ဥပမာ ab12-cd34', en: 'e.g. ab12-cd34' },
-  'g.customBtn': { my: 'စိတ်ကြိုက်ကုဒ်ထုတ်မယ်', en: 'Generate custom code' },
   'g.result': { my: 'ထုတ်ပြီးသား ဗောက်ချာများ', en: 'Generated vouchers' },
   'g.printAll': { my: 'အားလုံးပရင့်ထုတ်မယ်', en: 'Print all' },
   'g.queueAll': { my: 'Print queue ထဲထည့်မယ်', en: 'Add to print queue' },
@@ -658,7 +651,6 @@ function fillPackageSelects() {
     return `<option value="${esc(p.id)}|${esc(pid)}" data-pid="${esc(pid)}">${esc(label)}</option>`;
   }).join('');
   $('gen-package').innerHTML = opts || '<option value="">—</option>';
-  $('gen-custom-package').innerHTML = opts || '<option value="">—</option>';
 }
 function selectedPackage(selId) {
   const sel = $(selId);
@@ -858,27 +850,6 @@ function syncGenUserGroup() {
   if (!ug) return;
   ug.innerHTML = S.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') || '<option value="">—</option>';
   ug.value = S.projectId || '';
-}
-
-async function doGenerateCustom() {
-  const code = $('gen-custom-code').value.trim();
-  const { id, profile, pkg } = selectedPackage('gen-custom-package');
-  $('gen-custom-err').classList.add('hidden');
-  if (!/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}(-[A-Za-z0-9]{4})?$/.test(code))
-    return showErr('gen-custom-err', t('err.codeFmt'));
-  const btn = $('btn-generate-custom');
-  const lbl = $('btn-generate-custom-label');
-  btn.disabled = true; lbl.textContent = t('btn.generating');
-  try {
-    await Api.voucherCustomCreate(S.projectId, code, { profile, userGroupId: id });
-    showGenResult([{ code, pkg: pkg && (pkg.name || pkg.groupName), period: pkg && pkg.timePeriod, quota: pkg && pkg.quota }]);
-    S.vouchers = [];
-    toast(t('toast.genDone'));
-  } catch (e) {
-    showErr('gen-custom-err', e.message);
-  } finally {
-    btn.disabled = false; lbl.textContent = t('g.customBtn');
-  }
 }
 
 let genResultItems = [];
@@ -1453,6 +1424,7 @@ function init() {
   });
   searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') collapseSearch(); });
   searchBtn.addEventListener('click', () => {
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
     searchWrap.classList.add('open');
     searchBtn.classList.add('hidden');
     searchInput.focus();
@@ -1468,6 +1440,7 @@ function init() {
     }
   });
   $('btn-refresh-vouchers').addEventListener('click', function () {
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
     this.classList.add('spinning');
     loadVouchers().finally(() => this.classList.remove('spinning'));
   });
@@ -1510,7 +1483,6 @@ function init() {
 
   $('btn-generate').addEventListener('click', doGenerate);
   $('btn-generate-print').addEventListener('click', doGeneratePrint);
-  $('btn-generate-custom').addEventListener('click', doGenerateCustom);
   $('btn-gen-print-all').addEventListener('click', () => doPrint(genResultItems));
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
 
