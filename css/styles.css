@@ -22,7 +22,7 @@
   --spring: cubic-bezier(.32, .72, 0, 1);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, .04);
   --shadow-pop: 0 12px 40px rgba(0, 0, 0, .18);
-  --tabbar-h: 58px;
+  --tabbar-h: 86px;
 }
 [data-theme="dark"] {
   --blue: #0A84FF;
@@ -225,22 +225,43 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 #tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
-  display: flex;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
-  border-top: .5px solid var(--hairline);
-  padding: 6px 4px; padding-bottom: calc(6px + env(safe-area-inset-bottom));
-  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  position: fixed; z-index: 20;
+  left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  max-width: 600px; margin: 0 auto;
+  display: flex; align-items: flex-end; justify-content: space-around;
+  background: color-mix(in srgb, var(--bg) 76%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(26px); backdrop-filter: saturate(180%) blur(26px);
+  border: .5px solid var(--hairline);
+  border-radius: 32px;
+  box-shadow: var(--shadow-pop);
+  padding: 10px 6px 9px;
+  animation: tabbarin .45s var(--spring);
 }
+@keyframes tabbarin { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 .tab {
-  flex: 1; border: none; background: none; padding: 4px 2px; font-size: 23px; color: var(--gray);
-  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  border-radius: 12px; font-family: inherit; transition: color .15s, transform .12s;
+  flex: 1; border: none; background: none; padding: 2px; color: var(--gray);
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border-radius: 14px; font-family: inherit; transition: color .15s, transform .12s;
 }
-.tab:active { transform: scale(.92); }
-.tab span { font-size: 10px; font-weight: 500; letter-spacing: .1px; }
+.tab:active { transform: scale(.9); }
+.tab .ic { width: 25px; height: 25px; }
+.tab span:last-child { font-size: 10px; font-weight: 500; letter-spacing: .1px; }
 .tab.active { color: var(--blue); }
+/* center action button — raised blue circle */
+.tab.center { overflow: visible; }
+.tab.center .fab {
+  width: 60px; height: 60px; border-radius: 50%; margin-top: -36px;
+  background: linear-gradient(135deg, #2E8BFF 0%, #5E5CE6 100%);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  border: 5px solid var(--bg);
+  box-shadow: 0 12px 26px rgba(46, 139, 255, .5), inset 0 1px 1px rgba(255, 255, 255, .45);
+  transition: transform .15s var(--spring), box-shadow .2s;
+}
+.tab.center .fab .ic { width: 26px; height: 26px; }
+.tab.center:active .fab { transform: scale(.9); }
+.tab.center.active .fab {
+  box-shadow: 0 12px 26px rgba(46, 139, 255, .55), 0 0 0 4px color-mix(in srgb, var(--blue) 30%, transparent), inset 0 1px 1px rgba(255, 255, 255, .45);
+}
 
 /* ── iOS grouped cards ── */
 .card {
@@ -268,11 +289,13 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 }
 .toolbar-row { display: flex; gap: 10px; align-items: center; }
 .toolbar-row .search-wrap { flex: 1; }
-.refresh-btn {
+.tool-btn {
   flex: none; width: 44px; height: 44px; margin-top: 6px; border-radius: 50%;
-  font-size: 19px; padding: 0; display: flex; align-items: center; justify-content: center;
+  padding: 0; display: flex; align-items: center; justify-content: center;
   background: var(--card); box-shadow: var(--shadow-card);
+  border: none; color: var(--label); cursor: pointer;
 }
+.tool-btn:active { opacity: .6; }
 .refresh-btn.spinning { animation: spin .9s linear infinite; pointer-events: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .chips { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
@@ -443,4 +466,70 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
   .modal-box { border-radius: 16px; }
   .sheet-handle { display: none; }
   .menu-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UI 3.0 — SVG icon system · icon search · tablet layouts
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Icon sizing (icons inherit currentColor) ── */
+.ic { width: 22px; height: 22px; flex: none; vertical-align: middle; }
+.ic.sm { width: 16px; height: 16px; }
+.ic.lg { width: 30px; height: 30px; }
+.ic.xl { width: 54px; height: 54px; }
+.btn .ic { margin-right: 6px; }
+.btn.big .ic { width: 20px; height: 20px; }
+.tool-btn .ic { width: 21px; height: 21px; }
+.icon-btn .ic { width: 19px; height: 19px; }
+.card h2 .ic { color: var(--blue); }
+.menu-item .ic.lg { width: 34px; height: 34px; color: var(--blue); }
+.menu-item { font-size: 17px; }
+.connect-logo .ic { width: 42px; height: 42px; }
+.topbar-title .ic { width: 18px; height: 18px; margin-right: 3px; }
+.peek .ic { width: 21px; height: 21px; }
+.empty .big .ic.xl { color: var(--gray); opacity: .6; }
+.code-pill .ic.sm { width: 15px; height: 15px; }
+.voucher-row .chev .ic { width: 18px; height: 18px; color: #C7C7CC; }
+[data-theme="dark"] .voucher-row .chev .ic { color: #48484A; }
+.modal-head .ic { width: 21px; height: 21px; }
+.modal-head h2 .ic { width: 20px; height: 20px; margin-right: 4px; }
+.connect-secure .ic.sm { width: 14px; height: 14px; }
+.kv .ic.sm { width: 14px; height: 14px; margin-right: 2px; }
+
+/* ── Icon-only search: collapsed by default, expands on tap ── */
+.toolbar-row .search-wrap { display: none; }
+.toolbar-row .search-wrap.open {
+  display: block;
+  animation: searchin .28s var(--spring);
+}
+@keyframes searchin { from { opacity: 0; transform: translateX(16px) scale(.97); } to { opacity: 1; transform: none; } }
+.toolbar-row .search-wrap input { margin-top: 6px; }
+.search-wrap .clear .ic.sm { width: 12px; height: 12px; }
+
+/* ── Tablet / large-phone landscape layouts ── */
+.grid-2 { display: grid; gap: 14px; }
+
+@media (min-width: 768px) {
+  .view { max-width: 980px; }
+  #main { padding-left: 22px; padding-right: 22px; }
+  .toolbar { margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+  /* voucher list becomes a 2-column card grid */
+  #voucher-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: none; box-shadow: none; overflow: visible; }
+  .voucher-row { background: var(--card); border-radius: var(--radius); border-bottom: none; box-shadow: var(--shadow-card); }
+  #voucher-list .empty, #voucher-list .skel {
+    grid-column: 1 / -1; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
+  }
+  .stat-grid { gap: 12px; }
+  .stat { padding: 18px 6px 16px; }
+  .stat .n { font-size: 28px; }
+  .modal-box { max-width: 640px; }
+  #tabbar { max-width: 620px; left: 20px; right: 20px; }
+  .connect-card { max-width: 440px; padding: 38px 32px; }
+}
+
+@media (min-width: 1100px) {
+  .view { max-width: 1180px; }
+  #voucher-list { grid-template-columns: 1fr 1fr 1fr; }
+  #tabbar { max-width: 680px; }
 }
