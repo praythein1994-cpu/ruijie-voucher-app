@@ -11,6 +11,11 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import com.ruijie.voucher.printer.BluetoothPrinterManager;
+import com.ruijie.voucher.printer.PaperConfiguration;
+import com.ruijie.voucher.printer.PrintDesignSettings;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -51,6 +56,7 @@ public class RuijieBridge {
     private final ExecutorService pool = Executors.newCachedThreadPool();
     private final Map<String, TokenEntry> tokenCache = new ConcurrentHashMap<>();
     private WebView printWebView; // kept referenced while a print job is prepared
+    private BluetoothPrinterManager btPrinter; // lazy: Bluetooth thermal printer (ESC/POS)
 
     private static class TokenEntry {
         String token;
@@ -220,6 +226,179 @@ public class RuijieBridge {
                 printWebView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             } catch (Exception ignored) { /* nothing to report back */ }
         });
+    }
+
+    // ── BLUETOOTH THERMAL PRINTER (ESC/POS, printer-v1 engine) ──
+    // Direct Bluetooth thermal printing, ported from printer-v1-fix1.2-p1994.
+    // Scan/connect/print run on background threads; JS polls btState/btDevices/
+    // btProgress/btLastResult. All methods return JSON strings and never throw.
+
+    private synchronized BluetoothPrinterManager bt() {
+        if (btPrinter == null) btPrinter = new BluetoothPrinterManager(activity);
+        return btPrinter;
+    }
+
+    private static String btErr(String msg) {
+        return "{\"ok\":false,\"message\":" + JSONObject.quote(msg != null ? msg : "error") + "}";
+    }
+
+    /** {"state","deviceName","deviceAddress","error","scanning","supported","enabled"} */
+    @JavascriptInterface
+    public String btState() {
+        try {
+            BluetoothPrinterManager m = bt();
+            JSONObject o = new JSONObject();
+            o.put("state", m.getConnectionState());
+            o.put("deviceName", m.getConnectedDeviceName());
+            o.put("deviceAddress", m.getConnectedDeviceAddress());
+            o.put("error", m.getConnectionError());
+            o.put("scanning", m.isScanning());
+            o.put("supported", m.isBluetoothSupported());
+            o.put("enabled", m.isBluetoothEnabled());
+            o.put("lastPrinterName", m.getLastPrinterName());
+            o.put("lastPrinterAddress", m.getLastPrinterAddress());
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Starts discovery. Returns {"ok":true} immediately; poll btDevices(). */
+    @JavascriptInterface
+    public String btScan() {
+        try {
+            BluetoothPrinterManager m = bt();
+            if (!m.isBluetoothSupported()) return btErr("Bluetooth not supported on this device");
+            if (!m.isBluetoothEnabled()) return btErr("Bluetooth is turned off");
+            m.startScan();
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** [{"name","address","paired"}] — paired devices first, then discovered. */
+    @JavascriptInterface
+    public String btDevices() {
+        try {
+            JSONArray arr = new JSONArray();
+            for (BluetoothPrinterManager.DiscoveredPrinter d : bt().getDiscoveredDevices()) {
+                JSONObject o = new JSONObject();
+                o.put("name", d.name);
+                o.put("address", d.address);
+                o.put("paired", d.paired);
+                arr.put(o);
+            }
+            return arr.toString();
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    /** Async connect by MAC address. Poll btState() for CONNECTED. */
+    @JavascriptInterface
+    public String btConnect(String address) {
+        try {
+            if (address == null || address.trim().isEmpty()) return btErr("No device address");
+            bt().connectAsync(address.trim());
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    @JavascriptInterface
+    public String btDisconnect() {
+        try {
+            bt().disconnect();
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /**
+     * Print vouchers via Bluetooth.
+     * vouchersJson: [{"code","profile","period","quota","status"}]
+     * settingsJson: PrintDesignSettings JSON (printer-v1 keys)
+     * siteName: header brand text; paperMm: "58" or "80"; copiesPerVoucher: int
+     * Runs async — poll btProgress()/btLastResult().
+     */
+    @JavascriptInterface
+    public String btPrint(String vouchersJson, String settingsJson, String siteName,
+                          String paperMm, int copiesPerVoucher) {
+        try {
+            BluetoothPrinterManager m = bt();
+            JSONArray arr = new JSONArray(vouchersJson != null ? vouchersJson : "[]");
+            if (arr.length() == 0) return btErr("Nothing to print");
+            java.util.List<BluetoothPrinterManager.VoucherData> list = new java.util.ArrayList<>();
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject v = arr.getJSONObject(i);
+                list.add(new BluetoothPrinterManager.VoucherData(
+                        v.optString("code", ""),
+                        v.optString("profile", ""),
+                        v.optString("period", ""),
+                        v.optString("quota", ""),
+                        v.optString("status", "")));
+            }
+            PrintDesignSettings settings = PrintDesignSettings.fromJson(settingsJson);
+            PaperConfiguration paper = "80".equals(paperMm)
+                    ? PaperConfiguration.STANDARD_80MM : PaperConfiguration.STANDARD_58MM;
+            m.printBatchAsync(list, settings, paper,
+                    siteName != null ? siteName : "", Math.max(1, copiesPerVoucher));
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Test receipt. Runs async — poll btLastResult(). */
+    @JavascriptInterface
+    public String btTestPrint(String settingsJson, String siteName) {
+        try {
+            bt().printTestAsync(PrintDesignSettings.fromJson(settingsJson),
+                    siteName != null ? siteName : "");
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** {"printing","current","total","message"} */
+    @JavascriptInterface
+    public String btProgress() {
+        try {
+            BluetoothPrinterManager m = bt();
+            JSONObject o = new JSONObject();
+            o.put("printing", m.isPrintIsPrinting());
+            o.put("current", m.getPrintCurrent());
+            o.put("total", m.getPrintTotal());
+            o.put("message", m.getPrintMessage());
+            return o.toString();
+        } catch (Exception e) {
+            return "{\"printing\":false,\"current\":0,\"total\":0,\"message\":\"\"}";
+        }
+    }
+
+    /** Returns and clears the last async print result: {"ok","message"} or null. */
+    @JavascriptInterface
+    public String btLastResult() {
+        try {
+            String r = bt().takeLastResult();
+            return r != null ? r : "null";
+        } catch (Exception e) {
+            return "null";
+        }
     }
 
     // ── SSO SESSION (Ruijie account login) ───────────────────────

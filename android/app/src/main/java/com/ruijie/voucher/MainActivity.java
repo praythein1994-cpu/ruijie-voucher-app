@@ -2,6 +2,8 @@ package com.ruijie.voucher;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -34,6 +36,18 @@ public class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new RuijieBridge(this, webView), "RuijieBridge");
         webView.loadUrl("file:///android_asset/www/index.html");
+
+        // Bluetooth runtime permissions (API 31+) for the thermal-printer feature.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            String[] perms = new String[]{
+                    android.Manifest.permission.BLUETOOTH_SCAN,
+                    android.Manifest.permission.BLUETOOTH_CONNECT};
+            boolean need = false;
+            for (String p : perms) {
+                if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) { need = true; break; }
+            }
+            if (need) requestPermissions(perms, 1001);
+        }
     }
 
     @Override
