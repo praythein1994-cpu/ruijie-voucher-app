@@ -252,6 +252,41 @@ const Api = {
     return j;
   },
 
+  /* ── Portal device reboot (Cloud webproxy, SSO session) · v1.5.13 ──
+   * Verified 2026-09-28 from the portal's own frontend JS (read-only):
+   * outer  POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/maint/device/reboot
+   * inner  {"api":"/maint/device/reboot?cloudType=smb","method":"POST",
+   *         "params":{"snList":["<serial>"]},"module":"default","querys":{"lang":"en"}}
+   * Response {code,msg}; code 0 = success. No device was rebooted to verify.
+   * Android-APK-only (needs the SSO portal session, like voucher delete).
+   */
+  ssoRebootEnvelope(sn) {
+    return {
+      api: '/maint/device/reboot?cloudType=smb',
+      method: 'POST',
+      params: { snList: [sn] },
+      module: 'default',
+      querys: { lang: 'en' },
+    };
+  },
+
+  /** Reboot one device through the SSO session. Throws on portal error. */
+  async deviceRebootSso(sn) {
+    const env = this.ssoRebootEnvelope(sn);
+    const j = await ssoCall('/maint/device/reboot', env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : -1;
+    if (c !== 0) {
+      throw new Error(j.msg || j.message || ('ပြန်ဖွင့်မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /** Reboot entry point: SSO session required (Ruijie account login). */
+  async deviceReboot(sn) {
+    if (this.ssoLoggedIn()) return this.deviceRebootSso(sn);
+    throw new Error('SSO_REQUIRED');
+  },
+
   // ── 2.4 Auth accounts ──
   async accountList(groupId, { start = 0, pageSize = 50, name = '', status = '' } = {}) {
     const q = { start, pageSize };

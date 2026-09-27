@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.12';
+const APP_VERSION = '1.5.13';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -318,6 +318,13 @@ const I18N = {
   'md.sn': { my: 'SN / အမည်', en: 'SN / Name' },
   'md.model': { my: 'Model', en: 'Model' },
   'md.status': { my: 'Status', en: 'Status' },
+  'md.action': { my: 'လုပ်ဆောင်ချက်', en: 'Action' },
+  'md.reboot': { my: 'ပြန်ဖွင့်', en: 'Reboot' },
+  'md.rebootConfirm': { my: '{name} ကို ပြန်လည်စတင်မှာလား? စက်ခနရပ်မည်။', en: 'Reboot {name}? The device will briefly go offline.' },
+  'md.rebooting': { my: 'ပြန်လည်စတင်ခိုင်းနေပါသည်…', en: 'Sending reboot…' },
+  'md.rebootOk': { my: 'ပြန်လည်စတင်ခိုင်းပြီးပါပြီ', en: 'Reboot command sent' },
+  'md.rebootFail': { my: 'ပြန်ဖွင့်မရပါ', en: 'Reboot failed' },
+  'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
   'mc.none': { my: 'Online client မရှိပါ', en: 'No online clients' },
@@ -1776,11 +1783,17 @@ async function moreDevices() {
         if (!seen.has(k)) { seen.add(k); list.push(d); }
       });
       $('md-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
-        <tr><th>${t('md.sn')}</th><th>${t('md.model')}</th><th>${t('md.status')}</th></tr>
-        ${list.map(d => `<tr><td>${esc(d.alias || d.deviceAliasName || d.name || d.serialNumber || d.sn || '')}<br><small class="muted">${esc(d.serialNumber || d.sn || d.mac || '')}</small></td>
+        <tr><th>${t('md.sn')}</th><th>${t('md.model')}</th><th>${t('md.status')}</th><th>${t('md.action')}</th></tr>
+        ${list.map(d => {
+          const sn = d.serialNumber || d.sn || '';
+          const nm = d.alias || d.deviceAliasName || d.name || sn;
+          return `<tr><td>${esc(nm)}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
-          <td>${esc(d.onlineStatus || d.status || (d.online ? 'online' : ''))}</td></tr>`).join('')}
+          <td>${esc(d.onlineStatus || d.status || (d.online ? 'online' : ''))}</td>
+          <td>${sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : ''}</td></tr>`;
+        }).join('')}
         </table></div>` : `<p class="muted">${t('md.none')}</p>`;
+      document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
     } catch (e) { $('md-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
@@ -1788,6 +1801,20 @@ async function moreDevices() {
     c.classList.add('active'); load(c.dataset.t);
   }));
   load('');
+}
+
+/* ── Device reboot (Cloud portal via SSO) · v1.5.13 ──
+   Button-only: no web portal, no CLI. Android-APK-only (SSO bridge);
+   the portal reboots by device serial number (snList). */
+async function rebootDevice(sn, name) {
+  if (!Api.ssoLoggedIn()) { toast(t('md.needSso'), true); return; }
+  if (!confirm(tx('md.rebootConfirm', { name: name || sn }))) return;
+  toast(t('md.rebooting'));
+  try {
+    await Api.deviceReboot(sn);
+    toast(t('md.rebootOk'));
+  } catch (e) { toast(e.message || t('md.rebootFail'), true); }
+  if (S.moreFn === moreDevices) moreDevices();
 }
 
 async function moreClients() {
