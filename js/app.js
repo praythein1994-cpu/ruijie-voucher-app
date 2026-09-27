@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -217,6 +217,35 @@ const I18N = {
   'm.clientsSub': { my: 'ချိတ်ထားသူများ', en: 'Connected' },
   'm.networks': { my: 'Networks', en: 'Networks' },
   'm.networksSub': { my: 'ကွန်ရက်များ', en: 'Networks' },
+  'm.sales': { my: 'ရောင်းရငွေ', en: 'Sales' },
+  'm.salesSub': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
+  'g.logSale': { my: 'ရောင်းရငွေစာရင်းသွင်းမယ်', en: 'Log to sales' },
+  'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
+  'sl.vouchers': { my: 'ဗောက်ချာ (စောင်)', en: 'Vouchers' },
+  'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
+  'sl.allTime': { my: 'စုစုပေါင်း', en: 'All time' },
+  'sl.thisMonth': { my: 'ဒီလ', en: 'This month' },
+  'sl.add': { my: 'အသစ်ထည့်မယ်', en: 'Log sale' },
+  'sl.date': { my: 'ရက်စွဲ', en: 'Date' },
+  'sl.pkg': { my: 'ပက်ကေ့ခ်ျ', en: 'Package' },
+  'sl.qty': { my: 'အရေအတွက်', en: 'Qty' },
+  'sl.price': { my: 'တစ်စောင်ဈေး (ကျပ်)', en: 'Price each (Ks)' },
+  'sl.total': { my: 'စုစုပေါင်း', en: 'Total' },
+  'sl.note': { my: 'မှတ်ချက်', en: 'Note' },
+  'sl.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'sl.none': { my: 'စာရင်းမရှိသေးပါ', en: 'No sales logged yet' },
+  'sl.logged': { my: 'စာရင်းသွင်းပြီးပါပြီ', en: 'Sale logged' },
+  'sl.needQty': { my: 'အရေအတွက်ထည့်ပါ', en: 'Enter a quantity' },
+  'sl.autoTitle': { my: 'ဗောက်ချာအခြေအနေ · အလိုအလျောက်တွက်ချက်မှု', en: 'Auto · from voucher status' },
+  'sl.manualTitle': { my: 'လက်တွေ့ထည့်သွင်းစာရင်း', en: 'Manual records' },
+  'sl.used': { my: 'သုံးပြီး', en: 'Used' },
+  'sl.expired': { my: 'သက်တမ်းကုန်', en: 'Expired' },
+  'sl.soldAuto': { my: 'ရောင်းပြီး (စောင်)', en: 'Sold (vouchers)' },
+  'sl.refreshV': { my: 'ဗောက်ချာစာရင်း refresh', en: 'Refresh vouchers' },
+  'sl.autoNote': { my: 'used နဲ့ သက်တမ်းကုန် ဗောက်ချာတွေကို ရောင်းပြီးအဖြစ် တွက်ပါတယ်။ ဈေးနှုန်းကို ပက်ကေ့ခ်ျစာရင်းက ယူပါတယ်။', en: 'Used + expired vouchers count as sold; prices come from the package list.' },
+  'sl.noneAuto': { my: 'ရောင်းပြီးဗောက်ချာ မရှိသေးပါ — ဗောက်ချာစာရင်း refresh လုပ်ကြည့်ပါ။', en: 'No sold vouchers yet — try refreshing the voucher list.' },
+  'sl.unknownPkg': { my: 'အမည်မသိ', en: 'Unknown' },
+  'sl.manualNote': { my: 'ဗောက်ချာစာရင်းမှာ အလိုအလျောက်ပါပြီးသားတွေကို ဒီမှာ ထပ်မထည့်ပါနဲ့။', en: 'Do not re-add sales already counted automatically above.' },
   'more.back': { my: 'ပြန်သွားမယ်', en: 'Back' },
   'more.loading': { my: 'ဆွဲနေသည်…', en: 'Loading…' },
   'ma.title': { my: 'Auth Accounts', en: 'Auth Accounts' },
@@ -425,6 +454,7 @@ const S = {
   packages: [],       // user groups
   queue: [],          // print queue: {code, pkg, period, quota}
   account: null,
+  sales: [],          // manual sales ledger entries (rv_sales_v1)
   moreFn: null,       // active "more" screen renderer (for language re-render)
 };
 
@@ -1262,7 +1292,7 @@ async function moreAccounts() {
     <div class="row"><button class="btn" id="ma-add">${ic('plus', 'sm')}<span>${t('ma.add')}</span></button></div><div id="ma-form"></div>`);
   S.moreFn = moreAccounts;
   $('ma-add').addEventListener('click', () => {
-    const pkgOpts = S.packages.map(p => `<option value="${p.id}|${esc(p.authprofileid || p.profileId || '')}">${esc(p.name || p.groupName)}</option>`).join('');
+    const pkgOpts = S.packages.map(p => `<option value="${esc(pkgGroupId(p))}|${esc(pkgProfileId(p))}">${esc(pkgName(p))}</option>`).join('');
     $('ma-form').innerHTML = `<label>${t('ma.user')} <input id="ma-u"></label><label>${t('ma.pass')} <input id="ma-p"></label>
       <label>${t('ma.pkg')} <select id="ma-pkg">${pkgOpts}</select></label>
       <label>${t('ma.note')} <input id="ma-c"></label>
@@ -1298,7 +1328,7 @@ async function moreUserGroups() {
     await ensurePackages();
     $('mg-list').innerHTML = S.packages.length ? `<div class="wrap-scroll"><table class="data">
       <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th></tr>
-      ${S.packages.map(p => `<tr><td>${esc(p.name || p.groupName || '')}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
+      ${S.packages.map(p => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
         <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('mg.none')}</p>`;
   } catch (e) { $('mg-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
@@ -1368,6 +1398,141 @@ async function moreNetworks() {
       } catch (e) { toast(e.message, true); }
     });
   });
+}
+
+/* ═══════════ SALES LEDGER (ရောင်းရငွေစာရင်း) · v1.3.3 ═══════════
+   AUTO: vouchers with status used (2) or expired (3) count as sold;
+   revenue = sold count × package price (matched from the package list).
+   MANUAL: extra records in rv_sales_v1, per project. */
+const SALES_KEY = 'rv_sales_v1';
+function loadSales() {
+  try {
+    const a = JSON.parse(localStorage.getItem(SALES_KEY) || '[]');
+    S.sales = Array.isArray(a) ? a : [];
+  } catch (e) { S.sales = []; }
+}
+function saveSales() {
+  try { localStorage.setItem(SALES_KEY, JSON.stringify(S.sales)); } catch (e) {}
+}
+const fmtMoney = n => `${Number(n || 0).toLocaleString('en-US')} Ks`;
+const fmtDay = ts => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+const salesOfProject = () => S.sales.filter(s => String(s.projectId) === String(S.projectId));
+function pkgPriceNum(p) {
+  const n = parseFloat(String(p.price || p.packagePrice || '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+function lastPriceFor(pkgNm) {
+  const e = salesOfProject().filter(s => s.pkg === pkgNm && s.price > 0).pop();
+  return e ? e.price : 0;
+}
+function voucherPkgName(v) { return v.packageName || v.userGroupName || ''; }
+
+async function moreSales(prefill) {
+  moreShell(`${ic('chart', 'sm')} ${esc(t('sl.title'))}`,
+    `<div class="sec-h">${t('sl.autoTitle')}</div>
+     <div class="stat-grid" id="sl-auto-stats" style="grid-template-columns:repeat(2,1fr)"></div>
+     <div id="sl-auto-list"><p class="muted">${t('more.loading')}</p></div>
+     <div class="row"><button class="btn" id="sl-refresh">${ic('refresh', 'sm')}<span>${t('sl.refreshV')}</span></button></div>
+     <div class="sec-h" style="margin-top:18px">${t('sl.manualTitle')}</div>
+     <div class="stat-grid" id="sl-stats" style="grid-template-columns:repeat(2,1fr)"></div>
+     <div id="sl-list"></div>
+     <div class="row"><button class="btn primary" id="sl-add">${ic('plus', 'sm')}<span>${t('sl.add')}</span></button></div>
+     <div id="sl-form"></div>`);
+  S.moreFn = () => moreSales();
+  await ensurePackages();
+  const priceByPkg = {};
+  S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
+
+  const renderAuto = () => {
+    const sold = S.vouchers.filter(v => String(v.status) === '2' || String(v.status) === '3');
+    const byPkg = {};
+    sold.forEach(v => {
+      const nm = voucherPkgName(v) || t('sl.unknownPkg');
+      if (!byPkg[nm]) byPkg[nm] = { used: 0, expired: 0 };
+      if (String(v.status) === '2') byPkg[nm].used++; else byPkg[nm].expired++;
+    });
+    let tq = 0, tr = 0;
+    const rows = Object.keys(byPkg).sort().map(nm => {
+      const g = byPkg[nm], q = g.used + g.expired, price = priceByPkg[nm] || 0, rev = q * price;
+      tq += q; tr += rev;
+      return `<tr><td>${esc(nm)}</td><td>${g.used}</td><td>${g.expired}</td><td><b>${q}</b></td>` +
+        `<td>${price ? esc(fmtMoney(price)) : '—'}</td><td><b>${price ? esc(fmtMoney(rev)) : '—'}</b></td></tr>`;
+    }).join('');
+    $('sl-auto-stats').innerHTML =
+      `<div class="stat a"><div class="n">${tq.toLocaleString()}</div><div class="l">${t('sl.soldAuto')}</div></div>` +
+      `<div class="stat g"><div class="n">${esc(fmtMoney(tr))}</div><div class="l">${t('sl.revenue')}</div></div>`;
+    $('sl-auto-list').innerHTML = sold.length
+      ? `<div class="wrap-scroll"><table class="data"><tr><th>${t('sl.pkg')}</th><th>${t('sl.used')}</th><th>${t('sl.expired')}</th><th>${t('sl.qty')}</th><th>${t('sl.price')}</th><th>${t('sl.revenue')}</th></tr>${rows}</table></div><p class="muted small">${t('sl.autoNote')}</p>`
+      : `<p class="muted">${t('sl.noneAuto')}</p>`;
+  };
+
+  const renderManual = () => {
+    const list = salesOfProject().sort((a, b) => b.ts - a.ts);
+    const now = new Date(), m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const sum = arr => arr.reduce((a, s) => ({ q: a.q + s.qty, r: a.r + s.qty * s.price }), { q: 0, r: 0 });
+    const all = sum(list), mon = sum(list.filter(s => s.ts >= m0));
+    $('sl-stats').innerHTML =
+      `<div class="stat t"><div class="n">${all.q.toLocaleString()}</div><div class="l">${t('sl.vouchers')} · ${t('sl.allTime')}</div></div>` +
+      `<div class="stat g"><div class="n">${esc(fmtMoney(all.r))}</div><div class="l">${t('sl.revenue')} · ${t('sl.allTime')}</div></div>` +
+      `<div class="stat t"><div class="n">${mon.q.toLocaleString()}</div><div class="l">${t('sl.vouchers')} · ${t('sl.thisMonth')}</div></div>` +
+      `<div class="stat g"><div class="n">${esc(fmtMoney(mon.r))}</div><div class="l">${t('sl.revenue')} · ${t('sl.thisMonth')}</div></div>`;
+    $('sl-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
+      <tr><th>${t('sl.date')}</th><th>${t('sl.pkg')}</th><th>${t('sl.qty')}</th><th>${t('sl.price')}</th><th>${t('sl.total')}</th><th></th></tr>
+      ${list.map(s => `<tr><td>${fmtDay(s.ts)}${s.note ? `<br><small class="muted">${esc(s.note)}</small>` : ''}</td>
+        <td>${esc(s.pkg)}</td><td>${s.qty}</td><td>${esc(fmtMoney(s.price))}</td><td><b>${esc(fmtMoney(s.qty * s.price))}</b></td>
+        <td><button class="btn danger-ghost" data-sl-del="${s.id}">${ic('trash', 'sm')}</button></td></tr>`).join('')}
+      </table></div><p class="muted small">${t('sl.manualNote')}</p>` : `<p class="muted">${t('sl.none')}</p>`;
+    document.querySelectorAll('[data-sl-del]').forEach(b => b.addEventListener('click', () => {
+      const e = S.sales.find(x => String(x.id) === b.dataset.slDel);
+      if (!e || !confirm(tx('del.confirm', { code: `${e.pkg} × ${e.qty}` }))) return;
+      S.sales = S.sales.filter(x => String(x.id) !== b.dataset.slDel);
+      saveSales(); renderManual();
+    }));
+  };
+
+  const openForm = (pf) => {
+    const pkgOpts = S.packages.map(p => {
+      const nm = pkgName(p);
+      const sel = pf && pf.pkg === nm ? ' selected' : '';
+      return `<option value="${esc(nm)}" data-price="${pkgPriceNum(p)}"${sel}>${esc(nm)}</option>`;
+    }).join('');
+    const pkgField = pkgOpts
+      ? `<label>${t('sl.pkg')} <select id="sl-pkg">${pkgOpts}</select></label>`
+      : `<label>${t('sl.pkg')} <input id="sl-pkgt" value="${esc((pf && pf.pkg) || '')}"></label>`;
+    const today = new Date().toISOString().slice(0, 10);
+    $('sl-form').innerHTML = `<div class="card" style="margin-top:10px">
+      ${pkgField}
+      <label>${t('sl.qty')} <input id="sl-qty" type="number" min="1" step="1" value="${(pf && pf.qty) || 1}"></label>
+      <label>${t('sl.price')} <input id="sl-price" type="number" min="0" step="any" value="${(pf && pf.price) || ''}"></label>
+      <label>${t('sl.date')} <input id="sl-date" type="date" value="${today}"></label>
+      <label>${t('sl.note')} <input id="sl-note"></label>
+      <button class="btn primary" id="sl-do">${t('sl.save')}</button></div>`;
+    const syncPrice = () => {
+      const sel = $('sl-pkg');
+      if (!sel || $('sl-price').value) return;
+      const opt = sel.options[sel.selectedIndex];
+      const pr = Number(opt.dataset.price) || lastPriceFor(opt.value);
+      if (pr) $('sl-price').value = pr;
+    };
+    if ($('sl-pkg')) { $('sl-pkg').addEventListener('change', () => { $('sl-price').value = ''; syncPrice(); }); syncPrice(); }
+    else { const lp = lastPriceFor($('sl-pkgt').value); if (lp && !$('sl-price').value) $('sl-price').value = lp; }
+    $('sl-do').addEventListener('click', () => {
+      const pkg = $('sl-pkg') ? $('sl-pkg').value : $('sl-pkgt').value.trim();
+      const qty = Math.max(1, Math.round(Number($('sl-qty').value) || 0));
+      const price = Math.max(0, Number($('sl-price').value) || 0);
+      if (!pkg || !qty) { toast(t('sl.needQty'), true); return; }
+      const dv = $('sl-date').value ? new Date($('sl-date').value + 'T12:00:00') : new Date();
+      S.sales.push({ id: Date.now() + '' + Math.floor(Math.random() * 1e4), ts: dv.getTime(), projectId: S.projectId, pkg, qty, price, note: $('sl-note').value.trim() });
+      saveSales(); $('sl-form').innerHTML = ''; renderManual(); toast(t('sl.logged'));
+    });
+    $('sl-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  $('sl-refresh').addEventListener('click', async () => { await loadVouchers(); renderAuto(); });
+  $('sl-add').addEventListener('click', () => openForm());
+  renderAuto();
+  renderManual();
+  if (prefill) openForm(prefill);
 }
 
 /* ═══════════ SETTINGS ═══════════ */
@@ -1507,6 +1672,11 @@ function init() {
   $('btn-generate-print').addEventListener('click', doGeneratePrint);
   $('btn-gen-print-all').addEventListener('click', () => doPrint(genResultItems));
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
+  $('btn-gen-logsale').addEventListener('click', () => {
+    const pkgNm = (genResultItems[0] && genResultItems[0].pkg) || '';
+    switchView('view-more');
+    moreSales({ pkg: pkgNm, qty: genResultItems.length || 1 });
+  });
 
   $('btn-print-test').addEventListener('click', () => doPrint([{ code: 'TEST-1234', pkg: t('tkt.test'), period: 60, quota: 1024 }]));
   $('btn-queue-print').addEventListener('click', () => doPrint(S.queue));
@@ -1514,6 +1684,7 @@ function init() {
 
   // print layout & typography
   loadPrintStyle();
+  loadSales();
   wireGenerateView();
   wireLayoutModal();
   wireTypoModal();
@@ -1527,6 +1698,7 @@ function init() {
     else if (k === 'devices') moreDevices();
     else if (k === 'clients') moreClients();
     else if (k === 'networks') moreNetworks();
+  else if (k === 'sales') moreSales();
   }));
 
   $('btn-save-settings').addEventListener('click', saveSettings);
