@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -109,6 +109,97 @@ const I18N = {
   'g.result': { my: 'ထုတ်ပြီးသား ဗောက်ချာများ', en: 'Generated vouchers' },
   'g.printAll': { my: 'အားလုံးပရင့်ထုတ်မယ်', en: 'Print all' },
   'g.queueAll': { my: 'Print queue ထဲထည့်မယ်', en: 'Add to print queue' },
+  'g.usergroup': { my: 'User Group', en: 'User Group' },
+  'g.profile': { my: 'Profile (Package)', en: 'Profile (Package)' },
+  'g.length': { my: 'Voucher Length', en: 'Voucher Length' },
+  'g.codetype': { my: 'Voucher Code Type', en: 'Voucher Code Type' },
+  'g.ctAlnum': { my: 'Alphanumeric', en: 'Alphanumeric' },
+  'g.ctAlpha': { my: 'Alphabetic', en: 'Alphabetic' },
+  'g.ctNum': { my: 'Numeric', en: 'Numeric' },
+  'g.apiNote': { my: 'Ruijie Cloud API က မူလအတိုင်း alphanumeric ကုဒ်များ ထုတ်ပေးပါသည်။ Parameter mapping ကို Cloud သို့ ပို့ပေးထားသည်။', en: 'Ruijie Cloud API creates alphanumeric codes by default. Parameter mapping is sent to Cloud.' },
+  'g.qty2': { my: 'ဗောက်ချာ အရေအတွက်', en: 'Number of Vouchers' },
+  'g.customQty': { my: 'စိတ်ကြိုက် အရေအတွက်', en: 'Custom Quantity' },
+  'g.btnPrint': { my: 'ထုတ်ပြီး ပရင့်မယ်', en: 'Generate & Print' },
+  'a.cancel': { my: 'မလုပ်တော့ပါ', en: 'Cancel' },
+  'tkt.profileName': { my: 'Profile အမည်: ', en: 'Profile Name: ' },
+  'pl.openLayout': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
+  'pl.title': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
+  'pl.reset': { my: 'မူလအတိုင်း ပြန်ထားမယ်', en: 'Reset Defaults' },
+  'pl.live': { my: 'တိုက်ရိုက်အစမ်းကြည့်ခြင်း (58mm / 384 dots):', en: 'LIVE OUTPUT PREVIEW (58mm / 384 dots):' },
+  'pl.advTypo': { my: 'အဆင့်မြင့် Typography & Fonts', en: 'Advanced Typography & Fonts' },
+  'pl.spacing': { my: 'အကွာအဝေး ပြင်ဆင်ခြင်း', en: 'Spacing Configuration' },
+  'pl.between': { my: 'ဗောက်ချာများကြား စာကြောင်းအလွတ်', en: 'Between Voucher Blank Lines' },
+  'pl.betweenSub': { my: 'ပရင့်ထုတ်ထားသော ဗောက်ချာများကြား စာကြောင်းအလွတ်များ ထည့်သွင်းခြင်း', en: 'Feed blank lines between printed vouchers' },
+  'pl.inside': { my: 'ဗောက်ချာအတွင်း အကွာအဝေး', en: 'Inside Voucher Spacing' },
+  'pl.insideSub': { my: 'ဗောက်ချာတစ်ခုအတွင်းရှိ အချက်အလက်များကြား ဒေါင်လိုက်အကွာအဝေး', en: 'Vertical spacing between fields inside each voucher' },
+  'pl.save': { my: 'Layout သိမ်းမယ်', en: 'Save Layout' },
+  'pl.field': { my: 'အကွက်', en: 'Field' },
+  'pl.show': { my: 'ပြမယ်', en: 'Show' },
+  'pl.fontSize': { my: 'စာလုံးအရွယ်', en: 'Font Size' },
+  'pl.bold': { my: 'စာလုံးထူ (Bold)', en: 'Bold' },
+  'pl.spaced': { my: 'အကွာအဝေးပါ စာလုံး (Spaced)', en: 'Spaced' },
+  'pl.label': { my: 'အညွှန်းပါမယ် (Label)', en: 'Label' },
+  'pl.align': { my: 'တန်းညှိခြင်း', en: 'Alignment' },
+  'pl.fHeader': { my: 'ခေါင်းစဉ် / Brand', en: 'Header / Brand' },
+  'pl.fCode': { my: 'ဗောက်ချာကုဒ်', en: 'Voucher Code' },
+  'pl.fProfile': { my: 'Profile အမည်', en: 'Profile Name' },
+  'pl.fPeriod': { my: 'သက်တမ်း', en: 'Valid Period' },
+  'pl.fQuota': { my: 'ဒေတာကန့်သတ်ချက်', en: 'Quota Limit' },
+  'pl.fDatetime': { my: 'ပရင့်ထုတ်သည့် ရက်စွဲ / အချိန်', en: 'Print Date / Time' },
+  'pl.lines': { my: 'လိုင်း', en: 'lines' },
+  'pl.compact': { my: 'ကျဉ်းကျဉ်း', en: 'Compact' },
+  'ty.openTypo': { my: 'Typography / Font Settings', en: 'Typography / Font Settings' },
+  'ty.title': { my: 'Typography / Font Settings', en: 'Typography / Font Settings' },
+  'ty.sub': { my: 'ဖောင့်၊ အရွယ်အစားနှင့် အပြင်အဆင်စတိုင်များ ပြင်ဆင်ပါ', en: 'Configure fonts, sizes, and layout styles' },
+  'ty.resetColors': { my: 'အရောင်များ ပြန်ထားမယ်', en: 'Reset Colors' },
+  'ty.live': { my: 'တိုက်ရိုက်ဗောက်ချာအစမ်းကြည့်ခြင်း (58mm)', en: 'LIVE VOUCHER PREVIEW (58mm)' },
+  'ty.realBadge': { my: 'REAL CLOUD VOUCHER', en: 'REAL CLOUD VOUCHER' },
+  'ty.presets': { my: 'Typography Presets', en: 'Typography Presets' },
+  'ty.pDefault': { my: 'မူလ', en: 'Default' },
+  'ty.pCompact': { my: 'ကျဉ်းကျဉ်း', en: 'Compact' },
+  'ty.pBold': { my: 'စာလုံးထူ ဗောက်ချာ', en: 'Bold Voucher' },
+  'ty.pLarge': { my: 'အကြီး ဗောက်ချာ', en: 'Large Voucher' },
+  'ty.pCustom': { my: 'စိတ်ကြိုက်', en: 'Custom' },
+  'ty.fontFamily': { my: 'အဓိက ဖောင့်အမျိုးအစား', en: 'Global Font Family' },
+  'ty.ffDefault': { my: 'မူလ', en: 'Default' },
+  'ty.align': { my: 'တန်းညှိခြင်း', en: 'Alignment' },
+  'ty.left': { my: 'ဘယ်', en: 'Left' },
+  'ty.center': { my: 'အလယ်', en: 'Center' },
+  'ty.right': { my: 'ညာ', en: 'Right' },
+  'ty.color': { my: 'စာသားအရောင်', en: 'Text Color' },
+  'ty.letterSpacing': { my: 'စာလုံးအကွာအဝေး (ဗောက်ချာကုဒ်နှင့် အကွက်များ)', en: 'Letter Spacing (Voucher Code & Fields)' },
+  'ty.lsCompact': { my: 'ကျဉ်းကျဉ်း', en: 'Compact' },
+  'ty.lsNormal': { my: 'ပုံမှန်', en: 'Normal' },
+  'ty.lsWide': { my: 'ကျယ်ကျယ်', en: 'Wide' },
+  'ty.lsCustom': { my: 'စိတ်ကြိုက်', en: 'Custom' },
+  'ty.lineSpacing': { my: 'ထပ်တိုးလိုင်းအကွာအဝေး', en: 'Extra Line Spacing' },
+  'ty.shadow': { my: 'စာသားအရိပ်', en: 'Text Shadow' },
+  'ty.shadowSub': { my: 'အစမ်းကြည့်ခြင်းတွင်သာ ပြမည်။ Thermal ပရင့်အထွက်တွင် ကြည်လင်စွာရှိနေမည်။', en: 'Rendered in preview; thermal print output remains crisp and safe.' },
+  'ty.outline': { my: 'စာသားအနားသတ် / Stroke', en: 'Text Outline / Stroke' },
+  'ty.outlineSub': { my: 'စာသားအနားများကို သန့်ရှင်းစွာ ထင်ရှားစေသည်။', en: 'Accents text edges cleanly.' },
+  'ty.fieldTitle': { my: 'အကွက်အလိုက် Typography & Styling', en: 'Field Typography & Styling' },
+  'ty.fontSize': { my: 'စာလုံးအရွယ်', en: 'Font Size' },
+  'ty.szSmall': { my: 'သေး', en: 'Small' },
+  'ty.szMedium': { my: 'အလယ်', en: 'Medium' },
+  'ty.szLarge': { my: 'အကြီး', en: 'Large' },
+  'ty.szCustom': { my: 'စိတ်ကြိုက်', en: 'Custom' },
+  'ty.fontWeight': { my: 'စာလုံးအထူ', en: 'Font Weight' },
+  'ty.wRegular': { my: 'ပုံမှန်', en: 'Regular' },
+  'ty.wMedium': { my: 'အလယ်', en: 'Medium' },
+  'ty.wSemibold': { my: 'တစ်ဝက်ထူ', en: 'Semi Bold' },
+  'ty.wBold': { my: 'ထူ', en: 'Bold' },
+  'ty.fontStyle': { my: 'စာလုံးပုံစံ', en: 'Font Style' },
+  'ty.stNormal': { my: 'ပုံမှန်', en: 'Normal' },
+  'ty.stItalic': { my: 'စောင်း', en: 'Italic' },
+  'ty.save': { my: 'Typography သိမ်းမယ်', en: 'Save Typography' },
+  'ty.tabCode': { my: 'ဗောက်ချာကုဒ်', en: 'Voucher Code' },
+  'ty.tabProfile': { my: 'Profile အမည်', en: 'Profile Name' },
+  'ty.tabPeriod': { my: 'သက်တမ်း', en: 'Period' },
+  'ty.tabQuota': { my: 'ဒေတာ', en: 'Quota' },
+  'ty.tabDatetime': { my: 'ရက်စွဲ/အချိန်', en: 'Date/Time' },
+  'ty.tabHeader': { my: 'ခေါင်းစဉ်', en: 'Header' },
+  'ty.auto': { my: 'Auto', en: 'Auto' },
+  'toast.styleSaved': { my: 'ပရင့်စတိုင် သိမ်းပြီးပါပြီ', en: 'Print style saved' },
   'p.title': { my: 'ပရင်တာ', en: 'Printer' },
   'p.settings': { my: 'ပရင့်ဆက်တင်', en: 'Print settings' },
   'p.paper': { my: 'စာရွက်အကျယ်', en: 'Paper width' },
@@ -234,6 +325,8 @@ function applyLang() {
   renderQueue();
   if (modalVoucher && !$('modal').classList.contains('hidden')) openVoucherDetail(modalVoucher.uuid);
   if (!$('preview-modal').classList.contains('hidden')) openPrintPreview();
+  if (!$('layout-modal').classList.contains('hidden')) renderLayoutModal();
+  if (!$('typo-modal').classList.contains('hidden')) renderTypoModal();
   if (S.account) loadAccountInfo();
   if (S.moreFn) S.moreFn();
 }
@@ -429,11 +522,13 @@ async function loadProjects() {
   S.projectId = st.projectId && S.projects.some(p => p.id === st.projectId) ? st.projectId : (S.projects[0] && S.projects[0].id);
   if (S.projectId) sel.value = S.projectId;
   Store.save({ projectId: S.projectId });
+  syncGenUserGroup();
 }
 
 function onProjectChange() {
   S.projectId = $('project-select').value;
   Store.save({ projectId: S.projectId });
+  syncGenUserGroup();
   S.vouchers = [];
   S.packages = [];
   loadVouchers();
@@ -516,7 +611,7 @@ function openVoucherDetail(uuid) {
     [t('d.validity'), esc(fmtPeriod(v.timePeriod))],
     [t('d.usedTime'), v.usedTime ? fmtPeriod(v.usedTime) : '—'],
     [t('d.created'), esc(fmtDate(v.createTime))],
-    [t('d.expiry'), esc(v.expiryTime || '—')],
+    [t('d.expiry'), esc(fmtDate(v.expiryTime))],
     [t('d.quota'), esc(fmtQuota(v.quota))],
     [t('d.usedQuota'), esc(fmtQuota(v.usedQuota))],
     [t('d.maxClients'), esc(v.maxClients || '—')],
@@ -572,32 +667,197 @@ function selectedPackage(selId) {
   return { id: id ? Number(id) : null, profile: pid || null, pkg };
 }
 
+/* ═══════════ PRINT STYLE (Layout + Typography) · v1.3.0 ═══════════ */
+const LS_PX = { compact: 0, normal: 1, wide: 3 };
+const WEIGHT_NUM = { regular: 400, medium: 500, semibold: 600, bold: 700 };
+const FF_STACK = {
+  default: `-apple-system, 'Segoe UI', Roboto, sans-serif`,
+  sans: `Arial, Helvetica, sans-serif`,
+  serif: `Georgia, 'Times New Roman', serif`,
+  mono: `'Courier New', Courier, monospace`,
+};
+const TYPO_COLORS = ['#111111', '#333333', '#1a3a5c', '#0a58ca', '#6c757d', '#c0392b', '#1e7e34', '#6f42c1'];
+const TYPO_FIELD_DEFS = [
+  { id: 'header',   labelKey: 'pl.fHeader' },
+  { id: 'code',     labelKey: 'pl.fCode' },
+  { id: 'profile',  labelKey: 'pl.fProfile' },
+  { id: 'period',   labelKey: 'pl.fPeriod' },
+  { id: 'quota',    labelKey: 'pl.fQuota' },
+  { id: 'datetime', labelKey: 'pl.fDatetime' },
+];
+function defaultField(id) {
+  const base = { show: true, size: 20, align: 'left', color: null, weight: 'regular', style: 'normal', ls: 'normal', lsCustom: 2, label: false, spaced: false };
+  switch (id) {
+    case 'header':   return Object.assign(base, { size: 14, align: 'center', weight: 'bold' });
+    case 'code':     return Object.assign(base, { size: 30, align: 'center', weight: 'bold', spaced: true, ls: 'wide', lsCustom: 3 });
+    case 'profile':  return Object.assign(base, { size: 22, label: true });
+    case 'period':   return Object.assign(base, { size: 22, label: true });
+    case 'quota':    return Object.assign(base, { show: false, size: 22, label: true });
+    case 'datetime': return Object.assign(base, { show: false, size: 18, align: 'center' });
+  }
+  return base;
+}
+function defaultPrintStyle() {
+  const fields = {};
+  TYPO_FIELD_DEFS.forEach(f => { fields[f.id] = defaultField(f.id); });
+  return {
+    preset: 'default', fontFamily: 'default',
+    align: 'center', color: '#111111',
+    ls: 'normal', lsCustom: 2,
+    lineSpacing: 0, shadow: false, outline: false,
+    betweenBlanks: 1, insideSpacing: 0,
+    fields,
+  };
+}
+function cloneStyle(s) { return JSON.parse(JSON.stringify(s)); }
+function mergePrintStyle(saved) {
+  const d = defaultPrintStyle();
+  if (!saved || typeof saved !== 'object') return d;
+  const out = Object.assign(d, saved);
+  out.fields = {};
+  TYPO_FIELD_DEFS.forEach(f => {
+    out.fields[f.id] = Object.assign(defaultField(f.id), (saved.fields && saved.fields[f.id]) || {});
+  });
+  return out;
+}
+let PS = null; // active saved print style
+function loadPrintStyle() { PS = mergePrintStyle(Store.load().printStyle); }
+function savePrintStyle() { Store.save({ printStyle: PS }); }
+
+/** Apply a typography preset onto a style object (mutates). */
+function applyPreset(st, name) {
+  st.preset = name;
+  const F = st.fields;
+  const setAll = (fn) => TYPO_FIELD_DEFS.forEach(d => fn(F[d.id]));
+  if (name === 'default') {
+    const d = defaultPrintStyle();
+    Object.assign(st, { fontFamily: d.fontFamily, align: d.align, color: d.color, ls: d.ls, lsCustom: d.lsCustom, lineSpacing: 0, shadow: false, outline: false, betweenBlanks: 1, insideSpacing: 0 });
+    TYPO_FIELD_DEFS.forEach(fd => { F[fd.id] = defaultField(fd.id); });
+  } else if (name === 'compact') {
+    setAll(f => { f.size = Math.max(12, f.size - 6); f.ls = 'compact'; });
+    st.insideSpacing = 0; st.lineSpacing = 0; st.ls = 'compact';
+  } else if (name === 'bold') {
+    F.code.size = 32; F.code.weight = 'bold';
+    setAll(f => { if (f.id !== 'code') f.weight = 'semibold'; });
+  } else if (name === 'large') {
+    F.code.size = 38; F.profile.size = 28; F.period.size = 28; F.quota.size = 28; F.header.size = 18;
+  }
+}
+
+/* ── shared ticket HTML builder (layout + typography aware) ── */
+function fieldCss(f, st, preview) {
+  const lsPx = f.ls === 'custom' ? (Number(f.lsCustom) || 0) : (LS_PX[f.ls] != null ? LS_PX[f.ls] : 1);
+  const color = preview ? (f.color || st.color || '#111111') : '#000000';
+  let css = `font-size:${Number(f.size) || 20}pt;font-weight:${WEIGHT_NUM[f.weight] || 400};` +
+    `font-style:${f.style === 'italic' ? 'italic' : 'normal'};text-align:${f.align || 'left'};` +
+    `letter-spacing:${lsPx}px;color:${color};` +
+    `line-height:calc(1.35em + ${Number(st.lineSpacing) || 0}px);margin:${Number(st.insideSpacing) || 0}px 0;`;
+  if (preview && st.shadow) css += 'text-shadow:1px 1px 2px rgba(0,0,0,.35);';
+  if (preview && st.outline) css += '-webkit-text-stroke:.6px currentColor;';
+  return css;
+}
+function ticketInnerHtml(item, st, style, preview) {
+  const F = style.fields;
+  const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const ff = FF_STACK[style.fontFamily] || FF_STACK.default;
+  let h = `<div class="lv-wrap" style="font-family:${ff}">`;
+  if (st.header && F.header.show)
+    h += `<div class="lv" style="${fieldCss(F.header, style, preview)}">${esc(st.header)}</div>`;
+  if (F.code.show) {
+    const code = F.code.spaced ? esc(item.code).split('').join(' ') : esc(item.code);
+    h += `<div class="lv" style="${fieldCss(F.code, style, preview)};border:2px dashed ${preview ? (F.code.color || style.color || '#111') : '#000'};padding:2mm;border-radius:2mm;">${code}</div>`;
+  }
+  if (F.profile.show && item.pkg)
+    h += `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(t('tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
+  if (F.period.show && item.period)
+    h += `<div class="lv" style="${fieldCss(F.period, style, preview)}">${F.period.label ? esc(t('tkt.validity')) : ''}${esc(fmtPeriod(item.period))}</div>`;
+  if (F.quota.show && item.quota != null)
+    h += `<div class="lv" style="${fieldCss(F.quota, style, preview)}">${F.quota.label ? esc(t('tkt.quota')) : ''}${esc(fmtQuota(item.quota))}</div>`;
+  if (F.datetime.show)
+    h += `<div class="lv" style="${fieldCss(F.datetime, style, preview)}">${esc(now)}</div>`;
+  if (st.footer)
+    h += `<hr><div class="lv" style="font-size:9pt;text-align:center;margin:2mm 0;">${esc(st.footer)}</div>`;
+  h += `</div>`;
+  return h;
+}
+
 /* ═══════════ GENERATE ═══════════ */
-async function doGenerate() {
+S.genOpts = { vlen: 8, vtype: 'alnum' };
+
+function genQty() {
+  return Math.min(500, Math.max(1, Number($('gen-qty').value) || 1));
+}
+function markCustomPreset() { S.genOpts.presetTouched = true; }
+
+async function generateVouchers(btnId, lblId) {
   const { id, profile, pkg } = selectedPackage('gen-package');
-  const qty = Math.min(500, Math.max(1, Number($('gen-qty').value) || 1));
+  const qty = genQty();
   $('gen-err').classList.add('hidden');
-  if (!id || !profile) return showErr('gen-err', t('err.pickPkg'));
-  const btn = $('btn-generate');
-  const lbl = $('btn-generate-label');
+  if (!id || !profile) { showErr('gen-err', t('err.pickPkg')); return null; }
+  const btn = $(btnId);
+  const lbl = $(lblId);
   btn.disabled = true; lbl.textContent = t('btn.generating');
   try {
     const list = await Api.voucherCreate(S.projectId, {
       quantity: qty, profile, userGroupId: id,
-      firstName: $('gen-first').value.trim() || undefined,
-      lastName: $('gen-last').value.trim() || undefined,
-      email: $('gen-email').value.trim() || undefined,
-      phone: $('gen-phone').value.trim() || undefined,
-      comment: $('gen-comment').value.trim() || undefined,
+      codeLength: S.genOpts.vlen, codeType: S.genOpts.vtype,
     });
-    showGenResult(list.map(v => ({ code: vCode(v), pkg: pkg && (pkg.name || pkg.groupName), period: v.timePeriod, quota: v.quota })));
+    const items = list.map(v => ({ code: vCode(v), pkg: pkg && (pkg.name || pkg.groupName), period: v.timePeriod, quota: v.quota }));
+    showGenResult(items);
     S.vouchers = []; // refresh list next time
     toast(tx('toast.generated', { n: list.length }));
+    return items;
   } catch (e) {
     showErr('gen-err', e.message);
+    return null;
   } finally {
-    btn.disabled = false; lbl.textContent = t('g.btn');
+    btn.disabled = false;
+    lbl.textContent = t(btnId === 'btn-generate-print' ? 'g.btnPrint' : 'g.btn');
   }
+}
+async function doGenerate() { await generateVouchers('btn-generate', 'btn-generate-label'); }
+async function doGeneratePrint() {
+  const items = await generateVouchers('btn-generate-print', 'btn-generate-print-label');
+  if (items && items.length) doPrint(items);
+}
+
+/* generate view controls */
+function wireGenerateView() {
+  // User Group select — two-way synced with header project selector
+  const ug = $('gen-usergroup');
+  if (ug && !ug.dataset.wired) {
+    ug.dataset.wired = '1';
+    ug.addEventListener('change', () => {
+      $('project-select').value = ug.value;
+      onProjectChange();
+    });
+  }
+  document.querySelectorAll('#vlen-seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#vlen-seg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    S.genOpts.vlen = Number(b.dataset.vlen);
+  }));
+  document.querySelectorAll('#vtype-grid .codetype').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#vtype-grid .codetype').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    S.genOpts.vtype = b.dataset.vtype;
+  }));
+  document.querySelectorAll('#qty-presets button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#qty-presets button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    $('gen-qty').value = b.dataset.qty;
+  }));
+  $('gen-qty').addEventListener('input', () => {
+    const v = Number($('gen-qty').value);
+    document.querySelectorAll('#qty-presets button').forEach(x =>
+      x.classList.toggle('active', String(v) === x.dataset.qty));
+  });
+}
+function syncGenUserGroup() {
+  const ug = $('gen-usergroup');
+  if (!ug) return;
+  ug.innerHTML = S.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') || '<option value="">—</option>';
+  ug.value = S.projectId || '';
 }
 
 async function doGenerateCustom() {
@@ -663,18 +923,9 @@ function printSettings() {
 }
 
 function ticketHtml(item, st) {
-  const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   let html = '';
   for (let c = 0; c < st.copies; c++) {
-    html += `<div class="ticket${st.paper === '58' ? ' narrow' : ''}">
-      ${st.header ? `<h3>${esc(st.header)}</h3><hr>` : ''}
-      <div class="info">${esc(item.pkg || '')}</div>
-      <div class="vcode">${esc(item.code)}</div>
-      <div class="info">${item.period ? t('tkt.validity') + esc(fmtPeriod(item.period)) : ''}</div>
-      <div class="info">${item.quota != null ? t('tkt.quota') + esc(fmtQuota(item.quota)) : ''}</div>
-      <div class="info">${esc(now)}</div>
-      ${st.footer ? `<hr><div class="foot">${esc(st.footer)}</div>` : ''}
-    </div>`;
+    html += `<div class="ticket${st.paper === '58' ? ' narrow' : ''}">${ticketInnerHtml(item, st, PS, false)}</div>`;
   }
   return html;
 }
@@ -682,7 +933,8 @@ function ticketHtml(item, st) {
 function doPrint(items) {
   if (!items.length) return toast(t('err.noPrint'), true);
   const st = printSettings();
-  const html = items.map(it => ticketHtml(it, st)).join('');
+  const blanks = PS.betweenBlanks > 0 ? `<div style="height:${PS.betweenBlanks * 14}px"></div>` : '';
+  const html = items.map(it => ticketHtml(it, st)).join(blanks);
   // APK: native Android print via PrintManager (window.print() does nothing in WebView)
   if (window.RuijieBridge && window.RuijieBridge.printHtml) {
     try {
@@ -694,33 +946,20 @@ function doPrint(items) {
   setTimeout(() => window.print(), 60);
 }
 
-/** Standalone HTML document wrapper for the native print WebView. */
+/** Standalone HTML document wrapper for the native print WebView. Thermal-safe: black only, no shadow/outline. */
 function printDocHtml(ticketsHtml, st) {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
     @page { margin: 0; }
     body { margin: 0; }
-    .ticket { width: ${st.paper === '58' ? '58mm' : '80mm'}; margin: 0 auto; padding: 4mm 3mm; text-align: center;
-      font-family: monospace; page-break-after: always; color: #000; }
-    .ticket h3 { margin: 2mm 0; font-size: 14pt; font-family: sans-serif; }
-    .ticket .vcode { font-size: 22pt; font-weight: 700; letter-spacing: 2px; margin: 3mm 0; border: 2px dashed #000; padding: 2mm; }
-    .ticket .info { font-size: 10pt; margin: 1mm 0; }
-    .ticket .foot { font-size: 9pt; margin-top: 3mm; font-family: sans-serif; }
+    .ticket { width: ${st.paper === '58' ? '58mm' : '80mm'}; margin: 0 auto; padding: 4mm 3mm; color: #000; page-break-after: always; }
+    .ticket .lv-wrap { width: 100%; }
     .ticket hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
   </style></head><body>${ticketsHtml}</body></html>`;
 }
 
 /* ── print preview (sample ticket with current settings) ── */
 function ticketPreviewHtml(item, st) {
-  const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  return `<div class="ticket-preview">
-    ${st.header ? `<h4>${esc(st.header)}</h4><hr>` : ''}
-    <div class="pv-info">${esc(item.pkg || '')}</div>
-    <div class="pv-code">${esc(item.code)}</div>
-    <div class="pv-info">${item.period ? t('tkt.validity') + esc(fmtPeriod(item.period)) : ''}</div>
-    <div class="pv-info">${item.quota != null ? t('tkt.quota') + esc(fmtQuota(item.quota)) : ''}</div>
-    <div class="pv-info">${esc(now)}</div>
-    ${st.footer ? `<hr><div class="pv-info">${esc(st.footer)}</div>` : ''}
-  </div>
+  return `<div class="ticket-preview">${ticketInnerHtml(item, st, PS, true)}</div>
   <p class="muted small" style="text-align:center">${tx('pv.meta', { paper: esc(st.paper), copies: esc(String(st.copies)) })}</p>`;
 }
 function openPrintPreview() {
@@ -728,6 +967,289 @@ function openPrintPreview() {
   $('preview-body').innerHTML = ticketPreviewHtml(
     { code: 'XXXX-XXXX', pkg: t('pv.sample'), period: 60, quota: 1024 }, st);
   $('preview-modal').classList.remove('hidden');
+}
+
+/* ═══════════ PRINT LAYOUT & SPACING MODAL ═══════════ */
+let layoutDraft = null;
+function previewBasics() {
+  return {
+    header: $('print-header').value.trim(),
+    footer: $('print-footer').value.trim(),
+    paper: $('print-paper').value, copies: 1,
+  };
+}
+function previewSampleItem() {
+  const v = (S.vouchers && S.vouchers.length) ? S.vouchers[0] : null;
+  return {
+    code: v ? vCode(v) : 'XXXX-XXXX',
+    pkg: v ? (v.packageName || v.userGroupName || t('pv.sample')) : t('pv.sample'),
+    period: v ? v.timePeriod : 60,
+    quota: v ? v.quota : 1024,
+    real: !!v,
+  };
+}
+function openLayoutModal() {
+  layoutDraft = cloneStyle(PS);
+  renderLayoutModal();
+  $('layout-modal').classList.remove('hidden');
+}
+function layoutFieldCard(fd) {
+  const f = layoutDraft.fields[fd.id];
+  const boldChecked = (f.weight === 'bold' || f.weight === 'semibold') ? 'checked' : '';
+  const extra = fd.id === 'code'
+    ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="spaced" ${f.spaced ? 'checked' : ''}> ${t('pl.spaced')}</label>`
+    : (['profile', 'period', 'quota'].includes(fd.id)
+      ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="label" ${f.label ? 'checked' : ''}> ${t('pl.label')}</label>` : '');
+  return `<div class="field-card">
+    <div class="fc-head"><span>${t(fd.labelKey)}</span>
+      <label class="switch"><input type="checkbox" data-lf="${fd.id}" data-k="show" ${f.show ? 'checked' : ''}><span class="track"></span></label>
+    </div>
+    <div class="fc-body"${f.show ? '' : ' style="display:none"'}>
+      <div class="fld" style="margin:0"><span class="fld-label">${t('pl.fontSize')}</span>
+        <div class="slider-row"><input type="range" min="8" max="48" step="1" value="${f.size}" data-lfr="${fd.id}"><b data-lfv="${fd.id}">${f.size} pt</b></div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="bold" ${boldChecked}> ${t('pl.bold')}</label>
+        ${extra}
+      </div>
+      <div class="fld" style="margin:0"><span class="fld-label">${t('pl.align')}</span>
+        <div class="mini-seg">${['left', 'center', 'right'].map(a =>
+          `<button type="button" data-lfa="${fd.id}" data-a="${a}" class="${f.align === a ? 'active' : ''}">${t('ty.' + a)}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderLayoutModal() {
+  const d = layoutDraft;
+  $('layout-between').value = d.betweenBlanks;
+  $('layout-between-val').textContent = `${d.betweenBlanks} ${t('pl.lines')}`;
+  $('layout-inside').value = d.insideSpacing;
+  $('layout-inside-val').textContent = d.insideSpacing === 0 ? `0 (${t('pl.compact')})` : String(d.insideSpacing);
+  $('layout-fields').innerHTML = TYPO_FIELD_DEFS.map(layoutFieldCard).join('');
+  // checkboxes (full re-render ok)
+  $('layout-fields').querySelectorAll('input[data-lf]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const f = d.fields[inp.dataset.lf];
+      const k = inp.dataset.k;
+      if (k === 'bold') f.weight = inp.checked ? 'bold' : 'regular';
+      else f[k] = inp.checked;
+      renderLayoutModal();
+    });
+  });
+  // size sliders (live, no re-render)
+  $('layout-fields').querySelectorAll('input[data-lfr]').forEach(r => {
+    r.addEventListener('input', () => {
+      const f = d.fields[r.dataset.lfr];
+      f.size = Number(r.value);
+      document.querySelector(`[data-lfv="${r.dataset.lfr}"]`).textContent = `${f.size} pt`;
+      updateLivePreviews();
+    });
+  });
+  // alignment
+  $('layout-fields').querySelectorAll('button[data-lfa]').forEach(b => {
+    b.addEventListener('click', () => {
+      const f = d.fields[b.dataset.lfa];
+      f.align = b.dataset.a;
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+      updateLivePreviews();
+    });
+  });
+  updateLivePreviews();
+}
+function updateLivePreviews() {
+  const item = previewSampleItem();
+  const st = previewBasics();
+  if (layoutDraft) $('layout-preview').innerHTML = ticketInnerHtml(item, st, layoutDraft, true);
+  if (typoDraft) {
+    $('typo-preview').innerHTML = ticketInnerHtml(item, st, typoDraft, true);
+    $('typo-real-badge').classList.toggle('hidden', !item.real);
+  }
+}
+function wireLayoutModal() {
+  $('layout-between').addEventListener('input', e => {
+    layoutDraft.betweenBlanks = Number(e.target.value);
+    $('layout-between-val').textContent = `${layoutDraft.betweenBlanks} ${t('pl.lines')}`;
+  });
+  $('layout-inside').addEventListener('input', e => {
+    layoutDraft.insideSpacing = Number(e.target.value);
+    $('layout-inside-val').textContent = layoutDraft.insideSpacing === 0 ? `0 (${t('pl.compact')})` : String(layoutDraft.insideSpacing);
+    updateLivePreviews();
+  });
+  $('layout-reset').addEventListener('click', () => { layoutDraft = defaultPrintStyle(); renderLayoutModal(); });
+  $('layout-save').addEventListener('click', () => {
+    PS = cloneStyle(layoutDraft); savePrintStyle(); closeModal('layout-modal'); toast(t('toast.styleSaved'));
+  });
+  $('layout-cancel').addEventListener('click', () => closeModal('layout-modal'));
+  $('layout-close').addEventListener('click', () => closeModal('layout-modal'));
+  $('layout-modal').addEventListener('click', e => { if (e.target === $('layout-modal')) closeModal('layout-modal'); });
+  $('layout-open-typo').addEventListener('click', () => { closeModal('layout-modal'); setTimeout(openTypoModal, 220); });
+}
+
+/* ═══════════ TYPOGRAPHY / FONT SETTINGS MODAL ═══════════ */
+let typoDraft = null, typoTab = 'code';
+const TYPO_TABS = [
+  { id: 'code', key: 'ty.tabCode' }, { id: 'profile', key: 'ty.tabProfile' },
+  { id: 'period', key: 'ty.tabPeriod' }, { id: 'quota', key: 'ty.tabQuota' },
+  { id: 'datetime', key: 'ty.tabDatetime' }, { id: 'header', key: 'ty.tabHeader' },
+];
+function openTypoModal() {
+  typoDraft = cloneStyle(PS);
+  typoTab = 'code';
+  renderTypoModal();
+  $('typo-modal').classList.remove('hidden');
+}
+function touchTypo() {
+  if (typoDraft.preset !== 'custom') {
+    typoDraft.preset = 'custom';
+    document.querySelectorAll('#typo-presets .chip').forEach(x => x.classList.toggle('active', x.dataset.preset === 'custom'));
+  }
+}
+function swatchHtml(colors, cur, attr, showAuto) {
+  return (showAuto ? [`<button type="button" class="swatch auto" ${attr}="auto" title="${t('ty.auto')}">Auto</button>`] : []).concat(
+    colors.map(c => `<button type="button" class="swatch${cur === c ? ' active' : ''}" style="background:${c}" ${attr}="${c}" aria-label="${c}">${cur === c ? ic('check', 'sm') : ''}</button>`)
+  ).join('');
+}
+function renderTypoModal() {
+  const d = typoDraft;
+  document.querySelectorAll('#typo-presets .chip').forEach(x => x.classList.toggle('active', x.dataset.preset === d.preset));
+  document.querySelectorAll('#typo-fontfamily .chip').forEach(x => x.classList.toggle('active', x.dataset.ff === d.fontFamily));
+  document.querySelectorAll('#typo-align button').forEach(x => x.classList.toggle('active', x.dataset.align === d.align));
+  $('typo-colors').innerHTML = swatchHtml(TYPO_COLORS, d.color, 'data-gcolor', false);
+  document.querySelectorAll('#typo-ls .chip').forEach(x => x.classList.toggle('active', x.dataset.ls === d.ls));
+  $('typo-linespacing').value = d.lineSpacing;
+  $('typo-linespacing-val').textContent = `+${d.lineSpacing} px`;
+  $('typo-shadow').checked = d.shadow;
+  $('typo-outline').checked = d.outline;
+  $('typo-tabs').innerHTML = TYPO_TABS.map(tb =>
+    `<button type="button" class="tab2${typoTab === tb.id ? ' active' : ''}" data-tytab="${tb.id}" role="tab">${t(tb.key)}</button>`).join('');
+  document.querySelectorAll('#typo-tabs .tab2').forEach(b => b.addEventListener('click', () => { typoTab = b.dataset.tytab; renderTypoModal(); }));
+  renderTypoFieldConfig();
+  wireTypoStatics();
+  updateLivePreviews();
+}
+function renderTypoFieldConfig() {
+  const d = typoDraft, f = d.fields[typoTab];
+  const szPreset = f.size === 20 ? 'small' : f.size === 26 ? 'medium' : f.size === 32 ? 'large' : 'custom';
+  $('typo-field-config').innerHTML = `
+    <div class="fld"><span class="fld-label">${t('ty.fontSize')}: ${f.size} pt</span>
+      <div class="chip-grid" id="typo-szpresets">
+        ${[['small', 20, 'ty.szSmall'], ['medium', 26, 'ty.szMedium'], ['large', 32, 'ty.szLarge'], ['custom', 0, 'ty.szCustom']].map(([k, v, tk]) =>
+          `<button type="button" class="chip${szPreset === k ? ' active' : ''}" data-sz="${v}">${t(tk)}${v ? ` (${v})` : ''}</button>`).join('')}
+      </div>
+      <div class="size-stepper" style="margin-top:10px">
+        <div class="stepper">
+          <button type="button" id="typo-sz-minus" aria-label="−">−</button>
+          <input id="typo-sz-val" type="number" min="8" max="48" value="${f.size}" inputmode="numeric">
+          <button type="button" id="typo-sz-plus" aria-label="+">+</button>
+        </div><b>pt</b>
+      </div>
+    </div>
+    <div class="fld"><span class="fld-label">${t('ty.fontWeight')}</span>
+      <div class="chip-grid" id="typo-weight">
+        ${[['regular', 'ty.wRegular'], ['medium', 'ty.wMedium'], ['semibold', 'ty.wSemibold'], ['bold', 'ty.wBold']].map(([k, tk]) =>
+          `<button type="button" class="chip${f.weight === k ? ' active' : ''}" data-w="${k}">${t(tk)}</button>`).join('')}
+      </div>
+    </div>
+    <div class="fld"><span class="fld-label">${t('ty.fontStyle')}</span>
+      <div class="mini-seg" id="typo-fstyle">
+        <button type="button" data-fs="normal" class="${f.style === 'normal' ? 'active' : ''}">${t('ty.stNormal')}</button>
+        <button type="button" data-fs="italic" class="${f.style === 'italic' ? 'active' : ''}">${t('ty.stItalic')}</button>
+      </div>
+    </div>
+    <div class="fld"><span class="fld-label">${t('ty.align')}</span>
+      <div class="mini-seg" id="typo-falign">
+        ${['left', 'center', 'right'].map(a => `<button type="button" data-fa="${a}" class="${f.align === a ? 'active' : ''}">${t('ty.' + a)}</button>`).join('')}
+      </div>
+    </div>
+    <div class="fld"><span class="fld-label">${t('ty.color')}</span>
+      <div class="swatches" id="typo-fcolors">${swatchHtml(TYPO_COLORS, f.color, 'data-fcolor', true)}</div>
+    </div>
+    <div class="fld"><span class="fld-label">${t('ty.letterSpacing')}</span>
+      <div class="chip-grid" id="typo-fls">
+        ${[['compact', 'ty.lsCompact'], ['normal', 'ty.lsNormal'], ['wide', 'ty.lsWide'], ['custom', 'ty.lsCustom']].map(([k, tk]) =>
+          `<button type="button" class="chip${f.ls === k ? ' active' : ''}" data-fls="${k}">${t(tk)}</button>`).join('')}
+      </div>
+      ${f.ls === 'custom' ? `<div class="slider-row" style="margin-top:10px"><input type="range" id="typo-flscustom" min="0" max="12" step="1" value="${f.lsCustom}"><b>+${f.lsCustom} px</b></div>` : ''}
+    </div>`;
+  // size presets
+  document.querySelectorAll('#typo-szpresets .chip').forEach(b => b.addEventListener('click', () => {
+    const v = Number(b.dataset.sz);
+    if (v) { f.size = v; touchTypo(); renderTypoFieldConfig(); updateLivePreviews(); }
+  }));
+  const setSize = v => {
+    f.size = Math.min(48, Math.max(8, Math.round(v) || 8));
+    $('typo-sz-val').value = f.size; touchTypo(); updateLivePreviews();
+  };
+  $('typo-sz-minus').addEventListener('click', () => setSize(f.size - 1));
+  $('typo-sz-plus').addEventListener('click', () => setSize(f.size + 1));
+  $('typo-sz-val').addEventListener('input', e => setSize(Number(e.target.value)));
+  // weight / style / align / color / ls
+  document.querySelectorAll('#typo-weight .chip').forEach(b => b.addEventListener('click', () => { f.weight = b.dataset.w; touchTypo(); renderTypoFieldConfig(); updateLivePreviews(); }));
+  document.querySelectorAll('#typo-fstyle button').forEach(b => b.addEventListener('click', () => { f.style = b.dataset.fs; touchTypo(); renderTypoFieldConfig(); updateLivePreviews(); }));
+  document.querySelectorAll('#typo-falign button').forEach(b => b.addEventListener('click', () => { f.align = b.dataset.fa; touchTypo(); renderTypoFieldConfig(); updateLivePreviews(); }));
+  document.querySelectorAll('#typo-fcolors .swatch').forEach(b => b.addEventListener('click', () => {
+    f.color = b.dataset.fcolor === 'auto' ? null : b.dataset.fcolor; touchTypo(); renderTypoFieldConfig(); updateLivePreviews();
+  }));
+  document.querySelectorAll('#typo-fls .chip').forEach(b => b.addEventListener('click', () => { f.ls = b.dataset.fls; touchTypo(); renderTypoFieldConfig(); updateLivePreviews(); }));
+  const flsc = $('typo-flscustom');
+  if (flsc) flsc.addEventListener('input', e => {
+    f.lsCustom = Number(e.target.value);
+    e.target.nextElementSibling.textContent = `+${f.lsCustom} px`;
+    touchTypo(); updateLivePreviews();
+  });
+}
+/** wire the static (non-re-rendered) typo controls — idempotent */
+function wireTypoStatics() {
+  const once = (id, evt, fn) => {
+    const el = $(id);
+    if (!el || el.dataset.wired) return;
+    el.dataset.wired = '1';
+    el.addEventListener(evt, fn);
+  };
+  document.querySelectorAll('#typo-presets .chip').forEach(b => {
+    if (b.dataset.wired) return; b.dataset.wired = '1';
+    b.addEventListener('click', () => { applyPreset(typoDraft, b.dataset.preset); renderTypoModal(); });
+  });
+  document.querySelectorAll('#typo-fontfamily .chip').forEach(b => {
+    if (b.dataset.wired) return; b.dataset.wired = '1';
+    b.addEventListener('click', () => { typoDraft.fontFamily = b.dataset.ff; touchTypo(); renderTypoModal(); });
+  });
+  document.querySelectorAll('#typo-align button').forEach(b => {
+    if (b.dataset.wired) return; b.dataset.wired = '1';
+    b.addEventListener('click', () => {
+      typoDraft.align = b.dataset.align;
+      TYPO_FIELD_DEFS.forEach(fd => { typoDraft.fields[fd.id].align = b.dataset.align; });
+      touchTypo(); renderTypoModal();
+    });
+  });
+  $('typo-colors').querySelectorAll('.swatch').forEach(b => {
+    b.addEventListener('click', () => { typoDraft.color = b.dataset.gcolor; touchTypo(); renderTypoModal(); });
+  });
+  document.querySelectorAll('#typo-ls .chip').forEach(b => {
+    if (b.dataset.wired) return; b.dataset.wired = '1';
+    b.addEventListener('click', () => { typoDraft.ls = b.dataset.ls; touchTypo(); renderTypoModal(); });
+  });
+  once('typo-linespacing', 'input', e => {
+    typoDraft.lineSpacing = Number(e.target.value);
+    $('typo-linespacing-val').textContent = `+${typoDraft.lineSpacing} px`;
+    touchTypo(); updateLivePreviews();
+  });
+  once('typo-shadow', 'change', e => { typoDraft.shadow = e.target.checked; touchTypo(); updateLivePreviews(); });
+  once('typo-outline', 'change', e => { typoDraft.outline = e.target.checked; touchTypo(); updateLivePreviews(); });
+  once('typo-reset-colors', 'click', () => {
+    typoDraft.color = '#111111';
+    TYPO_FIELD_DEFS.forEach(fd => { typoDraft.fields[fd.id].color = null; });
+    touchTypo(); renderTypoModal();
+  });
+  once('typo-save', 'click', () => {
+    PS = cloneStyle(typoDraft); savePrintStyle(); closeModal('typo-modal'); toast(t('toast.styleSaved'));
+  });
+  once('typo-cancel', 'click', () => closeModal('typo-modal'));
+  once('typo-close', 'click', () => closeModal('typo-modal'));
+}
+function wireTypoModal() {
+  $('typo-modal').addEventListener('click', e => { if (e.target === $('typo-modal')) closeModal('typo-modal'); });
 }
 
 /* ═══════════ MORE ═══════════ */
@@ -970,7 +1492,6 @@ function init() {
   });
 
   // steppers
-  wireStepper('qty-minus', 'qty-plus', 'gen-qty', 1, 500);
   wireStepper('copies-minus', 'copies-plus', 'print-copies', 1, 10);
 
   // iOS segmented paper size (syncs hidden select used by printSettings)
@@ -988,6 +1509,7 @@ function init() {
   document.querySelectorAll('#lang-seg button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
 
   $('btn-generate').addEventListener('click', doGenerate);
+  $('btn-generate-print').addEventListener('click', doGeneratePrint);
   $('btn-generate-custom').addEventListener('click', doGenerateCustom);
   $('btn-gen-print-all').addEventListener('click', () => doPrint(genResultItems));
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
@@ -995,6 +1517,14 @@ function init() {
   $('btn-print-test').addEventListener('click', () => doPrint([{ code: 'TEST-1234', pkg: t('tkt.test'), period: 60, quota: 1024 }]));
   $('btn-queue-print').addEventListener('click', () => doPrint(S.queue));
   $('btn-queue-clear').addEventListener('click', () => { S.queue = []; renderQueue(); });
+
+  // print layout & typography
+  loadPrintStyle();
+  wireGenerateView();
+  wireLayoutModal();
+  wireTypoModal();
+  $('btn-print-layout').addEventListener('click', openLayoutModal);
+  $('btn-print-typo').addEventListener('click', openTypoModal);
 
   document.querySelectorAll('#more-menu .menu-item').forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.more;
