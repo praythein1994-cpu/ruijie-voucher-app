@@ -58,6 +58,7 @@ body {
 .hidden { display: none !important; }
 .muted { color: var(--gray); }
 .small { font-size: 13px; }
+.sec-h { font-size: 15px; font-weight: 700; margin: 4px 0 10px; }
 .err {
   color: var(--red); background: rgba(255, 59, 48, .1);
   border: 1px solid rgba(255, 59, 48, .3);
@@ -186,11 +187,12 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 }
 @keyframes cardin { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
 .connect-logo {
-  width: 78px; height: 78px; margin: 0 auto; border-radius: 23px;
-  background: linear-gradient(135deg, #0A84FF 0%, #5E5CE6 100%);
-  display: flex; align-items: center; justify-content: center; font-size: 38px; color: #fff;
-  box-shadow: 0 14px 30px rgba(10, 132, 255, .5), inset 0 1px 1px rgba(255, 255, 255, .4);
+  width: 78px; height: 78px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 14px 24px rgba(10, 114, 232, .45));
 }
+.connect-logo img { width: 100%; height: 100%; display: block; }
+.app-logo { width: 22px; height: 22px; border-radius: 6px; margin-right: 5px; flex: none; }
 .connect-card h1 { text-align: center; margin: 16px 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
 .connect-card > p { text-align: center; color: #6C6C70; font-size: 15px; }
 .connect-card label { font-size: 15px; font-weight: 600; color: #1C1C1E; }
