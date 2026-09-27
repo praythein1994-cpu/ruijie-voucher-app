@@ -510,15 +510,20 @@ public class RuijieBridge {
     private byte[] pendingDiagContent;
 
     /**
-     * Cookie NAMES (never values) present per SSO domain — lets the
+     * Cookie NAMES (never values) present per SSO URL — lets the
      * diagnosis tell "cookies exist" apart from "session alive".
+     * Includes the full webproxy URL because the portal session cookie
+     * may be path-scoped (e.g. Path=/webproxy), which the bare domain
+     * does not reveal.
      */
     @JavascriptInterface
     public String diagCookieInfo() {
         try {
             android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
             JSONObject o = new JSONObject();
-            String[] urls = {"https://cloud-as.ruijienetworks.com", "https://cloud.ruijienetworks.com"};
+            String[] urls = {"https://cloud-as.ruijienetworks.com",
+                    "https://cloud-as.ruijienetworks.com/webproxy/common/api",
+                    "https://cloud.ruijienetworks.com"};
             for (String u : urls) {
                 JSONArray names = new JSONArray();
                 String c = cm.getCookie(u);
