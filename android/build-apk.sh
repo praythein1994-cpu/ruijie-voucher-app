@@ -12,8 +12,8 @@ PLATFORM="$SDK/platforms/android-34"
 APP=app/src/main
 OUT=build/apk
 KS="$HOME/.ruijie-voucher.keystore"
-VERSION_CODE=10
-VERSION_NAME="1.4.1"
+VERSION_CODE=11
+VERSION_NAME="1.5.0"
 OUT_NAME="ruijie-voucher-${VERSION_NAME}.apk"
 
 echo "== 1. sync web app into assets =="
@@ -39,9 +39,7 @@ mkdir -p build/classes
 "$JAVA_HOME/bin/javac" -encoding UTF-8 -source 8 -target 8 -nowarn \
   -classpath "$PLATFORM/android.jar" \
   -d build/classes \
-  "$APP/java/com/ruijie/voucher/MainActivity.java" \
-  "$APP/java/com/ruijie/voucher/RuijieBridge.java" \
-  "$APP/java/com/ruijie/voucher/SsoSession.java"
+  $(find "$APP/java" -name "*.java")
 
 echo "== 4. d8 (dex) =="
 mkdir -p build/dex
