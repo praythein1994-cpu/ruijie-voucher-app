@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.7';
+const APP_VERSION = '1.5.8';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -1850,9 +1850,11 @@ async function runDiagnostics() {
         const res = JSON.parse(window.RuijieBridge.portalProbe(JSON.stringify(env)));
         if (res.error) diagAdd('login', t('diag.portalProbe'), 'fail', res.error);
         else if (res.notLogin) diagAdd('login', t('diag.portalProbe'), 'fail',
-          'portal: "not login" — portal session မရှိသေးပါ (ထွက်ပြီး ပြန် login လုပ်ပါ)');
+          'portal: "not login" — portal session မရှိသေးပါ (ထွက်ပြီး ပြန် login လုပ်ပါ)'
+          + (res.sentCookies ? ' · sent: ' + res.sentCookies : ''));
         else diagAdd('login', t('diag.portalProbe'), 'pass',
-          'portal session ok · HTTP ' + res.http + ' (ကုဒ်အတုမို့ မတွေ့တာ ပုံမှန်ပါ)');
+          'portal session ok · HTTP ' + res.http + ' (ကုဒ်အတုမို့ မတွေ့တာ ပုံမှန်ပါ)'
+          + (res.sentCookies ? ' · sent: ' + res.sentCookies : ''));
       } catch (e) { diagAdd('login', t('diag.portalProbe'), 'fail', e.message); }
       // L5 — login trace: proves whether the portal SSO handshake completed
       try {
