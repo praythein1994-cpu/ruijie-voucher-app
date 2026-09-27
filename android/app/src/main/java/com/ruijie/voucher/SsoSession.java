@@ -116,6 +116,23 @@ public class SsoSession {
         String body;
     }
 
+    /** Cookie NAMES (never values) from the last webproxy request — diagnostics. */
+    private static String lastSentCookieNames = "";
+
+    private static String cookieNamesOf(String cookieHeader) {
+        if (cookieHeader == null || cookieHeader.isEmpty()) return "—";
+        StringBuilder sb = new StringBuilder();
+        for (String part : cookieHeader.split(";")) {
+            String p = part.trim();
+            int eq = p.indexOf('=');
+            String n = eq > 0 ? p.substring(0, eq).trim() : p;
+            if (n.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(n);
+        }
+        return sb.length() == 0 ? "—" : sb.toString();
+    }
+
     private ProxyResult webProxyRaw(String apiPath, String envelopeJson) throws Exception {
         // Portal capture: POST .../webproxy/common/api?/intlSamVoucher/v2/delete
         // (query keeps the leading slash). Keep it byte-identical.
@@ -136,12 +153,17 @@ public class SsoSession {
         c.setRequestProperty("Referer", "https://cloud-as.ruijienetworks.com/");
         String cookies = null;
         try {
-            // Merge both Ruijie domains: CAS login happens on
-            // cloud.ruijienetworks.com while the portal lives on cloud-as.
+            // Read cookies for the FULL request URL, not the bare domain:
+            // the portal session cookie may be path-scoped (e.g. Path=
+            // /webproxy), which getCookie("https://host") does NOT return
+            // but a browser sends automatically. Missing it makes the
+            // portal answer "not login." even right after a fresh login.
+            // CAS cookies still come from cloud.ruijienetworks.com.
             cookies = mergeCookies(
-                    CookieManager.getInstance().getCookie("https://cloud-as.ruijienetworks.com"),
+                    CookieManager.getInstance().getCookie(urlStr),
                     CookieManager.getInstance().getCookie("https://cloud.ruijienetworks.com"));
         } catch (Exception ignored) { /* no cookies */ }
+        lastSentCookieNames = cookieNamesOf(cookies);
         if (cookies != null && !cookies.isEmpty()) c.setRequestProperty("Cookie", cookies);
         byte[] bytes = envelopeJson.getBytes(StandardCharsets.UTF_8);
         c.setDoOutput(true);
@@ -180,6 +202,7 @@ public class SsoSession {
             org.json.JSONObject o = new org.json.JSONObject();
             o.put("http", r.status);
             o.put("notLogin", body.contains("not login"));
+            o.put("sentCookies", lastSentCookieNames);
             o.put("snippet", body.length() > 160 ? body.substring(0, 160) : body);
             return o.toString();
         } catch (Exception e) {
