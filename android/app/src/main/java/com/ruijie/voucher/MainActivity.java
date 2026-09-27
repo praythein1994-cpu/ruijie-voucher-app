@@ -90,12 +90,20 @@ public class MainActivity extends Activity {
         }
     }
 
+    private long lastBackPress = 0;
+
     @Override
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
-            super.onBackPressed();
+            long now = System.currentTimeMillis();
+            if (now - lastBackPress < 2000) {
+                super.onBackPressed();
+            } else {
+                lastBackPress = now;
+                android.widget.Toast.makeText(this, "ထွက်ရန် back ထပ်နှိပ်ပါ", android.widget.Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
