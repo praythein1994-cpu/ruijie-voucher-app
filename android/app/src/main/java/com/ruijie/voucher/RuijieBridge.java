@@ -221,4 +221,65 @@ public class RuijieBridge {
             } catch (Exception ignored) { /* nothing to report back */ }
         });
     }
+
+    // ── SSO SESSION (Ruijie account login) ───────────────────────
+    // Enables voucher delete via the portal's internal webproxy API, which
+    // the public Open API does not offer. The login dialog keeps the
+    // official Ruijie CAS page inside our branded header.
+
+    /** Open the Ruijie account login dialog. Result events go to window._ssoEvent(name). */
+    @JavascriptInterface
+    public void ssoLogin() {
+        activity.runOnUiThread(() -> SsoSession.getInstance().showLoginDialog(activity,
+                new SsoSession.LoginCallback() {
+                    @Override public void onSuccess() {
+                        webView.post(() -> webView.evaluateJavascript(
+                                "window._ssoEvent&&window._ssoEvent('login')", null));
+                    }
+                    @Override public void onCancel() {
+                        webView.post(() -> webView.evaluateJavascript(
+                                "window._ssoEvent&&window._ssoEvent('cancel')", null));
+                    }
+                }));
+    }
+
+    /** Synchronous status JSON: {"loggedIn":true/false}. */
+    @JavascriptInterface
+    public String ssoStatus() {
+        boolean in = SsoSession.getInstance().isLoggedIn();
+        return "{\"loggedIn\":" + (in ? "true" : "false") + "}";
+    }
+
+    /**
+     * Async webproxy call with the SSO session cookies.
+     * Response (raw body) is base64-encoded and delivered via
+     * window._ssoResolve(id, b64).
+     */
+    @JavascriptInterface
+    public void ssoRequest(final String callId, final String apiPath, final String envelopeJson) {
+        pool.execute(() -> {
+            String result;
+            try {
+                result = SsoSession.getInstance().webProxy(apiPath, envelopeJson);
+            } catch (SecurityException se) {
+                result = "{\"code\":401,\"msg\":\"" + se.getMessage().replace("\"", "'") + "\"}";
+            } catch (Exception e) {
+                String m = e.getMessage() == null ? "unknown error" : e.getMessage().replace("\"", "'");
+                result = "{\"code\":-97,\"msg\":\"SSO request failed: " + m + "\"}";
+            }
+            String b64 = Base64.encodeToString(result.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+            final String out = b64;
+            final String safeId = callId.replaceAll("[^A-Za-z0-9_]", "");
+            webView.post(() -> webView.evaluateJavascript(
+                    "window._ssoResolve('" + safeId + "','" + out + "')", null));
+        });
+    }
+
+    /** Clear SSO cookies. Fires window._ssoEvent('logout'). */
+    @JavascriptInterface
+    public void ssoLogout() {
+        SsoSession.getInstance().logout();
+        webView.post(() -> webView.evaluateJavascript(
+                "window._ssoEvent&&window._ssoEvent('logout')", null));
+    }
 }
