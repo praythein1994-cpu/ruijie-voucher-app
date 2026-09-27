@@ -12,6 +12,9 @@ PLATFORM="$SDK/platforms/android-34"
 APP=app/src/main
 OUT=build/apk
 KS="$HOME/.ruijie-voucher.keystore"
+VERSION_CODE=2
+VERSION_NAME="1.1.0"
+OUT_NAME="ruijie-voucher-${VERSION_NAME}.apk"
 
 echo "== 1. sync web app into assets =="
 rm -rf "$APP/assets/www"
@@ -26,7 +29,7 @@ rm -rf build && mkdir -p "$OUT"
   --manifest "$APP/AndroidManifest.xml" \
   -A "$APP/assets" \
   --min-sdk-version 24 --target-sdk-version 34 \
-  --version-code 1 --version-name 1.0.0
+  --version-code "$VERSION_CODE" --version-name "$VERSION_NAME"
 
 echo "== 3. javac =="
 mkdir -p build/classes
@@ -68,10 +71,10 @@ PASS_FILE=$(mktemp)
 chmod 600 "$PASS_FILE"
 "$BT/apksigner" sign --ks "$KS" --ks-pass "file:$PASS_FILE" \
   --key-pass "file:$PASS_FILE" \
-  --out "$OUT/ruijie-voucher-1.0.0.apk" "$OUT/aligned.apk"
+  --out "$OUT/$OUT_NAME" "$OUT/aligned.apk"
 rm -f "$PASS_FILE"
 
 echo "== 8. verify =="
-"$BT/apksigner" verify --print-certs "$OUT/ruijie-voucher-1.0.0.apk" | head -5
-ls -la "$OUT/ruijie-voucher-1.0.0.apk"
+"$BT/apksigner" verify --print-certs "$OUT/$OUT_NAME" | head -5
+ls -la "$OUT/$OUT_NAME"
 echo "BUILD OK"
