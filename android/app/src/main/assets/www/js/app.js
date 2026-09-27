@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.6';
+const APP_VERSION = '1.5.7';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -101,6 +101,8 @@ const I18N = {
   'diag.saved': { my: 'Report သိမ်းပြီးပါပြီ', en: 'Report saved' },
   'diag.saveCancel': { my: 'မသိမ်းပါ', en: 'Save cancelled' },
   'diag.saveFail': { my: 'သိမ်းမရပါ: ', en: 'Save failed: ' },
+  'diag.portalProbe': { my: 'Portal session စစ်မယ်', en: 'Portal session probe' },
+  'diag.loginTrace': { my: 'Login လမ်းကြောင်း', en: 'Login trace' },
   'err.pkgList': { my: 'Package list ရမလာ: ', en: "Couldn't load packages: " },
   'err.pickPkg': { my: 'Package ရွေးပါ', en: 'Choose a package' },
   'btn.generating': { my: 'ထုတ်နေသည်…', en: 'Generating…' },
@@ -1838,6 +1840,28 @@ async function runDiagnostics() {
         }
         diagAdd('login', 'SSO cookie domains', 'pass', parts.join('  |  '));
       } catch (e) { diagAdd('login', 'SSO cookie domains', 'fail', e.message); }
+      // L4 — portal session probe: delete envelope for a voucher code that
+      // cannot exist. The portal checks the session first, so "not login"
+      // means the portal session is missing; any other answer means the
+      // session is alive (the fake voucher is simply not found). Nothing
+      // real is deleted.
+      try {
+        const env = Api.ssoDeleteEnvelope('PROBE000', '00000000-0000-0000-0000-000000000000', S.projectId || 1);
+        const res = JSON.parse(window.RuijieBridge.portalProbe(JSON.stringify(env)));
+        if (res.error) diagAdd('login', t('diag.portalProbe'), 'fail', res.error);
+        else if (res.notLogin) diagAdd('login', t('diag.portalProbe'), 'fail',
+          'portal: "not login" — portal session မရှိသေးပါ (ထွက်ပြီး ပြန် login လုပ်ပါ)');
+        else diagAdd('login', t('diag.portalProbe'), 'pass',
+          'portal session ok · HTTP ' + res.http + ' (ကုဒ်အတုမို့ မတွေ့တာ ပုံမှန်ပါ)');
+      } catch (e) { diagAdd('login', t('diag.portalProbe'), 'fail', e.message); }
+      // L5 — login trace: proves whether the portal SSO handshake completed
+      try {
+        const tr = JSON.parse(window.RuijieBridge.diagLoginTrace());
+        const urls = tr.urls || [];
+        const tail = urls.slice(-3).map(u => u.replace(/^https?:\/\//, '')).join(' → ');
+        diagAdd('login', t('diag.loginTrace'), tr.result === 'success' ? 'pass' : 'skip',
+          'result=' + tr.result + (tr.at ? ' · ' + tr.at : '') + ' · steps=' + urls.length + (tail ? ' · ' + tail : ''));
+      } catch (e) { diagAdd('login', t('diag.loginTrace'), 'fail', e.message); }
     } else {
       diagAdd('login', 'Ruijie အကောင့် (SSO)', 'skip', t('sso.onlyAndroid'));
     }
@@ -1889,7 +1913,21 @@ function diagReportText() {
     L.push('  ' + r.status.toUpperCase() + ' — ' + r.name + (r.detail ? ': ' + r.detail : ''));
   }
   L.push('');
-  L.push('Note: read-only checks; nothing was created, deleted or changed.');
+  L.push('Note: nothing real was created, deleted or changed.');
+  L.push('The portal session probe uses a voucher code that cannot exist,');
+  L.push('so it deletes nothing — it only checks whether the portal');
+  L.push('session is alive.');
+  // Full login trace (URLs only, no credentials)
+  try {
+    if (window.RuijieBridge && window.RuijieBridge.diagLoginTrace) {
+      const tr = JSON.parse(window.RuijieBridge.diagLoginTrace());
+      if (tr.urls && tr.urls.length) {
+        L.push('');
+        L.push('[Login trace] result=' + tr.result + (tr.at ? ' at ' + tr.at : ''));
+        tr.urls.forEach((u, i) => L.push('  ' + (i + 1) + '. ' + u));
+      }
+    }
+  } catch (e) { /* ignore */ }
   return L.join('\n');
 }
 function diagB64(s) {
