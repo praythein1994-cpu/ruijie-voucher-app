@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.13';
+const APP_VERSION = '1.5.14';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -324,6 +324,8 @@ const I18N = {
   'md.rebooting': { my: 'ပြန်လည်စတင်ခိုင်းနေပါသည်…', en: 'Sending reboot…' },
   'md.rebootOk': { my: 'ပြန်လည်စတင်ခိုင်းပြီးပါပြီ', en: 'Reboot command sent' },
   'md.rebootFail': { my: 'ပြန်ဖွင့်မရပါ', en: 'Reboot failed' },
+  'md.total': { my: 'စုစုပေါင်း {n} လုံး', en: 'Total {n} devices' },
+  'md.partial': { my: 'အချို့စက်များ မရသေးပါ', en: 'Some device types failed to load' },
   'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
@@ -416,7 +418,8 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 const fmtDate = ts => {
   if (!ts) return '—';
   const d = new Date(Number(ts));
-  return isNaN(d) ? String(ts) : d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  // v1.5.14: 12-hour clock (02:45 PM) per user request
+  return isNaN(d) ? String(ts) : d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 };
 const fmtPeriod = mins => {
   if (!mins) return '—';
@@ -465,7 +468,17 @@ const remQuotaTxt = v => {
   const q = Number(v.quota);
   if (q <= 0) return t('fmt.unlimited');
   if (v.usedQuota === null || v.usedQuota === undefined || v.usedQuota === '') return '—';
-  return fmtQuota(Math.max(0, q - Number(v.usedQuota)));
+  const rem = q - Number(v.usedQuota);
+  // v1.5.14: fully used quota shows "0 GB", never "unlimited"
+  if (rem <= 0) return q >= 1024 ? '0 GB' : '0 MB';
+  return fmtQuota(rem);
+};
+/* Used quota: 0 means nothing used yet → "0 MB", not "unlimited" (v1.5.14). */
+const fmtUsedQuota = mb => {
+  if (mb === null || mb === undefined || mb === '') return '—';
+  mb = Number(mb);
+  if (!isFinite(mb) || mb < 0) return '—';
+  return mb === 0 ? '0 MB' : fmtQuota(mb);
 };
 const remTimeTxt = v => {
   if (v.usedTime === null || v.usedTime === undefined || v.usedTime === '') return '—';
@@ -776,13 +789,13 @@ function openVoucherDetail(uuid) {
     [t('d.status'), `<span class="badge s${esc(v.status)}">${esc(statusTxt(v.status))}</span>`],
     [t('d.pkg'), esc(v.packageName || v.userGroupName || '—')],
     [t('d.validity'), esc(fmtPeriod(v.timePeriod))],
-    [t('d.usedTime'), `<span id="live-usedtime">${v.usedTime ? esc(fmtPeriod(v.usedTime)) : '—'}</span>`],
+    [t('d.usedTime'), `<span id="live-usedtime">${v.usedTime ? esc(fmtRemain(v.usedTime)) : '—'}</span>`],
     [t('d.remTime'), `<span id="live-remtime">${esc(remTimeTxt(v))}</span><span class="live-dot" title="live"></span>`],
     [t('d.created'), esc(fmtDate(v.createTime))],
     [t('d.activated'), (() => { const at = voucherActivatedTime(v); return at ? esc(fmtDate(at)) : '—'; })()],
     [t('d.expiry'), esc(fmtDate(v.expiryTime))],
     [t('d.quota'), esc(fmtQuota(v.quota))],
-    [t('d.usedQuota'), `<span id="live-usedquota">${esc(fmtQuota(v.usedQuota))}</span>`],
+    [t('d.usedQuota'), `<span id="live-usedquota">${esc(fmtUsedQuota(v.usedQuota))}</span>`],
     [t('d.remQuota'), `<span id="live-remquota">${esc(remQuotaTxt(v))}</span><span id="live-age" class="muted small"></span>`],
     [t('d.maxClients'), esc(v.maxClients || '—')],
     [t('d.curClients'), esc(v.currentClients || 0)],
@@ -828,9 +841,9 @@ function startVoucherLive(v) {
         liveBase.at = Date.now();
         liveBase.dataAt = Date.now();
         const uq = $('live-usedquota'), rq = $('live-remquota'), ut = $('live-usedtime');
-        if (uq) uq.textContent = fmtQuota(fv.usedQuota);
+        if (uq) uq.textContent = fmtUsedQuota(fv.usedQuota);
         if (rq) rq.textContent = remQuotaTxt(modalVoucher);
-        if (ut) ut.textContent = fv.usedTime ? fmtPeriod(fv.usedTime) : '—';
+        if (ut) ut.textContent = fv.usedTime ? fmtRemain(fv.usedTime) : '—';
         tick();
       }
     } catch (e) { /* keep the last good snapshot on poll failure */ }
@@ -1761,6 +1774,18 @@ async function moreUserGroups() {
   } catch (e) { $('mg-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
 
+/* ── Device status light · v1.5.14 ──
+   green = online, gray = offline, red = error/unknown */
+function devStatus(d) {
+  const raw = d.onlineStatus || d.status || (d.online === true ? 'Online' : d.online === false ? 'Offline' : '') || '';
+  const v = String(raw).trim().toLowerCase();
+  if (/^(on|online|1|up|connected|normal)$/.test(v)) return { cls: 'st-on', label: String(raw) };
+  if (/^(off|offline|0|down|disconnected)$/.test(v)) return { cls: 'st-off', label: String(raw) };
+  if (!v) return { cls: 'st-off', label: '—' };
+  return /error|fail|fault|abnorm|alarm|exception/.test(v)
+    ? { cls: 'st-err', label: String(raw) } : { cls: 'st-off', label: String(raw) };
+}
+
 async function moreDevices() {
   moreShell(`${ic('signal', 'sm')} ${esc(t('md.title'))}`, `
     <div class="chips" id="md-chips">
@@ -1773,28 +1798,34 @@ async function moreDevices() {
   const DEV_TYPES = ['AP', 'Switch', 'Gateway'];
   const load = async (type) => {
     $('md-list').innerHTML = `<p class="muted">${t('more.loading')}</p>`;
-    try {
-      // common_type is mandatory per manual — "All" queries each type and merges
-      const types = type ? [type] : DEV_TYPES;
-      const lists = await Promise.all(types.map(tp => Api.deviceList(S.projectId, tp, 0, 100)));
-      const seen = new Set(), list = [];
-      lists.flat().forEach(d => {
-        const k = d.serialNumber || d.sn || d.mac || JSON.stringify(d);
-        if (!seen.has(k)) { seen.add(k); list.push(d); }
-      });
-      $('md-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
+    // v1.5.14: allSettled — one failing type (Switch/Gateway 404) must not kill the whole list
+    const types = type ? [type] : DEV_TYPES;
+    const results = await Promise.allSettled(types.map(tp => Api.deviceList(S.projectId, tp, 0, 100)));
+    const seen = new Set(), list = [], errs = [];
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') {
+        (Array.isArray(r.value) ? r.value : []).forEach(d => {
+          const k = d.serialNumber || d.sn || d.mac || JSON.stringify(d);
+          if (!seen.has(k)) { seen.add(k); list.push(d); }
+        });
+      } else errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
+    });
+    if (!list.length) { $('md-list').innerHTML = `<p class="err">${esc(errs.join(' · ') || t('md.none'))}</p>`; return; }
+    const warn = errs.length ? `<p class="warn small">${esc(t('md.partial'))}: ${esc(errs.join(' · '))}</p>` : '';
+    $('md-list').innerHTML = `${warn}<p class="muted small">${tx('md.total', { n: list.length })}</p>` +
+      `<div class="wrap-scroll"><table class="data">
         <tr><th>${t('md.sn')}</th><th>${t('md.model')}</th><th>${t('md.status')}</th><th>${t('md.action')}</th></tr>
         ${list.map(d => {
           const sn = d.serialNumber || d.sn || '';
           const nm = d.alias || d.deviceAliasName || d.name || sn;
+          const st = devStatus(d);
           return `<tr><td>${esc(nm)}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
-          <td>${esc(d.onlineStatus || d.status || (d.online ? 'online' : ''))}</td>
+          <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
           <td>${sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : ''}</td></tr>`;
         }).join('')}
-        </table></div>` : `<p class="muted">${t('md.none')}</p>`;
-      document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
-    } catch (e) { $('md-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+        </table></div>`;
+    document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#md-chips .chip').forEach(x => x.classList.remove('active'));
