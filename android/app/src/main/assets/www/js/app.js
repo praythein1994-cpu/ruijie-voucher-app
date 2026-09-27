@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.5.0';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -216,6 +216,16 @@ const I18N = {
   'p.queue': { my: 'Print Queue', en: 'Print Queue' },
   'p.queuePrint': { my: 'ပရင့်ထုတ်မယ်', en: 'Print' },
   'p.queueClear': { my: 'ရှင်းမယ်', en: 'Clear' },
+  'p.bt': { my: 'ဘလူးတုသ် ပရင်တာ', en: 'Bluetooth Printer' },
+  'p.btIdle': { my: 'ပရင်တာမချိတ်ရသေးပါ', en: 'No printer connected' },
+  'p.btScan': { my: 'စက်ရှာမယ်', en: 'Scan' },
+  'p.btScanning': { my: 'ရှာနေတယ်…', en: 'Scanning…' },
+  'p.btDisconnect': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
+  'p.btPrint': { my: 'ဘလူးတုသ်နဲ့ထုတ်မယ်', en: 'Print via Bluetooth' },
+  'p.btTest': { my: 'စမ်းထုတ်မယ်', en: 'Test print' },
+  'p.btNoDevices': { my: 'စက်မတွေ့သေးပါ — Scan နှိပ်ပါ', en: 'No devices yet — tap Scan' },
+  'p.btNeedApk': { my: 'ဘလူးတုသ်ပရင့်က Android app သီးသန့်ပါ', en: 'Bluetooth printing is Android-app only' },
+  'p.btNoQueue': { my: 'Print Queue ထဲမှာ voucher မရှိသေးပါ', en: 'Print Queue is empty' },
   'm.title': { my: 'နောက်ထပ်', en: 'More' },
   'm.accounts': { my: 'Auth Accounts', en: 'Auth Accounts' },
   'm.accountsSub': { my: 'အသုံးပြုသူများ', en: 'Users' },
@@ -505,11 +515,11 @@ function enterApp() {
   const pp = $('print-paper').value || '80';
   document.querySelectorAll('#paper-seg button').forEach(b =>
     b.classList.toggle('active', b.dataset.paper === pp));
-  loadProjects().then(() => { switchView('view-vouchers'); });
+  loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; });
   loadAccountInfo();
 }
 
-function switchView(id) {
+function switchView(id, push) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   $(id).classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(tb => tb.classList.toggle('active', tb.dataset.view === id));
@@ -517,7 +527,30 @@ function switchView(id) {
   if (id === 'view-generate') ensurePackages();
   if (id === 'view-printer') renderQueue();
   if (id === 'view-settings') fillSettings();
+  // SPA back-button support: one back press walks views instead of killing the app.
+  if (push !== false) {
+    try { history.pushState({ view: id }, ''); } catch (e) {}
+  }
+  S.currentView = id;
 }
+
+// System back button: close an open modal first, else let popstate walk the view stack.
+function anyModalOpen() {
+  return !!document.querySelector('.modal:not(.hidden)');
+}
+function closeAnyModal() {
+  document.querySelectorAll('.modal:not(.hidden)').forEach(m => closeModal(m.id));
+}
+window.addEventListener('popstate', (e) => {
+  if (anyModalOpen()) {
+    closeAnyModal();
+    // restore the current entry so the next back press keeps working
+    try { history.pushState({ view: S.currentView || 'view-vouchers' }, ''); } catch (err) {}
+    return;
+  }
+  const v = e.state && e.state.view;
+  if (v && $(v)) switchView(v, false);
+});
 
 /* ═══════════ PROJECTS ═══════════ */
 function flattenProjects(nodes, out = []) {
@@ -957,6 +990,154 @@ function ticketHtml(item, st) {
     html += `<div class="ticket${st.paper === '58' ? ' narrow' : ''}">${ticketInnerHtml(item, st, PS, false)}</div>`;
   }
   return html;
+}
+
+/* ═══════════ BLUETOOTH THERMAL PRINTER (printer-v1 engine, APK only) ═══════════ */
+
+function btBridge() {
+  return (window.RuijieBridge && window.RuijieBridge.btState) ? window.RuijieBridge : null;
+}
+
+function btCall(fn) {
+  const B = btBridge();
+  if (!B) { toast(t('p.btNeedApk'), true); return null; }
+  try { return fn(B); } catch (e) { toast(String(e && e.message || e), true); return null; }
+}
+
+/** Map our printStyle (PS) to printer-v1 PrintDesignSettings JSON keys. */
+function nativePrintSettings() {
+  const F = PS.fields;
+  const W = (f) => f.weight === 'bold' ? 'BOLD' : f.weight === 'semibold' ? 'SEMI_BOLD' : f.weight === 'medium' ? 'MEDIUM' : 'REGULAR';
+  const A = (f) => (f.align || 'left').toUpperCase();
+  const ST = (f) => f.style === 'italic' ? 'ITALIC' : 'NORMAL';
+  const lsMode = PS.ls === 'compact' ? 'COMPACT' : PS.ls === 'wide' ? 'WIDE' : PS.ls === 'custom' ? 'CUSTOM' : 'NORMAL';
+  const ff = (PS.fontFamily || 'default').toLowerCase();
+  const fontFamily = ff === 'monospace' ? 'MONOSPACE' : ff === 'serif' ? 'SERIF' : ff === 'sansserif' || ff === 'sans-serif' ? 'SANS_SERIF' : 'DEFAULT';
+  const BLACK = 0xFF000000;
+  return JSON.stringify({
+    showVoucherCode: !!F.code.show, codeFontSize: +F.code.size || 28,
+    codeBold: F.code.weight === 'bold', codeFontWeight: W(F.code), codeFontStyle: ST(F.code),
+    codeAlignment: A(F.code), codeSpaced: !!F.code.spaced, codeColor: BLACK,
+    showProfileName: !!F.profile.show, profileNameFontSize: +F.profile.size || 24,
+    profileNameBold: F.profile.weight === 'bold', profileNameFontWeight: W(F.profile),
+    profileNameFontStyle: ST(F.profile), profileNameAlignment: A(F.profile),
+    showProfileNameLabel: !!F.profile.label, profileNameColor: BLACK,
+    showPeriod: !!F.period.show, periodFontSize: +F.period.size || 24,
+    periodBold: F.period.weight === 'bold', periodFontWeight: W(F.period),
+    periodFontStyle: ST(F.period), periodAlignment: A(F.period),
+    showPeriodLabel: !!F.period.label, periodColor: BLACK,
+    showQuota: !!F.quota.show, quotaFontSize: +F.quota.size || 24,
+    quotaBold: F.quota.weight === 'bold', quotaFontWeight: W(F.quota),
+    quotaFontStyle: ST(F.quota), quotaAlignment: A(F.quota),
+    showQuotaLabel: !!F.quota.label, quotaColor: BLACK,
+    showHeader: !!F.header.show, headerFontSize: +F.header.size || 26,
+    headerBold: F.header.weight === 'bold', headerFontWeight: W(F.header),
+    headerFontStyle: ST(F.header), headerAlignment: A(F.header),
+    headerSeparator: ' - ', customHeaderName: ($('print-header') ? $('print-header').value.trim() : ''),
+    headerColor: BLACK,
+    insideVoucherSpacing: Math.max(0, Math.min(4, PS.insideSpacing | 0)),
+    betweenVoucherSpacing: Math.max(0, Math.min(8, PS.betweenBlanks == null ? 1 : PS.betweenBlanks | 0)),
+    showPrintDateTime: !!F.datetime.show, printDateTimeFontSize: +F.datetime.size || 20,
+    printDateTimeBold: F.datetime.weight === 'bold', printDateTimeFontWeight: W(F.datetime),
+    printDateTimeFontStyle: ST(F.datetime), printDateTimeAlignment: A(F.datetime),
+    printDateTimeColor: BLACK,
+    showStatus: false, statusFontSize: 20, statusBold: false,
+    statusFontWeight: 'REGULAR', statusFontStyle: 'NORMAL', statusAlignment: 'LEFT', statusColor: BLACK,
+    fontFamily: fontFamily, letterSpacingMode: lsMode, customLetterSpacing: +PS.lsCustom || 0,
+    lineSpacingExtra: +PS.lineSpacing || 0,
+    textShadowEnabled: false, shadowColor: 0x88000000, shadowOpacity: 0.5,
+    shadowBlur: 3, shadowOffsetX: 2, shadowOffsetY: 2,
+    textOutlineEnabled: false, outlineColor: BLACK, outlineWidth: 1,
+    activePreset: 'CUSTOM'
+  });
+}
+
+function btVoucherPayload(items) {
+  return items.map(it => ({
+    code: it.code || '',
+    profile: it.pkg || '',
+    period: it.period != null ? fmtPeriod(it.period) : '',
+    quota: it.quota != null ? fmtQuota(it.quota) : '',
+    status: ''
+  }));
+}
+
+function btRefresh() {
+  const B = btBridge();
+  const stEl = $('bt-status'), devEl = $('bt-devices'), prEl = $('bt-progress');
+  if (!stEl) return;
+  if (!B) { stEl.textContent = t('p.btNeedApk'); return; }
+  let state = null;
+  try { state = JSON.parse(B.btState() || '{}'); } catch (e) {}
+  if (!state) return;
+  const label = { DISCONNECTED: t('p.btIdle'), CONNECTING: '…', CONNECTED: '', ERROR: '' }[state.state] || state.state;
+  if (state.state === 'CONNECTED') {
+    stEl.textContent = '● ' + (state.deviceName || state.deviceAddress || '');
+    stEl.style.color = 'var(--green)';
+  } else if (state.state === 'ERROR') {
+    stEl.textContent = '● ' + (state.error || state.state);
+    stEl.style.color = 'var(--red)';
+  } else if (state.state === 'CONNECTING') {
+    stEl.textContent = '● ' + t('p.btScanning');
+    stEl.style.color = '';
+  } else {
+    stEl.textContent = '● ' + label;
+    stEl.style.color = '';
+  }
+  if (!state.enabled) stEl.textContent += ' — Bluetooth off';
+  // devices
+  let devs = [];
+  try { devs = JSON.parse(B.btDevices() || '[]'); } catch (e) {}
+  devEl.innerHTML = devs.length ? devs.map((d, i) =>
+    `<button class="code-pill" data-i="${i}" style="cursor:pointer">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}<br><small class="muted">${esc(d.address)}</small></button>`
+  ).join('') : `<p class="muted">${t('p.btNoDevices')}</p>`;
+  devEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const d = devs[Number(b.dataset.i)];
+    btCall(B2 => B2.btConnect(d.address));
+    setTimeout(btRefresh, 800);
+  }));
+  // progress + last result
+  try {
+    const p = JSON.parse(B.btProgress() || '{}');
+    if (prEl) prEl.textContent = p.printing ? (p.message || '') : '';
+    const r = B.btLastResult();
+    if (r && r !== 'null') {
+      const res = JSON.parse(r);
+      toast(res.message || '', !res.ok);
+      btRefreshSoon();
+    }
+  } catch (e) {}
+}
+
+let btTimer = null;
+function btRefreshSoon() { setTimeout(btRefresh, 600); }
+function btPollStart() {
+  btPollStop();
+  btRefresh();
+  btTimer = setInterval(() => {
+    if ($('view-printer') && !$('view-printer').classList.contains('hidden')) btRefresh();
+  }, 2500);
+}
+function btPollStop() { if (btTimer) { clearInterval(btTimer); btTimer = null; } }
+
+function initBtPrinter() {
+  $('btn-bt-scan').addEventListener('click', () => {
+    const r = btCall(B => B.btScan());
+    if (r) { try { if (!JSON.parse(r).ok) toast(JSON.parse(r).message, true); } catch (e) {} }
+    btRefreshSoon(); setTimeout(btRefresh, 2500);
+  });
+  $('btn-bt-disconnect').addEventListener('click', () => { btCall(B => B.btDisconnect()); btRefreshSoon(); });
+  $('btn-bt-test').addEventListener('click', () => {
+    const r = btCall(B => B.btTestPrint(nativePrintSettings(), $('print-header') ? $('print-header').value.trim() : ''));
+    if (r) btRefreshSoon();
+  });
+  $('btn-bt-print').addEventListener('click', () => {
+    if (!S.queue.length) return toast(t('p.btNoQueue'), true);
+    const st = printSettings();
+    const r = btCall(B => B.btPrint(JSON.stringify(btVoucherPayload(S.queue)), nativePrintSettings(),
+      st.header || '', st.paper, st.copies));
+    if (r) btRefreshSoon();
+  });
 }
 
 function doPrint(items) {
@@ -1614,8 +1795,9 @@ function init() {
   searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') collapseSearch(); });
   searchBtn.addEventListener('click', () => {
     if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
+    // toggle: tap again while open to collapse (the ✕ was unreachable when empty)
+    if (searchWrap.classList.contains('open')) { collapseSearch(); return; }
     searchWrap.classList.add('open');
-    searchBtn.classList.add('hidden');
     searchInput.focus();
   });
   $('search-clear').addEventListener('click', () => {
@@ -1682,6 +1864,9 @@ function init() {
   loadPrintStyle();
   wireGenerateView();
   wireLayoutModal();
+  // bluetooth thermal printer (printer-v1 engine, APK only)
+  initBtPrinter();
+  btPollStart();
   wireTypoModal();
   $('btn-print-layout').addEventListener('click', openLayoutModal);
   $('btn-print-typo').addEventListener('click', openTypoModal);
