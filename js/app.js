@@ -29,15 +29,69 @@ const STATUS_TXT = { '1': 'မသုံးရသေး', '2': 'သုံးန�
 const vCode = v => v.voucherCode || v.codeNo || '';
 
 function toast(msg, isErr) {
-  // minimal toast
+  // iOS-style banner pill (styled in CSS)
   let t = document.querySelector('.toast');
   if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
   t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:' +
-    (isErr ? '#c62828' : '#1a1a1a') + ';color:#fff;padding:10px 18px;border-radius:10px;z-index:99;font-size:14px;max-width:90vw;text-align:center;';
-  t.classList.remove('hidden');
+  t.classList.toggle('err', !!isErr);
+  // restart animation
+  t.classList.remove('show');
+  void t.offsetWidth;
+  t.classList.add('show');
   clearTimeout(t._h);
-  t._h = setTimeout(() => t.classList.add('hidden'), 2600);
+  t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('ကူးပြီးပါပြီ 📋');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('ကူးပြီးပါပြီ 📋'); }
+    catch (e2) { toast('ကူးမရပါ', true); }
+    ta.remove();
+  }
+}
+
+/* ── theme (iOS light/dark) ── */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('rv-theme', t); } catch (e) {}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = t === 'dark' ? '#000000' : '#F2F2F7';
+  const cb = $('set-darkmode');
+  if (cb) cb.checked = t === 'dark';
+}
+function initTheme() {
+  let t = null;
+  try { t = localStorage.getItem('rv-theme'); } catch (e) {}
+  if (t !== 'dark' && t !== 'light') {
+    t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  applyTheme(t);
+}
+
+/* ── iOS sheet close with animation ── */
+function closeModal(id) {
+  const m = $(id);
+  if (!m || m.classList.contains('hidden')) return;
+  m.classList.add('closing');
+  setTimeout(() => { m.classList.add('hidden'); m.classList.remove('closing'); }, 200);
+}
+
+/* ── stepper wiring ── */
+function wireStepper(minusId, plusId, inputId, min, max) {
+  const inp = $(inputId);
+  const clamp = () => {
+    let v = Math.round(Number(inp.value) || min);
+    v = Math.min(max, Math.max(min, v));
+    inp.value = v;
+  };
+  $(minusId).addEventListener('click', () => { inp.value = (Number(inp.value) || min) - 1; clamp(); });
+  $(plusId).addEventListener('click', () => { inp.value = (Number(inp.value) || min) + 1; clamp(); });
+  inp.addEventListener('change', clamp);
 }
 
 /* ── state ── */
@@ -92,6 +146,10 @@ function enterApp() {
   if (st.printFooter) $('print-footer').value = st.printFooter;
   if (st.printPaper) $('print-paper').value = st.printPaper;
   if (st.printCopies) $('print-copies').value = st.printCopies;
+  // sync iOS segmented paper control with stored value
+  const pp = $('print-paper').value || '80';
+  document.querySelectorAll('#paper-seg button').forEach(b =>
+    b.classList.toggle('active', b.dataset.paper === pp));
   loadProjects().then(() => { switchView('view-vouchers'); });
   loadAccountInfo();
 }
@@ -148,9 +206,10 @@ function onProjectChange() {
 async function loadVouchers() {
   if (!S.projectId) return;
   const listEl = $('voucher-list');
-  listEl.innerHTML = '';
-  $('voucher-loading').classList.remove('hidden');
   $('voucher-count').textContent = '';
+  // iOS-style skeleton shimmer
+  listEl.innerHTML = Array.from({ length: 6 }, () =>
+    '<div class="skel"><div class="bar" style="width:52%"></div><div class="bar" style="width:34%"></div></div>').join('');
   try {
     S.vouchers = await Api.voucherListAll(S.projectId, (done, total) => {
       $('voucher-count').textContent = `ဆွဲနေသည်… ${done}/${total}`;
@@ -159,9 +218,7 @@ async function loadVouchers() {
     S.vouchers.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
     renderVouchers();
   } catch (e) {
-    listEl.innerHTML = `<p class="err">ဒေတာရမလာ: ${esc(e.message)}</p>`;
-  } finally {
-    $('voucher-loading').classList.add('hidden');
+    listEl.innerHTML = `<div class="empty"><div class="big">⚠️</div><p><b>ဒေတာရမလာ</b></p><p class="small">${esc(e.message)}</p></div>`;
   }
 }
 
@@ -175,18 +232,38 @@ function filteredVouchers() {
 }
 
 function renderVouchers() {
+  // dashboard stats (all vouchers, not just filtered)
+  const n1 = S.vouchers.filter(v => String(v.status) === '1').length;
+  const n2 = S.vouchers.filter(v => String(v.status) === '2').length;
+  const n3 = S.vouchers.filter(v => String(v.status) === '3').length;
+  $('stat-active').textContent = n1.toLocaleString();
+  $('stat-used').textContent = n2.toLocaleString();
+  $('stat-expired').textContent = n3.toLocaleString();
+  $('stat-total').textContent = S.vouchers.length.toLocaleString();
+
   const list = filteredVouchers();
-  $('voucher-count').textContent = `စုစုပေါင်း ${S.vouchers.length} · ပြသနေသည် ${list.length}`;
-  $('voucher-list').innerHTML = list.slice(0, 300).map(v => `
+  $('voucher-count').textContent = S.vFilter || S.vStatus
+    ? `တွေ့ရှိချက် ${list.length} / စုစုပေါင်း ${S.vouchers.length}`
+    : `စုစုပေါင်း ${S.vouchers.length}`;
+  const el = $('voucher-list');
+  if (!list.length) {
+    el.innerHTML = (S.vFilter || S.vStatus)
+      ? `<div class="empty"><div class="big">🔍</div><p><b>ရှာမတွေ့ပါ</b></p><p class="small">ရှာဖွေမှုစာသား (သို့) စစ်ထုတ်မှုပြောင်းကြည့်ပါ</p></div>`
+      : `<div class="empty"><div class="big">🎟️</div><p><b>ဗောက်ချာမရှိပါ</b></p><p class="small">「ထုတ်မယ်」 tab မှ အသစ်ထုတ်နိုင်ပါတယ်</p></div>`;
+    return;
+  }
+  el.innerHTML = list.slice(0, 300).map(v => `
     <div class="voucher-row" data-uuid="${esc(v.uuid)}">
+      <span class="status-dot s${esc(v.status)}"></span>
       <div class="voucher-meta">
         <div class="voucher-code">${esc(vCode(v))}</div>
         <div class="pkg">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
       </div>
       <span class="badge s${esc(v.status)}">${esc(STATUS_TXT[v.status] || v.status)}</span>
-    </div>`).join('') || '<p class="muted">ဗောက်ချာမရှိပါ</p>';
-  if (list.length > 300) $('voucher-list').innerHTML += `<p class="muted small">အစဆုံး ၃၀၀ သာပြထားသည် — ရှာဖွေမှုနဲ့ စစ်ထုတ်ပါ</p>`;
-  document.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', () => openVoucherDetail(r.dataset.uuid)));
+      <span class="chev">›</span>
+    </div>`).join('');
+  if (list.length > 300) el.innerHTML += `<div class="empty" style="padding:20px"><p class="small">အစဆုံး ၃၀၀ သာပြထားသည် — ရှာဖွေမှုနဲ့ စစ်ထုတ်ပါ</p></div>`;
+  el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', () => openVoucherDetail(r.dataset.uuid)));
 }
 
 let modalVoucher = null;
@@ -196,7 +273,7 @@ function openVoucherDetail(uuid) {
   modalVoucher = v;
   $('modal-title').textContent = '🎟️ ' + vCode(v);
   const rows = [
-    ['ကုဒ်နံပါတ်', `<b class="voucher-code">${esc(vCode(v))}</b>`],
+    ['ကုဒ်နံပါတ်', `<b class="voucher-code">${esc(vCode(v))}</b> <button class="icon-btn" id="modal-copy" title="ကူးမယ်" style="width:30px;height:30px;font-size:14px">📋</button>`],
     ['အခြေအနေ', `<span class="badge s${esc(v.status)}">${esc(STATUS_TXT[v.status] || v.status)}</span>`],
     ['Package', esc(v.packageName || v.userGroupName || '—')],
     ['သက်တမ်း', esc(fmtPeriod(v.timePeriod))],
@@ -214,6 +291,7 @@ function openVoucherDetail(uuid) {
     ['MAC bind', v.bindMac ? 'Yes' : 'No'],
   ];
   $('modal-body').innerHTML = `<dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
+  $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
 }
 
@@ -225,7 +303,8 @@ async function deleteVoucher() {
     await Api.voucherDelete(S.projectId, v);
     toast('ဖျက်ပြီးပါပြီ');
   } catch (e) {
-    alert(e.message);
+    // Honest: Ruijie Open Platform has no voucher-delete endpoint (portal uses internal SSO API)
+    toast(e.message || 'ဖျက်မရပါ — Ruijie Open API မှာ voucher ဖျက်တဲ့လုပ်ဆောင်ချက်မပါဝင်ပါ', true);
   }
 }
 
@@ -308,8 +387,10 @@ function showGenResult(items) {
   genResultItems = items;
   $('gen-result-count').textContent = items.length;
   $('gen-result-list').innerHTML = items.map((it, i) =>
-    `<span class="code-pill">${esc(it.code)}<button data-i="${i}" title="queue">➕</button></span>`).join('');
-  document.querySelectorAll('#gen-result-list button').forEach(b =>
+    `<span class="code-pill">${esc(it.code)}<button data-copy="${i}" title="ကူးမယ်">📋</button><button data-i="${i}" title="queue">➕</button></span>`).join('');
+  document.querySelectorAll('#gen-result-list [data-copy]').forEach(b =>
+    b.addEventListener('click', () => copyText(genResultItems[Number(b.dataset.copy)].code)));
+  document.querySelectorAll('#gen-result-list [data-i]').forEach(b =>
     b.addEventListener('click', () => { addToQueue(genResultItems[Number(b.dataset.i)]); }));
   $('gen-result').classList.remove('hidden');
   $('gen-result').scrollIntoView({ behavior: 'smooth' });
@@ -387,6 +468,27 @@ function printDocHtml(ticketsHtml, st) {
     .ticket .foot { font-size: 9pt; margin-top: 3mm; font-family: sans-serif; }
     .ticket hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
   </style></head><body>${ticketsHtml}</body></html>`;
+}
+
+/* ── print preview (sample ticket with current settings) ── */
+function ticketPreviewHtml(item, st) {
+  const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return `<div class="ticket-preview">
+    ${st.header ? `<h4>${esc(st.header)}</h4><hr>` : ''}
+    <div class="pv-info">${esc(item.pkg || '')}</div>
+    <div class="pv-code">${esc(item.code)}</div>
+    <div class="pv-info">${item.period ? 'သက်တမ်း: ' + esc(fmtPeriod(item.period)) : ''}</div>
+    <div class="pv-info">${item.quota != null ? 'ဒေတာ: ' + esc(fmtQuota(item.quota)) : ''}</div>
+    <div class="pv-info">${esc(now)}</div>
+    ${st.footer ? `<hr><div class="pv-info">${esc(st.footer)}</div>` : ''}
+  </div>
+  <p class="muted small" style="text-align:center">စာရွက် ${esc(st.paper)}mm · မိတ္တူ ${esc(String(st.copies))} စောင်</p>`;
+}
+function openPrintPreview() {
+  const st = printSettings();
+  $('preview-body').innerHTML = ticketPreviewHtml(
+    { code: 'XXXX-XXXX', pkg: 'နမူနာစာရွက်', period: 60, quota: 1024 }, st);
+  $('preview-modal').classList.remove('hidden');
 }
 
 /* ═══════════ MORE ═══════════ */
@@ -523,6 +625,8 @@ async function loadAccountInfo() {
     const email = info.account || info.email || '';
     const name = info.userName || info.username || '';
     $('topbar-account').textContent = name || email || 'Ruijie';
+    const av = $('topbar-avatar');
+    if (av) av.textContent = (name || email || 'R').trim().charAt(0).toUpperCase();
     $('account-info').innerHTML = `<dl class="kv">
       <dt>အမည်</dt><dd>${esc(name || '—')}</dd>
       <dt>Email</dt><dd>${esc(email || '—')}</dd>
@@ -551,24 +655,69 @@ async function saveSettings() {
 
 /* ═══════════ INIT ═══════════ */
 function init() {
-  // toast container style
-  const st = document.createElement('style');
-  st.textContent = '.toast.hidden{display:none}';
-  document.head.appendChild(st);
+  initTheme();
+
+  // password peek toggles
+  document.querySelectorAll('[data-peek]').forEach(b => b.addEventListener('click', () => {
+    const i = $(b.dataset.peek);
+    if (i) i.type = i.type === 'password' ? 'text' : 'password';
+  }));
 
   $('btn-connect').addEventListener('click', doConnect);
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
   $('project-select').addEventListener('change', onProjectChange);
-  $('voucher-search').addEventListener('input', e => { S.vFilter = e.target.value; renderVouchers(); });
+
+  // search with clear button
+  const searchInput = $('voucher-search'), searchWrap = $('search-wrap');
+  searchInput.addEventListener('input', e => {
+    S.vFilter = e.target.value;
+    searchWrap.classList.toggle('has-text', !!e.target.value);
+    renderVouchers();
+  });
+  $('search-clear').addEventListener('click', () => {
+    searchInput.value = ''; S.vFilter = '';
+    searchWrap.classList.remove('has-text');
+    renderVouchers();
+    searchInput.focus();
+  });
+  $('btn-refresh-vouchers').addEventListener('click', function () {
+    this.classList.add('spinning');
+    loadVouchers().finally(() => this.classList.remove('spinning'));
+  });
+
   document.querySelectorAll('#voucher-status-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#voucher-status-chips .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active'); S.vStatus = c.dataset.s; renderVouchers();
   }));
-  $('modal-close').addEventListener('click', () => $('modal').classList.add('hidden'));
-  $('modal').addEventListener('click', e => { if (e.target === $('modal')) $('modal').classList.add('hidden'); });
+  $('modal-close').addEventListener('click', () => closeModal('modal'));
+  $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal('modal'); });
   $('modal-print').addEventListener('click', () => { if (modalVoucher) doPrint([{ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }]); });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
   $('modal-delete').addEventListener('click', deleteVoucher);
+
+  // print preview sheet
+  $('preview-close').addEventListener('click', () => closeModal('preview-modal'));
+  $('preview-modal').addEventListener('click', e => { if (e.target === $('preview-modal')) closeModal('preview-modal'); });
+  $('btn-print-preview').addEventListener('click', openPrintPreview);
+  $('btn-preview-print').addEventListener('click', () => {
+    closeModal('preview-modal');
+    doPrint([{ code: 'TEST-1234', pkg: 'စမ်းသပ်စာရွက်', period: 60, quota: 1024 }]);
+  });
+
+  // steppers
+  wireStepper('qty-minus', 'qty-plus', 'gen-qty', 1, 500);
+  wireStepper('copies-minus', 'copies-plus', 'print-copies', 1, 10);
+
+  // iOS segmented paper size (syncs hidden select used by printSettings)
+  document.querySelectorAll('#paper-seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#paper-seg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    $('print-paper').value = b.dataset.paper;
+    Store.save({ printPaper: b.dataset.paper });
+  }));
+
+  // dark mode
+  $('set-darkmode').addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
 
   $('btn-generate').addEventListener('click', doGenerate);
   $('btn-generate-custom').addEventListener('click', doGenerateCustom);
