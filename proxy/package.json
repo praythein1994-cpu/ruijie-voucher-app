@@ -1,0 +1,1 @@
+{"description":"CORS proxy for the Ruijie Cloud open API (used by the Ruijie Voucher web app)","engines":{"node":">=16"},"license":"MIT","main":"server.js","name":"ruijie-proxy","scripts":{"start":"node server.js"},"version":"1.0.0"}

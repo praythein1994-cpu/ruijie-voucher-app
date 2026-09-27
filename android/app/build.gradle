@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.ruijie.voucher'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.ruijie.voucher'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            // passwords come from ~/.gradle/gradle.properties (never committed):
+            // rvkStoreFile, rvkStorePassword, rvkKeyAlias, rvkKeyPassword
+            if (project.hasProperty('rvkStoreFile')) {
+                storeFile file(project.property('rvkStoreFile'))
+                storePassword project.property('rvkStorePassword')
+                keyAlias project.property('rvkKeyAlias')
+                keyPassword project.property('rvkKeyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+        debug {
+            // debug builds use the default debug key
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// copy the web app into assets before every build
+tasks.register('syncWebApp', Copy) {
+    from '../../index.html'
+    from '../../css'
+    from '../../js'
+    into 'src/main/assets/www'
+    includeEmptyDirs = false
+}
+preBuild.dependsOn syncWebApp

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1565c0">
+<title>Ruijie Voucher App</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ══════════ CONNECT SCREEN ══════════ -->
+<div id="view-connect" class="screen hidden">
+  <div class="connect-card">
+    <div class="connect-logo">📶</div>
+    <h1>Ruijie Voucher App</h1>
+    <p class="muted">Ruijie Cloud နဲ့ ချိတ်ဆက်ရန် အချက်အလက်ထည့်ပါ</p>
+    <label>Cloud URL
+      <input id="cfg-cloud" type="url" value="https://cloud-as.ruijienetworks.com" autocomplete="off">
+    </label>
+    <label>App ID
+      <input id="cfg-appid" type="text" placeholder="Ruijie Cloud Open Platform မှ App ID" autocomplete="off">
+    </label>
+    <label>App Secret
+      <input id="cfg-secret" type="password" placeholder="App Secret" autocomplete="off">
+    </label>
+    <label>Proxy URL
+      <input id="cfg-proxy" type="url" placeholder="https://your-proxy.example.com" autocomplete="off">
+      <small class="muted">CORS proxy server လိပ်စာ (ဥပမာ Render/Railway မှာ deploy ထားတာ)</small>
+    </label>
+    <button id="btn-connect" class="btn primary big">ချိတ်ဆက်မယ်</button>
+    <p id="connect-err" class="err hidden"></p>
+    <p class="muted small">အချက်အလက်များသည် သင့်စက်ပေါ်မှာသာ သိမ်းထားပါသည်</p>
+  </div>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="app" class="hidden">
+  <header id="topbar">
+    <div class="topbar-title">📶 <span id="topbar-account">Ruijie</span></div>
+    <select id="project-select" aria-label="Project"></select>
+  </header>
+
+  <main id="main">
+    <!-- VOUCHERS -->
+    <section id="view-vouchers" class="view">
+      <div class="toolbar">
+        <input id="voucher-search" type="search" placeholder="🔍 ကုဒ်နံပါတ်ရှာမယ်…">
+        <div class="chips" id="voucher-status-chips">
+          <button class="chip active" data-s="">အားလုံး</button>
+          <button class="chip" data-s="1">မသုံးရသေး</button>
+          <button class="chip" data-s="2">သုံးနေဆဲ</button>
+          <button class="chip" data-s="3">သက်တမ်းကုန်</button>
+        </div>
+      </div>
+      <div id="voucher-count" class="muted small"></div>
+      <div id="voucher-list" class="list"></div>
+      <div id="voucher-loading" class="loading hidden">ဒေတာဆွဲနေသည်…</div>
+    </section>
+
+    <!-- GENERATE -->
+    <section id="view-generate" class="view hidden">
+      <div class="card">
+        <h2>🎟️ ဗောက်ချာအသစ်ထုတ်မယ်</h2>
+        <label>Package ရွေးပါ
+          <select id="gen-package"></select>
+        </label>
+        <label>အရေအတွက် (၁–၅၀၀)
+          <input id="gen-qty" type="number" min="1" max="500" value="10">
+        </label>
+        <label>မှတ်ချက် (optional)
+          <input id="gen-comment" type="text" placeholder="ဥပမာ ဆိုင်အမည် / ဧည့်သည်အမည်">
+        </label>
+        <details class="advanced">
+          <summary>အပိုအချက်အလက် (optional)</summary>
+          <label>First name <input id="gen-first" type="text"></label>
+          <label>Last name <input id="gen-last" type="text"></label>
+          <label>Email <input id="gen-email" type="email"></label>
+          <label>Phone <input id="gen-phone" type="tel"></label>
+        </details>
+        <button id="btn-generate" class="btn primary big">ထုတ်မယ်</button>
+        <p id="gen-err" class="err hidden"></p>
+      </div>
+      <div class="card">
+        <h2>✏️ စိတ်ကြိုက်ကုဒ်နံပါတ်ထုတ်မယ်</h2>
+        <p class="muted small">ပုံစံ: xxxx-xxxx (သို့) xxxx-xxxx-xxxx</p>
+        <label>ကုဒ်နံပါတ်
+          <input id="gen-custom-code" type="text" placeholder="ဥပမာ ab12-cd34" autocomplete="off">
+        </label>
+        <label>Package ရွေးပါ
+          <select id="gen-custom-package"></select>
+        </label>
+        <button id="btn-generate-custom" class="btn big">စိတ်ကြိုက်ကုဒ်ထုတ်မယ်</button>
+        <p id="gen-custom-err" class="err hidden"></p>
+      </div>
+      <div id="gen-result" class="card hidden">
+        <h2>ထုတ်ပြီးသား ဗောက်ချာများ (<span id="gen-result-count"></span>)</h2>
+        <div id="gen-result-list" class="code-list"></div>
+        <div class="row">
+          <button id="btn-gen-print-all" class="btn primary">🖨️ အားလုံးပရင့်ထုတ်မယ်</button>
+          <button id="btn-gen-queue-all" class="btn">➕ Print queue ထဲထည့်မယ်</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRINTER -->
+    <section id="view-printer" class="view hidden">
+      <div class="card">
+        <h2>🖨️ ပရင့်ဆက်တင်</h2>
+        <label>စာရွက်အကျယ်
+          <select id="print-paper">
+            <option value="80">80mm (thermal)</option>
+            <option value="58">58mm (thermal)</option>
+          </select>
+        </label>
+        <label>ခေါင်းစဉ်စာသား
+          <input id="print-header" type="text" placeholder="ဥပမာ My Shop WiFi">
+        </label>
+        <label>အောက်ခြေစာသား
+          <input id="print-footer" type="text" placeholder="ဥပမာ ကျေးဇူးတင်ပါသည်">
+        </label>
+        <label>မိတ္တူ အရေအတွက်
+          <input id="print-copies" type="number" min="1" max="10" value="1">
+        </label>
+        <button id="btn-print-test" class="btn">စမ်းသပ်စာရွက်ထုတ်မယ်</button>
+      </div>
+      <div class="card">
+        <h2>🧾 Print Queue (<span id="queue-count">0</span>)</h2>
+        <div id="print-queue" class="code-list"></div>
+        <div class="row">
+          <button id="btn-queue-print" class="btn primary">🖨️ ပရင့်ထုတ်မယ်</button>
+          <button id="btn-queue-clear" class="btn danger-ghost">ရှင်းမယ်</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MORE -->
+    <section id="view-more" class="view hidden">
+      <div class="menu-grid" id="more-menu">
+        <button class="menu-item" data-more="accounts">👥<span>Auth Accounts</span></button>
+        <button class="menu-item" data-more="usergroups">📦<span>User Groups</span></button>
+        <button class="menu-item" data-more="devices">📡<span>Devices</span></button>
+        <button class="menu-item" data-more="clients">💻<span>Online Clients</span></button>
+        <button class="menu-item" data-more="networks">🌐<span>Networks</span></button>
+      </div>
+      <div id="more-content"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view hidden">
+      <div class="card">
+        <h2>👤 အကောင့်အချက်အလက်</h2>
+        <div id="account-info" class="kv"></div>
+      </div>
+      <div class="card">
+        <h2>🔗 ချိတ်ဆက်မှုပြင်ဆင်မယ်</h2>
+        <label>Cloud URL <input id="set-cloud" type="url"></label>
+        <label>App ID <input id="set-appid" type="text"></label>
+        <label>App Secret <input id="set-secret" type="password" placeholder="(မပြောင်းလျှင် ချန်ထားပါ)"></label>
+        <label>Proxy URL <input id="set-proxy" type="url"></label>
+        <button id="btn-save-settings" class="btn primary">သိမ်းမယ်</button>
+        <p id="set-err" class="err hidden"></p>
+      </div>
+      <div class="card">
+        <h2>⚙️ အခြား</h2>
+        <button id="btn-disconnect" class="btn danger">အကောင့်ထွက်မယ် (ဒေတာရှင်းမယ်)</button>
+        <p class="muted small">Version 1.0.0 · Ruijie Cloud Open API</p>
+      </div>
+    </section>
+  </main>
+
+  <nav id="tabbar">
+    <button class="tab active" data-view="view-vouchers">🎟️<span>ဗောက်ချာ</span></button>
+    <button class="tab" data-view="view-generate">➕<span>ထုတ်မယ်</span></button>
+    <button class="tab" data-view="view-printer">🖨️<span>ပရင်တာ</span></button>
+    <button class="tab" data-view="view-more">⋯<span>More</span></button>
+    <button class="tab" data-view="view-settings">⚙️<span>ဆက်တင်</span></button>
+  </nav>
+</div>
+
+<!-- VOUCHER DETAIL MODAL -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-title">ဗောက်ချာအသေးစိတ်</h2>
+      <button id="modal-close" class="icon-btn">✕</button>
+    </div>
+    <div id="modal-body"></div>
+    <div class="row modal-actions">
+      <button id="modal-print" class="btn primary">🖨️ ပရင့်ထုတ်မယ်</button>
+      <button id="modal-queue" class="btn">➕ Queue</button>
+      <button id="modal-delete" class="btn danger">🗑️ ဖျက်မယ်</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT AREA (only visible when printing) -->
+<div id="print-area"></div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
