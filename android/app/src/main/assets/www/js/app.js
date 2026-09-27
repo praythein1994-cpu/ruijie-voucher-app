@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.10';
+const APP_VERSION = '1.5.12';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -64,6 +64,8 @@ const I18N = {
   'd.activated': { my: 'စတင်သုံးချိန်', en: 'First used' },
   'd.quota': { my: 'ဒေတာပမာဏ', en: 'Data quota' },
   'd.usedQuota': { my: 'သုံးပြီးဒေတာ', en: 'Data used' },
+  'd.remQuota': { my: 'ကျန်ဒေတာ', en: 'Remaining data' },
+  'd.remTime': { my: 'ကျန်အချိန်', en: 'Remaining time' },
   'd.maxClients': { my: 'တစ်ပြိုင်သုံးနိုင်သူ', en: 'Max clients' },
   'd.curClients': { my: 'လက်ရှိသုံးနေသူ', en: 'Current clients' },
   'd.price': { my: 'ဈေးနှုန်း', en: 'Price' },
@@ -130,6 +132,8 @@ const I18N = {
   'g.advanced': { my: 'အပိုအချက်အလက် (optional)', en: 'Extra info (optional)' },
   'g.btn': { my: 'ထုတ်မယ်', en: 'Generate' },
   'g.result': { my: 'ထုတ်ပြီးသား ဗောက်ချာများ', en: 'Generated vouchers' },
+  'g.recent': { my: 'နောက်ဆုံးထုတ်ထားသောများ', en: 'Recently generated' },
+  'g.recentEmpty': { my: 'ဒီစက်မှာ မှတ်ထားတဲ့ နောက်ဆုံးအသုတ်မရှိသေးပါ', en: 'No recent batch saved on this device yet' },
   'g.printAll': { my: 'အားလုံးပရင့်ထုတ်မယ်', en: 'Print all' },
   'g.queueAll': { my: 'Print queue ထဲထည့်မယ်', en: 'Add to print queue' },
   'g.usergroup': { my: 'User Group', en: 'User Group' },
@@ -354,6 +358,7 @@ const I18N = {
   'fmt.day': { my: ' ရက်', en: 'd' },
   'fmt.hour': { my: ' နာရီ', en: 'h' },
   'fmt.min': { my: ' မိနစ်', en: 'm' },
+  'fmt.sec': { my: ' စက္ကန့်', en: 's' },
   'fmt.unlimited': { my: 'အကန့်အသတ်မရှိ', en: 'Unlimited' },
   'peek': { my: 'ပြမယ်/ဖုံးမယ်', en: 'Show/hide' },
 };
@@ -420,6 +425,47 @@ const fmtQuota = mb => {
   if (mb <= 0) return t('fmt.unlimited');
   return mb >= 1024 ? (mb / 1024).toFixed(mb % 1024 ? 1 : 0) + ' GB' : mb + ' MB';
 };
+/* Smart duration for remaining time: "18h 13m", "2d 3h" — built from cloud minutes. */
+const fmtRemain = mins => {
+  if (mins === null || mins === undefined || mins === '') return '—';
+  mins = Math.round(Number(mins));
+  if (!isFinite(mins)) return '—';
+  mins = Math.max(0, mins);
+  if (mins === 0) return '0' + t('fmt.min');
+  const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+  const p = [];
+  if (d) p.push(d + t('fmt.day'));
+  if (h) p.push(h + t('fmt.hour'));
+  if (m || !p.length) p.push(m + t('fmt.min'));
+  return p.join(' ');
+};
+/* Live ticking variant with seconds: "18h 12m 45s". Driven by the local clock
+   from the cloud snapshot — time always passes at 1s/s, so this is exact. */
+const fmtRemainSecs = secs => {
+  secs = Math.max(0, Math.round(Number(secs)));
+  if (!isFinite(secs)) return '—';
+  const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600),
+        m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  const p = [];
+  if (d) p.push(d + t('fmt.day'));
+  if (h || d) p.push(h + t('fmt.hour'));
+  p.push(m + t('fmt.min'));
+  p.push(s + t('fmt.sec'));
+  return p.join(' ');
+};
+const remQuotaTxt = v => {
+  if (v.quota === null || v.quota === undefined || v.quota === '') return '—';
+  const q = Number(v.quota);
+  if (q <= 0) return t('fmt.unlimited');
+  if (v.usedQuota === null || v.usedQuota === undefined || v.usedQuota === '') return '—';
+  return fmtQuota(Math.max(0, q - Number(v.usedQuota)));
+};
+const remTimeTxt = v => {
+  if (v.usedTime === null || v.usedTime === undefined || v.usedTime === '') return '—';
+  const tp = Number(v.timePeriod);
+  if (!tp) return '—';
+  return fmtRemain(tp - Number(v.usedTime));
+};
 const statusTxt = s => t('status.' + s) || String(s);
 const vCode = v => v.voucherCode || v.codeNo || '';
 
@@ -472,6 +518,7 @@ function initTheme() {
 function closeModal(id) {
   const m = $(id);
   if (!m || m.classList.contains('hidden')) return;
+  if (id === 'modal') stopVoucherLive();
   m.classList.add('closing');
   setTimeout(() => { m.classList.add('hidden'); m.classList.remove('closing'); }, 200);
 }
@@ -559,8 +606,8 @@ function switchView(id, push) {
   $(id).classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(tb => tb.classList.toggle('active', tb.dataset.view === id));
   if (id === 'view-vouchers' && S.vouchers.length === 0 && !S._vouchersLoading) loadVouchers();
-  if (id === 'view-generate') ensurePackages();
-  if (id === 'view-printer') renderQueue();
+  if (id === 'view-generate') { ensurePackages(); renderRecentGen(); btCacheState(); renderPrinterDots(); }
+  if (id === 'view-printer') { renderQueue(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-settings') fillSettings();
   // SPA back-button support: one back press walks views instead of killing the app.
   if (push !== false) {
@@ -722,12 +769,14 @@ function openVoucherDetail(uuid) {
     [t('d.status'), `<span class="badge s${esc(v.status)}">${esc(statusTxt(v.status))}</span>`],
     [t('d.pkg'), esc(v.packageName || v.userGroupName || '—')],
     [t('d.validity'), esc(fmtPeriod(v.timePeriod))],
-    [t('d.usedTime'), v.usedTime ? fmtPeriod(v.usedTime) : '—'],
+    [t('d.usedTime'), `<span id="live-usedtime">${v.usedTime ? esc(fmtPeriod(v.usedTime)) : '—'}</span>`],
+    [t('d.remTime'), `<span id="live-remtime">${esc(remTimeTxt(v))}</span><span class="live-dot" title="live"></span>`],
     [t('d.created'), esc(fmtDate(v.createTime))],
     [t('d.activated'), (() => { const at = voucherActivatedTime(v); return at ? esc(fmtDate(at)) : '—'; })()],
     [t('d.expiry'), esc(fmtDate(v.expiryTime))],
     [t('d.quota'), esc(fmtQuota(v.quota))],
-    [t('d.usedQuota'), esc(fmtQuota(v.usedQuota))],
+    [t('d.usedQuota'), `<span id="live-usedquota">${esc(fmtQuota(v.usedQuota))}</span>`],
+    [t('d.remQuota'), `<span id="live-remquota">${esc(remQuotaTxt(v))}</span><span id="live-age" class="muted small"></span>`],
     [t('d.maxClients'), esc(v.maxClients || '—')],
     [t('d.curClients'), esc(v.currentClients || 0)],
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
@@ -739,6 +788,55 @@ function openVoucherDetail(uuid) {
   $('modal-body').innerHTML = `<dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
+  startVoucherLive(v);
+}
+
+/* Live voucher detail: remaining time ticks every second from the local clock
+   (exact — time passes at 1s/s from the cloud snapshot). Data usage can only
+   change in the cloud, so it is re-fetched from the cloud every 45s while the
+   detail is open; nothing is ever interpolated or invented. */
+let liveTimer = null, livePoller = null, liveBase = null;
+function startVoucherLive(v) {
+  stopVoucherLive();
+  liveBase = { uuid: v.uuid, at: Date.now(), usedTimeMin: Number(v.usedTime) || 0, timePeriodMin: Number(v.timePeriod) || 0, dataAt: 0 };
+  const tick = () => {
+    if (!modalVoucher || !liveBase || modalVoucher.uuid !== liveBase.uuid) return stopVoucherLive();
+    const elapsedMin = (Date.now() - liveBase.at) / 60000;
+    const el = $('live-remtime');
+    if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
+    const age = $('live-age');
+    if (age) age.textContent = liveBase.dataAt ? ' · ' + Math.max(0, Math.round((Date.now() - liveBase.dataAt) / 1000)) + t('fmt.sec') + ' ago' : '';
+  };
+  const poll = async () => {
+    if (!liveBase) return;
+    try {
+      const fresh = await Api.voucherListAll(S.projectId);
+      if (!liveBase || !fresh) return;
+      S.vouchers = fresh;
+      const fv = fresh.find(x => x.uuid === liveBase.uuid);
+      if (fv && modalVoucher && modalVoucher.uuid === liveBase.uuid) {
+        Object.assign(modalVoucher, { usedTime: fv.usedTime, usedQuota: fv.usedQuota, status: fv.status, expiryTime: fv.expiryTime });
+        liveBase.usedTimeMin = Number(fv.usedTime) || 0;
+        liveBase.timePeriodMin = Number(modalVoucher.timePeriod) || 0;
+        liveBase.at = Date.now();
+        liveBase.dataAt = Date.now();
+        const uq = $('live-usedquota'), rq = $('live-remquota'), ut = $('live-usedtime');
+        if (uq) uq.textContent = fmtQuota(fv.usedQuota);
+        if (rq) rq.textContent = remQuotaTxt(modalVoucher);
+        if (ut) ut.textContent = fv.usedTime ? fmtPeriod(fv.usedTime) : '—';
+        tick();
+      }
+    } catch (e) { /* keep the last good snapshot on poll failure */ }
+  };
+  liveTimer = setInterval(tick, 1000);
+  tick();
+  livePoller = setInterval(poll, 45000);
+  setTimeout(poll, 15000);
+}
+function stopVoucherLive() {
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  if (livePoller) { clearInterval(livePoller); livePoller = null; }
+  liveBase = null;
 }
 
 async function deleteVoucher() {
@@ -946,6 +1044,8 @@ async function generateVouchers(btnId, lblId) {
     });
     const items = list.map(v => ({ code: vCode(v), pkg: pkg && pkgName(pkg), period: v.timePeriod, quota: v.quota }));
     showGenResult(items);
+    try { Store.save({ lastGen: { when: Date.now(), pkg: pkg ? pkgName(pkg) : '', items } }); } catch (e) {}
+    renderRecentGen();
     S.vouchers = []; // refresh list next time
     toast(tx('toast.generated', { n: list.length }));
     return items;
@@ -1003,8 +1103,7 @@ function syncGenUserGroup() {
 }
 
 let genResultItems = [];
-function showGenResult(items) {
-  genResultItems = items;
+function showGenResult(items) {  genResultItems = items;
   $('gen-result-count').textContent = items.length;
   $('gen-result-list').innerHTML = items.map((it, i) =>
     `<span class="code-pill">${esc(it.code)}<button data-copy="${i}" title="${t('a.copy')}">${ic('copy', 'sm')}</button><button data-i="${i}" title="${t('a.queue')}">${ic('plus', 'sm')}</button></span>`).join('');
@@ -1014,6 +1113,29 @@ function showGenResult(items) {
     b.addEventListener('click', () => { addToQueue(genResultItems[Number(b.dataset.i)]); }));
   $('gen-result').classList.remove('hidden');
   $('gen-result').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* Recently generated — the last batch saved on this device (fills the tablet side panel). */
+let recentGenItems = [];
+function renderRecentGen() {
+  const list = $('gen-recent-list');
+  if (!list) return;
+  const sub = $('gen-recent-sub');
+  let lg = null;
+  try { lg = Store.load().lastGen; } catch (e) {}
+  recentGenItems = (lg && lg.items) || [];
+  if (sub) sub.textContent = (lg && lg.when) ? fmtDate(lg.when) + (lg.pkg ? ' · ' + lg.pkg : '') : '';
+  list.innerHTML = recentGenItems.length
+    ? recentGenItems.map((it, i) =>
+        `<span class="code-pill">${esc(it.code)}<button data-copy="${i}" title="${t('a.copy')}">${ic('copy', 'sm')}</button><button data-i="${i}" title="${t('a.queue')}">${ic('plus', 'sm')}</button></span>`).join('')
+    : `<p class="muted">${t('g.recentEmpty')}</p>`;
+  list.querySelectorAll('[data-copy]').forEach(b =>
+    b.addEventListener('click', () => copyText(recentGenItems[Number(b.dataset.copy)].code)));
+  list.querySelectorAll('[data-i]').forEach(b =>
+    b.addEventListener('click', () => { addToQueue(recentGenItems[Number(b.dataset.i)]); }));
+  ['btn-recent-print-all', 'btn-recent-queue-all'].forEach(id => {
+    const e = $(id); if (e) e.disabled = !recentGenItems.length;
+  });
 }
 
 /* ═══════════ PRINTER ═══════════ */
@@ -1125,10 +1247,12 @@ function btRefresh() {
   const B = btBridge();
   const stEl = $('bt-status'), devEl = $('bt-devices'), prEl = $('bt-progress');
   if (!stEl) return;
-  if (!B) { stEl.textContent = t('p.btNeedApk'); return; }
+  if (!B) { stEl.textContent = t('p.btNeedApk'); lastBtState = null; renderPrinterDots(); return; }
   let state = null;
   try { state = JSON.parse(B.btState() || '{}'); } catch (e) {}
   if (!state) return;
+  lastBtState = state;
+  renderPrinterDots();
   const label = { DISCONNECTED: t('p.btIdle'), CONNECTING: '…', CONNECTED: '', ERROR: '' }[state.state] || state.state;
   if (state.state === 'CONNECTED') {
     stEl.textContent = '● ' + (state.deviceName || state.deviceAddress || '');
@@ -1170,11 +1294,36 @@ function btRefresh() {
 
 let btTimer = null;
 function btRefreshSoon() { setTimeout(btRefresh, 600); }
+
+/* Real-time printer status dots (printer + generate views). Green = connected. */
+let lastBtState = null;
+function btCacheState() {
+  const B = btBridge();
+  lastBtState = null;
+  if (!B) return null;
+  try { lastBtState = JSON.parse(B.btState() || '{}'); } catch (e) { lastBtState = null; }
+  return lastBtState;
+}
+function renderPrinterDots() {
+  const st = lastBtState;
+  const on = !!(st && st.state === 'CONNECTED');
+  const name = on ? (st.deviceName || st.deviceAddress || '') : '';
+  document.querySelectorAll('[data-printer-dot]').forEach(el => {
+    el.classList.toggle('on', on);
+    el.title = on ? name : t('p.btIdle');
+  });
+  document.querySelectorAll('[data-printer-label]').forEach(el => {
+    el.textContent = on ? name : t('p.btIdle');
+    el.style.color = on ? 'var(--green)' : '';
+  });
+}
 function btPollStart() {
   btPollStop();
   btRefresh();
   btTimer = setInterval(() => {
-    if ($('view-printer') && !$('view-printer').classList.contains('hidden')) btRefresh();
+    const v = S.currentView;
+    if (v === 'view-printer') btRefresh();
+    else if (v === 'view-generate') { btCacheState(); renderPrinterDots(); }
   }, 2500);
 }
 function btPollStop() { if (btTimer) { clearInterval(btTimer); btTimer = null; } }
@@ -2154,6 +2303,8 @@ function init() {
   $('btn-generate').addEventListener('click', doGenerate);
   $('btn-generate-print').addEventListener('click', doGeneratePrint);
   $('btn-gen-print-all').addEventListener('click', () => doPrint(genResultItems));
+  $('btn-recent-print-all').addEventListener('click', () => doPrint(recentGenItems));
+  $('btn-recent-queue-all').addEventListener('click', () => { recentGenItems.forEach(addToQueue); });
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
   $('btn-print-test').addEventListener('click', () => doPrint([{ code: 'TEST-1234', pkg: t('tkt.test'), period: 60, quota: 1024 }]));
   $('btn-queue-print').addEventListener('click', () => doPrint(S.queue));
