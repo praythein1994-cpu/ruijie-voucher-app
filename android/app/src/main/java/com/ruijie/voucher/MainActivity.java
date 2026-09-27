@@ -3,6 +3,7 @@ package com.ruijie.voucher;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,6 +21,7 @@ import android.webkit.WebView;
 public class MainActivity extends Activity {
 
     private WebView webView;
+    private RuijieBridge bridge;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -37,7 +39,7 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setMediaPlaybackRequiresUserGesture(false);
 
-        webView.addJavascriptInterface(new RuijieBridge(this, webView), "RuijieBridge");
+        webView.addJavascriptInterface(bridge = new RuijieBridge(this, webView), "RuijieBridge");
 
         // JS alert()/confirm() need a WebChromeClient — without it, confirm()
         // silently returns false and the delete / sign-out flows do nothing.
@@ -76,6 +78,15 @@ public class MainActivity extends Activity {
                 if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) { need = true; break; }
             }
             if (need) requestPermissions(perms, 1001);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // System file-picker result for the diagnostics report save.
+        if (requestCode == RuijieBridge.REQ_DIAG_SAVE && bridge != null) {
+            bridge.onDiagSaveResult(resultCode, data);
         }
     }
 

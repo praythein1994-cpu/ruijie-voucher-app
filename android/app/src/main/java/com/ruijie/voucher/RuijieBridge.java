@@ -2,6 +2,8 @@ package com.ruijie.voucher;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
@@ -490,5 +492,87 @@ public class RuijieBridge {
         SsoSession.getInstance().logout();
         webView.post(() -> webView.evaluateJavascript(
                 "window._ssoEvent&&window._ssoEvent('logout')", null));
+    }
+
+    // ── DIAGNOSTICS ──────────────────────────────────────────────
+    // In-app diagnosis tool (Settings → စစ်ဆေးမှုများ). Login tests and
+    // voucher tests are selectable; the report is saved as .txt through
+    // the system file picker so the user chooses where it goes.
+
+    /** Request code for the ACTION_CREATE_DOCUMENT report-save picker. */
+    public static final int REQ_DIAG_SAVE = 2001;
+    private byte[] pendingDiagContent;
+
+    /**
+     * Cookie NAMES (never values) present per SSO domain — lets the
+     * diagnosis tell "cookies exist" apart from "session alive".
+     */
+    @JavascriptInterface
+    public String diagCookieInfo() {
+        try {
+            android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
+            JSONObject o = new JSONObject();
+            String[] urls = {"https://cloud-as.ruijienetworks.com", "https://cloud.ruijienetworks.com"};
+            for (String u : urls) {
+                JSONArray names = new JSONArray();
+                String c = cm.getCookie(u);
+                if (c != null) {
+                    for (String p : c.split(";")) {
+                        String n = p.trim().split("=", 2)[0];
+                        if (!n.isEmpty()) names.put(n);
+                    }
+                }
+                o.put(u, names);
+            }
+            return o.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /**
+     * Save the diagnostic report: opens the system file picker
+     * (ACTION_CREATE_DOCUMENT) so the user picks where the .txt goes.
+     * Result is delivered via window._diagEvent('saved'|'cancel'|'error').
+     */
+    @JavascriptInterface
+    public void diagSaveReport(final String filename, final String contentB64) {
+        try {
+            pendingDiagContent = Base64.decode(contentB64, Base64.DEFAULT);
+            Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            i.addCategory(Intent.CATEGORY_OPENABLE);
+            i.setType("text/plain");
+            i.putExtra(Intent.EXTRA_TITLE, filename);
+            activity.startActivityForResult(i, REQ_DIAG_SAVE);
+        } catch (Exception e) {
+            fireDiagEvent("error", e.getMessage());
+        }
+    }
+
+    /** Called from MainActivity.onActivityResult for REQ_DIAG_SAVE. */
+    public void onDiagSaveResult(int resultCode, Intent data) {
+        if (pendingDiagContent == null) return;
+        byte[] content = pendingDiagContent;
+        pendingDiagContent = null;
+        if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            try {
+                Uri uri = data.getData();
+                OutputStream os = activity.getContentResolver().openOutputStream(uri);
+                if (os == null) throw new Exception("cannot open output");
+                os.write(content);
+                os.close();
+                fireDiagEvent("saved", "");
+            } catch (Exception e) {
+                fireDiagEvent("error", e.getMessage());
+            }
+        } else {
+            fireDiagEvent("cancel", "");
+        }
+    }
+
+    private void fireDiagEvent(final String name, final String info) {
+        final String safe = info == null ? "" : info.replace("\\", "\\\\").replace("'", "\\'");
+        webView.post(() -> webView.evaluateJavascript(
+                "window._diagEvent&&window._diagEvent('" + name + "','" + safe + "')", null));
     }
 }
