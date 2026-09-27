@@ -200,6 +200,8 @@ const Api = {
   },
 
   // ── Devices ──
+  // Manual §2.x: common_type is MANDATORY (AP / Switch / Gateway).
+  // Response carries the array under "deviceList".
   async deviceList(groupId, commonType = '', page = 0, perPage = 50, key = '') {
     const q = { group_id: groupId, page, per_page: perPage };
     if (commonType) q.common_type = commonType;
@@ -207,12 +209,13 @@ const Api = {
     const j = await this.call('GET', 'maint/devices', q);
     const d = this.unwrap(j);
     const inner = d.data || d;
-    return Array.isArray(inner) ? inner : (inner.list || inner.devices || []);
+    return Array.isArray(inner) ? inner : (inner.list || inner.devices || inner.deviceList || []);
   },
 
   // ── Clients (online) ──
+  // Manual: staType is MANDATORY — "currentUser" = current online data.
   async onlineClients(groupId, pageIndex = 0, pageSize = 50) {
-    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize });
+    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize, staType: 'currentUser' });
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },

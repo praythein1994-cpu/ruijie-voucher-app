@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.3.4';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -219,33 +219,26 @@ const I18N = {
   'm.networksSub': { my: 'ကွန်ရက်များ', en: 'Networks' },
   'm.sales': { my: 'ရောင်းရငွေ', en: 'Sales' },
   'm.salesSub': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
-  'g.logSale': { my: 'ရောင်းရငွေစာရင်းသွင်းမယ်', en: 'Log to sales' },
   'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
-  'sl.vouchers': { my: 'ဗောက်ချာ (စောင်)', en: 'Vouchers' },
   'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
-  'sl.allTime': { my: 'စုစုပေါင်း', en: 'All time' },
-  'sl.thisMonth': { my: 'ဒီလ', en: 'This month' },
-  'sl.add': { my: 'အသစ်ထည့်မယ်', en: 'Log sale' },
-  'sl.date': { my: 'ရက်စွဲ', en: 'Date' },
   'sl.pkg': { my: 'ပက်ကေ့ခ်ျ', en: 'Package' },
   'sl.qty': { my: 'အရေအတွက်', en: 'Qty' },
   'sl.price': { my: 'တစ်စောင်ဈေး (ကျပ်)', en: 'Price each (Ks)' },
-  'sl.total': { my: 'စုစုပေါင်း', en: 'Total' },
-  'sl.note': { my: 'မှတ်ချက်', en: 'Note' },
-  'sl.save': { my: 'သိမ်းမယ်', en: 'Save' },
-  'sl.none': { my: 'စာရင်းမရှိသေးပါ', en: 'No sales logged yet' },
-  'sl.logged': { my: 'စာရင်းသွင်းပြီးပါပြီ', en: 'Sale logged' },
-  'sl.needQty': { my: 'အရေအတွက်ထည့်ပါ', en: 'Enter a quantity' },
+  'sl.all': { my: 'အားလုံး', en: 'All' },
+  'sl.today': { my: 'ဒီနေ့', en: 'Today' },
+  'sl.week': { my: '၇ ရက်', en: '7 days' },
+  'sl.custom': { my: 'စိတ်ကြိုက်ရက်', en: 'Custom' },
+  'sl.from': { my: 'မှ', en: 'From' },
+  'sl.to': { my: 'ထိ', en: 'To' },
   'sl.autoTitle': { my: 'ဗောက်ချာအခြေအနေ · အလိုအလျောက်တွက်ချက်မှု', en: 'Auto · from voucher status' },
-  'sl.manualTitle': { my: 'လက်တွေ့ထည့်သွင်းစာရင်း', en: 'Manual records' },
   'sl.used': { my: 'သုံးပြီး', en: 'Used' },
   'sl.expired': { my: 'သက်တမ်းကုန်', en: 'Expired' },
   'sl.soldAuto': { my: 'ရောင်းပြီး (စောင်)', en: 'Sold (vouchers)' },
   'sl.refreshV': { my: 'ဗောက်ချာစာရင်း refresh', en: 'Refresh vouchers' },
   'sl.autoNote': { my: 'used နဲ့ သက်တမ်းကုန် ဗောက်ချာတွေကို ရောင်းပြီးအဖြစ် တွက်ပါတယ်။ ဈေးနှုန်းကို ပက်ကေ့ခ်ျစာရင်းက ယူပါတယ်။', en: 'Used + expired vouchers count as sold; prices come from the package list.' },
-  'sl.noneAuto': { my: 'ရောင်းပြီးဗောက်ချာ မရှိသေးပါ — ဗောက်ချာစာရင်း refresh လုပ်ကြည့်ပါ။', en: 'No sold vouchers yet — try refreshing the voucher list.' },
+  'sl.noneAuto': { my: 'ဒီကာလမှာ ရောင်းပြီးဗောက်ချာ မရှိပါ။', en: 'No sold vouchers in this period.' },
   'sl.unknownPkg': { my: 'အမည်မသိ', en: 'Unknown' },
-  'sl.manualNote': { my: 'ဗောက်ချာစာရင်းမှာ အလိုအလျောက်ပါပြီးသားတွေကို ဒီမှာ ထပ်မထည့်ပါနဲ့။', en: 'Do not re-add sales already counted automatically above.' },
+  'sl.dateNote': { my: 'ရက်စွဲအခြေခံ: ဗောက်ချာထုတ်လုပ်ချိန် (createTime) — သုံးပြီးချိန်က မိနစ်အရေအတွက်ဖြစ်လို့ ရက်စွဲအဖြစ် သုံးမရပါ။', en: 'Date basis: voucher creation time (usedTime is a duration in minutes, not a date).' },
   'more.back': { my: 'ပြန်သွားမယ်', en: 'Back' },
   'more.loading': { my: 'ဆွဲနေသည်…', en: 'Loading…' },
   'ma.title': { my: 'Auth Accounts', en: 'Auth Accounts' },
@@ -454,7 +447,6 @@ const S = {
   packages: [],       // user groups
   queue: [],          // print queue: {code, pkg, period, quota}
   account: null,
-  sales: [],          // manual sales ledger entries (rv_sales_v1)
   moreFn: null,       // active "more" screen renderer (for language re-render)
 };
 
@@ -1343,14 +1335,22 @@ async function moreDevices() {
       <button class="chip" data-t="Gateway">Gateway</button>
     </div><div id="md-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
   S.moreFn = moreDevices;
+  const DEV_TYPES = ['AP', 'Switch', 'Gateway'];
   const load = async (type) => {
     $('md-list').innerHTML = `<p class="muted">${t('more.loading')}</p>`;
     try {
-      const list = await Api.deviceList(S.projectId, type, 0, 100);
+      // common_type is mandatory per manual — "All" queries each type and merges
+      const types = type ? [type] : DEV_TYPES;
+      const lists = await Promise.all(types.map(tp => Api.deviceList(S.projectId, tp, 0, 100)));
+      const seen = new Set(), list = [];
+      lists.flat().forEach(d => {
+        const k = d.serialNumber || d.sn || d.mac || JSON.stringify(d);
+        if (!seen.has(k)) { seen.add(k); list.push(d); }
+      });
       $('md-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
         <tr><th>${t('md.sn')}</th><th>${t('md.model')}</th><th>${t('md.status')}</th></tr>
-        ${list.map(d => `<tr><td>${esc(d.alias || d.name || d.sn || '')}<br><small class="muted">${esc(d.sn || d.mac || '')}</small></td>
-          <td>${esc(d.model || d.productModel || '')}</td>
+        ${list.map(d => `<tr><td>${esc(d.alias || d.deviceAliasName || d.name || d.serialNumber || d.sn || '')}<br><small class="muted">${esc(d.serialNumber || d.sn || d.mac || '')}</small></td>
+          <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td>${esc(d.onlineStatus || d.status || (d.online ? 'online' : ''))}</td></tr>`).join('')}
         </table></div>` : `<p class="muted">${t('md.none')}</p>`;
     } catch (e) { $('md-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
@@ -1400,51 +1400,66 @@ async function moreNetworks() {
   });
 }
 
-/* ═══════════ SALES LEDGER (ရောင်းရငွေစာရင်း) · v1.3.3 ═══════════
-   AUTO: vouchers with status used (2) or expired (3) count as sold;
+/* ═══════════ SALES LEDGER (ရောင်းရငွေစာရင်း) · v1.3.4 ═══════════
+   AUTO ONLY: vouchers with status used (2) or expired (3) count as sold;
    revenue = sold count × package price (matched from the package list).
-   MANUAL: extra records in rv_sales_v1, per project. */
-const SALES_KEY = 'rv_sales_v1';
-function loadSales() {
-  try {
-    const a = JSON.parse(localStorage.getItem(SALES_KEY) || '[]');
-    S.sales = Array.isArray(a) ? a : [];
-  } catch (e) { S.sales = []; }
-}
-function saveSales() {
-  try { localStorage.setItem(SALES_KEY, JSON.stringify(S.sales)); } catch (e) {}
-}
+   Sale-date basis = voucher createTime (usedTime is a duration in minutes,
+   not a timestamp). Filter: all / today / last 7 days / custom range. */
 const fmtMoney = n => `${Number(n || 0).toLocaleString('en-US')} Ks`;
-const fmtDay = ts => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
-const salesOfProject = () => S.sales.filter(s => String(s.projectId) === String(S.projectId));
 function pkgPriceNum(p) {
   const n = parseFloat(String(p.price || p.packagePrice || '').replace(/[^0-9.]/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
-function lastPriceFor(pkgNm) {
-  const e = salesOfProject().filter(s => s.pkg === pkgNm && s.price > 0).pop();
-  return e ? e.price : 0;
-}
 function voucherPkgName(v) { return v.packageName || v.userGroupName || ''; }
 
-async function moreSales(prefill) {
+async function moreSales() {
+  const todayStr = new Date().toISOString().slice(0, 10);
   moreShell(`${ic('chart', 'sm')} ${esc(t('sl.title'))}`,
-    `<div class="sec-h">${t('sl.autoTitle')}</div>
-     <div class="stat-grid" id="sl-auto-stats" style="grid-template-columns:repeat(2,1fr)"></div>
-     <div id="sl-auto-list"><p class="muted">${t('more.loading')}</p></div>
+    `<div class="chips" id="sl-chips">
+       <button class="chip active" data-r="all">${t('sl.all')}</button>
+       <button class="chip" data-r="today">${t('sl.today')}</button>
+       <button class="chip" data-r="week">${t('sl.week')}</button>
+       <button class="chip" data-r="custom">${t('sl.custom')}</button>
+     </div>
+     <div id="sl-custom" class="row hidden" style="margin-top:10px">
+       <label style="flex:1">${t('sl.from')} <input type="date" id="sl-from" value="${todayStr}"></label>
+       <label style="flex:1">${t('sl.to')} <input type="date" id="sl-to" value="${todayStr}"></label>
+     </div>
+     <div class="stat-grid" id="sl-stats" style="grid-template-columns:repeat(2,1fr);margin-top:10px"></div>
+     <div id="sl-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>
      <div class="row"><button class="btn" id="sl-refresh">${ic('refresh', 'sm')}<span>${t('sl.refreshV')}</span></button></div>
-     <div class="sec-h" style="margin-top:18px">${t('sl.manualTitle')}</div>
-     <div class="stat-grid" id="sl-stats" style="grid-template-columns:repeat(2,1fr)"></div>
-     <div id="sl-list"></div>
-     <div class="row"><button class="btn primary" id="sl-add">${ic('plus', 'sm')}<span>${t('sl.add')}</span></button></div>
-     <div id="sl-form"></div>`);
+     <p class="muted small">${t('sl.dateNote')}</p>`);
   S.moreFn = () => moreSales();
   await ensurePackages();
   const priceByPkg = {};
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
 
-  const renderAuto = () => {
-    const sold = S.vouchers.filter(v => String(v.status) === '2' || String(v.status) === '3');
+  let range = 'all';
+  const dayMs = 864e5;
+  const rangeBounds = () => {
+    const now = new Date();
+    if (range === 'today') {
+      const s = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      return [s, s + dayMs];
+    }
+    if (range === 'week') {
+      const s = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - 6 * dayMs;
+      return [s, s + 7 * dayMs];
+    }
+    if (range === 'custom') {
+      const f = $('sl-from').value, tt = $('sl-to').value;
+      const s = f ? new Date(f + 'T00:00:00').getTime() : 0;
+      const e = tt ? new Date(tt + 'T00:00:00').getTime() + dayMs : Date.now() + dayMs;
+      return [s, e];
+    }
+    return [0, Infinity];
+  };
+
+  const render = () => {
+    const [rs, re] = rangeBounds();
+    const sold = S.vouchers.filter(v =>
+      (String(v.status) === '2' || String(v.status) === '3') &&
+      (v.createTime || 0) >= rs && (v.createTime || 0) < re);
     const byPkg = {};
     sold.forEach(v => {
       const nm = voucherPkgName(v) || t('sl.unknownPkg');
@@ -1458,81 +1473,25 @@ async function moreSales(prefill) {
       return `<tr><td>${esc(nm)}</td><td>${g.used}</td><td>${g.expired}</td><td><b>${q}</b></td>` +
         `<td>${price ? esc(fmtMoney(price)) : '—'}</td><td><b>${price ? esc(fmtMoney(rev)) : '—'}</b></td></tr>`;
     }).join('');
-    $('sl-auto-stats').innerHTML =
+    $('sl-stats').innerHTML =
       `<div class="stat a"><div class="n">${tq.toLocaleString()}</div><div class="l">${t('sl.soldAuto')}</div></div>` +
       `<div class="stat g"><div class="n">${esc(fmtMoney(tr))}</div><div class="l">${t('sl.revenue')}</div></div>`;
-    $('sl-auto-list').innerHTML = sold.length
+    $('sl-list').innerHTML = sold.length
       ? `<div class="wrap-scroll"><table class="data"><tr><th>${t('sl.pkg')}</th><th>${t('sl.used')}</th><th>${t('sl.expired')}</th><th>${t('sl.qty')}</th><th>${t('sl.price')}</th><th>${t('sl.revenue')}</th></tr>${rows}</table></div><p class="muted small">${t('sl.autoNote')}</p>`
       : `<p class="muted">${t('sl.noneAuto')}</p>`;
   };
 
-  const renderManual = () => {
-    const list = salesOfProject().sort((a, b) => b.ts - a.ts);
-    const now = new Date(), m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const sum = arr => arr.reduce((a, s) => ({ q: a.q + s.qty, r: a.r + s.qty * s.price }), { q: 0, r: 0 });
-    const all = sum(list), mon = sum(list.filter(s => s.ts >= m0));
-    $('sl-stats').innerHTML =
-      `<div class="stat t"><div class="n">${all.q.toLocaleString()}</div><div class="l">${t('sl.vouchers')} · ${t('sl.allTime')}</div></div>` +
-      `<div class="stat g"><div class="n">${esc(fmtMoney(all.r))}</div><div class="l">${t('sl.revenue')} · ${t('sl.allTime')}</div></div>` +
-      `<div class="stat t"><div class="n">${mon.q.toLocaleString()}</div><div class="l">${t('sl.vouchers')} · ${t('sl.thisMonth')}</div></div>` +
-      `<div class="stat g"><div class="n">${esc(fmtMoney(mon.r))}</div><div class="l">${t('sl.revenue')} · ${t('sl.thisMonth')}</div></div>`;
-    $('sl-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
-      <tr><th>${t('sl.date')}</th><th>${t('sl.pkg')}</th><th>${t('sl.qty')}</th><th>${t('sl.price')}</th><th>${t('sl.total')}</th><th></th></tr>
-      ${list.map(s => `<tr><td>${fmtDay(s.ts)}${s.note ? `<br><small class="muted">${esc(s.note)}</small>` : ''}</td>
-        <td>${esc(s.pkg)}</td><td>${s.qty}</td><td>${esc(fmtMoney(s.price))}</td><td><b>${esc(fmtMoney(s.qty * s.price))}</b></td>
-        <td><button class="btn danger-ghost" data-sl-del="${s.id}">${ic('trash', 'sm')}</button></td></tr>`).join('')}
-      </table></div><p class="muted small">${t('sl.manualNote')}</p>` : `<p class="muted">${t('sl.none')}</p>`;
-    document.querySelectorAll('[data-sl-del]').forEach(b => b.addEventListener('click', () => {
-      const e = S.sales.find(x => String(x.id) === b.dataset.slDel);
-      if (!e || !confirm(tx('del.confirm', { code: `${e.pkg} × ${e.qty}` }))) return;
-      S.sales = S.sales.filter(x => String(x.id) !== b.dataset.slDel);
-      saveSales(); renderManual();
-    }));
-  };
-
-  const openForm = (pf) => {
-    const pkgOpts = S.packages.map(p => {
-      const nm = pkgName(p);
-      const sel = pf && pf.pkg === nm ? ' selected' : '';
-      return `<option value="${esc(nm)}" data-price="${pkgPriceNum(p)}"${sel}>${esc(nm)}</option>`;
-    }).join('');
-    const pkgField = pkgOpts
-      ? `<label>${t('sl.pkg')} <select id="sl-pkg">${pkgOpts}</select></label>`
-      : `<label>${t('sl.pkg')} <input id="sl-pkgt" value="${esc((pf && pf.pkg) || '')}"></label>`;
-    const today = new Date().toISOString().slice(0, 10);
-    $('sl-form').innerHTML = `<div class="card" style="margin-top:10px">
-      ${pkgField}
-      <label>${t('sl.qty')} <input id="sl-qty" type="number" min="1" step="1" value="${(pf && pf.qty) || 1}"></label>
-      <label>${t('sl.price')} <input id="sl-price" type="number" min="0" step="any" value="${(pf && pf.price) || ''}"></label>
-      <label>${t('sl.date')} <input id="sl-date" type="date" value="${today}"></label>
-      <label>${t('sl.note')} <input id="sl-note"></label>
-      <button class="btn primary" id="sl-do">${t('sl.save')}</button></div>`;
-    const syncPrice = () => {
-      const sel = $('sl-pkg');
-      if (!sel || $('sl-price').value) return;
-      const opt = sel.options[sel.selectedIndex];
-      const pr = Number(opt.dataset.price) || lastPriceFor(opt.value);
-      if (pr) $('sl-price').value = pr;
-    };
-    if ($('sl-pkg')) { $('sl-pkg').addEventListener('change', () => { $('sl-price').value = ''; syncPrice(); }); syncPrice(); }
-    else { const lp = lastPriceFor($('sl-pkgt').value); if (lp && !$('sl-price').value) $('sl-price').value = lp; }
-    $('sl-do').addEventListener('click', () => {
-      const pkg = $('sl-pkg') ? $('sl-pkg').value : $('sl-pkgt').value.trim();
-      const qty = Math.max(1, Math.round(Number($('sl-qty').value) || 0));
-      const price = Math.max(0, Number($('sl-price').value) || 0);
-      if (!pkg || !qty) { toast(t('sl.needQty'), true); return; }
-      const dv = $('sl-date').value ? new Date($('sl-date').value + 'T12:00:00') : new Date();
-      S.sales.push({ id: Date.now() + '' + Math.floor(Math.random() * 1e4), ts: dv.getTime(), projectId: S.projectId, pkg, qty, price, note: $('sl-note').value.trim() });
-      saveSales(); $('sl-form').innerHTML = ''; renderManual(); toast(t('sl.logged'));
-    });
-    $('sl-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
-
-  $('sl-refresh').addEventListener('click', async () => { await loadVouchers(); renderAuto(); });
-  $('sl-add').addEventListener('click', () => openForm());
-  renderAuto();
-  renderManual();
-  if (prefill) openForm(prefill);
+  document.querySelectorAll('#sl-chips .chip').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('#sl-chips .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    range = c.dataset.r;
+    $('sl-custom').classList.toggle('hidden', range !== 'custom');
+    render();
+  }));
+  $('sl-from').addEventListener('change', render);
+  $('sl-to').addEventListener('change', render);
+  $('sl-refresh').addEventListener('click', async () => { await loadVouchers(); render(); });
+  render();
 }
 
 /* ═══════════ SETTINGS ═══════════ */
@@ -1672,19 +1631,12 @@ function init() {
   $('btn-generate-print').addEventListener('click', doGeneratePrint);
   $('btn-gen-print-all').addEventListener('click', () => doPrint(genResultItems));
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
-  $('btn-gen-logsale').addEventListener('click', () => {
-    const pkgNm = (genResultItems[0] && genResultItems[0].pkg) || '';
-    switchView('view-more');
-    moreSales({ pkg: pkgNm, qty: genResultItems.length || 1 });
-  });
-
   $('btn-print-test').addEventListener('click', () => doPrint([{ code: 'TEST-1234', pkg: t('tkt.test'), period: 60, quota: 1024 }]));
   $('btn-queue-print').addEventListener('click', () => doPrint(S.queue));
   $('btn-queue-clear').addEventListener('click', () => { S.queue = []; renderQueue(); });
 
   // print layout & typography
   loadPrintStyle();
-  loadSales();
   wireGenerateView();
   wireLayoutModal();
   wireTypoModal();
