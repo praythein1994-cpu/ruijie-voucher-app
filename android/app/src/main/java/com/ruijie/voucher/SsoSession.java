@@ -81,7 +81,9 @@ public class SsoSession {
      * session is rejected (401/403) so callers can prompt re-login.
      */
     public String webProxy(String apiPath, String envelopeJson) throws Exception {
-        String clean = apiPath.startsWith("/") ? apiPath.substring(1) : apiPath;
+        // Portal capture: POST .../webproxy/common/api?/intlSamVoucher/v2/delete
+        // (query keeps the leading slash). Keep it byte-identical.
+        String clean = apiPath.startsWith("/") ? apiPath : "/" + apiPath;
         String urlStr = WEBPROXY_BASE + "?" + clean;
         HttpURLConnection c = (HttpURLConnection) new URL(urlStr).openConnection();
         c.setRequestMethod("POST");
