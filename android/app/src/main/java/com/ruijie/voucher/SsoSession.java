@@ -91,6 +91,32 @@ public class SsoSession {
      * session is rejected (401/403) so callers can prompt re-login.
      */
     public String webProxy(String apiPath, String envelopeJson) throws Exception {
+        ProxyResult r = webProxyRaw(apiPath, envelopeJson);
+        if (r.status == 401) {
+            // Session is dead server-side — drop the stale cookies so
+            // ssoStatus() stops reporting "Connected" for a dead session.
+            try { logout(); } catch (Exception ignored) {}
+            throw new SecurityException("Session expired (HTTP 401) — please log in again");
+        }
+        if (r.status == 403) {
+            // 403 is NOT treated as a dead session: minutes after a fresh
+            // login the session is alive, so the request itself was rejected
+            // (missing header/cookie/permission). Keep the session and
+            // surface Ruijie's answer instead of logging the user out.
+            String detail = r.body;
+            if (detail.length() > 200) detail = detail.substring(0, 200);
+            throw new Exception("Ruijie rejected the request (HTTP 403)" + (detail.isEmpty() ? "" : ": " + detail));
+        }
+        return r.body;
+    }
+
+    /** Raw webproxy result: HTTP status + body, no throwing. */
+    private static final class ProxyResult {
+        int status;
+        String body;
+    }
+
+    private ProxyResult webProxyRaw(String apiPath, String envelopeJson) throws Exception {
         // Portal capture: POST .../webproxy/common/api?/intlSamVoucher/v2/delete
         // (query keeps the leading slash). Keep it byte-identical.
         String clean = apiPath.startsWith("/") ? apiPath : "/" + apiPath;
@@ -132,22 +158,39 @@ public class SsoSession {
                 while ((line = br.readLine()) != null) sb.append(line);
             }
         }
-        if (status == 401) {
-            // Session is dead server-side — drop the stale cookies so
-            // ssoStatus() stops reporting "Connected" for a dead session.
-            try { logout(); } catch (Exception ignored) {}
-            throw new SecurityException("Session expired (HTTP 401) — please log in again");
+        ProxyResult r = new ProxyResult();
+        r.status = status;
+        r.body = sb.toString();
+        return r;
+    }
+
+    /**
+     * Diagnostics: checks whether the portal session is alive WITHOUT
+     * deleting anything real. Posts the delete envelope for a voucher code
+     * that cannot exist ("PROBE000" / nil UUID); the portal checks the
+     * session BEFORE looking the voucher up, so "not login" in the answer
+     * means the portal session is missing, while any other answer means
+     * the session is alive (the fake voucher is simply not found).
+     * Returns {"http":N,"notLogin":bool,"snippet":"..."}.
+     */
+    public String portalProbe(String envelopeJson) {
+        try {
+            ProxyResult r = webProxyRaw("/intlSamVoucher/v2/delete", envelopeJson);
+            String body = r.body == null ? "" : r.body;
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("http", r.status);
+            o.put("notLogin", body.contains("not login"));
+            o.put("snippet", body.length() > 160 ? body.substring(0, 160) : body);
+            return o.toString();
+        } catch (Exception e) {
+            try {
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("error", String.valueOf(e.getMessage()));
+                return o.toString();
+            } catch (Exception je) {
+                return "{\"error\":\"probe failed\"}";
+            }
         }
-        if (status == 403) {
-            // 403 is NOT treated as a dead session: minutes after a fresh
-            // login the session is alive, so the request itself was rejected
-            // (missing header/cookie/permission). Keep the session and
-            // surface Ruijie's answer instead of logging the user out.
-            String detail = sb.toString();
-            if (detail.length() > 200) detail = detail.substring(0, 200);
-            throw new Exception("Ruijie rejected the request (HTTP 403)" + (detail.isEmpty() ? "" : ": " + detail));
-        }
-        return sb.toString();
     }
 
     /** Merge two CookieManager cookie strings; first arg wins on name clash. */
@@ -169,6 +212,41 @@ public class SsoSession {
         return sb.toString();
     }
 
+    // ── login trace (diagnostics) ──────────────────────────────
+    // Records the URLs the login dialog visits (no credentials — URLs only)
+    // so a diagnostic report can prove whether the portal SSO handshake
+    // (/webproxy/sso/back ticket callback) actually completed.
+    private static final java.util.List<String> loginTrace = new java.util.ArrayList<>();
+    private static String loginTraceResult = "none";
+    private static String loginTraceAt = "";
+
+    private static synchronized void traceUrl(String url) {
+        if (url == null || url.isEmpty()) return;
+        String u = url.length() > 180 ? url.substring(0, 180) + "…" : url;
+        if (!loginTrace.isEmpty() && loginTrace.get(loginTrace.size() - 1).equals(u)) return;
+        loginTrace.add(u);
+        while (loginTrace.size() > 40) loginTrace.remove(0);
+    }
+
+    private static synchronized void traceResult(String result) {
+        loginTraceResult = result;
+        try {
+            loginTraceAt = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",
+                    java.util.Locale.US).format(new java.util.Date());
+        } catch (Exception ignored) { /* timestamp optional */ }
+    }
+
+    /** JSON: {"result":"success|cancel|started|none","at":"...","urls":[...]} */
+    public static synchronized String getLoginTraceJson() {
+        StringBuilder sb = new StringBuilder("{\"result\":\"");
+        sb.append(loginTraceResult).append("\",\"at\":\"").append(loginTraceAt).append("\",\"urls\":[");
+        for (int i = 0; i < loginTrace.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append(org.json.JSONObject.quote(loginTrace.get(i)));
+        }
+        return sb.append("]}").toString();
+    }
+
     // ── login dialog ─────────────────────────────────────────────
 
     public interface LoginCallback {
@@ -183,6 +261,9 @@ public class SsoSession {
     public void showLoginDialog(Activity activity, LoginCallback cb) {
         final Dialog dialog = new Dialog(activity, android.R.style.Theme_NoTitleBar_Fullscreen);
         final boolean[] fired = {false};
+        // Fresh trace for this login attempt.
+        loginTrace.clear();
+        traceResult("started");
 
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -224,6 +305,7 @@ public class SsoSession {
             @Override public void onClick(View v) {
                 if (!fired[0]) {
                     fired[0] = true;
+                    traceResult("cancel");
                     dialog.dismiss();
                     cb.onCancel();
                 }
@@ -264,6 +346,7 @@ public class SsoSession {
                 if (firedRef[0]) return;
                 if (isAuthenticatedUrl(url)) {
                     firedRef[0] = true;
+                    traceResult("success");
                     try { CookieManager.getInstance().flush(); } catch (Exception ignored) {}
                     dlgRef.dismiss();
                     cbRef.onSuccess();
@@ -272,6 +355,7 @@ public class SsoSession {
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 progress.setVisibility(View.VISIBLE);
+                traceUrl(url);
                 // NOTE: auth is checked in onPageFinished only. Checking here
                 // (or in shouldOverrideUrlLoading) dismisses the dialog before
                 // the portal page finishes loading, which can cut off the
@@ -280,6 +364,7 @@ public class SsoSession {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
+                traceUrl(url);
                 checkAuth(url);
             }
             @Override
@@ -299,6 +384,7 @@ public class SsoSession {
             @Override public void onCancel(android.content.DialogInterface d) {
                 if (!fired[0]) {
                     fired[0] = true;
+                    traceResult("cancel");
                     cb.onCancel();
                 }
             }
