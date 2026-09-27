@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.1';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -226,6 +226,8 @@ const I18N = {
   'p.btNoDevices': { my: 'စက်မတွေ့သေးပါ — Scan နှိပ်ပါ', en: 'No devices yet — tap Scan' },
   'p.btNeedApk': { my: 'ဘလူးတုသ်ပရင့်က Android app သီးသန့်ပါ', en: 'Bluetooth printing is Android-app only' },
   'p.btNoQueue': { my: 'Print Queue ထဲမှာ voucher မရှိသေးပါ', en: 'Print Queue is empty' },
+  'p.btAuto': { my: 'နောက်ဆုံးသုံးခဲ့တဲ့ပရင်တာကို အော်တိုချိတ်မယ်', en: 'Auto-connect last printer' },
+  'p.btAutoTrying': { my: 'အော်တိုချိတ်နေတယ်…', en: 'Auto-connecting…' },
   'm.title': { my: 'နောက်ထပ်', en: 'More' },
   'm.accounts': { my: 'Auth Accounts', en: 'Auth Accounts' },
   'm.accountsSub': { my: 'အသုံးပြုသူများ', en: 'Users' },
@@ -1120,7 +1122,32 @@ function btPollStart() {
 }
 function btPollStop() { if (btTimer) { clearInterval(btTimer); btTimer = null; } }
 
+/** Auto-connect to the last used printer (APK only). quiet=true skips toasts. */
+function btAutoConnect(quiet) {
+  const B = btBridge();
+  if (!B || !B.btAutoConnect) return;
+  let r = null;
+  try { r = JSON.parse(B.btAutoConnect() || '{}'); } catch (e) { return; }
+  if (!r) return;
+  if (r.ok) {
+    const prEl = $('bt-progress');
+    if (prEl) prEl.textContent = t('p.btAutoTrying') + (r.name ? ' ' + r.name : '');
+    btRefreshSoon(); setTimeout(btRefresh, 3000);
+  } else if (!quiet && r.message) {
+    toast(r.message, true);
+  }
+}
+
 function initBtPrinter() {
+  // auto-connect preference (persisted)
+  const acBox = $('bt-autoconnect');
+  if (acBox) {
+    acBox.checked = !!Store.load().btAutoConnect;
+    acBox.addEventListener('change', () => {
+      Store.save({ btAutoConnect: acBox.checked });
+      if (acBox.checked) btAutoConnect(true);
+    });
+  }
   $('btn-bt-scan').addEventListener('click', () => {
     const r = btCall(B => B.btScan());
     if (r) { try { if (!JSON.parse(r).ok) toast(JSON.parse(r).message, true); } catch (e) {} }
@@ -1867,6 +1894,8 @@ function init() {
   // bluetooth thermal printer (printer-v1 engine, APK only)
   initBtPrinter();
   btPollStart();
+  // auto-connect to the last used printer if the user enabled it
+  if (Store.load().btAutoConnect) setTimeout(() => btAutoConnect(true), 2000);
   wireTypoModal();
   $('btn-print-layout').addEventListener('click', openLayoutModal);
   $('btn-print-typo').addEventListener('click', openTypoModal);
