@@ -128,6 +128,8 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   padding: 0;
 }
 .search-wrap.has-text .clear { display: flex; }
+/* ✕ always visible while the bar is open, so the bar can always be closed */
+.toolbar-row .search-wrap.open .clear { display: flex; }
 
 /* iOS toggle switch */
 .switch { position: relative; width: 51px; height: 31px; flex: none; }
