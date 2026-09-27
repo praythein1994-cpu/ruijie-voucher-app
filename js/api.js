@@ -197,7 +197,7 @@ const Api = {
    * portal's internal webproxy API.
    */
   async voucherDelete(groupId, voucher) {
-    if (this.ssoLoggedIn()) return this.voucherDeleteSso(voucher);
+    if (this.ssoLoggedIn()) return this.voucherDeleteSso(groupId, voucher);
     throw new Error('SSO_REQUIRED');
   },
 
@@ -210,24 +210,35 @@ const Api = {
 
   /**
    * Portal webproxy envelope for voucher delete (internal API, undocumented).
-   * Shape follows the portal's intlSamVoucher v2 delete contract:
+   * EXACT shape captured from the live Ruijie portal (Chrome DevTools, 2026-09-27):
    * POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/intlSamVoucher/v2/delete
+   *   {"api":"/intlSamVoucher/v2/delete",
+   *    "authParams":{"api":"/intlSamVoucher/v2/delete","method":"DELETE"},
+   *    "method":"DELETE","module":"default",
+   *    "params":[{"voucherCode":"<code>"}],
+   *    "querys":{"ids":"<voucher uuid>","group_id":<project group id>,"lang":"en"}}
+   * Success response: {"code":0,"msg":"Success.","voucherData":{"code":0,"msg":"OK."}}
+   * Notes: module is "default" (not "common"); params carries ONLY voucherCode
+   * (no codeNo); querys.ids is the voucher uuid; group_id is numeric.
    */
-  ssoDeleteEnvelope(code, uuid) {
+  ssoDeleteEnvelope(code, uuid, groupId) {
+    const api = '/intlSamVoucher/v2/delete';
+    const gid = Number(groupId);
     return {
-      api: '/intlSamVoucher/v2/delete',
+      api,
+      authParams: { api, method: 'DELETE' },
       method: 'DELETE',
-      module: 'common',
-      params: [{ voucherCode: code, codeNo: code }],
-      querys: { ids: uuid || code },
+      module: 'default',
+      params: [{ voucherCode: code }],
+      querys: { ids: uuid, group_id: Number.isFinite(gid) ? gid : groupId, lang: 'en' },
     };
   },
 
   /** Delete one voucher through the SSO session. Throws on portal error. */
-  async voucherDeleteSso(voucher) {
+  async voucherDeleteSso(groupId, voucher) {
     const code = voucher.voucherCode || voucher.codeNo || voucher.code || '';
     const uuid = voucher.uuid || voucher.id || '';
-    const env = this.ssoDeleteEnvelope(code, uuid);
+    const env = this.ssoDeleteEnvelope(code, uuid, groupId);
     const j = await ssoCall(env.api, env);
     const c = j && typeof j.code !== 'undefined' ? j.code : 0;
     if (c !== 0 && c !== 200) {
