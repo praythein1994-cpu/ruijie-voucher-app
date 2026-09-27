@@ -323,6 +323,16 @@ public class BluetoothPrinterManager {
         }
     }
 
+    /** Auto-connect to the last used printer (stored MAC, no scan).
+     *  No-op when already connected/connecting or when no printer was saved. */
+    public void autoConnectAsync() {
+        String addr = getLastPrinterAddress();
+        if (addr == null || addr.isEmpty()) return;
+        String s = connState;
+        if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) return;
+        connectAsync(addr);
+    }
+
     /** Async connect by device address (runs on a background thread). */
     public void connectAsync(final String address) {
         Thread t = new Thread(() -> doConnect(address));
