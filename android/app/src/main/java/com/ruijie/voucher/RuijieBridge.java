@@ -311,6 +311,29 @@ public class RuijieBridge {
         }
     }
 
+    /**
+     * Auto-connect to the last used printer (stored MAC, no scan).
+     * Async — poll btState() for CONNECTED.
+     */
+    @JavascriptInterface
+    public String btAutoConnect() {
+        try {
+            BluetoothPrinterManager m = bt();
+            if (!m.isBluetoothSupported()) return btErr("Bluetooth not supported on this device");
+            if (!m.isBluetoothEnabled()) return btErr("Bluetooth is turned off");
+            String addr = m.getLastPrinterAddress();
+            if (addr == null || addr.isEmpty()) return btErr("No saved printer yet");
+            m.autoConnectAsync();
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            o.put("address", addr);
+            o.put("name", m.getLastPrinterName());
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
     @JavascriptInterface
     public String btDisconnect() {
         try {
