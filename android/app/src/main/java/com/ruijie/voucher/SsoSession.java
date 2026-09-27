@@ -43,7 +43,15 @@ import java.nio.charset.StandardCharsets;
  */
 public class SsoSession {
 
-    public static final String SSO_LOGIN_URL = "https://cloud.ruijienetworks.com/sso/";
+    /**
+     * The portal's own SSO entry point. Loading it unauthenticated 302s to
+     * /sso/login?service=.../webproxy/sso/back on the SAME host; after the
+     * user logs in, the ticket comes back to /webproxy/sso/back, which
+     * creates the portal session on cloud-as — the session the webproxy
+     * delete needs. (Logging in at cloud.ruijienetworks.com instead never
+     * creates this portal session, so the portal answers "not login.")
+     */
+    public static final String SSO_LOGIN_URL = "https://cloud-as.ruijienetworks.com/webproxy/sso/back";
     public static final String WEBPROXY_BASE = "https://cloud-as.ruijienetworks.com/webproxy/common/api";
     private static final int TIMEOUT_MS = 30000;
     private static final int BRAND_BLUE = Color.parseColor("#007AFF");
@@ -302,7 +310,14 @@ public class SsoSession {
     /** True once the WebView has left the SSO pages and reached the portal. */
     private static boolean isAuthenticatedUrl(String url) {
         if (url == null || url.isEmpty()) return false;
+        // Still on the SSO login page or inside the /webproxy/sso/back
+        // ticket callback — the portal session is not established yet,
+        // so keep the dialog open (closing here cuts the session off).
         if (url.contains("/sso/")) return false;
+        // The dialog starts at the portal's own SSO entry, so any non-SSO
+        // page on cloud-as reached from there is the portal home AFTER the
+        // ticket callback created the portal session.
+        if (url.contains("cloud-as.ruijienetworks.com")) return true;
         return url.contains("/macc5/") || url.contains("/dashboard")
                 || url.contains("/project") || url.contains("/intlSamVoucher")
                 || url.contains("/common/api");
