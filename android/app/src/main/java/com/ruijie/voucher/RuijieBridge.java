@@ -537,6 +537,30 @@ public class RuijieBridge {
     }
 
     /**
+     * Login dialog redirect trace (URLs only, no credentials) for
+     * diagnostics. Proves whether the portal SSO handshake completed.
+     */
+    @JavascriptInterface
+    public String diagLoginTrace() {
+        try { return SsoSession.getLoginTraceJson(); }
+        catch (Exception e) { return "{\"result\":\"error\",\"at\":\"\",\"urls\":[]}"; }
+    }
+
+    /**
+     * Portal session probe: posts the delete envelope for a voucher code
+     * that cannot exist. Returns {"http":N,"notLogin":bool,"snippet":"…"}
+     * — nothing real is deleted.
+     */
+    @JavascriptInterface
+    public String portalProbe(String envelopeJson) {
+        try { return SsoSession.getInstance().portalProbe(envelopeJson); }
+        catch (Exception e) {
+            String m = String.valueOf(e.getMessage()).replace('"', '\'');
+            return "{\"error\":\"" + m + "\"}";
+        }
+    }
+
+    /**
      * Save the diagnostic report: opens the system file picker
      * (ACTION_CREATE_DOCUMENT) so the user picks where the .txt goes.
      * Result is delivered via window._diagEvent('saved'|'cancel'|'error').
