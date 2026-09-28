@@ -371,6 +371,11 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .badge.s2 { background: rgba(255, 149, 0, .14); color: var(--orange); }
 .badge.s3 { background: var(--fill-bg); color: var(--gray); }
 
+/* v1.5.38: voucher status colors in the gateway AP-clients view —
+   expired red, in-use green (user request). */
+.vcode-expired { color: var(--red); }
+.vcode-inuse { color: var(--green); }
+
 /* skeleton loading */
 .skel { padding: 14px 16px; border-bottom: .5px solid var(--hairline); }
 .skel:last-child { border-bottom: none; }
