@@ -9,7 +9,7 @@
   --orange: #FF9500;
   --yellow: #FFCC00;
   --purple: #5E5CE6;
-  --bg: #F2F2F7;            /* systemGroupedBackground */
+  --bg: #EDF1F8;            /* systemGroupedBackground, faint blue tint to match the bar */
   --fill-bg: #E5E5EA;       /* systemGray5 — search fields, pills */
   --card: #FFFFFF;
   --label: #1C1C1E;
@@ -256,7 +256,7 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 }
 .avatar {
   width: 36px; height: 36px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue), var(--purple));
+  background: linear-gradient(135deg, var(--blue), #5AC8FA);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 16px; color: #fff; flex: none;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .35);
@@ -274,17 +274,19 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .view { max-width: 680px; margin: 0 auto; animation: fadein .25s var(--spring); }
 @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* ── Liquid navbar (bottom bar) ── */
+/* ── Liquid navbar (bottom bar) ──
+   v1.5.50: desaturated steel-blue glass so the bar sits naturally on the
+   background — the vivid blue lives only on the active tab's liq-blob. */
 #tabbar {
   position: fixed; z-index: 20;
   left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   max-width: 600px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-around;
-  background: linear-gradient(180deg, rgba(125, 184, 255, .45), rgba(43, 108, 238, .45));
-  -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
-  border: 1px solid rgba(191, 219, 253, .38);
+  background: linear-gradient(180deg, rgba(206, 217, 239, .55), rgba(179, 196, 227, .55));
+  -webkit-backdrop-filter: saturate(160%) blur(28px); backdrop-filter: saturate(160%) blur(28px);
+  border: 1px solid rgba(255, 255, 255, .55);
   border-radius: 999px;
-  box-shadow: 0 18px 44px rgba(23, 80, 180, .35), inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -1px 0 rgba(255, 255, 255, .08);
+  box-shadow: 0 14px 34px rgba(70, 100, 160, .22), inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -1px 0 rgba(255, 255, 255, .1);
   padding: 10px 8px;
   animation: tabbarin .45s var(--spring);
 }
@@ -331,7 +333,10 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .tab:active { transform: scale(.92); }
 .tab .ic { width: 24px; height: 24px; }
 .tab span:last-child { font-size: 10px; font-weight: 600; letter-spacing: .2px; }
-.tab.active { color: #fff; }
+/* v1.5.50: deep-blue active label for crispness on the desaturated bar —
+   the icon stays white on the vivid liq-blob behind it */
+.tab.active { color: #1E40AF; }
+.tab.active .ic { color: #fff; }
 /* center tab sits inline like the rest (no more raised circle) */
 .tab.center { overflow: visible; }
 .tab.center .fab {
@@ -876,17 +881,12 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Theme picker (Settings → Appearance) ── */
-.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 6px; }
-.theme-opt {
-  border: 2px solid var(--hairline); background: var(--fill-bg); border-radius: 16px;
-  padding: 12px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  font-family: inherit; font-size: 12px; font-weight: 600; color: var(--label); cursor: pointer;
-  transition: transform .12s, border-color .15s, box-shadow .15s;
-}
-.theme-opt:active { transform: scale(.94); }
-.theme-opt.active { border-color: var(--blue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 28%, transparent); }
+/* theme picker rows (Settings → Appearance) · iOS checkmark list — v1.5.50 */
+#theme-grid { display: block; }
+.theme-opt .check { display: none; }
+.theme-opt.active .check { display: block; }
 .theme-dot { width: 46px; height: 30px; border-radius: 9px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
-.theme-dot.t-light { background: linear-gradient(135deg, #F2F2F7 55%, #007AFF 55%); }
+.theme-dot.t-light { background: linear-gradient(135deg, #EDF1F8 55%, #007AFF 55%); }
 .theme-dot.t-dark { background: linear-gradient(135deg, #000000 55%, #0A84FF 55%); }
 .theme-dot.t-glass { background: linear-gradient(135deg, rgba(90,140,255,.9), rgba(170,90,255,.9)); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 0 0 1px rgba(255,255,255,.25); }
 .theme-dot.t-neo { background: #E0E5EC; box-shadow: 3px 3px 6px #B4BAC6, -3px -3px 6px #ffffff; }
@@ -1045,3 +1045,55 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 [data-theme="clay"] table.data { border: 3px solid rgba(255,255,255,.7); }
 [data-theme="clay"] .stepper { border: 2.5px solid #E2E8F2; border-radius: 18px; box-shadow: inset 3px 3px 7px rgba(163,177,198,.3); }
 [data-theme="clay"] details.advanced { border: 2.5px solid #E2E8F2; border-radius: 18px; }
+
+/* ═══════════ Settings · iOS grouped list (v1.5.50) ═══════════ */
+.set-group {
+  background: var(--card); border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow-card); margin-bottom: 6px;
+}
+.set-group .set-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 11px 16px; min-height: 52px; margin: 0;
+  border: none; border-bottom: .5px solid var(--hairline); border-radius: 0;
+  font-family: inherit; font-size: 17px; font-weight: 400; color: var(--label);
+  background: none; box-shadow: none; text-align: left;
+}
+.set-group .set-row:last-child { border-bottom: none; }
+button.set-row { cursor: pointer; }
+.set-ico {
+  width: 30px; height: 30px; border-radius: 8px; flex: none;
+  background: var(--tile, var(--blue)); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.set-ico .ic { width: 17px; height: 17px; }
+.set-row .t { flex: 1; min-width: 0; }
+.set-row .t-main { font-size: 17px; }
+.set-row .sub { font-size: 13px; color: var(--gray); margin-top: 1px; }
+.set-val { font-size: 15px; color: var(--gray); flex: none; }
+.set-chev { color: #C7C7CC; flex: none; font-size: 18px; font-weight: 600; }
+[data-theme="dark"] .set-chev { color: #48484A; }
+/* action rows: iOS blue text */
+.set-group button.set-action { justify-content: center; color: var(--blue); font-weight: 500; }
+.set-group button.set-action.danger { color: var(--red); }
+.set-group button.set-action:disabled { opacity: .5; }
+/* inline field rows */
+.set-group label.set-row { margin: 0; font-weight: 400; }
+.set-field .fld-label { flex: none; font-size: 17px; }
+.set-field .fld-input, .set-field .fld-wrap { flex: 1; min-width: 0; }
+.set-field .fld-input {
+  background: none; border: none; border-radius: 0; margin: 0; box-shadow: none;
+  padding: 4px 0; text-align: right; font-size: 17px;
+}
+.set-field .fld-input:focus { box-shadow: none; }
+.set-field .fld-wrap input {
+  background: none; border: none; border-radius: 0; margin: 0; box-shadow: none;
+  padding: 4px 44px 4px 0; text-align: right; font-size: 17px; width: 100%;
+}
+.set-field .fld-wrap input:focus { box-shadow: none; }
+.set-field .input-wrap .peek { right: 0; padding-right: 0; }
+/* checkmark rows (theme / language) */
+.set-group .check { width: 22px; height: 22px; color: var(--blue); flex: none; display: none; }
+.set-group .active .check { display: block; }
+.set-pad { padding: 14px 16px; }
+.set-pad:empty { display: none; }
+.footnote { text-align: center; color: var(--gray); font-size: 13px; margin: 18px 0 8px; }
