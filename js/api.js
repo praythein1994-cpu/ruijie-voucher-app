@@ -89,6 +89,22 @@ window._gwResolve = (id, b64) => {
   } catch (e) { p.reject(e); }
 };
 const hasGw = () => !!(window.RuijieBridge && window.RuijieBridge.gatewayLogin);
+const GW_AUTH_RE = /GW_NOT_LOGGED_IN|auth|login|session|sid|token|expire|invalid|unauthori|forbidden|\b40[13]\b/i;
+/** Is this error text (or throwaway message) an auth/session failure? */
+function gwAuthLike(m) { return GW_AUTH_RE.test(String((m && m.message) || m || '')); }
+/**
+ * Does a resolved gateway response look like an auth/session failure?
+ * (401/403, or an auth-ish message with a non-zero code.) A code-0 response
+ * is never flagged, even if its message mentions auth words.
+ */
+function gwAuthFailed(j) {
+  if (!j || typeof j !== 'object') return false;
+  const code = Number(j.code);
+  if (code === 401 || code === 403) return true;
+  if (code === 0 || !j.code) return false;
+  const m = String(j.msg || j.message || j.error || '');
+  return /auth|login|session|sid|token|expire|invalid|unauthori|forbidden/i.test(m);
+}
 function gwCall(kind, ...args) {
   return new Promise((resolve, reject) => {
     if (!hasGw()) return reject(new Error('Gateway ကို Android app မှာပဲ ချိတ်လို့ရပါတယ်'));
@@ -111,7 +127,11 @@ function gwCall(kind, ...args) {
  *   {method:"cmdArr",params:{device:"pc",params:[ ... ]}}
  */
 const GwApi = {
-  /** Session: {ip, sid, sn, token}. Kept in memory only (never persisted). */
+  /** Session: {ip, sid, sn, token}. The session itself lives in memory only.
+   * The gateway PASSWORD is remembered in localStorage (gwPass) once the user
+   * logs in successfully — the user explicitly asked that the app keep using
+   * it (auto re-connect) until they change it or disconnect. The password is
+   * never logged and never sent anywhere except the gateway itself. */
   session: null,
 
   /**
@@ -146,6 +166,55 @@ const GwApi = {
   logout() { this.session = null; },
   loggedIn() { return !!(this.session && this.session.sid); },
 
+  /**
+   * Auto-login with the remembered gateway credentials (user-requested).
+   * Once the user has logged in once, the app must stay connected: after an
+   * app restart — or when a session expires mid-use — the app re-connects by
+   * itself with the remembered password, until the user explicitly
+   * disconnects (gwAuto=false) or no password is remembered.
+   * Returns true when a session is (now) available. Never throws.
+   */
+  async ensureLogin() {
+    if (this.loggedIn()) return true;
+    if (!hasGw()) return false;
+    let s = null;
+    try { s = Store.load(); } catch (_) { s = null; }
+    if (!s || s.gwAuto === false) return false; // user explicitly disconnected
+    const ip = String(s.gwIp || '100.88.200.103').trim() || '100.88.200.103';
+    const pass = s.gwPass || '';
+    if (!pass) return false;
+    try { await this.login(ip, 'admin', pass); return true; }
+    catch (_) { return false; }
+  },
+
+  /** Drop the current session and try a fresh login with remembered creds. */
+  async relogin() {
+    this.session = null;
+    return this.ensureLogin();
+  },
+
+  /**
+   * Run fn(); on auth-like failures (no session, expired/invalid sid),
+   * drop the session, re-login with the remembered password and retry.
+   * At most two attempts total; a second auth-like failure (or a failed
+   * re-login) rethrows. Any non-auth error is rethrown untouched.
+   */
+  async _withAutoRelogin(fn) {
+    let lastErr = null;
+    for (let i = 0; i < 2; i++) {
+      try {
+        if (!this.loggedIn() && !(await this.ensureLogin()))
+          throw new Error('Gateway re-login failed (check saved IP/password)');
+        return await fn();
+      } catch (e) {
+        lastErr = e;
+        if (!gwAuthLike(e)) throw e;
+        this.session = null; // next iteration re-logs in
+      }
+    }
+    throw lastErr;
+  },
+
   /** Exact cmdArr batch captured from the /admin/device page. */
   deviceListBody() {
     const sub = (method, params) => ({ method, params });
@@ -167,9 +236,11 @@ const GwApi = {
 
   /** Fetch + merge local devices, deduped by serialNumber. Each gets local:true. */
   async deviceList() {
-    if (!this.loggedIn()) throw new Error('GW_NOT_LOGGED_IN');
-    const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(this.deviceListBody()));
-    return this.parseDevices(j);
+    return this._withAutoRelogin(async () => {
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(this.deviceListBody()));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return this.parseDevices(j);
+    });
   },
 
   /**
@@ -181,7 +252,7 @@ const GwApi = {
    * empty array = not available (caller falls through honestly).
    */
   async staList() {
-    if (!this.loggedIn()) throw new Error('GW_NOT_LOGGED_IN');
+    return this._withAutoRelogin(async () => {
     const sub = (method, params) => ({ method, params });
     const base = { noParse: true, async: null, remoteIp: false };
     const body = {
@@ -198,7 +269,13 @@ const GwApi = {
     };
     let j = null;
     try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
-    catch (_) { return []; }
+    catch (e) {
+      /* Network blips return [] as before — but an auth-like rejection must
+       * reach _withAutoRelogin so the session is refreshed and retried. */
+      if (gwAuthLike(e)) throw e;
+      return [];
+    }
+    if (gwAuthFailed(j)) throw new Error('Gateway session expired');
     const out = [];
     const grab = (o) => {
       if (!o || typeof o !== 'object') return;
@@ -228,6 +305,7 @@ const GwApi = {
     // Dedupe by MAC (multiple modules may return the same STAs).
     const seen = new Set();
     return out.filter(r => (seen.has(r.mac) ? false : (seen.add(r.mac), true)));
+    });
   },
 
   /** Pull every {serialNumber,...} object out of a cmdArr response. */

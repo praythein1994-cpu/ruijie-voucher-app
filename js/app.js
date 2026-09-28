@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.40';
+const APP_VERSION = '1.5.41';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -667,6 +667,12 @@ function showErr(id, msg) {
  * best-effort, never blocks or breaks startup. */
 async function startupSync() {
   try {
+    /* Gateway auto-connect (user-requested): once logged in, the app stays
+     * connected — re-connect silently in the background on every startup
+     * with the remembered password, unless explicitly disconnected. */
+    if (typeof GwApi !== 'undefined' && typeof hasGw === 'function' && hasGw()) {
+      GwApi.ensureLogin().then(ok => { if (ok) { try { refreshGwCard(); } catch (e) {} } }).catch(() => {});
+    }
     const pid = Number(S.projectId);
     if (!pid) return;
     try { await apClientVoucherMap(pid, true); } catch (e) { /* offline: keep last-known map */ }
@@ -683,6 +689,9 @@ async function startupSync() {
 
 /* ═══════════ APP SHELL ═══════════ */
 function enterApp() {
+  /* User-requested: the app always starts in English. A manual language
+   * switch still works for the session; the next startup is English again. */
+  try { setLang('en'); } catch (e) {}
   $('view-connect').classList.add('hidden');
   $('app').classList.remove('hidden');
   const st = Store.load();
@@ -714,7 +723,26 @@ function switchView(id, push) {
     try { history.pushState({ view: id }, ''); } catch (e) {}
   }
   S.currentView = id;
+  try { moveLiqBlob(); } catch (e) {}
 }
+
+/* ── Liquid navbar: slide the glowing blob behind the active tab's icon ── */
+function moveLiqBlob() {
+  const bar = $('tabbar'), blob = $('liq-blob');
+  if (!bar || !blob) return;
+  const active = bar.querySelector('.tab.active') || bar.querySelector('.tab');
+  if (!active) return;
+  const icon = active.querySelector('.ic') || active;
+  const br = bar.getBoundingClientRect(), ir = icon.getBoundingClientRect();
+  if (!br.width || !ir.width) return;
+  const bw = blob.offsetWidth || 56, bh = blob.offsetHeight || 56;
+  const x = ir.left - br.left + ir.width / 2 - bw / 2;
+  const y = ir.top - br.top + ir.height / 2 - bh / 2;
+  blob.style.setProperty('--liq', active.dataset.liq || '#2dd4bf');
+  blob.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+  blob.style.opacity = '1';
+}
+window.addEventListener('resize', () => { try { moveLiqBlob(); } catch (e) {} });
 
 // System back button: close an open modal first, else let popstate walk the view stack.
 function anyModalOpen() {
@@ -2264,10 +2292,21 @@ const CST_META = {
   unknown: { key: 'mc.fUnknown' },
 };
 
+/* v1.5.41: quota-exhausted counts as expired for the COLOR — Cloud may
+ * still report status 2 ("in use") after the data quota is fully spent
+ * (verified 2026-09-28: voucher 14045577, used 1025 MB / quota 1024 MB,
+ * Cloud still "In use"). Per user decision: never show green just because
+ * Cloud says so. Missing usedQuota → not "gone" (never guess). */
+function voucherQuotaGone(v) {
+  const q = Number(v && v.quota) || 0, uq = Number(v && v.usedQuota) || 0;
+  return q > 0 && uq >= q;
+}
+
 /* v1.5.40: shared voucher cell — plan · period · price + status color,
  * identical on EVERY AP/client view (gateway China APs, Cloud APs,
- * Online Clients). Status comes from the voucher object in the Cloud
- * voucher list (status 2 = in use → green, 3 = expired → red); the map
+ * Online Clients). v1.5.41: red when Cloud says expired (status 3) OR the
+ * data quota is exhausted (voucherQuotaGone) even if Cloud still says
+ * "in use"; green only for genuinely usable in-use vouchers. The map
  * itself is refetched from Cloud on each view open (apClientVoucherMap
  * force), so colors track Cloud in realtime instead of session cache.
  * extraSubs: optional extra sub-lines shown above plan·period·price. */
@@ -2280,7 +2319,7 @@ function voucherCellHtml(vcode, vmap, extraSubs) {
   const vprc = v ? fmtMoney(pkgPriceNum(v)) : '';
   const vsub = [vpkg, vper, vprc].filter(Boolean).join(' · ');
   const vst = v ? String(v.status) : '';
-  const vstCls = vst === '3' ? 'vcode-expired' : vst === '2' ? 'vcode-inuse' : '';
+  const vstCls = (vst === '3' || voucherQuotaGone(v)) ? 'vcode-expired' : vst === '2' ? 'vcode-inuse' : '';
   const subs = [].concat(extraSubs || [], vsub ? [vsub] : []).filter(Boolean).map(esc).join('<br>');
   return `<b${vstCls ? ` class="${vstCls}"` : ''}>${esc(code)}</b>` +
     (subs ? `<br><small class="muted">${subs}</small>` : '');
@@ -2961,7 +3000,7 @@ function onSsoButton() {
  * Direct LAN connection to the user's own gateway eWeb. The password is
  * entered here in Settings and kept on this device only — never in chat,
  * never in logs, never sent anywhere except the gateway itself. */
-const GW_STORE_KEYS = { ip: 'gwIp', pass: 'gwPass' };
+const GW_STORE_KEYS = { ip: 'gwIp', pass: 'gwPass', auto: 'gwAuto' };
 /* Gateway password is remembered on this device (localStorage) once the
  * user enters it — it stays until they change it. Never in chat, never in
  * logs, never sent anywhere except the gateway itself. */
@@ -2991,7 +3030,11 @@ async function onGwButton() {
   if (!hasGw()) { toast(t('gw.onlyAndroid'), true); return; }
   const btn = $('btn-gw');
   if (btn.dataset.mode === 'logout') {
+    /* Explicit disconnect: stop auto-connect until the next manual login.
+     * The remembered password is KEPT (the user said: keep using it until
+     * it is changed) — only the auto-connect flag is turned off. */
     GwApi.logout();
+    Store.save({ [GW_STORE_KEYS.auto]: false });
     refreshGwCard();
     toast(t('gw.bye'));
     return;
@@ -3003,8 +3046,10 @@ async function onGwButton() {
   try {
     await GwApi.login(ip, 'admin', pass);
     /* Remember the gateway password ONLY after a successful login — a
-     * failed attempt must never overwrite the previously remembered one. */
-    Store.save({ [GW_STORE_KEYS.ip]: ip, [GW_STORE_KEYS.pass]: pass });
+     * failed attempt must never overwrite the previously remembered one.
+     * gwAuto=true: from now on the app re-connects by itself (startup +
+     * session expiry) until the user explicitly disconnects. */
+    Store.save({ [GW_STORE_KEYS.ip]: ip, [GW_STORE_KEYS.pass]: pass, [GW_STORE_KEYS.auto]: true });
     GwMem.pass = pass;
     toast(t('gw.ok'));
   } catch (e) {
