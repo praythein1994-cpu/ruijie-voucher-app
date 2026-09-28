@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.19';
+const APP_VERSION = '1.5.20';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
