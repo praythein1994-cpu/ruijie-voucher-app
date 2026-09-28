@@ -664,6 +664,12 @@ public class RuijieBridge {
      * Gateway login. The plaintext password is AES-encrypted natively
      * (Gibberish-AES compatible) and never crosses the JS bridge.
      * Resolves {"code":0,"data":{"token":..,"sn":..,"sid":..}} verbatim.
+     *
+     * Key strategy (v1.5.21): newer Ruijie firmware rotates the login-page
+     * AES key on every render (server remembers it per source IP). We GET
+     * /cgi-bin/luci/ first, extract the key from the GibberishAES.enc call,
+     * and log in immediately with it. If extraction fails (older firmware),
+     * we fall back to the static bundle-derived key.
      */
     @JavascriptInterface
     public void gatewayLogin(final String callId, final String ip, final String username, final String passwordPlain) {
@@ -674,7 +680,12 @@ public class RuijieBridge {
             }
             try {
                 String cleanIp = ip.trim().replaceAll("^https?://", "").replaceAll("/.*$", "");
-                String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, GW_PWD_PASSPHRASE)
+                // v1.5.21: try the per-render dynamic key from the login page
+                // first (newer firmware); fall back to the static key.
+                String dynKey = GatewayClient.fetchLoginKey(cleanIp);
+                boolean useDyn = (dynKey != null && !dynKey.isEmpty());
+                String keyToUse = useDyn ? dynKey : GW_PWD_PASSPHRASE;
+                String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, keyToUse)
                         .replaceAll("\\s+", ""); // bundle: GibberishAES.enc(e, t || Zt).replace(/\s/g, "")
                 long ts = System.currentTimeMillis() / 1000L;
                 JSONObject params = new JSONObject()
@@ -689,11 +700,13 @@ public class RuijieBridge {
                 String resp = GatewayClient.post(cleanIp, "/cgi-bin/luci/api/auth", null, body.toString());
                 // Attach Set-Cookie headers: some firmware omits sid in the body
                 // and only returns it as the <sn>=<sid> session cookie.
+                // Also report which key mode was used (dynamic vs static).
                 try {
                     JSONObject j = new JSONObject(resp);
                     JSONArray arr = new JSONArray();
                     for (String ck : GatewayClient.lastCookies()) arr.put(ck);
                     j.put("_cookies", arr);
+                    j.put("_keyMode", useDyn ? "dynamic" : "static");
                     gwResolve(callId, j.toString());
                 } catch (Exception je) {
                     gwResolve(callId, resp);
