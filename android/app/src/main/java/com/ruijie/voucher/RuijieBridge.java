@@ -673,6 +673,11 @@ public class RuijieBridge {
      * /cgi-bin/luci/ first, extract the key from the GibberishAES.enc call,
      * and log in immediately with it. If extraction fails (older firmware),
      * we fall back to the static bundle-derived key.
+     *
+     * v1.5.29: if the dynamic key yields no session (empty data / no sid),
+     * retry once with the static key — the extracted key can be stale or
+     * from the wrong call site after a firmware change. Whichever key
+     * produces a sid wins; _keyMode reports it, _tried lists attempts.
      */
     @JavascriptInterface
     public void gatewayLogin(final String callId, final String ip, final String username, final String passwordPlain) {
@@ -685,31 +690,62 @@ public class RuijieBridge {
                 String cleanIp = ip.trim().replaceAll("^https?://", "").replaceAll("/.*$", "");
                 // v1.5.21: try the per-render dynamic key from the login page
                 // first (newer firmware); fall back to the static key.
+                // v1.5.29: retry with the static key when the dynamic key
+                // yields no session (stale/wrong key after firmware change).
                 String dynKey = GatewayClient.fetchLoginKey(cleanIp);
                 boolean useDyn = (dynKey != null && !dynKey.isEmpty());
-                String keyToUse = useDyn ? dynKey : GW_PWD_PASSPHRASE;
-                String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, keyToUse)
-                        .replaceAll("\\s+", ""); // bundle: GibberishAES.enc(e, t || Zt).replace(/\s/g, "")
-                long ts = System.currentTimeMillis() / 1000L;
-                JSONObject params = new JSONObject()
-                        .put("username", username)
-                        .put("time", String.valueOf(ts))
-                        .put("isCheckReadAgreement", "true")
-                        .put("encry", true)
-                        .put("pwd", pwdEnc);
-                JSONObject body = new JSONObject()
-                        .put("method", "login")
-                        .put("params", params);
-                String resp = GatewayClient.post(cleanIp, "/cgi-bin/luci/api/auth", null, body.toString());
+                String[] keysToTry = useDyn
+                        ? new String[]{ dynKey, GW_PWD_PASSPHRASE }
+                        : new String[]{ GW_PWD_PASSPHRASE };
+                String[] modes = useDyn
+                        ? new String[]{ "dynamic", "static" }
+                        : new String[]{ "static" };
+                String resp = null;
+                String usedMode = modes[0];
+                StringBuilder tried = new StringBuilder();
+                JSONObject lastJ = null;
+                for (int ki = 0; ki < keysToTry.length; ki++) {
+                    if (tried.length() > 0) tried.append(",");
+                    tried.append(modes[ki]);
+                    usedMode = modes[ki];
+                    String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, keysToTry[ki])
+                            .replaceAll("\\s+", ""); // bundle: GibberishAES.enc(e, t || Zt).replace(/\s/g, "")
+                    long ts = System.currentTimeMillis() / 1000L;
+                    JSONObject params = new JSONObject()
+                            .put("username", username)
+                            .put("time", String.valueOf(ts))
+                            .put("isCheckReadAgreement", "true")
+                            .put("encry", true)
+                            .put("pwd", pwdEnc);
+                    JSONObject body = new JSONObject()
+                            .put("method", "login")
+                            .put("params", params);
+                    resp = GatewayClient.post(cleanIp, "/cgi-bin/luci/api/auth", null, body.toString());
+                    try {
+                        JSONObject j = new JSONObject(resp);
+                        lastJ = j;
+                        // Success = any session indicator: sid/stok in data
+                        // or top-level, or a session cookie.
+                        JSONObject dd = j.optJSONObject("data");
+                        boolean hasSid = (dd != null && (dd.has("sid") || dd.has("stok")))
+                                || j.has("sid") || j.has("stok")
+                                || !GatewayClient.lastCookies().isEmpty();
+                        if (hasSid) break;
+                    } catch (Exception je) {
+                        lastJ = null; // non-JSON response: retrying won't help
+                        break;
+                    }
+                }
                 // Attach Set-Cookie headers: some firmware omits sid in the body
                 // and only returns it as the <sn>=<sid> session cookie.
                 // Also report which key mode was used (dynamic vs static).
                 try {
-                    JSONObject j = new JSONObject(resp);
+                    JSONObject j = (lastJ != null) ? lastJ : new JSONObject(resp);
                     JSONArray arr = new JSONArray();
                     for (String ck : GatewayClient.lastCookies()) arr.put(ck);
                     j.put("_cookies", arr);
-                    j.put("_keyMode", useDyn ? "dynamic" : "static");
+                    j.put("_keyMode", usedMode);
+                    j.put("_tried", tried.toString());
                     gwResolve(callId, j.toString());
                 } catch (Exception je) {
                     gwResolve(callId, resp);
