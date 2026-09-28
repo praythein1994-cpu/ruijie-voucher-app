@@ -17,8 +17,8 @@
   --gray: #8E8E93;          /* systemGray */
   --separator: #D1D1D6;
   --hairline: rgba(60, 60, 67, .12);
-  --radius: 14px;
-  --radius-s: 10px;
+  --radius: 20px;
+  --radius-s: 14px;
   --spring: cubic-bezier(.32, .72, 0, 1);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, .04);
   --shadow-pop: 0 12px 40px rgba(0, 0, 0, .18);
@@ -304,6 +304,30 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   from { border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%; }
   to { border-radius: 58% 42% 44% 56% / 44% 58% 42% 56%; }
 }
+/* ── Global touch glow: a liquid blob that glides to every tap, anywhere ── */
+#touch-blob {
+  position: fixed; left: 0; top: 0; z-index: 40; pointer-events: none;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(147,197,253,.9), rgba(59,130,246,.55) 55%, rgba(59,130,246,0) 72%);
+  filter: blur(6px);
+  opacity: 0;
+  transform: translate(-300px, -300px);
+  transition: transform .55s cubic-bezier(.32,.72,0,1), opacity .6s ease;
+  animation: blobmorph 3.4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+#touch-blob.on { opacity: .8; }
+#touch-blob.tap { animation: blobmorph 3.4s ease-in-out infinite alternate, blobtap .55s cubic-bezier(.32,.72,0,1); }
+@keyframes blobmorph {
+  from { border-radius: 58% 42% 55% 45% / 52% 55% 45% 48%; }
+  to { border-radius: 45% 55% 48% 52% / 55% 45% 58% 42%; }
+}
+@keyframes blobtap {
+  0% { scale: .55; }
+  45% { scale: 1.28; }
+  100% { scale: 1; }
+}
+@media (prefers-reduced-motion: reduce) { #touch-blob { display: none; } }
 .tab {
   position: relative; z-index: 1;
   flex: 1; border: none; background: none; padding: 6px 2px; color: #8b94a7;
