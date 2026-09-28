@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.37';
+const APP_VERSION = '1.5.38';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2514,7 +2514,19 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
       const vcode = gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
-      const vcell = vcode ? `<b>${esc(vcode)}</b>` : '—';
+      // v1.5.38: show the voucher's plan / period / price like the portal
+      // Online Clients view does (voucher object from the open-API map).
+      const vv = vcode ? vmap.get(vcode) : null;
+      const vpkg = vv ? voucherPkgName(vv) : '';
+      const vper = vv && vv.timePeriod ? fmtPeriod(vv.timePeriod) : '';
+      const vprc = vv ? fmtMoney(pkgPriceNum(vv)) : '';
+      const vsub = [vpkg, vper, vprc].filter(Boolean).join(' · ');
+      // v1.5.38: voucher status color — expired red, in-use green.
+      const vst = vv ? String(vv.status) : '';
+      const vstCls = vst === '3' ? 'vcode-expired' : vst === '2' ? 'vcode-inuse' : '';
+      const vcell = vcode
+        ? `<b${vstCls ? ` class="${vstCls}"` : ''}>${esc(vcode)}</b>` + (vsub ? `<br><small class="muted">${esc(vsub)}</small>` : '')
+        : '—';
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
         `<td>${vcell}</td>` +
         `<td><small>${esc(c.ssid || '—')}</small></td>` +
