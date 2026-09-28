@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.52';
+const APP_VERSION = '1.5.53';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -320,6 +320,8 @@ const I18N = {
   'sl.unknownPkg': { my: 'အမည်မသိ', en: 'Unknown' },
   'sl.dateNote': { my: 'ရက်စွဲအခြေခံ: ဗောက်ချာထုတ်လုပ်ချိန် (createTime) — သုံးပြီးချိန်က မိနစ်အရေအတွက်ဖြစ်လို့ ရက်စွဲအဖြစ် သုံးမရပါ။', en: 'Date basis: voucher creation time (usedTime is a duration in minutes, not a date).' },
   'sl.day1': { my: 'နောက်ဆုံး ၁ ရက်', en: 'Last 1 Day' },
+  'sl.today': { my: 'ဒီနေ့', en: 'Today' },
+  'sl.yday': { my: 'မနေ့က', en: 'Yesterday' },
   'sl.day7': { my: 'နောက်ဆုံး ၇ ရက်', en: 'Last 7 Days' },
   'sl.day30': { my: 'နောက်ဆုံး ၃၀ ရက်', en: 'Last 30 Days' },
   'sl.no': { my: 'စဉ်', en: 'No.' },
@@ -377,6 +379,8 @@ const I18N = {
   'mc.fDataUp': { my: 'ဒေတာပြည့်', en: 'Data up' },
   'mc.fNoAuth': { my: 'Portal မဝင်', en: 'No portal' },
   'mc.fUnknown': { my: 'အခြား', en: 'Other' },
+  'mc.flag.suspicious': { my: 'သံသယရှိ — စစ်ဆေးရန်', en: 'Unattributed, active — review' },
+  'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
   'ac.title': { my: 'AP ချိတ်ဆက်သူများ', en: 'AP clients' },
   'ac.none': { my: 'ချိတ်ဆက်ထားသူမရှိပါ', en: 'No connected clients' },
   'ac.total': { my: 'စုစုပေါင်း {n} ယောက်', en: '{n} clients' },
@@ -559,6 +563,32 @@ const remTimeTxt = v => {
   return fmtRemain(tp - Number(v.usedTime));
 };
 const statusTxt = s => t('status.' + s) || String(s);
+/* v1.5.53: remaining-resource info for voucher rows.
+   Data vouchers: remaining = quota - usedQuota (MB).
+   Time vouchers: remaining = timePeriod - usedTime (minutes).
+   Returns {pct, txt} or null → null means "original row" (no fill):
+   unused, fully consumed, or usage data missing (never guessed). */
+function remainInfo(v) {
+  const q = Number(v && v.quota) || 0;
+  if (q > 0) {
+    if (v.usedQuota === null || v.usedQuota === undefined || v.usedQuota === '') return null;
+    const used = Number(v.usedQuota);
+    if (!isFinite(used) || used <= 0) return null;
+    const rem = q - used;
+    if (rem <= 0) return null;
+    return { pct: Math.max(0, Math.min(100, (rem / q) * 100)), txt: fmtQuota(rem) };
+  }
+  const p = Number(v && v.timePeriod) || 0;
+  if (p > 0) {
+    if (v.usedTime === null || v.usedTime === undefined || v.usedTime === '') return null;
+    const used = Number(v.usedTime);
+    if (!isFinite(used) || used <= 0) return null;
+    const rem = p - used;
+    if (rem <= 0) return null;
+    return { pct: Math.max(0, Math.min(100, (rem / p) * 100)), txt: fmtRemain(rem) };
+  }
+  return null;
+}
 const vCode = v => v.voucherCode || v.codeNo || '';
 
 function toast(msg, isErr) {
@@ -951,16 +981,21 @@ function renderVouchers() {
       : `<div class="empty"><div class="big">${ic('ticket', 'xl')}</div><p><b>${t('v.empty')}</b></p><p class="small">${t('v.emptySub')}</p></div>`;
     return;
   }
-  el.innerHTML = list.slice(0, 300).map(v => `
+  el.innerHTML = list.slice(0, 300).map(v => {
+    const ri = remainInfo(v); // v1.5.53: decreasing remaining-resource fill
+    return `
     <div class="voucher-row${fillRowCls(v)}" data-uuid="${esc(v.uuid)}">
+      ${ri ? `<div class="remain-fill" style="width:${ri.pct.toFixed(1)}%"></div>` : ''}
       <span class="status-dot s${esc(v.status)}"></span>
       <div class="voucher-meta">
         <div class="voucher-code">${esc(vCode(v))}</div>
         <div class="pkg">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
       </div>
+      ${ri ? `<span class="remain-txt">${esc(ri.txt)}</span>` : ''}
       <span class="badge s${esc(v.status)}">${esc(statusTxt(v.status))}</span>
       <span class="chev">${ic('chev')}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   if (list.length > 300) el.innerHTML += `<div class="empty" style="padding:20px"><p class="small">${t('v.first300')}</p></div>`;
   el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', () => openVoucherDetail(r.dataset.uuid)));
 }
@@ -1114,7 +1149,6 @@ function openVoucherDetail(uuid) {
     <div class="liquid-wave" aria-hidden="true"></div>
     <canvas class="liquid-bubbles" id="liquid-canvas" aria-hidden="true"></canvas>
     <span class="liquid-label">${esc(statusTxt(v.status))}</span>
-    <div class="liquid-code">${esc(vCode(v))}</div>
     <div class="liquid-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
     <div class="liquid-perf"></div>
   </div>
@@ -1667,6 +1701,14 @@ function renderPrinterDots() {
     el.textContent = on ? name : t('p.btIdle');
     el.style.color = on ? 'var(--green)' : '';
   });
+  // v1.5.53: topbar printer status icon — green connected, default
+  // (no color) when not connected, red on error.
+  const topBtn = $('btn-printer-top');
+  if (topBtn) {
+    topBtn.classList.toggle('st-connected', on);
+    topBtn.classList.toggle('st-error', !!(st && st.state === 'ERROR'));
+    topBtn.title = on ? name : (st && st.state === 'ERROR' ? (st.error || 'Error') : t('p.btIdle'));
+  }
 }
 function btPollStart() {
   btPollStop();
@@ -1674,7 +1716,7 @@ function btPollStart() {
   btTimer = setInterval(() => {
     const v = S.currentView;
     if (v === 'view-printer') btRefresh();
-    else if (v === 'view-generate') { btCacheState(); renderPrinterDots(); }
+    else { btCacheState(); renderPrinterDots(); } // v1.5.53: topbar icon stays live on every view
   }, 2500);
 }
 function btPollStop() { if (btTimer) { clearInterval(btTimer); btTimer = null; } }
@@ -2193,14 +2235,26 @@ async function moreDevices() {
       : Promise.resolve(null);
     const results = await Promise.allSettled(jobs);
     const seen = new Set(), list = [], errs = [];
+    let deadSession = false;
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') {
         (Array.isArray(r.value) ? r.value : []).forEach(d => {
           const k = d.serialNumber || d.sn || d.mac || JSON.stringify(d);
           if (!seen.has(k)) { seen.add(k); list.push(d); }
         });
-      } else if (i < types.length) errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
+      } else if (i < types.length) {
+        if (ssoDeadSession(r.reason)) deadSession = true; // v1.5.53: stale portal session
+        else errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
+      }
     });
+    // v1.5.53: dead session → queue a one-shot retry of this exact load and
+    // silently re-authenticate. The retry fires on the next successful login;
+    // genuine errors still render as before.
+    if (deadSession && sso) {
+      const retryType = type;
+      ssoQueueRetry(() => load(retryType));
+      ssoSilentReauth();
+    }
     let cliByAp = null, apNames = null;
     const clients = await clientP;
     if (clients) {
@@ -2464,14 +2518,30 @@ function renderMcList() {
     if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
     const st = sts[i];
+    // v1.5.53: anomaly flags — neutral wording, never accusatory.
+    // "suspicious": online with no voucher attribution but showing real
+    //   usage (traffic or long session) — worth a review, not a verdict.
+    // "sticky": voucher quota exhausted (datalimit/timeup) yet the client
+    //   is still in the online list — the AP didn't disconnect it.
+    const flags = [];
+    if (st === 'noauth' && viaPortal) {
+      const bytes = Number(c.flowUpDown) || 0;
+      const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
+        : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : 0);
+      if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
+    }
+    if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
+    const flagHtml = flags.map(fl =>
+      `<br><small class="flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</small>`).join('');
     // v1.5.40: shared voucher cell — plan · period · price + status color
-    // on every view; authType kept as an extra sub-line.
+    // on every view (raw authType hidden since v1.5.53).
     const macSub = [f.ip !== '—' ? f.ip : '', (showNames && f.name) ? f.name : ''].filter(Boolean).map(esc).join('<br>');
-    const vCell = voucherCellHtml(f.acct, vmap, f.authType ? [f.authType] : []);
+    const vCell = voucherCellHtml(f.acct, vmap); // v1.5.53: raw authType ("15") hidden
     const ssidSub = f.conn !== '—' ? `<br><small class="muted">${esc(f.conn)}</small>` : '';
     const trSub = f.live !== '—' ? `<br><small class="muted">⇅ ${esc(f.live)}</small>` : '';
     rows += `<tr class="cst cst-${st}"><td><span class="cst-dot cst-${st}"></span>${esc(f.mac)}` +
       `${macSub ? `<br><small class="muted">${macSub}</small>` : ''}` +
+      `${flagHtml}` +
       `<br><small class="cst-lbl cst-${st}">${esc(t(CST_META[st].key))}</small></td>` +
       `<td>${vCell}</td>` +
       `<td><small>${esc(f.ssid)}${ssidSub}</small></td>` +
@@ -2937,15 +3007,17 @@ function pkgPriceNum(p) {
 }
 function voucherPkgName(v) { return v.packageName || v.userGroupName || ''; }
 
-// v1.5.51: sales-ledger range windows. "Last 1 Day" = the whole previous
-// calendar day + the current day up to now (local time), so yesterday's
-// sales stay visible all day (the old start-of-today bound hid all of
-// yesterday and showed almost nothing just after midnight).
+// v1.5.53: sales-ledger range windows. "Today" = start of today (local) →
+// now; "Yesterday" = start of yesterday → start of today (local), so the
+// two days are distinct choices. ("day1" kept for backward compatibility.)
 function salesRangeBounds(range, nowMs) {
   const dayMs = 864e5;
+  const d = new Date(nowMs);
+  d.setHours(0, 0, 0, 0);
+  const startToday = d.getTime();
+  if (range === 'today') return [startToday, nowMs];
+  if (range === 'yday') return [startToday - dayMs, startToday];
   if (range === 'day1') {
-    const d = new Date(nowMs);
-    d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - 1);
     return [d.getTime(), nowMs];
   }
@@ -2958,7 +3030,8 @@ async function moreSales() {
   S.moreFn = moreSales;
   moreShell(`${ic('chart', 'sm')} ${esc(t('sl.title'))}`,
     `<div class="chips" id="sl-chips">
-       <button class="chip active" data-r="day1">${t('sl.day1')}</button>
+       <button class="chip active" data-r="today">${t('sl.today')}</button>
+       <button class="chip" data-r="yday">${t('sl.yday')}</button>
        <button class="chip" data-r="day7">${t('sl.day7')}</button>
        <button class="chip" data-r="day30">${t('sl.day30')}</button>
        <button class="chip" data-r="custom">${t('sl.custom')}</button>
@@ -2974,7 +3047,7 @@ async function moreSales() {
   const priceByPkg = {};
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
 
-  let range = 'day1';
+  let range = 'today';
   const dayMs = 864e5;
   const rangeBounds = () => {
     if (range === 'custom') {
@@ -3095,6 +3168,7 @@ function onSsoButton() {
     // v1.5.52: explicit logout suppresses the one-shot startup auto-login
     // for the rest of this app session.
     window.__ssoAutoTried = true;
+    window.__ssoExplicitLogout = true; // v1.5.53: no silent re-auth after this
     window.RuijieBridge.ssoLogout();
   } else {
     try { window.RuijieBridge.ssoLogin(); }
@@ -3105,6 +3179,7 @@ function onSsoButton() {
 function onSsoSwitch() {
   if (!hasSso()) { toast(t('sso.onlyAndroid'), true); return; }
   window.__ssoAutoTried = true; // this tap opens the dialog itself
+  window.__ssoExplicitLogout = true; // v1.5.53: no silent re-auth after this
   try { window.RuijieBridge.ssoForgetAccount(); } catch (e) {}
   try { window.RuijieBridge.ssoLogout(); } catch (e) {}
   toast(t('sso.forgotten'));
@@ -3510,23 +3585,38 @@ function init() {
   document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view)));
   $('project-select').addEventListener('change', onProjectChange);
 
-  // iOS: search field always visible — topbar magnifier focuses it (v1.5.51)
+  // v1.5.53: search opens ONLY on magnifier tap; toggles closed.
+  // Single source of truth = .open class, so it can never get stuck open.
   const searchInput = $('voucher-search'), searchWrap = $('search-wrap'), searchBtn = $('btn-search');
+  const isSearchOpen = () => searchWrap.classList.contains('open');
+  const setSearchOpen = (open) => {
+    searchWrap.classList.toggle('open', open);
+    if (open) { searchInput.focus(); }
+    else {
+      searchInput.value = ''; S.vFilter = '';
+      searchWrap.classList.remove('has-text');
+      renderVouchers(); searchInput.blur();
+    }
+  };
   searchInput.addEventListener('input', e => {
     S.vFilter = e.target.value;
     searchWrap.classList.toggle('has-text', !!e.target.value);
     renderVouchers();
   });
-  searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') searchInput.blur(); });
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') setSearchOpen(false); });
   searchBtn.addEventListener('click', () => {
     if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
-    searchInput.focus();
+    setSearchOpen(!isSearchOpen());
   });
   $('search-clear').addEventListener('click', () => {
-    searchInput.value = ''; S.vFilter = '';
-    searchWrap.classList.remove('has-text');
-    renderVouchers(); searchInput.focus();
+    if (searchInput.value) {
+      searchInput.value = ''; S.vFilter = '';
+      searchWrap.classList.remove('has-text');
+      renderVouchers(); searchInput.focus();
+    } else setSearchOpen(false); // X on empty field closes the search
   });
+  // v1.5.53: topbar printer icon → printer view
+  $('btn-printer-top').addEventListener('click', () => switchView('view-printer'));
   $('btn-refresh-vouchers').addEventListener('click', function () {
     if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
     this.classList.add('spinning');
@@ -3614,10 +3704,51 @@ function init() {
   $('btn-diag-run').addEventListener('click', runDiagnostics);
   $('btn-diag-save').addEventListener('click', saveDiagReport);
   // SSO login/logout events from the native dialog
+  /* v1.5.53: silent re-authentication after the portal session dies
+ * mid-session (e.g. stale cookies after the app was swiped away / the phone
+ * restarted — Devices showed "not login"/403). Uses the saved account when
+ * auto-login is enabled; the SSO dialog opens and auto-submits by itself.
+ * Loop-safe: at most one silent re-auth per 5 minutes, and never after an
+ * explicit user logout (window.__ssoExplicitLogout). */
+let ssoLastReauth = 0;
+/* v1.5.53: one-shot retry of the portal operation that died with the session.
+   When a portal call fails with a dead session, the caller stores a retry
+   closure here and kicks off silent re-auth. On the next successful login
+   the closure runs ONCE, then is cleared — so Devices reloads instead of
+   leaving a "not login"/403 banner. Never retries genuine 403s. */
+let ssoPendingRetry = null;
+function ssoDeadSession(e) {
+  const m = String((e && e.message) || e || '').toLowerCase();
+  return m.includes('session expired') || m.includes('not login') || m.includes('ssojump');
+}
+function ssoQueueRetry(fn) {
+  ssoPendingRetry = fn; // at most one pending retry; a newer failure replaces it
+}
+function ssoSilentReauth() {
+  if (!hasSso()) return;
+  const now = Date.now();
+  if (now - ssoLastReauth < 5 * 60 * 1000) return;
+  let info = null;
+  try { info = JSON.parse(window.RuijieBridge.ssoAccountInfo() || '{}'); } catch (e) {}
+  if (!info || !info.has || !info.autoLogin) return;
+  ssoLastReauth = now;
+  try { window.RuijieBridge.ssoLogin(); } catch (e) { /* never break the UI */ }
+}
   document.addEventListener('ruijie-sso', (e) => {
     refreshSsoCard();
-    if (e.detail === 'login') toast(t('sso.welcome'));
-    if (e.detail === 'logout') toast(t('sso.bye'));
+    if (e.detail === 'login') {
+      window.__ssoExplicitLogout = false; // a fresh login clears the flag
+      toast(t('sso.welcome'));
+      // v1.5.53: run the one-shot retry of the operation that died, if any.
+      if (ssoPendingRetry) {
+        const fn = ssoPendingRetry; ssoPendingRetry = null;
+        try { fn(); } catch (err) { /* never break the UI */ }
+      }
+    }
+    if (e.detail === 'logout') {
+      if (window.__ssoExplicitLogout) { toast(t('sso.bye')); ssoPendingRetry = null; }
+      else ssoSilentReauth(); // dead session → silently re-authenticate
+    }
   });
   $('btn-disconnect').addEventListener('click', () => {
     if (!confirm(t('confirm.signout'))) return;
