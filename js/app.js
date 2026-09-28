@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.30';
+const APP_VERSION = '1.5.31';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2128,11 +2128,34 @@ const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn)))
 
 /* ── Gateway-local AP client list (China APs) · v1.5.29 ──
  * Renders STA records from GwApi.staList() in the same table style as the
- * Cloud per-AP client view. The gateway reports no auth-account field, so
- * the Voucher column honestly shows "—" (never a device name). */
-function renderGwApClients(apSn, apName, clients, staTotal) {
+ * Cloud per-AP client view.
+ * v1.5.31: voucher codes via MAC matching — the gateway reports no
+ * auth-account field, but the Cloud portal's client list (authCount=true)
+ * DOES carry per-client voucher accounts. When SSO is logged in, build a
+ * MAC→voucher map from the portal and fill the Voucher column for any
+ * gateway STA whose MAC appears there. Unmatched stays "—" (honest). */
+async function renderGwApClients(apSn, apName, clients, staTotal) {
   const showNames = Store.load().clientShowNames !== false;
   if (!clients.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
+  // MAC → voucher code from the Cloud portal (SSO). The portal joins
+  // auth-account data when authCount=true (v1.5.28 parity).
+  const vByMac = new Map();
+  if (Api.ssoLoggedIn()) {
+    try {
+      const pid = Number(S.projectId);
+      let hasAuth = null;
+      try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
+      const plist = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false });
+      (plist || []).forEach(p => {
+        const mac = String(p.mac || p.staMac || '').toUpperCase().trim();
+        const acct = String(p.account || p.authAccount || p.authName || '').trim();
+        if (mac && acct && !vByMac.has(mac)) vByMac.set(mac, acct);
+      });
+    } catch (e) { /* portal voucher enrichment optional — stay honest "—" */ }
+  }
+  // Also try the local voucher map (open-API path) as a fallback.
+  let vmap = new Map();
+  try { vmap = await apClientVoucherMap(Number(S.projectId)); } catch (e) {}
   const srcLine = `<p class="muted small">📡 ${esc(t('ac.srcGateway'))}</p>`;
   $('ac-list').innerHTML =
     `<p class="muted small">${esc(tx('ac.total', { n: clients.length }))}</p>` +
@@ -2145,8 +2168,10 @@ function renderGwApClients(apSn, apName, clients, staTotal) {
       const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
+      const vcode = vByMac.get(String(c.mac || '').toUpperCase().trim()) || '';
+      const vcell = vcode ? `<b>${esc(vcode)}</b>` : '—';
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
-        `<td>—</td>` +
+        `<td>${vcell}</td>` +
         `<td><small>${esc(c.ssid || '—')}</small></td>` +
         `<td><small>${esc(sig)}</small></td></tr>`;
     }).join('') + `</table></div>`;
@@ -2181,7 +2206,7 @@ async function apClientsView(apSn, apName, apNames, isLocalAp) {
       // If STAs carry no AP link at all, show all (gateway-local view).
       const clients = mine.length ? mine : ((stas || []).length && !(stas || []).some(s => s.apSn || s.apMac) ? stas : []);
       if (clients.length || (stas || []).length) {
-        renderGwApClients(apSn, apName, clients, stas.length);
+        await renderGwApClients(apSn, apName, clients, stas.length);
         return;
       }
       // Gateway STA modules unavailable — fall through to Cloud (honest "—").
