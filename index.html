@@ -297,7 +297,16 @@
           <div class="t"><div class="t-main" data-i18n="sso.title">Ruijie အကောင့်</div><div class="sub" data-i18n="sso.sub">ဝင်ထားမှ voucher ဖျက်လို့ရမယ်</div></div>
           <span class="set-val" id="sso-status">…</span>
         </div>
+        <div class="set-row" id="sso-saved-row">
+          <span class="set-ico" style="--tile:#34C759"><svg class="ic"><use href="#i-user"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="sso.savedAs">သိမ်းထားတဲ့ အကောင့်</div><div class="sub" id="sso-saved-email">—</div></div>
+        </div>
+        <div class="set-row"><div class="t"><div class="t-main" data-i18n="sso.remember">အကောင့်မှတ်ထားမယ်</div><div class="sub" data-i18n="sso.rememberSub">စက်မှာ encrypted သိမ်းမယ်</div></div>
+          <label class="switch"><input type="checkbox" id="sso-remember"><span class="track"></span></label></div>
+        <div class="set-row"><div class="t"><div class="t-main" data-i18n="sso.autologin">အလိုအလျောက် ဝင်မယ်</div><div class="sub" data-i18n="sso.autologinSub">နောက်တစ်ခါ နှိပ်စရာမလို</div></div>
+          <label class="switch"><input type="checkbox" id="sso-autologin"><span class="track"></span></label></div>
         <button type="button" class="set-row set-action" id="btn-sso"><span>အကောင့်ဝင်မယ်</span></button>
+        <button type="button" class="set-row set-action" id="btn-sso-switch"><span data-i18n="sso.switch">အကောင့်ပြောင်းမယ်</span></button>
       </div>
 
       <div class="section-title" data-i18n="gw.title">Gateway (ဒေသတွင်း)</div>
@@ -310,6 +319,18 @@
         <label class="set-row set-field"><span class="fld-label" data-i18n="gw.ip">Gateway IP</span><input id="gw-ip" class="fld-input" type="text" inputmode="decimal" placeholder="100.88.200.103"></label>
         <label class="set-row set-field"><span class="fld-label" data-i18n="gw.pass">စကားဝှက်</span><span class="input-wrap fld-wrap"><input id="gw-pass" type="password" autocomplete="current-password"><button type="button" class="peek" data-peek="gw-pass" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button></span></label>
         <button type="button" class="set-row set-action" id="btn-gw"><span>ချိတ်မယ်</span></button>
+      </div>
+
+      <div class="section-title" data-i18n="mon.title">စက်ပစ္စည်း သတိပေးချက်</div>
+      <div class="set-group" id="mon-card">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#FF3B30"><svg class="ic"><use href="#i-signal"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="mon.title">စက်ပစ္စည်း သတိပေးချက်</div><div class="sub" data-i18n="mon.sub">AP / Gateway offline ဖြစ်ရင် သတိပေးမယ်</div></div>
+          <span class="set-val" id="mon-status">…</span>
+        </div>
+        <div class="set-row"><div class="t"><div class="t-main" data-i18n="mon.enable">နောက်ခံ စောင့်ကြည့်မယ်</div><div class="sub" data-i18n="mon.enableSub">App ပိတ်ထားရင်တောင် ၁၅ မိနစ်တစ်ခါ စစ်မယ်</div></div>
+          <label class="switch"><input type="checkbox" id="mon-enable"><span class="track"></span></label></div>
+        <button type="button" class="set-row set-action" id="btn-mon-check"><span data-i18n="mon.checkNow">အခုပဲ စစ်မယ်</span></button>
       </div>
 
       <div class="section-title" data-i18n="diag.title">စစ်ဆေးမှုများ</div>
