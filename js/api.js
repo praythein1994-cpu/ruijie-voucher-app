@@ -602,6 +602,48 @@ const Api = {
     return !!j.hasConfigAuth;
   },
 
+  /* ── Voucher Authenticate records (auth-server data) · v1.5.39 ──
+     The portal's own "Auth Clients" page (verified 2026-09-28 against the
+     portal's public JS chunk macc5/assets/index-C9-BzMTB.js + the live page):
+       outer POST .../webproxy/common/api?/samTransfer/authuserinfos/bypage?cloudType=smb
+       body {"api":"/samTransfer/authuserinfos/bypage?cloudType=smb",
+             "method":"POST","module":"default",
+             "params":{"group_id":N,"tenant_name":"...","page":1,"size":N},
+             "querys":{"lang":"en"}}
+       -> {code, data:{result:{list:[...], total}}, msg}
+     Each record carries account (= the voucher code for voucher auths),
+     userIp, userMac, authType ("15" = Voucher, per the portal's own
+     authType map), loginTimes, onlineStatus, deviceSn. This table is
+     AP-independent (keyed by group, not by AP) — it covers clients sitting
+     on China/local APs that the portal's current-client snapshot never
+     lists. NOTE: tenant_name is deliberately omitted — the app has no
+     verified source for it, and the sibling /samTransfer/kick/user/offline
+     endpoint works with group_id alone. If the backend ever requires it,
+     the call fails here and callers fall back silently (never fabricated).
+     Android-APK-only (needs SSO session). */
+  async portalAuthUsers(groupId, { pageSize = 1000, maxPages = 5 } = {}) {
+    const p = '/samTransfer/authuserinfos/bypage?cloudType=smb';
+    const out = [];
+    let total = Infinity, page = 1;
+    while (out.length < total && page <= maxPages) {
+      const env = {
+        api: p, method: 'POST', module: 'default',
+        params: { group_id: Number(groupId), page, size: pageSize },
+        querys: { lang: 'en' },
+      };
+      const j = await ssoCall('/samTransfer/authuserinfos/bypage?cloudType=smb', env);
+      if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
+      if (Number(j.code) !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + j.code)));
+      const res = (j.data && j.data.result) || {};
+      const list = Array.isArray(res.list) ? res.list : [];
+      out.push(...list);
+      total = Number(res.total) || out.length;
+      if (!list.length) break;
+      page++;
+    }
+    return out;
+  },
+
   // ── Clients (online) ──
   // Manual: staType is MANDATORY — "currentUser" = current online data.
   // NOTE: logbiz APIs live at /logbizagent/... directly (NO /service/api/ prefix).
