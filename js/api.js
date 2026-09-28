@@ -500,6 +500,29 @@ const Api = {
     return Array.isArray(j.deviceList) ? j.deviceList : [];
   },
 
+  /* ── Clients via Cloud portal webproxy (SSO) · v1.5.25 ──
+     The portal's own client list (extracted from the portal's public JS):
+     outer POST .../webproxy/common/api?/network/current/user/global/page
+     body {"api":"/network/current/user/global/page","method":"GET",
+           "module":"logbiz",
+           "querys":{"group_id":N,"page_index":1,"page_size":N,
+                     "connect_type":"wireless","lang":"en"}}
+     Unlike the open-API sta_users, portal records carry `account` (the auth
+     account — the voucher code for voucher-auth clients), `userName`,
+     `authType`, `linkedDevice` (the AP serial), `deviceName`, `activeSec`
+     (seconds). page_index is 1-based. Response {code,list[],currentCount}.
+     Android-APK-only (needs SSO session). */
+  async portalClients(groupId, { pageIndex = 1, pageSize = 500, linkedDevice = '' } = {}) {
+    const querys = { group_id: Number(groupId), page_index: pageIndex, page_size: pageSize, connect_type: 'wireless', lang: 'en' };
+    if (linkedDevice) querys.linked_device = linkedDevice;
+    const env = { api: '/network/current/user/global/page', method: 'GET', module: 'logbiz', params: {}, querys };
+    const j = await ssoCall('/network/current/user/global/page', env);
+    if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
+    const code = Number(j.code);
+    if (code !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + code)));
+    return Array.isArray(j.list) ? j.list : [];
+  },
+
   // ── Clients (online) ──
   // Manual: staType is MANDATORY — "currentUser" = current online data.
   // NOTE: logbiz APIs live at /logbizagent/... directly (NO /service/api/ prefix).
