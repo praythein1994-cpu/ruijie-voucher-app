@@ -145,7 +145,10 @@ async function handleRuijie(req, res) {
 
   const attempt = async (tok) => {
     const qs = new URLSearchParams({ ...(query || {}), access_token: tok }).toString();
-    const url = `${cloud}/service/api/${path}?${qs}`;
+    // v1.5.23: a leading "/" means absolute path on the cloud host (e.g. logbiz
+    // APIs live at /logbizagent/..., NOT under /service/api/).
+    const apiPath = path.startsWith('/') ? path.slice(1) : `service/api/${path}`;
+    const url = `${cloud}/${apiPath}?${qs}`;
     return httpsJson(url, m, m === 'POST' ? (body || {}) : null);
   };
 
