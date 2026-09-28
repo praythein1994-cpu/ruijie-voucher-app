@@ -721,7 +721,16 @@ function switchView(id, push) {
   if (id === 'view-settings') fillSettings();
   // SPA back-button support: one back press walks views instead of killing the app.
   if (push !== false) {
-    try { history.pushState({ view: id }, ''); } catch (e) {}
+    // v1.5.48: re-entering the More tab while a sub-page is open seeds the
+    // More-menu level first and tags the entry with the real sub-page depth —
+    // so system back walks sub-page → More menu → previous tab instead of
+    // jumping to whatever tab was open before.
+    if (id === 'view-more' && S.moreStack.length) {
+      try { history.pushState({ view: 'view-more', moreDepth: 0 }, ''); } catch (e) {}
+    }
+    const st = { view: id };
+    if (id === 'view-more') st.moreDepth = S.moreStack.length;
+    try { history.pushState(st, ''); } catch (e) {}
   }
   S.currentView = id;
   try { moveLiqBlob(); } catch (e) {}
@@ -3471,11 +3480,11 @@ function init() {
   applyLang();
 
   Api.loadCfg();
-  if (window.RuijieBridge) {
-    // APK mode: no proxy needed (native HTTPS has no CORS) — hide proxy field
-    const pf = $('cfg-proxy');
-    if (pf && pf.closest('label')) pf.closest('label').style.display = 'none';
-  }
+  // Login stays clean: proxy has a working default and is editable in Settings.
+  // Show the login proxy field only on web when no proxy is saved yet (it is required there).
+  const pf = $('cfg-proxy');
+  const needProxyField = !hasBridge() && !(Api.cfg && Api.cfg.proxy);
+  if (pf && pf.closest('label')) pf.closest('label').style.display = needProxyField ? '' : 'none';
   if (Api.cfg && Api.cfg.appid) enterApp();
   else $('view-connect').classList.remove('hidden');
 }
