@@ -683,59 +683,95 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 }
 
 
-/* ═══════════ v1.5.31 — burning-paper voucher (realistic fire) ═══════════ */
+/* ═══════════ v1.5.34 — usage-proportional roaring fire ═══════════
+   --burn (0..1) drives everything: the charred (consumed) region grows
+   from the bottom as the voucher is used — data vouchers burn by
+   usedQuota/quota, pure time vouchers by usedTime/timePeriod — and a wall
+   of roaring flames rides the burn front. Unused = clean paper. */
 .burn-paper {
   position: relative; overflow: hidden; border-radius: 16px;
   margin: 2px 0 14px; padding: 20px 16px 14px; text-align: center;
   background: linear-gradient(180deg, #fffefb, #fdf4e3);
   border: 1px solid rgba(120, 80, 20, .18); color: #1c1c1e;
 }
-.burn-embers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
-/* Realistic flame tongues along the bottom edge */
-.burn-embers::before,
-.burn-embers::after {
-  content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 46px;
+/* Charred (consumed) region — bottom-anchored, height follows --burn */
+.burn-char {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  height: calc(var(--burn, 0) * 100%);
+  background: linear-gradient(180deg,
+    rgba(30,16,8,0) 0%, rgba(26,14,7,.45) 20%,
+    rgba(15,8,4,.85) 55%, rgba(6,3,2,.97) 100%);
+  pointer-events: none;
+  transition: height 1s ease;
+}
+/* jagged burnt edge — irregular bumps along the char front */
+.burn-char::before {
+  content: ""; position: absolute; top: -9px; left: -2%; right: -2%; height: 22px;
+  background:
+    radial-gradient(ellipse 34px 20px at 4% 100%, rgba(12,6,3,.9) 0%, transparent 70%),
+    radial-gradient(ellipse 26px 15px at 13% 100%, rgba(12,6,3,.85) 0%, transparent 70%),
+    radial-gradient(ellipse 38px 24px at 24% 100%, rgba(10,5,2,.92) 0%, transparent 70%),
+    radial-gradient(ellipse 24px 13px at 35% 100%, rgba(12,6,3,.85) 0%, transparent 70%),
+    radial-gradient(ellipse 36px 22px at 46% 100%, rgba(10,5,2,.9) 0%, transparent 70%),
+    radial-gradient(ellipse 28px 16px at 57% 100%, rgba(12,6,3,.87) 0%, transparent 70%),
+    radial-gradient(ellipse 34px 21px at 68% 100%, rgba(10,5,2,.91) 0%, transparent 70%),
+    radial-gradient(ellipse 25px 14px at 79% 100%, rgba(12,6,3,.86) 0%, transparent 70%),
+    radial-gradient(ellipse 37px 23px at 90% 100%, rgba(10,5,2,.9) 0%, transparent 70%),
+    radial-gradient(ellipse 27px 15px at 98% 100%, rgba(12,6,3,.85) 0%, transparent 70%);
   pointer-events: none;
 }
-.burn-embers::before {
+/* incandescent ember line glowing along the char front */
+.burn-char::after {
+  content: ""; position: absolute; top: -4px; left: 0; right: 0; height: 14px;
+  background: linear-gradient(180deg, rgba(255,140,20,0), rgba(255,120,15,.55) 55%, rgba(255,210,95,.9));
+  filter: blur(3px);
+  pointer-events: none;
+}
+/* Roaring flame wall riding the burn front (only while in use) */
+.burn-flames { display: none; }
+.burn-paper.burning .burn-flames {
+  display: block;
+  position: absolute; left: -6%; right: -6%; z-index: 3;
+  bottom: calc(var(--burn, 0) * 100% - 16px);
+  height: 130px; pointer-events: none;
+  transform-origin: 50% 100%;
+  transition: bottom 1s ease;
+  animation: flameRoar .45s ease-in-out infinite alternate;
   background:
-    radial-gradient(ellipse 22px 38px at 12% 100%, rgba(255, 220, 80, .95) 0%, rgba(255, 150, 30, .85) 45%, rgba(255, 80, 0, .55) 70%, transparent 100%),
-    radial-gradient(ellipse 18px 30px at 28% 100%, rgba(255, 230, 120, .9) 0%, rgba(255, 160, 40, .8) 50%, rgba(255, 90, 0, .5) 75%, transparent 100%),
-    radial-gradient(ellipse 24px 42px at 47% 100%, rgba(255, 215, 70, .95) 0%, rgba(255, 140, 20, .85) 45%, rgba(255, 70, 0, .55) 70%, transparent 100%),
-    radial-gradient(ellipse 16px 28px at 66% 100%, rgba(255, 225, 110, .9) 0%, rgba(255, 155, 35, .8) 50%, rgba(255, 85, 0, .5) 75%, transparent 100%),
-    radial-gradient(ellipse 20px 36px at 84% 100%, rgba(255, 220, 85, .92) 0%, rgba(255, 148, 28, .82) 48%, rgba(255, 75, 0, .52) 72%, transparent 100%);
-  animation: flameFlick .55s ease-in-out infinite alternate;
-  transform-origin: bottom center;
+    linear-gradient(180deg, transparent 62%, rgba(255,90,0,.35) 88%, rgba(255,140,20,.5) 100%),
+    radial-gradient(ellipse 44px 78px at 2% 100%, rgba(255,100,0,.75) 0%, rgba(235,65,0,.45) 55%, transparent 78%),
+    radial-gradient(ellipse 52px 100px at 9% 100%, rgba(255,130,15,.8) 0%, rgba(245,85,0,.5) 55%, transparent 78%),
+    radial-gradient(ellipse 42px 72px at 17% 100%, rgba(255,95,0,.78) 0%, rgba(230,60,0,.48) 55%, transparent 78%),
+    radial-gradient(ellipse 56px 112px at 26% 100%, rgba(255,125,10,.85) 0%, rgba(240,75,0,.55) 55%, transparent 80%),
+    radial-gradient(ellipse 46px 82px at 34% 100%, rgba(255,105,5,.8) 0%, rgba(235,70,0,.5) 55%, transparent 78%),
+    radial-gradient(ellipse 54px 106px at 43% 100%, rgba(255,128,12,.84) 0%, rgba(242,80,0,.54) 55%, transparent 80%),
+    radial-gradient(ellipse 43px 74px at 51% 100%, rgba(255,98,0,.77) 0%, rgba(232,62,0,.47) 55%, transparent 78%),
+    radial-gradient(ellipse 55px 110px at 60% 100%, rgba(255,122,10,.82) 0%, rgba(238,76,0,.52) 55%, transparent 78%),
+    radial-gradient(ellipse 45px 80px at 68% 100%, rgba(255,102,0,.76) 0%, rgba(234,64,0,.46) 55%, transparent 78%),
+    radial-gradient(ellipse 53px 102px at 77% 100%, rgba(255,127,12,.83) 0%, rgba(241,78,0,.53) 55%, transparent 79%),
+    radial-gradient(ellipse 44px 76px at 85% 100%, rgba(255,99,0,.77) 0%, rgba(233,63,0,.47) 55%, transparent 78%),
+    radial-gradient(ellipse 50px 96px at 93% 100%, rgba(255,124,10,.81) 0%, rgba(239,77,0,.51) 55%, transparent 79%),
+    radial-gradient(ellipse 40px 70px at 99% 100%, rgba(255,101,0,.75) 0%, rgba(234,64,0,.45) 55%, transparent 78%);
 }
-.burn-embers::after {
+/* inner bright cores — hotter, faster flicker */
+.burn-paper.burning .burn-flames::after {
+  content: ""; position: absolute; inset: 0;
+  transform-origin: 50% 100%;
+  animation: flameRoar .3s ease-in-out infinite alternate-reverse;
   background:
-    radial-gradient(ellipse 12px 22px at 20% 100%, rgba(255, 240, 160, .95) 0%, rgba(255, 190, 60, .7) 60%, transparent 100%),
-    radial-gradient(ellipse 10px 18px at 55% 100%, rgba(255, 245, 180, .95) 0%, rgba(255, 195, 70, .7) 60%, transparent 100%),
-    radial-gradient(ellipse 11px 20px at 78% 100%, rgba(255, 238, 150, .92) 0%, rgba(255, 188, 55, .68) 60%, transparent 100%);
-  animation: flameFlick .4s ease-in-out infinite alternate-reverse;
-  transform-origin: bottom center;
+    radial-gradient(ellipse 16px 46px at 12% 100%, rgba(255,236,150,.95) 0%, rgba(255,180,50,.75) 50%, transparent 75%),
+    radial-gradient(ellipse 20px 58px at 32% 100%, rgba(255,230,130,.95) 0%, rgba(255,175,45,.75) 50%, transparent 75%),
+    radial-gradient(ellipse 15px 42px at 52% 100%, rgba(255,238,160,.95) 0%, rgba(255,182,55,.75) 50%, transparent 75%),
+    radial-gradient(ellipse 19px 54px at 70% 100%, rgba(255,232,140,.95) 0%, rgba(255,178,48,.75) 50%, transparent 75%),
+    radial-gradient(ellipse 16px 44px at 88% 100%, rgba(255,236,150,.93) 0%, rgba(255,180,50,.72) 50%, transparent 75%);
 }
-@keyframes flameFlick {
-  0% { transform: scaleY(1) scaleX(1); opacity: .92; }
-  30% { transform: scaleY(1.18) scaleX(.97); opacity: 1; }
-  60% { transform: scaleY(.92) scaleX(1.03); opacity: .85; }
-  100% { transform: scaleY(1.12) scaleX(.98); opacity: .97; }
+@keyframes flameRoar {
+  0% { transform: scaleY(1) scaleX(1) skewX(0deg); opacity: .96; }
+  50% { transform: scaleY(1.24) scaleX(.95) skewX(-2.5deg); opacity: 1; }
+  100% { transform: scaleY(.93) scaleX(1.04) skewX(2deg); opacity: .9; }
 }
-/* Rising ember particles */
-.burn-paper.burning .burn-embers {
-  background-image:
-    radial-gradient(circle 2.5px at 18% 88%, rgba(255, 170, 40, .95) 0%, transparent 100%),
-    radial-gradient(circle 2px at 42% 92%, rgba(255, 140, 20, .9) 0%, transparent 100%),
-    radial-gradient(circle 3px at 68% 86%, rgba(255, 180, 50, .92) 0%, transparent 100%),
-    radial-gradient(circle 2px at 85% 90%, rgba(255, 150, 30, .88) 0%, transparent 100%);
-  background-repeat: no-repeat;
-  animation: embersRise 1.8s linear infinite;
-}
-@keyframes embersRise {
-  0% { background-position: 0 0, 0 0, 0 0, 0 0; opacity: 0; }
-  15% { opacity: 1; }
-  100% { background-position: 8px -70px, -6px -80px, 10px -65px, -8px -75px; opacity: 0; }
-}
+/* rising-sparks canvas */
+.burn-embers { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: hidden; }
 .burn-label {
   position: relative; z-index: 1;
   display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
@@ -751,16 +787,15 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 .burn-sub { position: relative; z-index: 1; margin-top: 6px; font-size: 13px; color: #6b6b70; }
 .burn-perf { position: relative; z-index: 1; border-top: 2px dashed rgba(0, 0, 0, .14); margin: 12px 6px 0; }
 .burn-paper.burning {
-  box-shadow: inset 0 -60px 50px -20px rgba(20, 8, 2, .85), inset 0 -25px 22px -8px rgba(255, 110, 20, .45);
+  box-shadow: 0 0 34px -6px rgba(255,110,10,.55), inset 0 -30px 30px -18px rgba(255,110,20,.35);
 }
 .burn-paper.burned-out {
   background: linear-gradient(180deg, #e9e7e2, #d8d5ce);
   filter: brightness(.92) grayscale(1); opacity: .85;
 }
-.burn-paper.burned-out .burn-embers::before,
-.burn-paper.burned-out .burn-embers::after { display: none; }
+.burn-paper.burned-out .burn-flames { display: none; }
 @media (prefers-reduced-motion: reduce) {
-  .burn-embers::before, .burn-embers::after, .burn-paper.burning .burn-embers { animation: none; }
+  .burn-paper.burning .burn-flames, .burn-paper.burning .burn-flames::after { animation: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
