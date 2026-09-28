@@ -670,7 +670,17 @@ public class RuijieBridge {
                         .put("method", "login")
                         .put("params", params);
                 String resp = GatewayClient.post(cleanIp, "/cgi-bin/luci/api/auth", null, body.toString());
-                gwResolve(callId, resp);
+                // Attach Set-Cookie headers: some firmware omits sid in the body
+                // and only returns it as the <sn>=<sid> session cookie.
+                try {
+                    JSONObject j = new JSONObject(resp);
+                    JSONArray arr = new JSONArray();
+                    for (String ck : GatewayClient.lastCookies()) arr.put(ck);
+                    j.put("_cookies", arr);
+                    gwResolve(callId, j.toString());
+                } catch (Exception je) {
+                    gwResolve(callId, resp);
+                }
             } catch (Exception e) {
                 gwResolve(callId, gwErr(e.getMessage() == null ? "login failed" : e.getMessage()));
             }

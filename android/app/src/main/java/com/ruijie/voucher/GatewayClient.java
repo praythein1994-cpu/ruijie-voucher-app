@@ -44,6 +44,11 @@ public class GatewayClient {
 
     private static final int TIMEOUT_MS = 20000;
 
+    /** Set-Cookie headers from the most recent post() call (for sid fallback). */
+    private static volatile java.util.List<String> lastCookies = java.util.Collections.emptyList();
+
+    public static java.util.List<String> lastCookies() { return lastCookies; }
+
     private static volatile javax.net.ssl.SSLSocketFactory trustAllFactory;
     private static final HostnameVerifier TRUST_ALL_HOST = new HostnameVerifier() {
         @Override public boolean verify(String hostname, SSLSession session) { return true; }
@@ -100,6 +105,8 @@ public class GatewayClient {
         if (status < 200 || status >= 300) {
             throw new Exception("Gateway HTTP " + status + ": " + sb.toString().substring(0, Math.min(160, sb.length())));
         }
+        java.util.List<String> cookies = c.getHeaderFields().get("Set-Cookie");
+        lastCookies = (cookies != null) ? cookies : java.util.Collections.<String>emptyList();
         return sb.toString();
     }
 }
