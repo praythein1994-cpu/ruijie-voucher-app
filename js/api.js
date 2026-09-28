@@ -134,7 +134,10 @@ const GwApi = {
         if (m && m[1] && !/^(deleted|expired)$/i.test(m[1].trim())) { sid = m[1].trim(); break; }
       }
     }
-    if (!sid) throw new Error('Gateway login: sid မပါလာပါ (data keys: ' + Object.keys(d).join(',') + ')');
+    if (!sid) {
+      const gwMsg = d.msg ? String(d.msg).slice(0, 160) : '';
+      throw new Error('Gateway login: ' + (gwMsg || 'sid မပါလာပါ') + ' (keys: ' + Object.keys(d).join(',') + ')');
+    }
     this.session = { ip, sid, sn: d.sn || '', token: d.token || '' };
     return this.session;
   },
