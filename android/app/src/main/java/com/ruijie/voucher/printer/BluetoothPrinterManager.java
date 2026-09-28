@@ -41,6 +41,7 @@ public class BluetoothPrinterManager {
     private static final String PREFS_NAME = "printer_v1_device_prefs";
     private static final String KEY_LAST_DEVICE_ADDRESS = "key_last_device_address";
     private static final String KEY_LAST_DEVICE_NAME = "key_last_device_name";
+    private static final String KEY_AUTO_RECONNECT = "key_auto_reconnect";
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     // Connection states (mirrors Kotlin sealed class PrinterConnectionState)
@@ -130,13 +131,46 @@ public class BluetoothPrinterManager {
     public volatile SocketFactory socketFactory;
     public volatile long healthCheckIntervalMs = 3000L;
 
+    // Auto-reconnect after unexpected loss (e.g. printer power cycle).
+    private volatile boolean autoReconnectEnabled = false;
+    private volatile boolean userInitiatedDisconnect = false;
+    private volatile Thread reconnectThread;
+    private volatile int reconnectAttempts = 0;
+    private volatile boolean suppressReconnect = false;
+    // Backoff between attempts (ms); last value repeats indefinitely — the loop
+    // never gives up on its own (user Disconnect or toggle-off stops it).
+    private static final long[] RECONNECT_BACKOFF_MS = {3000, 5000, 8000, 13000, 20000, 30000};
+
     public BluetoothPrinterManager(Context context) {
         this.appContext = context.getApplicationContext();
         this.prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        this.autoReconnectEnabled = prefs.getBoolean(KEY_AUTO_RECONNECT, false);
         this.bluetoothManager = (BluetoothManager) appContext.getSystemService(Context.BLUETOOTH_SERVICE);
         this.bluetoothAdapter = bluetoothManager != null ? bluetoothManager.getAdapter() : null;
         registerConnectionReceiver();
         refreshPairedDevices();
+    }
+
+    /** Enables/disables auto-reconnect after unexpected connection loss. Persisted. */
+    public void setAutoReconnectEnabled(boolean enabled) {
+        autoReconnectEnabled = enabled;
+        prefs.edit().putBoolean(KEY_AUTO_RECONNECT, enabled).apply();
+        if (!enabled) stopReconnect();
+    }
+
+    public boolean isAutoReconnectEnabled() { return autoReconnectEnabled; }
+
+    /** True only for an explicit user disconnect — unexpected losses may reconnect. */
+    public void setUserInitiatedDisconnect(boolean v) { userInitiatedDisconnect = v; }
+
+    /** Live socket check so btState() never reports a stale CONNECTED. */
+    public boolean isSocketAlive() {
+        try {
+            PrinterSocket s = currentSocket;
+            return s != null && s.isConnected();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public boolean isBluetoothSupported() { return bluetoothAdapter != null; }
@@ -330,11 +364,17 @@ public class BluetoothPrinterManager {
         if (addr == null || addr.isEmpty()) return;
         String s = connState;
         if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) return;
+        userInitiatedDisconnect = false;
+        stopReconnect();
+        reconnectAttempts = 0;
         connectAsync(addr);
     }
 
     /** Async connect by device address (runs on a background thread). */
     public void connectAsync(final String address) {
+        userInitiatedDisconnect = false;
+        stopReconnect();
+        reconnectAttempts = 0;
         Thread t = new Thread(() -> doConnect(address));
         t.setDaemon(true);
         t.start();
@@ -342,7 +382,14 @@ public class BluetoothPrinterManager {
 
     @SuppressLint("MissingPermission")
     private void doConnect(String address) {
-        disconnect();
+        // Tear down any stale socket without scheduling a duplicate reconnect —
+        // this doConnect IS the (re)connect attempt.
+        suppressReconnect = true;
+        try {
+            disconnectInternal();
+        } finally {
+            suppressReconnect = false;
+        }
         if (!isBluetoothEnabled()) {
             setState(STATE_ERROR, null, null, "Bluetooth is turned off. Please turn on Bluetooth.");
             setLastResult(false, "Bluetooth is turned off. Please turn on Bluetooth.");
@@ -394,15 +441,29 @@ public class BluetoothPrinterManager {
                     .putString(KEY_LAST_DEVICE_NAME, finalName)
                     .apply();
 
+            if (userInitiatedDisconnect) {
+                // User tapped disconnect while this attempt was in flight.
+                try { socket.close(); } catch (Exception ignored) {}
+                setLastResult(false, "Disconnected by user");
+                return;
+            }
             setState(STATE_CONNECTED, finalName, address, null);
             setLastResult(true, "Connected to " + finalName);
+            userInitiatedDisconnect = false;
+            reconnectAttempts = 0;
+            stopReconnect();
             startContinuousMonitoring(socket);
         } catch (Exception e) {
-            disconnect();
+            disconnectInternal();
             String msg = "Connection to " + finalName + " failed: "
                     + (e.getMessage() != null ? e.getMessage() : "Device unreachable");
             setState(STATE_ERROR, null, null, msg);
-            setLastResult(false, msg);
+            // Inside the auto-reconnect loop the status line already shows the error;
+            // skip the toast-worthy result so the user isn't spammed on every retry.
+            // A successful (re)connect still reports via setLastResult(true, ...).
+            if (reconnectThread != Thread.currentThread()) {
+                setLastResult(false, msg);
+            }
         }
     }
 
@@ -433,10 +494,65 @@ public class BluetoothPrinterManager {
         if (!STATE_DISCONNECTED.equals(connState)) {
             setState(STATE_DISCONNECTED, null, null, null);
         }
+        maybeScheduleReconnect();
+    }
+
+    /** Explicit user disconnect: never auto-reconnect afterwards. */
+    public void userDisconnect() {
+        userInitiatedDisconnect = true;
+        stopReconnect();
+        disconnectInternal();
+    }
+
+    /** Internal teardown (connect retry, cleanup): keeps the user-disconnect flag as-is. */
+    private void disconnectInternal() {
+        handleConnectionLost("Internal disconnect");
     }
 
     public void disconnect() {
-        handleConnectionLost("User disconnected printer");
+        userDisconnect();
+    }
+
+    /** Reconnect with backoff after an UNEXPECTED loss (printer power cycle, out of
+     * range). Skipped when the user disconnected explicitly or auto-reconnect is off. */
+    private void maybeScheduleReconnect() {
+        if (suppressReconnect || userInitiatedDisconnect || !autoReconnectEnabled) return;
+        String addr = getLastPrinterAddress();
+        if (addr == null || addr.isEmpty()) return;
+        Thread cur = reconnectThread;
+        if (cur != null && cur.isAlive() && cur != Thread.currentThread()) return;
+        if (cur == Thread.currentThread()) return; // already inside the reconnect loop
+        reconnectAttempts = 0;
+        Thread t = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                if (userInitiatedDisconnect) break;
+                String s = connState;
+                if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) break;
+                if (!isBluetoothEnabled()) {
+                    // Bluetooth off: wait without burning attempts.
+                    try { Thread.sleep(10000); } catch (InterruptedException e) { break; }
+                    continue;
+                }
+                long wait = RECONNECT_BACKOFF_MS[
+                        Math.min(reconnectAttempts, RECONNECT_BACKOFF_MS.length - 1)];
+                try { Thread.sleep(wait); } catch (InterruptedException e) { break; }
+                if (userInitiatedDisconnect || Thread.currentThread().isInterrupted()) break;
+                reconnectAttempts++;
+                Log.i(TAG, "Auto-reconnect attempt " + reconnectAttempts + " to " + addr);
+                doConnect(addr);
+                // doConnect is synchronous; loop re-checks state above.
+            }
+            if (reconnectThread == Thread.currentThread()) reconnectThread = null;
+        });
+        t.setDaemon(true);
+        reconnectThread = t;
+        t.start();
+    }
+
+    private void stopReconnect() {
+        Thread t = reconnectThread;
+        reconnectThread = null;
+        if (t != null) t.interrupt();
     }
 
     public void cleanup() {
