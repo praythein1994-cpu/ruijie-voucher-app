@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.21';
+const APP_VERSION = '1.5.22';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -351,6 +351,18 @@ const I18N = {
   'mc.total': { my: 'စုစုပေါင်း {n}', en: '{n} total' },
   'mc.mac': { my: 'MAC / IP', en: 'MAC / IP' },
   'mc.ssid': { my: 'SSID', en: 'SSID' },
+  'ac.title': { my: 'AP ချိတ်ဆက်သူများ', en: 'AP clients' },
+  'ac.none': { my: 'ချိတ်ဆက်ထားသူမရှိပါ', en: 'No connected clients' },
+  'ac.total': { my: 'စုစုပေါင်း {n} ယောက်', en: '{n} clients' },
+  'ac.voucherN': { my: 'voucher နဲ့ {n} ယောက်', en: '{n} on vouchers' },
+  'ac.voucher': { my: 'Voucher', en: 'Voucher' },
+  'ac.since': { my: 'စချိတ်ချိန်', en: 'Connected at' },
+  'ac.duration': { my: 'ကြာချိန်', en: 'Duration' },
+  'ac.signal': { my: 'ဆစ်ဂနယ်', en: 'Signal' },
+  'ac.roamTitle': { my: 'AP ပြောင်းသွားမှု', en: 'Roaming' },
+  'ac.roamFrom': { my: 'ပြောင်းလာတဲ့ AP', en: 'Roamed from' },
+  'ac.roamNone': { my: 'roam မှတ်တမ်းမရှိပါ', en: 'No roam history' },
+  'ac.tapRoam': { my: 'roam မှတ်တမ်းကြည့်ရန် client ကို နှိပ်ပါ', en: 'Tap a client to see roam history' },
   'mn.title': { my: 'Networks', en: 'Networks' },
   'mn.add': { my: 'Network အသစ်ထည့်မယ်', en: 'Add network' },
   'mn.name': { my: 'အမည်', en: 'Name' },
@@ -1840,6 +1852,10 @@ async function moreDevices() {
     // All tab + gateway connected: also pull the local list for the merge.
     const wantLocalMerge = !type && GwApi.loggedIn();
     if (wantLocalMerge) jobs.push(GwApi.deviceList().catch(() => []));
+    // v1.5.22: per-AP client counts — one sta_users call in parallel, grouped by AP serial.
+    const clientP = (type === '' || type === 'AP')
+      ? Api.allOnlineClients(Number(S.projectId)).catch(() => [])
+      : Promise.resolve(null);
     const results = await Promise.allSettled(jobs);
     const seen = new Set(), list = [], errs = [];
     results.forEach((r, i) => {
@@ -1850,9 +1866,24 @@ async function moreDevices() {
         });
       } else if (i < types.length) errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
     });
-    renderDeviceRows(list, errs);
+    let cliByAp = null, apNames = null;
+    const clients = await clientP;
+    if (clients) {
+      cliByAp = new Map(); apNames = new Map();
+      clients.forEach(c => {
+        const sn = String(c.sn || c.apSn || '');
+        if (!cliByAp.has(sn)) cliByAp.set(sn, []);
+        cliByAp.get(sn).push(c);
+        if (sn && c.deviceAliasName && !apNames.has(sn)) apNames.set(sn, c.deviceAliasName);
+      });
+      list.forEach(d => {
+        const sn = String(d.serialNumber || d.sn || '');
+        if (sn && !apNames.has(sn)) apNames.set(sn, d.aliasName || d.alias || d.deviceAliasName || d.name || sn);
+      });
+    }
+    renderDeviceRows(list, errs, cliByAp, apNames);
   };
-  const renderDeviceRows = (list, errs) => {
+  const renderDeviceRows = (list, errs, cliByAp, apNames) => {
     if (!list.length) { $('md-list').innerHTML = `<p class="err">${esc(errs.join(' · ') || t('md.none'))}</p>`; return; }
     const warn = errs.length ? `<p class="warn small">${esc(t('md.partial'))}: ${esc(errs.join(' · '))}</p>` : '';
     $('md-list').innerHTML = `${warn}<p class="muted small">${tx('md.total', { n: list.length })}</p>` +
@@ -1865,13 +1896,23 @@ async function moreDevices() {
           const localTag = d.local ? ` <small class="muted">· ${esc(t('md.localTag'))}</small>` : '';
           // Local reboot wire format not captured yet — no reboot button on local rows (v1.5.16).
           const rb = (!d.local && sn) ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
+          // v1.5.22: per-AP client count badge → tap opens that AP's client list.
+          const isApRow = (() => {
+            const ct = String(d.commonType || '').toUpperCase();
+            if (ct) return ct === 'AP';
+            return d.local ? /^RAP/i.test(String(d.model || '')) : false;
+          })();
+          const ncli = (cliByAp && sn) ? (cliByAp.get(String(sn)) || []).length : 0;
+          const showCli = isApRow && sn && (ncli > 0 || !d.local);
+          const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncli}</span></button>` : '';
           return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
-          <td>${rb}</td></tr>`;
+          <td>${rb}${cb}</td></tr>`;
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
+    document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames)));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#md-chips .chip').forEach(x => x.classList.remove('active'));
@@ -1905,6 +1946,100 @@ async function moreClients() {
         <td>${esc(c.ssid || '')}</td><td><small>${esc(c.username || c.hostname || '')}</small></td></tr>`).join('')}
       </table></div><p class="muted small">${tx('mc.total', { n: list.length })}</p>` : `<p class="muted">${t('mc.none')}</p>`;
   } catch (e) { $('mc-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+/* ── Per-AP clients · v1.5.22 ──
+   One sta_users call (staType=currentUser) grouped by AP serial gives the
+   per-AP client list: MAC/IP, voucher code (client username), connect time
+   (onlineTime), duration (activeTime), signal. The voucher code is matched
+   against the voucher list for package/price; unmatched codes are shown raw,
+   never guessed. Tapping a client loads its onofflineUserHistory — consecutive
+   records on different AP serials mean the client roamed between APs. */
+let _acVMap = null, _acVMapPid = 0;
+async function apClientVoucherMap(pid) {
+  if (_acVMap && _acVMapPid === pid) return _acVMap;
+  const vs = await Api.voucherListAll(Number(pid), null);
+  const m = new Map();
+  (vs || []).forEach(v => { const c = vCode(v); if (c && !m.has(c)) m.set(c, v); });
+  _acVMap = m; _acVMapPid = pid;
+  return m;
+}
+const fmtDur = ms => {
+  ms = Number(ms);
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+};
+const fmtTs = ts => {
+  const n = Number(ts);
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  try { return new Date(n).toLocaleString(); } catch (e) { return '—'; }
+};
+const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn))) || fallback || sn || '—';
+
+async function apClientsView(apSn, apName, apNames) {
+  const pid = Number(S.projectId);
+  moreShell(`${ic('user', 'sm')} ${esc(apName || apSn)} <small class="muted">· ${esc(t('ac.title'))}</small>`,
+    `<div id="ac-list"><p class="muted">${t('more.loading')}</p></div>`);
+  S.moreFn = () => apClientsView(apSn, apName, apNames);
+  try {
+    const clients = await Api.allOnlineClients(pid);
+    let vmap = new Map();
+    try { vmap = await apClientVoucherMap(pid); } catch (e) { /* voucher enrichment optional */ }
+    const mine = (clients || []).filter(c => String(c.sn || c.apSn || '') === String(apSn));
+    if (!mine.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
+    const vCount = mine.filter(c => vmap.has(String(c.username || ''))).length;
+    $('ac-list').innerHTML =
+      `<p class="muted small">${esc(tx('ac.total', { n: mine.length }))} · ${esc(tx('ac.voucherN', { n: vCount }))}</p>` +
+      `<div class="wrap-scroll"><table class="data">` +
+      `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th></tr>` +
+      mine.map((c, i) => {
+        const mac = c.mac || '—';
+        const user = String(c.username || c.hostname || '');
+        const v = user ? vmap.get(user) : null;
+        const pkg = v ? voucherPkgName(v) : '';
+        const price = v ? fmtMoney(pkgPriceNum(v)) : '';
+        const since = fmtTs(c.onlineTime);
+        const durMs = Number(c.activeTime) > 0 ? Number(c.activeTime)
+          : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN);
+        const sig = [c.rssi ? String(c.rssi) + ' dBm' : '', c.band || '', c.channel ? 'ch ' + c.channel : ''].filter(Boolean).join(' · ') || '—';
+        const hostLine = (c.userIp || c.ip) ? `<br><small class="muted">${esc(c.userIp || c.ip)}${(c.hostname && c.username) ? '<br>' + esc(c.hostname) : ''}</small>` : '';
+        return `<tr data-accli="${i}" style="cursor:pointer"><td>${esc(mac)}${hostLine}</td>` +
+          `<td>${esc(user || '—')}${v ? `<br><small class="muted">${esc(pkg)}${price ? ' · ' + esc(price) : ''}</small>` : ''}</td>` +
+          `<td><small>${esc(since)}<br>${esc(fmtDur(durMs))}</small></td>` +
+          `<td><small>${esc(sig)}</small></td></tr>` +
+          `<tr data-acroam="${i}" style="display:none"><td colspan="4"><div id="ac-roam-${i}"><p class="muted small">${t('more.loading')}</p></div></td></tr>`;
+      }).join('') + `</table></div><p class="muted small">${esc(t('ac.tapRoam'))}</p>`;
+    document.querySelectorAll('#ac-list [data-accli]').forEach(row => {
+      row.addEventListener('click', async () => {
+        const i = row.dataset.accli;
+        const rrow = document.querySelector(`#ac-list [data-acroam="${i}"]`);
+        const box = $('ac-roam-' + i);
+        if (rrow.style.display !== 'none') { rrow.style.display = 'none'; return; }
+        rrow.style.display = '';
+        if (box.dataset.done) return;
+        box.dataset.done = '1';
+        try {
+          const c = mine[Number(i)];
+          const hist = await Api.clientHistory(pid, c.mac);
+          const recs = (hist || [])
+            .map(h => ({ t: Number(h.onlineTime || h.updateTime || 0), sn: String(h.sn || h.apSn || ''), nm: h.deviceAliasName || '' }))
+            .filter(r => r.t > 0 && r.sn)
+            .sort((a, b) => a.t - b.t);
+          const roams = [];
+          for (let k = 1; k < recs.length; k++) {
+            if (recs[k].sn !== recs[k - 1].sn) roams.push({ from: recs[k - 1], to: recs[k] });
+          }
+          box.innerHTML = roams.length
+            ? `<p class="small"><b>${esc(t('ac.roamTitle'))}</b></p>` + roams.map(r =>
+                `<p class="small">${esc(apNameOf(r.from.sn, apNames, r.from.nm))} → ${esc(apNameOf(r.to.sn, apNames, r.to.nm))}<br><small class="muted">${esc(fmtTs(r.to.t))}</small></p>`).join('')
+            : `<p class="muted small">${esc(t('ac.roamNone'))}</p>`;
+        } catch (e) { box.innerHTML = `<p class="err small">${esc(e.message || e)}</p>`; }
+      });
+    });
+  } catch (e) { $('ac-list').innerHTML = `<p class="err">${esc(e.message || e)}</p>`; }
 }
 
 async function moreNetworks() {
