@@ -304,32 +304,24 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   from { border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%; }
   to { border-radius: 58% 42% 44% 56% / 44% 58% 42% 56%; }
 }
-/* ── Liquid touch ripple: a watery blob blooms from the tap point ── */
-.liq-host { position: relative; }
-.liq-ripple {
-  position: absolute; border-radius: 50%; pointer-events: none; z-index: 6;
-  background: radial-gradient(circle at 38% 32%, rgba(191,219,254,.9), rgba(96,165,250,.55) 52%, rgba(59,130,246,0) 72%);
-  filter: blur(3px);
-  transform: scale(0); opacity: .9;
-  animation: liqrip .65s cubic-bezier(.25,.7,.3,1) forwards;
+/* ── Liquid touch wobble: the whole touched element squishes and wobbles
+   like jelly, pivoting around the tap point (JS sets transform-origin) ── */
+@keyframes liqWobble {
+  0%   { transform: scale(1, 1) skewX(0deg); }
+  14%  { transform: scale(.92, 1.08) skewX(1.6deg); }
+  28%  { transform: scale(1.07, .93) skewX(-1.3deg); }
+  42%  { transform: scale(.95, 1.05) skewX(.9deg); }
+  56%  { transform: scale(1.04, .96) skewX(-.6deg); }
+  70%  { transform: scale(.985, 1.015) skewX(.35deg); }
+  82%  { transform: scale(1.012, .988) skewX(-.18deg); }
+  92%  { transform: scale(.997, 1.003) skewX(.07deg); }
+  100% { transform: scale(1, 1) skewX(0deg); }
 }
-.liq-ripple::after {
-  content: ""; position: absolute; inset: 18%;
-  border-radius: 50%;
-  border: 2px solid rgba(191,219,254,.75);
-  transform: scale(.4); opacity: .8;
-  animation: liqring .65s cubic-bezier(.25,.7,.3,1) forwards;
+.liq-wobble {
+  animation: liqWobble .7s ease-out;
+  will-change: transform;
 }
-@keyframes liqrip {
-  0% { transform: scale(0); opacity: .9; }
-  55% { opacity: .55; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-@keyframes liqring {
-  0% { transform: scale(.4); opacity: .8; }
-  100% { transform: scale(1.9); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) { .liq-ripple { display: none; } }
+@media (prefers-reduced-motion: reduce) { .liq-wobble { animation: none; } }
 .tab {
   position: relative; z-index: 1;
   flex: 1; border: none; background: none; padding: 6px 2px; color: #8b94a7;
