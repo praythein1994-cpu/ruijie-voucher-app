@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.50';
+const APP_VERSION = '1.5.51';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2914,6 +2914,22 @@ function pkgPriceNum(p) {
 }
 function voucherPkgName(v) { return v.packageName || v.userGroupName || ''; }
 
+// v1.5.51: sales-ledger range windows. "Last 1 Day" = the whole previous
+// calendar day + the current day up to now (local time), so yesterday's
+// sales stay visible all day (the old start-of-today bound hid all of
+// yesterday and showed almost nothing just after midnight).
+function salesRangeBounds(range, nowMs) {
+  const dayMs = 864e5;
+  if (range === 'day1') {
+    const d = new Date(nowMs);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - 1);
+    return [d.getTime(), nowMs];
+  }
+  if (range === 'day7') return [nowMs - 7 * dayMs, nowMs];
+  if (range === 'day30') return [nowMs - 30 * dayMs, nowMs];
+  return [0, Infinity];
+}
 async function moreSales() {
   const todayStr = new Date().toISOString().slice(0, 10);
   S.moreFn = moreSales;
@@ -2937,19 +2953,15 @@ async function moreSales() {
 
   let range = 'day1';
   const dayMs = 864e5;
-  const startOfToday = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); };
   const rangeBounds = () => {
-    const s0 = startOfToday(), now = Date.now();
-    if (range === 'day1') return [s0, now];
-    if (range === 'day7') return [s0 - 6 * dayMs, now];
-    if (range === 'day30') return [s0 - 29 * dayMs, now];
     if (range === 'custom') {
+      const now = Date.now();
       const f = $('sl-from').value, tt = $('sl-to').value;
       const s = f ? new Date(f + 'T00:00:00').getTime() : 0;
       const e = tt ? new Date(tt + 'T00:00:00').getTime() + dayMs : now + dayMs;
       return [s, e];
     }
-    return [0, Infinity];
+    return salesRangeBounds(range, Date.now());
   };
   // Sale day = day the voucher was FIRST USED (activation), whether it is
   // now used (2) or expired (3). Falls back to creation time when the
@@ -3359,37 +3371,22 @@ function init() {
   document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view)));
   $('project-select').addEventListener('change', onProjectChange);
 
-  // icon-only search: expand on tap, collapse via ✕ when empty (or Esc)
+  // iOS: search field always visible — topbar magnifier focuses it (v1.5.51)
   const searchInput = $('voucher-search'), searchWrap = $('search-wrap'), searchBtn = $('btn-search');
-  const collapseSearch = () => {
-    searchWrap.classList.remove('open');
-    searchBtn.classList.remove('hidden');
-    searchInput.value = ''; S.vFilter = '';
-    searchWrap.classList.remove('has-text');
-    renderVouchers();
-  };
   searchInput.addEventListener('input', e => {
     S.vFilter = e.target.value;
     searchWrap.classList.toggle('has-text', !!e.target.value);
     renderVouchers();
   });
-  searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') collapseSearch(); });
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') searchInput.blur(); });
   searchBtn.addEventListener('click', () => {
     if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
-    // toggle: tap again while open to collapse (the ✕ was unreachable when empty)
-    if (searchWrap.classList.contains('open')) { collapseSearch(); return; }
-    searchWrap.classList.add('open');
     searchInput.focus();
   });
   $('search-clear').addEventListener('click', () => {
-    if (searchInput.value) {
-      searchInput.value = ''; S.vFilter = '';
-      searchWrap.classList.remove('has-text');
-      renderVouchers();
-      searchInput.focus();
-    } else {
-      collapseSearch();
-    }
+    searchInput.value = ''; S.vFilter = '';
+    searchWrap.classList.remove('has-text');
+    renderVouchers(); searchInput.focus();
   });
   $('btn-refresh-vouchers').addEventListener('click', function () {
     if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
