@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.38';
+const APP_VERSION = '1.5.39';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2431,6 +2431,29 @@ const gwVoucherForSta = (sta, byMac, byIp) =>
   (byMac && byMac.get(normMac(sta && sta.mac))) ||
   (byIp && sta && sta.ip && byIp.get(String(sta.ip).trim())) || '';
 
+/* ── Voucher Authenticate records map · v1.5.39 ──
+ * Build MAC→voucher / IP→voucher lookups from the portal's Auth Clients
+ * records (Api.portalAuthUsers). Verified field names (portal's own code):
+ * account, userIp, userMac, authType ("15" = Voucher). Pure and
+ * unit-testable. A record's account is mapped ONLY when it is a genuine
+ * voucher present in the voucher list — this keeps non-voucher auth
+ * accounts (802.1X usernames, etc.) out of the voucher column without
+ * guessing auth types. MAC is normMac-normalized (the portal reports
+ * dotted form like 2285.27e9.c122). */
+const authVoucherMaps = (records, voucherMap) => {
+  const byMac = new Map(), byIp = new Map();
+  (records || []).forEach(r => {
+    const acct = String(r.account || '').trim();
+    if (!acct) return;
+    if (!voucherMap || !voucherMap.has(acct)) return;
+    const mac = normMac(r.userMac);
+    if (mac && !byMac.has(mac)) byMac.set(mac, acct);
+    const ip = String(r.userIp || '').trim();
+    if (ip && !byIp.has(ip)) byIp.set(ip, acct);
+  });
+  return { byMac, byIp };
+};
+
 /* ── Voucher MAC/IP cache · v1.5.37 ──
  * The portal's current-user snapshot only lists clients on Cloud-managed
  * APs *right now* — a client sitting on a China/local AP is absent, so the
@@ -2486,7 +2509,14 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
   // *current* snapshot — clients sitting on China/local APs are absent.
   // v1.5.37: the local voucher cache (populated from every portal Online
   // Clients load) fills those gaps; live data always wins.
+  // v1.5.39: the portal's Voucher Authenticate records (auth-server data,
+  // AP-independent) sit between live and cache — they cover China-AP
+  // clients the live snapshot never lists. Priority: live > auth > cache.
+  // Also try the local voucher map (open-API path) as a fallback.
+  let vmap = new Map();
+  try { vmap = await apClientVoucherMap(Number(S.projectId)); } catch (e) {}
   let vByMac = new Map(), vByIp = new Map();
+  let aByMac = new Map(), aByIp = new Map();
   if (Api.ssoLoggedIn()) {
     try {
       const pid = Number(S.projectId);
@@ -2495,11 +2525,12 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const plist = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false });
       ({ byMac: vByMac, byIp: vByIp } = gwVoucherMaps(plist));
       try { cachePortalVouchers(plist); } catch (e) { /* best-effort */ }
+      try {
+        const arecs = await Api.portalAuthUsers(pid);
+        ({ byMac: aByMac, byIp: aByIp } = authVoucherMaps(arecs, vmap));
+      } catch (e) { /* auth records best-effort — live + cache still apply */ }
     } catch (e) { /* portal voucher enrichment optional — stay honest "—" */ }
   }
-  // Also try the local voucher map (open-API path) as a fallback.
-  let vmap = new Map();
-  try { vmap = await apClientVoucherMap(Number(S.projectId)); } catch (e) {}
   const vcache = getVoucherCache();
   const srcLine = `<p class="muted small">📡 ${esc(t('ac.srcGateway'))}</p>`;
   $('ac-list').innerHTML =
@@ -2513,7 +2544,7 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
-      const vcode = gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
+      const vcode = gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, aByMac, aByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
       // v1.5.38: show the voucher's plan / period / price like the portal
       // Online Clients view does (voucher object from the open-API map).
       const vv = vcode ? vmap.get(vcode) : null;
