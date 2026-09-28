@@ -52,5 +52,22 @@ function initLiquidWobble() {
 }
 initLiquidWobble();
 </script>
+
+<script>
+/* auto-demo: tap the voucher row on load, freeze the wobble mid-squash */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const row = document.getElementById('wobble-row');
+    const r = row.getBoundingClientRect();
+    row.dispatchEvent(new PointerEvent('pointerdown', {
+      clientX: r.left + r.width * 0.3, clientY: r.top + r.height / 2, bubbles: true
+    }));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const a = row.getAnimations();
+      if (a.length) { a[0].pause(); try { a[0].currentTime = 120; } catch (e) {} }
+    }));
+  }, 600);
+});
+</script>
 </body>
 </html>
