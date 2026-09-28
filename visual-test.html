@@ -10,7 +10,7 @@
   .vt-sec { max-width: 560px; margin: 0 auto; }
   .vt-sec h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin: 18px 0 10px; }
 </style>
-</head>
+<style>.liq-wobble{animation-duration:6s !important;}</style></head>
 <body>
 <div class="vt-sec">
   <h3>Voucher row (tap me)</h3>
@@ -54,17 +54,13 @@ initLiquidWobble();
 </script>
 
 <script>
-/* auto-demo: tap the voucher row on load, freeze the wobble mid-squash */
+/* auto-demo: tap the voucher row on load; slow-motion (6s) lets any screenshot catch it mid-wobble */
 window.addEventListener('load', () => {
   setTimeout(() => {
     const row = document.getElementById('wobble-row');
     const r = row.getBoundingClientRect();
     row.dispatchEvent(new PointerEvent('pointerdown', {
       clientX: r.left + r.width * 0.3, clientY: r.top + r.height / 2, bubbles: true
-    }));
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const a = row.getAnimations();
-      if (a.length) { a[0].pause(); try { a[0].currentTime = 120; } catch (e) {} }
     }));
   }, 600);
 });
