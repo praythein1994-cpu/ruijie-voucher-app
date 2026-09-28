@@ -1097,3 +1097,81 @@ button.set-row { cursor: pointer; }
 .set-pad { padding: 14px 16px; }
 .set-pad:empty { display: none; }
 .footnote { text-align: center; color: var(--gray); font-size: 13px; margin: 18px 0 8px; }
+
+/* ═══════════ v1.5.51 · whole-app iOS refinement (Login screen untouched) ═══════════ */
+
+/* — Topbar: iOS navigation-bar items (SF blue glyphs, no circles) — */
+#topbar .tool-btn { background: none; box-shadow: none; color: var(--blue); }
+#topbar .tool-btn:active { opacity: .45; transform: none; }
+#project-select { background-color: transparent; color: var(--blue); font-weight: 600; }
+
+/* — Stats: one iOS grouped card with dividers (was 4 separate cards) — */
+.stat-grid { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card); gap: 0; }
+.stat { background: none; box-shadow: none; border-radius: 0; padding: 12px 4px 10px; position: relative; }
+.stat + .stat::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: .5px; background: var(--hairline); }
+
+/* — Search: always-visible iOS search field — */
+.toolbar-row .search-wrap { display: block; }
+.search-wrap input {
+  background-color: var(--fill-bg); border: none; padding-left: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M15.8 15.8L20.5 20.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 12px center; background-size: 18px 18px;
+}
+.search-wrap input:focus { box-shadow: none; background-color: var(--fill-bg); }
+
+/* — Filter chips → iOS segmented control — */
+.chips { background: var(--fill-bg); border-radius: 10px; padding: 2px; gap: 2px; overflow-x: auto; }
+.chip { flex: 1 0 auto; border: none; background: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; text-align: center; }
+.chip.active { background: var(--card); border-color: transparent; color: var(--label); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+
+/* — More menu: 3-col grid → iOS grouped list with tiles + chevron — */
+.menu-grid { display: block; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); }
+.menu-item {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto;
+  align-items: center; column-gap: 12px; row-gap: 1px;
+  background: none; border: none; border-bottom: .5px solid var(--hairline); border-radius: 0;
+  box-shadow: none; padding: 10px 14px 10px 12px; text-align: left; font-size: 17px; width: 100%;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:active { transform: none; opacity: .55; background: var(--fill-bg); }
+.menu-item > .ic.lg {
+  grid-row: 1 / 3; grid-column: 1; width: 30px; height: 30px; padding: 6px; border-radius: 8px;
+  background: var(--tile, var(--blue)); color: #fff;
+}
+.menu-item span { grid-column: 2; grid-row: 1; font-size: 16px; text-align: left; }
+.menu-item small { grid-column: 2; grid-row: 2; text-align: left; }
+.menu-item::after {
+  grid-column: 3; grid-row: 1 / 3; content: ''; width: 9px; height: 14px; flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C7C7CC' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.5 5.5L16 12l-6.5 6.5'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+.menu-item[data-more="accounts"] > .ic.lg { --tile: #8E8E93; }
+.menu-item[data-more="usergroups"] > .ic.lg { --tile: #AF52DE; }
+.menu-item[data-more="devices"] > .ic.lg { --tile: #34C759; }
+.menu-item[data-more="clients"] > .ic.lg { --tile: #007AFF; }
+.menu-item[data-more="networks"] > .ic.lg { --tile: #5AC8FA; }
+.menu-item[data-more="sales"] > .ic.lg { --tile: #FF9500; }
+
+/* — Forms (Generate / Printer): iOS grouped rows — */
+.set-row .segmented { flex: 1; margin: 0; min-width: 0; }
+.set-row.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.set-row.col > .t { width: 100%; }
+.fld-stack { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.set-group .codetype-grid, .set-group .qty-grid { display: flex; gap: 8px; width: 100%; }
+.set-group .codetype { flex: 1; border: none; background: var(--fill-bg); border-radius: 10px; padding: 10px 6px; font-family: inherit; color: var(--label); cursor: pointer; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.set-group .codetype b { font-size: 14px; } .set-group .codetype small { font-size: 11px; color: var(--gray); }
+.set-group .codetype.active { background: var(--blue); color: #fff; }
+.set-group .codetype.active small { color: rgba(255,255,255,.75); }
+.set-group .qty-grid button { flex: 1; border: none; background: var(--fill-bg); border-radius: 10px; padding: 10px 4px; font-size: 15px; font-weight: 600; font-family: inherit; color: var(--label); cursor: pointer; }
+.set-group .qty-grid button.active { background: var(--blue); color: #fff; }
+.set-row .stepper { margin-left: auto; }
+.set-row select.set-inline, .set-row input.set-inline {
+  border: none; background: none; font-size: 17px; font-family: inherit; color: var(--label);
+  text-align: right; margin: 0; padding: 4px 0; max-width: 55%;
+}
+.set-row .btn-row { display: flex; gap: 10px; width: 100%; }
+.set-row .btn-row .btn { flex: 1; margin: 0; }
+.set-note { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--gray); padding: 10px 16px; }
+.set-note .ic { flex: none; margin-top: 1px; }
+.printer-dot { display: inline-flex; align-items: center; gap: 6px; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row .btn { flex: 1; margin: 0; }
