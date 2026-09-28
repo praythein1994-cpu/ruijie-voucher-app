@@ -403,6 +403,9 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .cst-lbl.cst-datalimit { color: #dc2626; }
 .cst-lbl.cst-noauth { color: #6b7280; }
 .cst-lbl.cst-unknown { color: #7c3aed; }
+/* v1.5.53: anomaly flags — neutral, never accusatory */
+.flag-suspicious { color: #b45309; font-weight: 600; }
+.flag-sticky { color: #dc2626; font-weight: 600; }
 tr.cst td:first-child { border-left: 3px solid transparent; }
 tr.cst-active td:first-child { border-left-color: #22c55e; }
 tr.cst-timeup td:first-child { border-left-color: #f59e0b; }
@@ -422,6 +425,21 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 }
 .voucher-row:last-child { border-bottom: none; }
 .voucher-row:active { background: var(--fill-bg); }
+/* v1.5.53: remaining-resource fill — blurred Basic-button-style bar behind the
+   row text. Width = remaining % (shrinks as the voucher is consumed).
+   Hidden when unused, fully consumed, or when usage data is missing. */
+.voucher-row { position: relative; overflow: hidden; }
+.remain-fill {
+  position: absolute; top: 0; bottom: 0; left: 0; z-index: 0;
+  background: linear-gradient(90deg, rgba(0,122,255,.20), rgba(0,122,255,.08));
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  border-radius: 14px; pointer-events: none;
+}
+.voucher-row > :not(.remain-fill) { position: relative; z-index: 1; }
+.remain-txt {
+  flex: none; font-size: 12px; font-weight: 700; color: var(--blue);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
 .voucher-row .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .status-dot.s1 { background: var(--green); }
 .status-dot.s2 { background: var(--orange); }
@@ -535,6 +553,35 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
 .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .modal-head h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
 .modal-actions { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 4px; }
+/* ── v1.5.53: voucher detail as iOS liquid glass ──
+   Transparent frosted UI: blurred dimmed backdrop + floating glass card.
+   Scoped to #modal (voucher detail) only — typography/print-layout modals
+   keep the plain fullscreen look. Action buttons are compact. */
+#modal.modal.fullscreen {
+  background: rgba(18, 28, 46, .38);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  align-items: center; justify-content: center; padding: 16px;
+}
+#modal.modal.fullscreen .modal-box {
+  height: auto; max-height: 92dvh; width: 100%; max-width: 480px;
+  border-radius: 26px; border: .5px solid rgba(255, 255, 255, .65);
+  background: rgba(255, 255, 255, .62);
+  -webkit-backdrop-filter: blur(26px) saturate(1.6);
+  backdrop-filter: blur(26px) saturate(1.6);
+  box-shadow: 0 24px 64px rgba(10, 30, 70, .30), inset 0 1px 0 rgba(255, 255, 255, .7);
+  animation: sheetup .45s var(--spring);
+}
+#modal.modal.fullscreen.closing { animation: dimout .2s ease-in forwards; }
+#modal .modal-actions { background: transparent; gap: 8px; padding-bottom: 2px; }
+#modal .modal-actions .btn {
+  padding: 9px 10px; font-size: 13.5px; border-radius: 13px; gap: 6px; flex: 1;
+}
+#modal .modal-actions .btn .ic { width: 16px; height: 16px; }
+[data-theme="dark"] #modal.modal.fullscreen .modal-box {
+  background: rgba(30, 30, 34, .62); border-color: rgba(255, 255, 255, .14);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
 
 /* ── Print preview ticket ── */
 .ticket-preview {
@@ -857,11 +904,6 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 }
 .liquid-paper[data-st="2"] .liquid-label { background: rgba(59, 130, 246, .16); color: #1d4ed8; }
 .liquid-paper[data-st="3"] .liquid-label, .liquid-paper.liquid-full .liquid-label { background: rgba(37, 99, 235, .14); color: #1d4ed8; }
-.liquid-code {
-  position: relative; z-index: 1;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 800; font-size: 28px; letter-spacing: 2px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
-}
 .liquid-sub { position: relative; z-index: 1; margin-top: 6px; font-size: 13px; color: #4b5563; }
 .liquid-perf { position: relative; z-index: 1; border-top: 2px dashed rgba(37, 99, 235, .22); margin: 12px 6px 0; }
 .liquid-paper.filling {
@@ -1060,12 +1102,23 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 }
 .set-group .set-row:last-child { border-bottom: none; }
 button.set-row { cursor: pointer; }
+/* v1.5.53: liquid-glass Apple-style icon tiles — frosted translucent tile,
+   accent-colored glyph (was solid colored tile + white glyph). */
 .set-ico {
   width: 30px; height: 30px; border-radius: 8px; flex: none;
-  background: var(--tile, var(--blue)); color: #fff;
+  background: linear-gradient(145deg, rgba(255,255,255,.65), rgba(255,255,255,.18));
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border: .5px solid rgba(255,255,255,.6);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.75), 0 2px 6px rgba(20,40,80,.10);
+  color: var(--tile, var(--blue));
   display: flex; align-items: center; justify-content: center;
 }
 .set-ico .ic { width: 17px; height: 17px; }
+[data-theme="dark"] .set-ico {
+  background: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+  border-color: rgba(255,255,255,.16);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.14), 0 2px 6px rgba(0,0,0,.3);
+}
 .set-row .t { flex: 1; min-width: 0; }
 .set-row .t-main { font-size: 17px; }
 .set-row .sub { font-size: 13px; color: var(--gray); margin-top: 1px; }
@@ -1102,6 +1155,9 @@ button.set-row { cursor: pointer; }
 
 /* — Topbar: iOS navigation-bar items (SF blue glyphs, no circles) — */
 #topbar .tool-btn { background: none; box-shadow: none; color: var(--blue); }
+/* v1.5.53: topbar printer status — green connected, default not connected, red error */
+#btn-printer-top.st-connected { color: var(--green); }
+#btn-printer-top.st-error { color: var(--red); }
 #topbar .tool-btn:active { opacity: .45; transform: none; }
 #project-select { background-color: transparent; color: var(--blue); font-weight: 600; }
 
@@ -1110,8 +1166,7 @@ button.set-row { cursor: pointer; }
 .stat { background: none; box-shadow: none; border-radius: 0; padding: 12px 4px 10px; position: relative; }
 .stat + .stat::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: .5px; background: var(--hairline); }
 
-/* — Search: always-visible iOS search field — */
-.toolbar-row .search-wrap { display: block; }
+/* — Search: icon-tap to open, collapsible (v1.5.53) — */
 .search-wrap input {
   background-color: var(--fill-bg); border: none; padding-left: 38px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M15.8 15.8L20.5 20.5'/%3E%3C/svg%3E");
@@ -1135,8 +1190,16 @@ button.set-row { cursor: pointer; }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:active { transform: none; opacity: .55; background: var(--fill-bg); }
 .menu-item > .ic.lg {
-  grid-row: 1 / 3; grid-column: 1; width: 30px; height: 30px; padding: 6px; border-radius: 8px;
-  background: var(--tile, var(--blue)); color: #fff;
+  grid-row: 1 / 3; grid-column: 1; width: 32px; height: 32px; padding: 7px; border-radius: 9px;
+  background: linear-gradient(145deg, rgba(255,255,255,.65), rgba(255,255,255,.18));
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border: .5px solid rgba(255,255,255,.6);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.75), 0 2px 6px rgba(20,40,80,.10);
+  color: var(--tile, var(--blue));
+}
+[data-theme="dark"] .menu-item > .ic.lg {
+  background: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+  border-color: rgba(255,255,255,.16);
 }
 .menu-item span { grid-column: 2; grid-row: 1; font-size: 16px; text-align: left; }
 .menu-item small { grid-column: 2; grid-row: 2; text-align: left; }
