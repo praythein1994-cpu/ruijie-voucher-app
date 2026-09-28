@@ -610,4 +610,87 @@ public class RuijieBridge {
         webView.post(() -> webView.evaluateJavascript(
                 "window._diagEvent&&window._diagEvent('" + name + "','" + safe + "')", null));
     }
+
+    // ── GATEWAY-LOCAL (LAN eWeb) ─────────────────────────────────────
+    // Direct connection to the user's own gateway over the LAN
+    // (e.g. https://100.88.200.103). Android-APK-only: the https web app
+    // cannot reach a LAN http(s) IP. Used to show devices that Ruijie
+    // Cloud never sees (e.g. China-version APs) — the full 9-device view.
+    //
+    // Login password encryption: the gateway's login page encrypts the
+    // password with Gibberish-AES (OpenSSL-compatible AES-256-CBC,
+    // "Salted__" format) — replicated in GatewayCrypto. The passphrase
+    // argument comes from the login page's GibberishAES.enc call site.
+
+    /** Passphrase used by the gateway login page's GibberishAES.enc call. */
+    private static final String GW_PWD_PASSPHRASE = "RjYkhwzx$2018!";
+    /** True once GW_PWD_PASSPHRASE is captured from the login JS. */
+    private static final boolean GW_PWD_ENC_READY = true;
+
+    private void gwResolve(final String callId, final String json) {
+        String b64 = Base64.encodeToString(json.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+        final String out = b64;
+        final String safeId = callId.replaceAll("[^A-Za-z0-9_]", "");
+        webView.post(() -> webView.evaluateJavascript(
+                "window._gwResolve('" + safeId + "','" + out + "')", null));
+    }
+
+    private String gwErr(String msg) {
+        try {
+            return new JSONObject().put("code", -97)
+                    .put("msg", "Gateway: " + msg).toString();
+        } catch (Exception e) {
+            return "{\"code\":-97,\"msg\":\"Gateway error\"}";
+        }
+    }
+
+    /**
+     * Gateway login. The plaintext password is AES-encrypted natively
+     * (Gibberish-AES compatible) and never crosses the JS bridge.
+     * Resolves {"code":0,"data":{"token":..,"sn":..,"sid":..}} verbatim.
+     */
+    @JavascriptInterface
+    public void gatewayLogin(final String callId, final String ip, final String username, final String passwordPlain) {
+        pool.execute(() -> {
+            if (!GW_PWD_ENC_READY) {
+                gwResolve(callId, gwErr("password encrypt \u1014\u100a\u103a\u1038\u101c\u1004\u103a\u1038 \u1019\u101e\u1004\u103a\u1001\u1031\u1038\u1010\u1031\u1038\u1010\u1032\u1037 — gateway login JS \u1000 \u101b\u1005\u103a\u1015\u103c\u102e\u1038\u1015\u102b\u1038\u1019\u103e\u1010\u103a\u1038\u101c\u102d\u102f\u1015\u103a\u1015\u102b\u1038"));
+                return;
+            }
+            try {
+                String cleanIp = ip.trim().replaceAll("^https?://", "").replaceAll("/.*$", "");
+                String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, GW_PWD_PASSPHRASE);
+                long ts = System.currentTimeMillis() / 1000L;
+                JSONObject params = new JSONObject()
+                        .put("username", username)
+                        .put("time", String.valueOf(ts))
+                        .put("isCheckReadAgreement", "true")
+                        .put("encry", true)
+                        .put("pwd", pwdEnc);
+                JSONObject body = new JSONObject()
+                        .put("method", "login")
+                        .put("params", params);
+                String resp = GatewayClient.post(cleanIp, "/cgi-bin/luci/api/auth", null, body.toString());
+                gwResolve(callId, resp);
+            } catch (Exception e) {
+                gwResolve(callId, gwErr(e.getMessage() == null ? "login failed" : e.getMessage()));
+            }
+        });
+    }
+
+    /**
+     * Raw gateway cmd call: POST /cgi-bin/luci/api/cmd?auth=<sid> with a
+     * cmdArr envelope. Resolves the gateway's JSON verbatim.
+     */
+    @JavascriptInterface
+    public void gatewayCmd(final String callId, final String ip, final String sid, final String bodyJson) {
+        pool.execute(() -> {
+            try {
+                String cleanIp = ip.trim().replaceAll("^https?://", "").replaceAll("/.*$", "");
+                String resp = GatewayClient.post(cleanIp, "/cgi-bin/luci/api/cmd", "auth=" + sid, bodyJson);
+                gwResolve(callId, resp);
+            } catch (Exception e) {
+                gwResolve(callId, gwErr(e.getMessage() == null ? "request failed" : e.getMessage()));
+            }
+        });
+    }
 }
