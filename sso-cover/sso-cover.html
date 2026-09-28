@@ -1,0 +1,62 @@
+<div id="sso-cover-root">
+  <div id="sso-cover-bg"></div>
+  <div class="sso-card" id="sso-cover-card">
+    <div class="sso-cap">Ruijie Cloud</div>
+
+    <div id="sso-cover-error" class="sso-error" hidden></div>
+
+    <div id="sso-cover-form">
+      <label class="sso-lbl" for="sso-cover-email">Username</label>
+      <input id="sso-cover-email" class="sso-in" type="email"
+             autocomplete="username" placeholder="Username" autocapitalize="off" spellcheck="false">
+      <label class="sso-lbl" for="sso-cover-pass">Password</label>
+      <div class="sso-passwrap">
+        <input id="sso-cover-pass" class="sso-in" type="password"
+               autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+        <button type="button" id="sso-cover-eye" class="sso-eye" aria-label="Show password">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <label class="sso-check"><input type="checkbox" id="sso-cover-remember">
+        <span>Remember me on this device</span></label>
+      <label class="sso-check"><input type="checkbox" id="sso-cover-auto">
+        <span>Auto-login next time</span></label>
+      <button type="button" id="sso-cover-go" class="sso-btn">Sign In</button>
+    </div>
+
+    <div id="sso-cover-busy" class="sso-busy" hidden>
+      <div class="sso-spin"></div>
+      <div class="sso-busy-t" id="sso-cover-busy-t">Signing in&hellip;</div>
+    </div>
+
+    <div id="sso-cover-captcha" class="sso-extra" hidden>
+      <div class="sso-lbl">Security check &mdash; enter the code shown</div>
+      <img id="sso-cover-capimg" class="sso-capimg" alt="Verification code">
+      <input id="sso-cover-capcode" class="sso-in" placeholder="Code"
+             autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button type="button" id="sso-cover-capgo" class="sso-btn">Verify &amp; Sign In</button>
+      <div class="sso-hint">Tap the image for a new code</div>
+    </div>
+
+    <div id="sso-cover-2fa" class="sso-extra" hidden>
+      <div class="sso-lbl">Two-factor authentication</div>
+      <div class="sso-seg" id="sso-cover-2fatabs">
+        <button type="button" data-m="app" class="on">Authenticator app</button><button
+          type="button" data-m="recovery">Recovery code</button>
+      </div>
+      <input id="sso-cover-2facode" class="sso-in" inputmode="numeric"
+             placeholder="6-digit code" autocomplete="one-time-code">
+      <button type="button" id="sso-cover-2fago" class="sso-btn">Verify</button>
+    </div>
+
+    <div class="sso-foot">
+      <button type="button" id="sso-cover-official" class="sso-link">Use official page instead</button>
+      <button type="button" id="sso-cover-close" class="sso-link" aria-label="Close">&#10005;</button>
+    </div>
+  </div>
+  <button type="button" id="sso-cover-fab" class="sso-fab" hidden>Custom login</button>
+</div>
