@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.31';
+const APP_VERSION = '1.5.32';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -384,6 +384,11 @@ const I18N = {
   's.appearance': { my: 'အသွင်အပြင်', en: 'Appearance' },
   's.darkmode': { my: 'Dark Mode', en: 'Dark Mode' },
   's.darkmodeSub': { my: 'ညအချိန်အတွက် အနက်ရောင်အပြင်', en: 'Dark theme for night use' },
+  's.themeLight': { my: 'Premium', en: 'Premium' },
+  's.themeDark': { my: 'Dark', en: 'Dark' },
+  's.themeGlass': { my: 'Liquid Glass', en: 'Liquid Glass' },
+  's.themeNeo': { my: 'Neumorphism', en: 'Neumorphism' },
+  's.themeClay': { my: 'Claymorphism', en: 'Claymorphism' },
   's.language': { my: 'ဘာသာစကား', en: 'Language' },
   's.conn': { my: 'ချိတ်ဆက်မှုပြင်ဆင်မယ်', en: 'Edit connection' },
   's.cloud': { my: 'Cloud URL', en: 'Cloud URL' },
@@ -556,19 +561,22 @@ async function copyText(text) {
   }
 }
 
-/* ── theme (iOS light/dark) ── */
+/* ── theme (light/dark/glass/neo/clay) ── */
+const THEMES = ['light', 'dark', 'glass', 'neo', 'clay'];
+const THEME_META = { light: '#F2F2F7', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5' };
 function applyTheme(theme) {
+  if (!THEMES.includes(theme)) theme = 'light';
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem('rv-theme', theme); } catch (e) {}
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme === 'dark' ? '#000000' : '#F2F2F7';
-  const cb = $('set-darkmode');
-  if (cb) cb.checked = theme === 'dark';
+  if (meta) meta.content = THEME_META[theme] || '#F2F2F7';
+  document.querySelectorAll('#theme-grid .theme-opt').forEach(b =>
+    b.classList.toggle('active', b.dataset.themeOpt === theme));
 }
 function initTheme() {
   let theme = null;
   try { theme = localStorage.getItem('rv-theme'); } catch (e) {}
-  if (theme !== 'dark' && theme !== 'light') {
+  if (!THEMES.includes(theme)) {
     theme = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   }
   applyTheme(theme);
@@ -2895,8 +2903,9 @@ function init() {
     Store.save({ printPaper: b.dataset.paper });
   }));
 
-  // dark mode
-  $('set-darkmode').addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
+  // theme picker (Settings → Appearance)
+  document.querySelectorAll('#theme-grid .theme-opt').forEach(b =>
+    b.addEventListener('click', () => applyTheme(b.dataset.themeOpt)));
 
   // language (မြန်မာ / English)
   document.querySelectorAll('#lang-seg button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
