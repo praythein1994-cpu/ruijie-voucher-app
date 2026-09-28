@@ -195,7 +195,9 @@ const GwApi = {
           product: o.product || '',
           ip: o.ip || o.localIp || '',
           mac: o.mac || '',
-          onlineStatus: (o.status || '').toUpperCase() === 'ON' ? 'ON' : 'OFF',
+          // v1.5.22: neighbor[] entries carry no status field — a missing
+          // status means UNKNOWN (''), never fabricated OFF.
+          onlineStatus: (o.status == null || o.status === '') ? '' : (String(o.status).toUpperCase() === 'ON' ? 'ON' : 'OFF'),
           staNums: o.staNum != null ? Number(o.staNum) : null,
           software: o.software || '',
           local: true, // gateway-local device (may be invisible to Ruijie Cloud)
@@ -502,6 +504,26 @@ const Api = {
   // Manual: staType is MANDATORY — "currentUser" = current online data.
   async onlineClients(groupId, pageIndex = 0, pageSize = 50) {
     const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize, staType: 'currentUser' });
+    const d = this.unwrap(j);
+    return d.list || d.data || [];
+  },
+  /**
+   * All currently-online clients in the group (one large page) — grouped
+   * per-AP client-side by each client's `sn` (the AP serial).
+   * v1.5.22: powers the per-AP client view (counts, voucher use, roam).
+   */
+  async allOnlineClients(groupId) {
+    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 200, staType: 'currentUser' });
+    const d = this.unwrap(j);
+    return d.list || d.data || [];
+  },
+  /**
+   * Online/offline history for one client MAC — consecutive records on
+   * different AP serials mean the client roamed between APs.
+   * v1.5.22.
+   */
+  async clientHistory(groupId, mac) {
+    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 100, staType: 'onofflineUserHistory', mac });
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },
