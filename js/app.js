@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.23';
+const APP_VERSION = '1.5.24';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -1845,7 +1845,9 @@ async function moreDevices() {
     // Open API fallback (no SSO): only AP works, Switch/Gateway 404.
     const sso = Api.ssoLoggedIn();
     const ssoType = tp => tp === 'Switch' ? 'SWITCH' : tp === 'Gateway' ? 'GATEWAY' : (tp || '');
-    const types = type ? [type] : (sso ? [''] : DEV_TYPES);
+    // v1.5.24: the AP chip also pulls WR (home routers — often run in AP mode,
+    // e.g. EW3200GX-PRO) so their rows and client badges show up too.
+    const types = (type === 'AP' && sso) ? ['AP', 'WR'] : (type ? [type] : (sso ? [''] : DEV_TYPES));
     const jobs = types.map(tp =>
       sso ? Api.deviceListSso(S.projectId, ssoType(tp), 1, 100)
           : Api.deviceList(S.projectId, tp, 0, 100));
@@ -1897,9 +1899,10 @@ async function moreDevices() {
           // Local reboot wire format not captured yet — no reboot button on local rows (v1.5.16).
           const rb = (!d.local && sn) ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
           // v1.5.22: per-AP client count badge → tap opens that AP's client list.
+          // v1.5.24: WR (home router, e.g. EW3200GX-PRO in AP mode) counts too.
           const isApRow = (() => {
             const ct = String(d.commonType || '').toUpperCase();
-            if (ct) return ct === 'AP';
+            if (ct) return ct === 'AP' || ct === 'WR';
             return d.local ? /^RAP/i.test(String(d.model || '')) : false;
           })();
           const ncli = (cliByAp && sn) ? (cliByAp.get(String(sn)) || []).length : 0;
