@@ -28,5 +28,29 @@
   <h3>Button (tap me)</h3>
   <button class="btn primary big" id="wobble-btn" style="width:100%">Print</button>
 </div>
+<script>
+/* verbatim from js/app.js (auto-extracted for this test page) */
+function initLiquidWobble() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const SEL = 'button,.tab,.voucher-row,.menu-item,.card,.chip,a,[data-wobble]';
+  document.addEventListener('pointerdown', e => {
+    if (e.clientX == null || e.clientY == null || !e.target || !e.target.closest) return;
+    const el = e.target.closest(SEL);
+    if (!el || !el.getBoundingClientRect) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    el.style.transformOrigin = Math.round(e.clientX - r.left) + 'px ' + Math.round(e.clientY - r.top) + 'px';
+    el.classList.remove('liq-wobble');
+    void el.offsetWidth; /* restart the wobble when tapped again mid-animation */
+    el.classList.add('liq-wobble');
+  }, { passive: true });
+  document.addEventListener('animationend', e => {
+    if (e.animationName === 'liqWobble' && e.target && e.target.classList) {
+      e.target.classList.remove('liq-wobble');
+    }
+  });
+}
+initLiquidWobble();
+</script>
 </body>
 </html>
