@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="my" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A72E8">
+<title>Pray Manager</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ══════════ SVG ICON SPRITE (original outline set, v1.5.27) ══════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 10a11 11 0 0 1 15 0"/><path d="M7.6 13.6a6.4 6.4 0 0 1 8.8 0"/><path d="M10.7 17a2.1 2.1 0 0 1 2.6 0"/><path d="M12 20h.01"/>
+    </symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 6.5h12a2 2 0 0 1 2 2v1.6a2.4 2.4 0 0 0 0 4.8v1.6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.6a2.4 2.4 0 0 0 0-4.8V8.5a2 2 0 0 1 2-2z"/><path d="M14.5 9v7" stroke-dasharray="2 2.4"/>
+    </symbol>
+    <symbol id="i-printer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 7.5V4.2A1.2 1.2 0 0 1 9.2 3h5.6A1.2 1.2 0 0 1 16 4.2v3.3"/><rect x="3.5" y="7.5" width="17" height="8" rx="2.5"/><path d="M8 12h8v6.2a1.3 1.3 0 0 1-1.3 1.3H9.3A1.3 1.3 0 0 1 8 18.2V12z"/><path d="M6.6 11h.01"/><path d="M10.5 15.5h3"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 5.5v13M5.5 12h13"/>
+    </symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="5.5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="18.5" cy="12" r="1.9"/>
+    </symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.2"/><path d="M12 5v2.4M12 16.6V19M5 12h2.4M16.6 12H19M6.9 6.9l1.7 1.7M15.4 15.4l1.7 1.7M17.1 6.9l-1.7 1.7M8.6 15.4l-1.7 1.7"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="6.5"/><path d="M15.7 15.7L20.5 20.5"/>
+    </symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 8a7 7 0 0 1 10 0"/><path d="M14.5 5.5L17 8l2.5-2.5"/><path d="M17 16a7 7 0 0 1-10 0"/><path d="M9.5 18.5L7 16l-2.5 2.5"/>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M6 6l12 12M18 6L6 18"/>
+    </symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.5 5.5L16 12l-6.5 6.5"/>
+    </symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 14.5H4.5A2.5 2.5 0 0 1 2 12V4.5A2.5 2.5 0 0 1 4.5 2h7.5A2.5 2.5 0 0 1 14.5 4.5V6"/><rect x="9" y="9" width="11.5" height="11.5" rx="2.5"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 6.5h16"/><path d="M9.5 6.5V4.7a1.2 1.2 0 0 1 1.2-1.2h2.6a1.2 1.2 0 0 1 1.2 1.2v1.8"/><path d="M6.5 6.5l.7 12a1.8 1.8 0 0 0 1.8 1.7h6a1.8 1.8 0 0 0 1.8-1.7l.7-12"/><path d="M10 10.5v5.5M14 10.5v5.5"/>
+    </symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5"/><path d="M11.5 5.5L5 12l6.5 6.5"/>
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="3.8"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/>
+    </symbol>
+    <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12L4 7.5M12 12v9"/>
+    </symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M5 19v-4M10 19v-8M15 19v-12M20 19v-16"/>
+    </symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4.5" width="18" height="12" rx="2.5"/><path d="M12 16.5V20M9 20.5h6"/>
+    </symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.5 3.7 5.3 3.7 8.5s-1.3 6-3.7 8.5c-2.4-2.5-3.7-5.3-3.7-8.5s1.3-6 3.7-8.5z"/>
+    </symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7z"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4.5L21 19.5H3L12 4.5z"/><path d="M12 10v4.2M12 17.4h.01"/>
+    </symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 13.5L6.2 6h11.6L20 13.5"/><path d="M4 13.5h4.6l1.4 2.5h4l1.4-2.5H20"/><path d="M4 13.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-5.5"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/><path d="M12 14.5v2.2"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 12.5l5 5L19.5 7"/>
+    </symbol>
+    <symbol id="i-roller" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="11" height="5.5" rx="2"/><path d="M14 6.8h3a2 2 0 0 1 2 2v4.2"/><rect x="16.8" y="13" width="4.4" height="7.5" rx="2.2"/>
+    </symbol>
+    <symbol id="i-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M4 6.5h16M4 11.5h16M4 16.5h10"/>
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 4v16h16"/><path d="M8.5 20v-6M13 20v-10M17.5 20v-7"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ══════════ CONNECT SCREEN ══════════ -->
+<div id="view-connect" class="screen hidden">
+  <div class="connect-card">
+    <div class="connect-logo"><img src="icon.svg" alt="Ruijie Voucher"></div>
+    <h1 data-i18n="appTitle">Pray Manager</h1>
+    <p class="muted" data-i18n="connect.sub">Voucher စီမံခန့်ခွဲမှုစနစ်</p>
+    <label><span data-i18n="connect.cloud">Cloud URL</span>
+      <input id="cfg-cloud" type="url" value="https://cloud-as.ruijienetworks.com" autocomplete="off">
+    </label>
+    <label><span data-i18n="connect.appid">App ID</span>
+      <input id="cfg-appid" type="text" data-i18n-ph="connect.appidPh" placeholder="App ID" autocomplete="off">
+    </label>
+    <label><span data-i18n="connect.secret">App Secret</span>
+      <div class="input-wrap">
+        <input id="cfg-secret" type="password" placeholder="App Secret" autocomplete="off">
+        <button type="button" class="peek" data-peek="cfg-secret" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
+      </div>
+    </label>
+    <label><span data-i18n="connect.proxy">Proxy URL</span>
+      <input id="cfg-proxy" type="url" value="https://ruijie-voucher-proxy.onrender.com" placeholder="https://your-proxy.example.com" autocomplete="off">
+      <small class="muted" data-i18n="connect.proxyHelp">CORS proxy server လိပ်စာ (ဥပမာ Render/Railway မှာ deploy ထားတာ)</small>
+    </label>
+    <button id="btn-connect" class="btn primary big"><span id="btn-connect-label" data-i18n="connect.btn">ချိတ်ဆက်မယ်</span></button>
+    <p id="connect-err" class="err hidden"></p>
+    <p class="muted small connect-secure"><svg class="ic sm"><use href="#i-lock"/></svg><span data-i18n="connect.secure">အချက်အလက်များသည် သင့်စက်ပေါ်မှာသာ သိမ်းထားပါသည်</span></p>
+  </div>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="app" class="hidden">
+  <header id="topbar">
+    <div class="avatar" id="topbar-avatar">မ</div>
+    <div class="topbar-title"><span id="topbar-account">Ruijie</span></div>
+    <select id="project-select" aria-label="Project"></select>
+    <button class="tool-btn" id="btn-search" data-i18n-aria="search.label" aria-label="ရှာဖွေမယ်"><svg class="ic"><use href="#i-search"/></svg></button>
+    <button class="tool-btn refresh-btn" id="btn-refresh-vouchers" data-i18n-aria="search.refresh" aria-label="Refresh"><svg class="ic"><use href="#i-refresh"/></svg></button>
+  </header>
+
+  <main id="main">
+    <!-- VOUCHERS -->
+    <section id="view-vouchers" class="view">
+      <div class="large-title hidden" data-i18n="v.title">ဗောက်ချာများ</div>
+      <div class="stat-grid">
+        <div class="stat g"><div class="n" id="stat-active">–</div><div class="l" data-i18n="stat.active">မသုံးရသေး</div></div>
+        <div class="stat a"><div class="n" id="stat-used">–</div><div class="l" data-i18n="stat.used">သုံးနေဆဲ</div></div>
+        <div class="stat m"><div class="n" id="stat-expired">–</div><div class="l" data-i18n="stat.expired">သက်တမ်းကုန်</div></div>
+        <div class="stat t"><div class="n" id="stat-total">–</div><div class="l" data-i18n="stat.total">စုစုပေါင်း</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <div class="search-wrap" id="search-wrap">
+            <input id="voucher-search" type="search" data-i18n-ph="search.ph" placeholder="ကုဒ်နံပါတ်ရှာမယ်…" autocomplete="off">
+            <button class="clear" id="search-clear" data-i18n-aria="search.clear" aria-label="ရှင်းမယ်"><svg class="ic sm"><use href="#i-x"/></svg></button>
+          </div>
+        </div>
+        <div class="chips" id="voucher-status-chips">
+          <button class="chip active" data-s=""><span data-i18n="chip.all">အားလုံး</span></button>
+          <button class="chip" data-s="1"><span class="dot" style="background:var(--green)"></span><span data-i18n="chip.s1">မသုံးရသေး</span></button>
+          <button class="chip" data-s="2"><span class="dot" style="background:var(--amber)"></span><span data-i18n="chip.s2">သုံးနေဆဲ</span></button>
+          <button class="chip" data-s="3"><span class="dot" style="background:var(--muted)"></span><span data-i18n="chip.s3">သက်တမ်းကုန်</span></button>
+        </div>
+      </div>
+      <div id="voucher-count" class="muted small"></div>
+      <div id="voucher-list" class="list"></div>
+      <div id="voucher-loading" class="loading hidden"></div>
+    </section>
+
+    <!-- GENERATE -->
+    <section id="view-generate" class="view hidden">
+      <div class="large-title hidden" data-i18n="g.title">ဗောက်ချာထုတ်မယ်</div>
+      <div class="grid-2">
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="g.new">ဗောက်ချာအသစ်ထုတ်မယ်</span></h2>
+          <div class="printer-line">
+            <span class="printer-dot" data-printer-dot><svg class="ic sm"><use href="#i-printer"/></svg><span class="pd"></span></span>
+            <span class="muted small" data-printer-label></span>
+          </div>
+          <label><span data-i18n="g.usergroup">User Group</span>
+            <select id="gen-usergroup"></select>
+          </label>
+          <label><span data-i18n="g.profile">Profile (Package)</span>
+            <select id="gen-package"></select>
+          </label>
+          <div class="fld"><span class="fld-label" data-i18n="g.length">Voucher Length</span>
+            <div class="segmented" id="vlen-seg" role="group" aria-label="Voucher Length">
+              <button type="button" data-vlen="6">6</button>
+              <button type="button" data-vlen="7">7</button>
+              <button type="button" data-vlen="8" class="active">8</button>
+              <button type="button" data-vlen="9">9</button>
+            </div>
+          </div>
+          <div class="fld"><span class="fld-label" data-i18n="g.codetype">Voucher Code Type</span>
+            <div class="codetype-grid" id="vtype-grid" role="group" aria-label="Voucher Code Type">
+              <button type="button" data-vtype="alnum" class="codetype active">
+                <b data-i18n="g.ctAlnum">Alphanumeric</b><small>(0-9a-z)</small>
+              </button>
+              <button type="button" data-vtype="alpha" class="codetype">
+                <b data-i18n="g.ctAlpha">Alphabetic</b><small>(a-z)</small>
+              </button>
+              <button type="button" data-vtype="numeric" class="codetype">
+                <b data-i18n="g.ctNum">Numeric</b><small>(0-9)</small>
+              </button>
+            </div>
+          </div>
+          <p class="api-note"><svg class="ic sm"><use href="#i-alert"/></svg><span data-i18n="g.apiNote">Length and code-type choices are sent to Cloud (6–9 chars / Alphanumeric·Alphabetic·Numeric).</span></p>
+          <div class="fld"><span class="fld-label" data-i18n="g.qty2">Number of Vouchers</span>
+            <div class="qty-grid" id="qty-presets" role="group" aria-label="Number of Vouchers">
+              <button type="button" data-qty="10" class="active">10</button>
+              <button type="button" data-qty="20">20</button>
+              <button type="button" data-qty="30">30</button>
+              <button type="button" data-qty="50">50</button>
+              <button type="button" data-qty="100">100</button>
+            </div>
+          </div>
+          <label><span data-i18n="g.customQty">Custom Quantity</span>
+            <input id="gen-qty" type="number" min="1" max="500" value="10" inputmode="numeric">
+          </label>
+          <div class="row">
+            <button id="btn-generate" class="btn big"><svg class="ic"><use href="#i-plus"/></svg><span id="btn-generate-label" data-i18n="g.btn">ထုတ်မယ်</span></button>
+            <button id="btn-generate-print" class="btn primary big"><svg class="ic"><use href="#i-printer"/></svg><span id="btn-generate-print-label" data-i18n="g.btnPrint">Generate &amp; Print</span></button>
+          </div>
+          <p id="gen-err" class="err hidden"></p>
+        </div>
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-inbox"/></svg><span data-i18n="g.recent">နောက်ဆုံးထုတ်ထားသောများ</span></h2>
+          <p id="gen-recent-sub" class="muted small" style="margin:-6px 0 10px"></p>
+          <div id="gen-recent-list" class="code-list" style="margin-bottom:10px"></div>
+          <div class="row">
+            <button id="btn-recent-print-all" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="g.printAll">အားလုံးပရင့်ထုတ်မယ်</span></button>
+            <button id="btn-recent-queue-all" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="g.queueAll">Print queue ထဲထည့်မယ်</span></button>
+          </div>
+        </div>
+      </div>
+      <div id="gen-result" class="card hidden">
+        <h2><svg class="ic"><use href="#i-check"/></svg><span><span data-i18n="g.result">ထုတ်ပြီးသား ဗောက်ချာများ</span> (<span id="gen-result-count"></span>)</span></h2>
+        <div id="gen-result-list" class="code-list"></div>
+        <div class="row">
+          <button id="btn-gen-print-all" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="g.printAll">အားလုံးပရင့်ထုတ်မယ်</span></button>
+          <button id="btn-gen-queue-all" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="g.queueAll">Print queue ထဲထည့်မယ်</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRINTER -->
+    <section id="view-printer" class="view hidden">
+      <div class="large-title hidden" data-i18n="p.title">ပရင်တာ</div>
+      <div class="grid-2">
+        <div class="card" id="bt-card">
+          <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.bt">ဘလူးတုသ် ပရင်တာ</span><span class="printer-dot" data-printer-dot style="margin-left:auto"><svg class="ic sm"><use href="#i-printer"/></svg><span class="pd"></span></span></h2>
+          <div id="bt-status" class="muted small" style="margin:0 0 10px" data-i18n="p.btIdle">ပရင်တာမချိတ်ရသေးပါ</div>
+          <div id="bt-devices" class="code-list" style="margin-bottom:10px"></div>
+          <div class="row">
+            <button id="btn-bt-scan" class="btn"><svg class="ic"><use href="#i-search"/></svg><span data-i18n="p.btScan">စက်ရှာမယ်</span></button>
+            <button id="btn-bt-disconnect" class="btn danger-ghost"><span data-i18n="p.btDisconnect">ဖြုတ်မယ်</span></button>
+          </div>
+          <div class="switch-row" style="margin-top:8px">
+            <div><div style="font-weight:700" data-i18n="p.btAuto">နောက်ဆုံးသုံးခဲ့တဲ့ပရင်တာကို အော်တိုချိတ်မယ်</div></div>
+            <label class="switch"><input type="checkbox" id="bt-autoconnect"><span class="track"></span></label>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button id="btn-bt-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.btPrint">ဘလူးတုသ်နဲ့ထုတ်မယ်</span></button>
+            <button id="btn-bt-test" class="btn"><span data-i18n="p.btTest">စမ်းထုတ်မယ်</span></button>
+          </div>
+          <div id="bt-progress" class="muted small" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.settings">ပရင့်ဆက်တင်</span></h2>
+          <label><span data-i18n="p.paper">စာရွက်အကျယ်</span>
+            <div class="paper-row">
+              <div class="segmented" id="paper-seg" role="group" aria-label="စာရွက်အကျယ်">
+                <button type="button" data-paper="80" class="active">80mm</button>
+                <button type="button" data-paper="58">58mm</button>
+              </div>
+              <button type="button" class="icon-btn" id="btn-print-layout" data-i18n-aria="pl.openLayout" aria-label="Print Layout & Spacing" title="Print Layout & Spacing"><svg class="ic"><use href="#i-roller"/></svg></button>
+              <button type="button" class="icon-btn" id="btn-print-typo" data-i18n-aria="ty.openTypo" aria-label="Typography / Font Settings" title="Typography / Font Settings"><svg class="ic"><use href="#i-text"/></svg></button>
+            </div>
+            <select id="print-paper" class="hidden" aria-hidden="true" tabindex="-1">
+              <option value="80">80mm (thermal)</option>
+              <option value="58">58mm (thermal)</option>
+            </select>
+          </label>
+          <label><span data-i18n="p.header">ခေါင်းစဉ်စာသား</span>
+            <input id="print-header" type="text" data-i18n-ph="p.headerPh" placeholder="ဥပမာ My Shop WiFi">
+          </label>
+          <label><span data-i18n="p.footer">အောက်ခြေစာသား</span>
+            <input id="print-footer" type="text" data-i18n-ph="p.footerPh" placeholder="ဥပမာ ကျေးဇူးတင်ပါသည်">
+          </label>
+          <label><span data-i18n="p.copies">မိတ္တူ အရေအတွက်</span>
+            <div class="stepper">
+              <button type="button" id="copies-minus" aria-label="−">−</button>
+              <input id="print-copies" type="number" min="1" max="10" value="1" inputmode="numeric">
+              <button type="button" id="copies-plus" aria-label="+">+</button>
+            </div>
+          </label>
+          <div class="row">
+            <button id="btn-print-test" class="btn"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.test">စမ်းသပ်ထုတ်မယ်</span></button>
+            <button id="btn-print-preview" class="btn"><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="p.preview">အစမ်းကြည့်မယ်</span></button>
+          </div>
+        </div>
+        <div class="card">
+          <h2><svg class="ic"><use href="#i-inbox"/></svg><span><span data-i18n="p.queue">Print Queue</span> (<span id="queue-count">0</span>)</span></h2>
+          <div id="print-queue" class="code-list"></div>
+          <div class="row">
+            <button id="btn-queue-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="p.queuePrint">ပရင့်ထုတ်မယ်</span></button>
+            <button id="btn-queue-clear" class="btn danger-ghost"><span data-i18n="p.queueClear">ရှင်းမယ်</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MORE -->
+    <section id="view-more" class="view hidden">
+      <div class="large-title hidden" data-i18n="m.title">နောက်ထပ်</div>
+      <div class="menu-grid" id="more-menu">
+        <button class="menu-item" data-more="accounts"><svg class="ic lg"><use href="#i-user"/></svg><span data-i18n="m.accounts">Auth Accounts</span><small data-i18n="m.accountsSub">အသုံးပြုသူများ</small></button>
+        <button class="menu-item" data-more="usergroups"><svg class="ic lg"><use href="#i-box"/></svg><span data-i18n="m.usergroups">User Groups</span><small data-i18n="m.usergroupsSub">အုပ်စုများ</small></button>
+        <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
+        <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
+        <button class="menu-item" data-more="networks"><svg class="ic lg"><use href="#i-globe"/></svg><span data-i18n="m.networks">Networks</span><small data-i18n="m.networksSub">ကွန်ရက်များ</small></button>
+        <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
+      </div>
+      <div id="more-content"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view hidden">
+      <div class="large-title hidden" data-i18n="s.title">ဆက်တင်များ</div>
+      <div class="card">
+        <h2><svg class="ic"><use href="#i-user"/></svg><span data-i18n="s.account">အကောင့်အချက်အလက်</span></h2>
+        <div id="account-info" class="kv"></div>
+      </div>
+      <div class="card" id="sso-card">
+        <h2><svg class="ic"><use href="#i-lock"/></svg><span data-i18n="sso.title">Ruijie အကောင့်</span></h2>
+        <p class="muted small" style="margin:0 0 10px" data-i18n="sso.sub">ဝင်ထားမှ voucher ဖျက်လို့ရမယ်</p>
+        <div class="switch-row" style="margin-bottom:12px">
+          <div><div style="font-weight:700" id="sso-status">…</div></div>
+        </div>
+        <button id="btn-sso" class="btn primary"><svg class="ic"><use href="#i-lock"/></svg><span>အကောင့်ဝင်မယ်</span></button>
+      </div>
+      <div class="card" id="gw-card">
+        <h2><svg class="ic"><use href="#i-signal"/></svg><span data-i18n="gw.title">Gateway (ဒေသတွင်း)</span></h2>
+        <p class="muted small" style="margin:0 0 10px" data-i18n="gw.sub">LAN ထဲက gateway ကို တိုက်ရိုက်ချိတ်မယ် — Cloud မှာမရှိတဲ့ China AP တွေပါမြင်ရမယ်</p>
+        <label><span data-i18n="gw.ip">Gateway IP</span> <input id="gw-ip" type="text" inputmode="decimal" placeholder="100.88.200.103"></label>
+        <label><span data-i18n="gw.pass">စကားဝှက်</span>
+          <div class="input-wrap">
+            <input id="gw-pass" type="password" autocomplete="current-password">
+            <button type="button" class="peek" data-peek="gw-pass" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
+          </div>
+        </label>
+        <div class="switch-row" style="margin-bottom:12px">
+          <div><div style="font-weight:700" id="gw-status">…</div></div>
+        </div>
+        <button id="btn-gw" class="btn primary"><svg class="ic"><use href="#i-signal"/></svg><span>ချိတ်မယ်</span></button>
+      </div>
+      <div class="card" id="diag-card">
+        <h2><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.title">စစ်ဆေးမှုများ</span></h2>
+        <p class="muted small" style="margin:0 0 10px" data-i18n="diag.sub">ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်</p>
+        <div class="switch-row">
+          <div><div style="font-weight:700" data-i18n="diag.login">Login စစ်မယ်</div><div class="muted small" data-i18n="diag.loginSub">App ID/Secret နဲ့ Ruijie အကောင့်</div></div>
+          <label class="switch"><input type="checkbox" id="diag-login" checked><span class="track"></span></label>
+        </div>
+        <div class="switch-row" style="margin-top:10px">
+          <div><div style="font-weight:700" data-i18n="diag.voucher">Voucher စစ်မယ်</div><div class="muted small" data-i18n="diag.voucherSub">စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)</div></div>
+          <label class="switch"><input type="checkbox" id="diag-voucher" checked><span class="track"></span></label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button id="btn-diag-run" class="btn primary"><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.run">စစ်မယ်</span></button>
+          <button id="btn-diag-save" class="btn hidden"><svg class="ic"><use href="#i-folder"/></svg><span data-i18n="diag.save">Report သိမ်းမယ်</span></button>
+        </div>
+        <div id="diag-results" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <h2><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="s.appearance">အသွင်အပြင်</span></h2>
+        <div class="theme-grid" id="theme-grid" role="group" aria-label="Theme">
+          <button type="button" class="theme-opt" data-theme-opt="light"><span class="theme-dot t-light"></span><span data-i18n="s.themeLight">Premium</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="dark"><span class="theme-dot t-dark"></span><span data-i18n="s.themeDark">Dark</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="glass"><span class="theme-dot t-glass"></span><span data-i18n="s.themeGlass">Liquid Glass</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="neo"><span class="theme-dot t-neo"></span><span data-i18n="s.themeNeo">Neumorphism</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="clay"><span class="theme-dot t-clay"></span><span data-i18n="s.themeClay">Claymorphism</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <h2><svg class="ic"><use href="#i-globe"/></svg><span data-i18n="s.language">ဘာသာစကား</span></h2>
+        <div class="segmented" id="lang-seg" style="margin-bottom:0" role="group" aria-label="Language">
+          <button type="button" data-lang="my" class="active">မြန်မာ</button>
+          <button type="button" data-lang="en">English</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2><svg class="ic"><use href="#i-gear"/></svg><span data-i18n="s.conn">ချိတ်ဆက်မှုပြင်ဆင်မယ်</span></h2>
+        <label><span data-i18n="s.cloud">Cloud URL</span> <input id="set-cloud" type="url"></label>
+        <label><span data-i18n="s.appid">App ID</span> <input id="set-appid" type="text"></label>
+        <label><span data-i18n="s.secret">App Secret</span>
+          <div class="input-wrap">
+            <input id="set-secret" type="password" data-i18n-ph="s.secretPh" placeholder="(မပြောင်းလျှင် ချန်ထားပါ)">
+            <button type="button" class="peek" data-peek="set-secret" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
+          </div>
+        </label>
+        <label><span data-i18n="s.proxy">Proxy URL</span> <input id="set-proxy" type="url"></label>
+        <button id="btn-save-settings" class="btn primary"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="s.save">သိမ်းမယ်</span></button>
+        <p id="set-err" class="err hidden"></p>
+      </div>
+      <div class="card">
+        <h2><svg class="ic"><use href="#i-dots"/></svg><span data-i18n="s.other">အခြား</span></h2>
+        <button id="btn-disconnect" class="btn danger"><span data-i18n="s.disconnect">အကောင့်ထွက်မယ် (ဒေတာရှင်းမယ်)</span></button>
+        <p class="muted small" id="app-version" data-i18n="s.version">Version 1.2.0 · Ruijie Cloud Open API</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating pill tab bar · center action -->
+  <nav id="tabbar">
+    <span id="liq-blob" aria-hidden="true"></span>
+    <button class="tab active" data-view="view-vouchers" data-liq="#38bdf8"><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="tab.vouchers">ဗောက်ချာ</span></button>
+    <button class="tab" data-view="view-printer" data-liq="#22d3ee"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="tab.printer">ပရင်တာ</span></button>
+    <button class="tab center" data-view="view-generate" data-liq="#3b82f6"><span class="fab"><svg class="ic"><use href="#i-plus"/></svg></span><span data-i18n="tab.generate">ထုတ်မယ်</span></button>
+    <button class="tab" data-view="view-more" data-liq="#6366f1"><svg class="ic"><use href="#i-dots"/></svg><span data-i18n="tab.more">More</span></button>
+    <button class="tab" data-view="view-settings" data-liq="#8b5cf6"><svg class="ic"><use href="#i-gear"/></svg><span data-i18n="tab.settings">ဆက်တင်</span></button>
+  </nav>
+  <div id="touch-blob" aria-hidden="true"></div>
+</div>
+
+<!-- VOUCHER DETAIL MODAL -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <h2 id="modal-title">—</h2>
+      <button id="modal-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="modal-body"></div>
+    <div class="row modal-actions">
+      <button id="modal-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="modal.print">ပရင့်ထုတ်မယ်</span></button>
+      <button id="modal-queue" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span>Queue</span></button>
+      <button id="modal-delete" class="btn danger"><svg class="ic"><use href="#i-trash"/></svg><span data-i18n="modal.del">ဖျက်မယ်</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT PREVIEW MODAL -->
+<div id="preview-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <h2><svg class="ic"><use href="#i-eye"/></svg> <span data-i18n="preview.title">ပရင့်အစမ်းကြည့်ခြင်း</span></h2>
+      <button id="preview-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="preview-body"></div>
+    <div class="row modal-actions">
+      <button id="btn-preview-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="preview.print">ပရင့်ထုတ်မယ်</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT LAYOUT & SPACING MODAL -->
+<div id="layout-modal" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <h2><svg class="ic"><use href="#i-roller"/></svg> <span data-i18n="pl.title">Print Layout &amp; Spacing</span></h2>
+      <div class="row" style="margin:0">
+        <button id="layout-reset" class="btn small"><span data-i18n="pl.reset">Reset Defaults</span></button>
+        <button id="layout-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+    <div class="modal-body-scroll">
+      <div class="fld">
+        <span class="fld-label live-label" data-i18n="pl.live">LIVE OUTPUT PREVIEW (58mm / 384 dots):</span>
+        <div id="layout-preview" class="live-preview"></div>
+      </div>
+      <button id="layout-open-typo" class="btn big"><svg class="ic"><use href="#i-text"/></svg><span data-i18n="pl.advTypo">Advanced Typography &amp; Fonts</span></button>
+      <h4 class="sec-title" data-i18n="pl.spacing">Spacing Configuration</h4>
+      <div class="fld">
+        <span class="fld-label" data-i18n="pl.between">Between Voucher Blank Lines</span>
+        <small class="muted" data-i18n="pl.betweenSub">Feed blank lines between printed vouchers</small>
+        <div class="slider-row"><input type="range" id="layout-between" min="0" max="5" step="1" value="1"><b id="layout-between-val">1</b></div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="pl.inside">Inside Voucher Spacing</span>
+        <small class="muted" data-i18n="pl.insideSub">Vertical spacing between fields inside each voucher</small>
+        <div class="slider-row"><input type="range" id="layout-inside" min="0" max="8" step="1" value="0"><b id="layout-inside-val">0</b></div>
+      </div>
+      <div id="layout-fields"></div>
+      <div class="row modal-actions">
+        <button id="layout-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
+        <button id="layout-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="pl.save">Save Layout</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TYPOGRAPHY / FONT SETTINGS MODAL -->
+<div id="typo-modal" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <div>
+        <h2><svg class="ic"><use href="#i-text"/></svg> <span data-i18n="ty.title">Typography / Font Settings</span></h2>
+        <small class="muted" data-i18n="ty.sub">Configure fonts, sizes, and layout styles</small>
+      </div>
+      <div class="row" style="margin:0">
+        <button id="typo-reset-colors" class="btn small"><span data-i18n="ty.resetColors">Reset Colors</span></button>
+        <button id="typo-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+    <div class="modal-body-scroll">
+      <div class="fld">
+        <span class="fld-label live-label"><span data-i18n="ty.live">LIVE VOUCHER PREVIEW (58mm)</span> <span id="typo-real-badge" class="badge hidden" data-i18n="ty.realBadge">REAL CLOUD VOUCHER</span></span>
+        <div id="typo-preview" class="live-preview"></div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.presets">Typography Presets</span>
+        <div class="chip-grid" id="typo-presets" role="group">
+          <button type="button" data-preset="default" class="chip active" data-i18n="ty.pDefault">Default</button>
+          <button type="button" data-preset="compact" class="chip" data-i18n="ty.pCompact">Compact</button>
+          <button type="button" data-preset="bold" class="chip" data-i18n="ty.pBold">Bold Voucher</button>
+          <button type="button" data-preset="large" class="chip" data-i18n="ty.pLarge">Large Voucher</button>
+          <button type="button" data-preset="custom" class="chip" data-i18n="ty.pCustom">Custom</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.fontFamily">Global Font Family</span>
+        <div class="chip-grid" id="typo-fontfamily" role="group">
+          <button type="button" data-ff="default" class="chip active" data-i18n="ty.ffDefault">Default</button>
+          <button type="button" data-ff="sans" class="chip">Sans Serif</button>
+          <button type="button" data-ff="serif" class="chip">Serif</button>
+          <button type="button" data-ff="mono" class="chip">Monospace</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.align">Alignment</span>
+        <div class="segmented" id="typo-align" role="group">
+          <button type="button" data-align="left" data-i18n="ty.left">Left</button>
+          <button type="button" data-align="center" class="active" data-i18n="ty.center">Center</button>
+          <button type="button" data-align="right" data-i18n="ty.right">Right</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.color">Text Color</span>
+        <div class="swatches" id="typo-colors"></div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.letterSpacing">Letter Spacing (Voucher Code &amp; Fields)</span>
+        <div class="chip-grid" id="typo-ls" role="group">
+          <button type="button" data-ls="compact" class="chip" data-i18n="ty.lsCompact">Compact</button>
+          <button type="button" data-ls="normal" class="chip active" data-i18n="ty.lsNormal">Normal</button>
+          <button type="button" data-ls="wide" class="chip" data-i18n="ty.lsWide">Wide</button>
+          <button type="button" data-ls="custom" class="chip" data-i18n="ty.lsCustom">Custom</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label" data-i18n="ty.lineSpacing">Extra Line Spacing</span>
+        <div class="slider-row"><input type="range" id="typo-linespacing" min="0" max="12" step="1" value="0"><b id="typo-linespacing-val">+0 px</b></div>
+      </div>
+      <div class="switch-row">
+        <div><div style="font-weight:700" data-i18n="ty.shadow">Text Shadow</div><div class="muted small" data-i18n="ty.shadowSub">Rendered in preview; thermal print output remains crisp and safe.</div></div>
+        <label class="switch"><input type="checkbox" id="typo-shadow"><span class="track"></span></label>
+      </div>
+      <div class="switch-row">
+        <div><div style="font-weight:700" data-i18n="ty.outline">Text Outline / Stroke</div><div class="muted small" data-i18n="ty.outlineSub">Accents text edges cleanly.</div></div>
+        <label class="switch"><input type="checkbox" id="typo-outline"><span class="track"></span></label>
+      </div>
+      <h4 class="sec-title" data-i18n="ty.fieldTitle">Field Typography &amp; Styling</h4>
+      <div class="tabs" id="typo-tabs" role="tablist"></div>
+      <div id="typo-field-config"></div>
+      <div class="row modal-actions">
+        <button id="typo-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
+        <button id="typo-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="ty.save">Save Typography</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT AREA (only visible when printing) -->
+<div id="print-area"></div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
+<script>
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('view-connect').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    try { moveLiqBlob(); } catch (e) {}
+    window.__step = 'tabbar-blue';
+  }, 600);
+  setTimeout(() => {
+    const tabs = [...document.querySelectorAll('#tabbar .tab')];
+    tabs.forEach(t => t.classList.remove('active'));
+    tabs[3].classList.add('active');
+    try { moveLiqBlob(); } catch (e) {}
+    window.__step = 'tabbar-indigo';
+  }, 2200);
+});
+</script>
