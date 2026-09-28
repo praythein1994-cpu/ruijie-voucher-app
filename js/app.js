@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.51';
+const APP_VERSION = '1.5.52';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -88,6 +88,23 @@ const I18N = {
   'sso.onlyAndroid': { my: 'Ruijie အကောင့်ဝင်တာကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Ruijie account login is only available in the Android app' },
   'sso.welcome': { my: 'Ruijie အကောင့် ဝင်ပြီးပါပြီ', en: 'Logged in to Ruijie account' },
   'sso.bye': { my: 'အကောင့်ထွက်ပြီးပါပြီ', en: 'Logged out' },
+  'sso.savedAs': { my: 'သိမ်းထားတဲ့ အကောင့်', en: 'Saved account' },
+  'sso.remember': { my: 'အကောင့်မှတ်ထားမယ်', en: 'Remember account' },
+  'sso.rememberSub': { my: 'စက်မှာ encrypted သိမ်းမယ်', en: 'Stored encrypted on this device' },
+  'sso.autologin': { my: 'အလိုအလျောက် ဝင်မယ်', en: 'Auto-login' },
+  'sso.autologinSub': { my: 'နောက်တစ်ခါ နှိပ်စရာမလို', en: 'Sign in without tapping anything' },
+  'sso.switch': { my: 'အကောင့်ပြောင်းမယ်', en: 'Switch account' },
+  'sso.forgotten': { my: 'သိမ်းထားတဲ့ အကောင့်ဖျက်ပြီးပါပြီ', en: 'Saved account forgotten' },
+  'mon.title': { my: 'စက်ပစ္စည်း သတိပေးချက်', en: 'Device offline alerts' },
+  'mon.sub': { my: 'AP / Gateway offline ဖြစ်ရင် အဝိုင်းပေါ့ပ်အပ် + အသံနဲ့ သတိပေးမယ်', en: 'Circle popup + sound when an AP or Gateway goes offline' },
+  'mon.enable': { my: 'နောက်ခံ စောင့်ကြည့်မယ်', en: 'Monitor in background' },
+  'mon.enableSub': { my: 'App ပိတ်ထားရင်တောင် ၁၅ မိနစ်တစ်ခါ စစ်မယ်', en: 'Checks every 15 min even with the app closed' },
+  'mon.checkNow': { my: 'အခုပဲ စစ်မယ်', en: 'Check now' },
+  'mon.on': { my: 'ဖွင့်ထားတယ်', en: 'On' },
+  'mon.off': { my: 'ပိတ်ထားတယ်', en: 'Off' },
+  'mon.noConfig': { my: 'အရင် Cloud ချိတ်ဆက်ပါ', en: 'Connect to Cloud first' },
+  'mon.onlyAndroid': { my: 'ဒါကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Only available in the Android app' },
+  'mon.checking': { my: 'စစ်နေတယ်…', en: 'Checking…' },
   'gw.title': { my: 'Gateway (ဒေသတွင်း)', en: 'Gateway (local)' },
   'gw.sub': { my: 'LAN ထဲက gateway ကို တိုက်ရိုက်ချိတ်မယ် — Cloud မှာမရှိတဲ့ China AP တွေပါမြင်ရမယ်', en: 'Connect directly to the gateway over LAN — shows China APs invisible to Cloud' },
   'gw.ip': { my: 'Gateway IP', en: 'Gateway IP' },
@@ -644,6 +661,7 @@ async function doConnect() {
   const lbl = $('btn-connect-label');
   btn.disabled = true; lbl.textContent = t('btn.connecting');
   Api.saveCfg(cfg);
+  syncMonitorConfig(); // v1.5.52: push cloud creds to the bg offline monitor
   try {
     const info = await Api.testConnection();
     S.account = info;
@@ -711,6 +729,9 @@ function enterApp() {
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
   loadAccountInfo();
+  // v1.5.52: one-shot startup SSO auto-login (saved creds + auto-login on,
+  // no portal session -> open the login dialog once; it auto-submits).
+  setTimeout(maybeSsoAutoLogin, 1200);
 }
 
 function switchView(id, push) {
@@ -858,12 +879,14 @@ async function loadProjects() {
   }
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
+  syncMonitorConfig();
 }
 
 function onProjectChange() {
   S.projectId = $('project-select').value;
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
+  syncMonitorConfig();
   S.vouchers = [];
   S.packages = [];
   loadVouchers();
@@ -3032,6 +3055,7 @@ function fillSettings() {
   $('set-secret').value = '';
   refreshSsoCard();
   refreshGwCard();
+  refreshMonitorCard();
 }
 
 /* ── SSO session (Ruijie account login, Android APK only) ───────
@@ -3040,26 +3064,141 @@ function refreshSsoCard() {
   const card = $('sso-card');
   if (!card) return;
   const statusEl = $('sso-status'), btn = $('btn-sso');
+  const savedRow = $('sso-saved-row'), savedEmail = $('sso-saved-email');
+  const rememberEl = $('sso-remember'), autoEl = $('sso-autologin');
+  const switchBtn = $('btn-sso-switch');
+  const extras = [savedRow, rememberEl && rememberEl.closest('.set-row'), autoEl && autoEl.closest('.set-row'), switchBtn].filter(Boolean);
   if (!hasSso()) {
     statusEl.textContent = t('sso.onlyAndroid');
     btn.classList.add('hidden');
+    extras.forEach(el => el.classList.add('hidden'));
     return;
   }
   btn.classList.remove('hidden');
+  extras.forEach(el => el.classList.remove('hidden'));
   const loggedIn = Api.ssoLoggedIn();
   statusEl.textContent = loggedIn ? t('sso.connected') : t('sso.notConnected');
   btn.querySelector('span').textContent = loggedIn ? t('sso.logout') : t('sso.login');
   btn.dataset.mode = loggedIn ? 'logout' : 'login';
+  // Saved-account rows (v1.5.52): email is exposed, never the password.
+  try {
+    const info = JSON.parse(window.RuijieBridge.ssoAccountInfo());
+    if (savedEmail) savedEmail.textContent = info.has && info.email ? info.email : '—';
+    if (rememberEl) rememberEl.checked = !!info.rememberWanted;
+    if (autoEl) autoEl.checked = !!info.autoLogin;
+  } catch (e) { /* bridge older than v1.5.52: rows stay default */ }
 }
 function onSsoButton() {
   if (!hasSso()) { toast(t('sso.onlyAndroid'), true); return; }
   const btn = $('btn-sso');
   if (btn.dataset.mode === 'logout') {
+    // v1.5.52: explicit logout suppresses the one-shot startup auto-login
+    // for the rest of this app session.
+    window.__ssoAutoTried = true;
     window.RuijieBridge.ssoLogout();
   } else {
     try { window.RuijieBridge.ssoLogin(); }
     catch (e) { toast(t('sso.onlyAndroid'), true); }
   }
+}
+/* v1.5.52: switch account = forget saved creds + drop SSO cookies + fresh login dialog. */
+function onSsoSwitch() {
+  if (!hasSso()) { toast(t('sso.onlyAndroid'), true); return; }
+  window.__ssoAutoTried = true; // this tap opens the dialog itself
+  try { window.RuijieBridge.ssoForgetAccount(); } catch (e) {}
+  try { window.RuijieBridge.ssoLogout(); } catch (e) {}
+  toast(t('sso.forgotten'));
+  refreshSsoCard();
+  try { window.RuijieBridge.ssoLogin(); }
+  catch (e) { toast(t('sso.onlyAndroid'), true); }
+}
+function onSsoRemember() {
+  if (!hasSso()) return;
+  const on = $('sso-remember').checked;
+  try { window.RuijieBridge.ssoSetRemember(on); } catch (e) {}
+  if (!on && $('sso-autologin')) $('sso-autologin').checked = false;
+  refreshSsoCard();
+}
+function onSsoAutoLogin() {
+  if (!hasSso()) return;
+  try { window.RuijieBridge.ssoSetAutoLogin($('sso-autologin').checked); } catch (e) {}
+}
+
+/* v1.5.52: one-shot startup SSO auto-login. Opens the SSO login dialog
+ * automatically when saved credentials + auto-login are enabled and no
+ * portal session exists. The cover auto-submits the saved credentials, so
+ * the dialog closes by itself on success. Fires at most once per app
+ * launch (window.__ssoAutoTried); an explicit logout sets the flag so the
+ * dialog never reopens by itself afterwards. Never breaks startup. */
+function maybeSsoAutoLogin() {
+  if (window.__ssoAutoTried) return;
+  window.__ssoAutoTried = true;
+  if (!hasSso()) return;
+  try {
+    const info = JSON.parse(window.RuijieBridge.ssoAccountInfo() || '{}');
+    if (!info.has || !info.autoLogin) return;
+    let loggedIn = false;
+    try { loggedIn = !!JSON.parse(window.RuijieBridge.ssoStatus() || '{}').loggedIn; } catch (e) {}
+    if (loggedIn) return;
+    window.RuijieBridge.ssoLogin();
+  } catch (e) { /* never break startup */ }
+}
+
+/* ── Device offline monitor (Android APK only, v1.5.52) ──────────
+ * Background JobScheduler check (APs + Gateways): circular-badge
+ * notification + custom sound, even with the app closed. */
+function hasMonitor() {
+  return !!(window.RuijieBridge && window.RuijieBridge.monitorInfo);
+}
+/** Push the current Cloud connection into the native monitor. The secret is
+ *  passed straight to native private prefs — never logged, never displayed. */
+function syncMonitorConfig() {
+  if (!hasMonitor()) return;
+  try {
+    const cfg = Api.cfg || Api.loadCfg();
+    if (!cfg) return;
+    window.RuijieBridge.monitorSync(JSON.stringify({
+      cloud: cfg.cloud || '', appid: cfg.appid || '',
+      secret: cfg.secret || '', groupId: Number(S.projectId) || 0,
+    }));
+  } catch (e) {}
+}
+function refreshMonitorCard() {
+  const card = $('mon-card');
+  if (!card) return;
+  const tg = $('mon-enable'), st = $('mon-status'), btn = $('btn-mon-check');
+  const tgRow = tg && tg.closest('.set-row');
+  if (!hasMonitor()) {
+    st.textContent = t('mon.onlyAndroid');
+    if (tgRow) tgRow.classList.add('hidden');
+    btn.classList.add('hidden');
+    return;
+  }
+  if (tgRow) tgRow.classList.remove('hidden');
+  btn.classList.remove('hidden');
+  let info = {};
+  try { info = JSON.parse(window.RuijieBridge.monitorInfo()); } catch (e) {}
+  tg.checked = !!info.enabled;
+  st.textContent = info.enabled ? t('mon.on')
+    : (!info.hasConfig ? t('mon.noConfig') : t('mon.off'));
+}
+function onMonitorToggle() {
+  if (!hasMonitor()) return;
+  const on = $('mon-enable').checked;
+  try {
+    if (on) {
+      syncMonitorConfig();
+      window.RuijieBridge.monitorRequestPermission();
+    }
+    window.RuijieBridge.monitorSetEnabled(on);
+  } catch (e) {}
+  setTimeout(refreshMonitorCard, 400);
+}
+function onMonitorCheckNow() {
+  if (!hasMonitor()) { toast(t('mon.onlyAndroid'), true); return; }
+  syncMonitorConfig();
+  try { window.RuijieBridge.monitorCheckNow(); toast(t('mon.checking')); }
+  catch (e) { toast(t('mon.onlyAndroid'), true); }
 }
 
 /* ── Gateway-local session (Android APK only) ───────────────────
@@ -3466,6 +3605,11 @@ function init() {
 
   $('btn-save-settings').addEventListener('click', saveSettings);
   $('btn-sso').addEventListener('click', onSsoButton);
+  const _sw = $('btn-sso-switch'); if (_sw) _sw.addEventListener('click', onSsoSwitch);
+  const _rm = $('sso-remember'); if (_rm) _rm.addEventListener('change', onSsoRemember);
+  const _al = $('sso-autologin'); if (_al) _al.addEventListener('change', onSsoAutoLogin);
+  const _me = $('mon-enable'); if (_me) _me.addEventListener('change', onMonitorToggle);
+  const _mc = $('btn-mon-check'); if (_mc) _mc.addEventListener('click', onMonitorCheckNow);
   $('btn-gw').addEventListener('click', onGwButton);
   $('btn-diag-run').addEventListener('click', runDiagnostics);
   $('btn-diag-save').addEventListener('click', saveDiagReport);
