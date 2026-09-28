@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.48';
+const APP_VERSION = '1.5.49';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -760,7 +760,11 @@ window.addEventListener('resize', () => { try { moveLiqBlob(); } catch (e) {} })
    row itself squishes and wobbles like jelly, pivoting at the tap point. */
 function initLiquidWobble() {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const SEL = 'button,.tab,.voucher-row,.menu-item,.card,.chip,a,[data-wobble]';
+  /* v1.5.49: .card is NOT a wobble target — tapping table rows / empty areas
+   * inside a page card used to fall through closest() to the whole card and
+   * shake the entire page. Only the actually-touched icon/function element
+   * (button, tab, voucher-row, chip, menu-item, link) wobbles now. */
+  const SEL = 'button,.tab,.voucher-row,.menu-item,.chip,a,[data-wobble]';
   document.addEventListener('pointerdown', e => {
     if (e.clientX == null || e.clientY == null || !e.target || !e.target.closest) return;
     const el = e.target.closest(SEL);
