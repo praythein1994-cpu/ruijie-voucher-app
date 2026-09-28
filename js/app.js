@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.36';
+const APP_VERSION = '1.5.37';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2262,6 +2262,7 @@ async function moreClients() {
       try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
       list = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false, connectType: '' }) || [];
       viaPortal = true;
+      try { cachePortalVouchers(list); } catch (e) { /* voucher cache is best-effort */ }
       if (hasAuth === false) srcNote = t('ac.noAuthCfg');
     } catch (e) { srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140); }
   } else {
@@ -2429,11 +2430,62 @@ const gwVoucherMaps = plist => {
 const gwVoucherForSta = (sta, byMac, byIp) =>
   (byMac && byMac.get(normMac(sta && sta.mac))) ||
   (byIp && sta && sta.ip && byIp.get(String(sta.ip).trim())) || '';
+
+/* ── Voucher MAC/IP cache · v1.5.37 ──
+ * The portal's current-user snapshot only lists clients on Cloud-managed
+ * APs *right now* — a client sitting on a China/local AP is absent, so the
+ * gateway AP-clients view can't match its voucher live. But every portal
+ * Online Clients load sees genuine MAC→voucher / IP→voucher pairs for the
+ * visible clients; persist them locally (7-day TTL, 5000-entry cap) so the
+ * gateway view can fall back to the last known voucher when the live
+ * snapshot has no entry. Live data always wins; cached values are real
+ * portal data observed earlier, never fabricated. */
+const VCACHE_TTL = 7 * 24 * 3600 * 1000;
+const VCACHE_MAX = 5000;
+function cachePortalVouchers(plist) {
+  let stored = null;
+  try { stored = Store.load().vcache || null; } catch (e) { stored = null; }
+  const m = (stored && stored.m) || {}, i = (stored && stored.i) || {};
+  const now = Date.now();
+  let touched = false;
+  (plist || []).forEach(p => {
+    const acct = String(p.account || p.authAccount || p.authName || '').trim();
+    if (!acct) return;
+    const mac = normMac(p.mac || p.staMac);
+    if (mac) { m[mac] = { v: acct, ts: now }; touched = true; }
+    const ip = String(p.ip || '').trim();
+    if (ip) { i[ip] = { v: acct, ts: now }; touched = true; }
+  });
+  if (!touched) return;
+  const cutoff = now - VCACHE_TTL;
+  [m, i].forEach(obj => {
+    Object.keys(obj).forEach(k => { if (!obj[k] || obj[k].ts < cutoff) delete obj[k]; });
+    const keys = Object.keys(obj);
+    if (keys.length > VCACHE_MAX) {
+      keys.sort((a, b) => obj[a].ts - obj[b].ts).slice(0, keys.length - VCACHE_MAX)
+        .forEach(k => delete obj[k]);
+    }
+  });
+  try { Store.save({ vcache: { m, i } }); } catch (e) { /* cache is best-effort */ }
+}
+function getVoucherCache() {
+  const byMac = new Map(), byIp = new Map();
+  let stored = null;
+  try { stored = Store.load().vcache || null; } catch (e) { stored = null; }
+  const cutoff = Date.now() - VCACHE_TTL;
+  const m = (stored && stored.m) || {}, i = (stored && stored.i) || {};
+  Object.keys(m).forEach(k => { const e = m[k]; if (e && e.v && e.ts >= cutoff) byMac.set(k, e.v); });
+  Object.keys(i).forEach(k => { const e = i[k]; if (e && e.v && e.ts >= cutoff) byIp.set(k, e.v); });
+  return { byMac, byIp };
+}
 async function renderGwApClients(apSn, apName, clients, staTotal) {
   const showNames = Store.load().clientShowNames !== false;
   if (!clients.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
   // MAC → voucher code from the Cloud portal (SSO). The portal joins
-  // auth-account data when authCount=true (v1.5.28 parity).
+  // auth-account data when authCount=true (v1.5.28 parity). NOTE: this is a
+  // *current* snapshot — clients sitting on China/local APs are absent.
+  // v1.5.37: the local voucher cache (populated from every portal Online
+  // Clients load) fills those gaps; live data always wins.
   let vByMac = new Map(), vByIp = new Map();
   if (Api.ssoLoggedIn()) {
     try {
@@ -2442,11 +2494,13 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
       const plist = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false });
       ({ byMac: vByMac, byIp: vByIp } = gwVoucherMaps(plist));
+      try { cachePortalVouchers(plist); } catch (e) { /* best-effort */ }
     } catch (e) { /* portal voucher enrichment optional — stay honest "—" */ }
   }
   // Also try the local voucher map (open-API path) as a fallback.
   let vmap = new Map();
   try { vmap = await apClientVoucherMap(Number(S.projectId)); } catch (e) {}
+  const vcache = getVoucherCache();
   const srcLine = `<p class="muted small">📡 ${esc(t('ac.srcGateway'))}</p>`;
   $('ac-list').innerHTML =
     `<p class="muted small">${esc(tx('ac.total', { n: clients.length }))}</p>` +
@@ -2459,7 +2513,7 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
-      const vcode = gwVoucherForSta(c, vByMac, vByIp);
+      const vcode = gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
       const vcell = vcode ? `<b>${esc(vcode)}</b>` : '—';
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
         `<td>${vcell}</td>` +
