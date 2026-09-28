@@ -371,9 +371,12 @@
       </div>
       <div class="card">
         <h2><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="s.appearance">အသွင်အပြင်</span></h2>
-        <div class="switch-row">
-          <div><div style="font-weight:700" data-i18n="s.darkmode">Dark Mode</div><div class="muted small" data-i18n="s.darkmodeSub">ညအချိန်အတွက် အနက်ရောင်အပြင်</div></div>
-          <label class="switch"><input type="checkbox" id="set-darkmode"><span class="track"></span></label>
+        <div class="theme-grid" id="theme-grid" role="group" aria-label="Theme">
+          <button type="button" class="theme-opt" data-theme-opt="light"><span class="theme-dot t-light"></span><span data-i18n="s.themeLight">Premium</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="dark"><span class="theme-dot t-dark"></span><span data-i18n="s.themeDark">Dark</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="glass"><span class="theme-dot t-glass"></span><span data-i18n="s.themeGlass">Liquid Glass</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="neo"><span class="theme-dot t-neo"></span><span data-i18n="s.themeNeo">Neumorphism</span></button>
+          <button type="button" class="theme-opt" data-theme-opt="clay"><span class="theme-dot t-clay"></span><span data-i18n="s.themeClay">Claymorphism</span></button>
         </div>
       </div>
       <div class="card">
