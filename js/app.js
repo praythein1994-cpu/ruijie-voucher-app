@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.49';
+const APP_VERSION = '1.5.50';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -573,13 +573,13 @@ async function copyText(text) {
 
 /* ── theme (light/dark/glass/neo/clay) ── */
 const THEMES = ['light', 'dark', 'glass', 'neo', 'clay'];
-const THEME_META = { light: '#F2F2F7', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5' };
+const THEME_META = { light: '#EDF1F8', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5' };
 function applyTheme(theme) {
   if (!THEMES.includes(theme)) theme = 'light';
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem('rv-theme', theme); } catch (e) {}
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = THEME_META[theme] || '#F2F2F7';
+  if (meta) meta.content = THEME_META[theme] || '#EDF1F8';
   document.querySelectorAll('#theme-grid .theme-opt').forEach(b =>
     b.classList.toggle('active', b.dataset.themeOpt === theme));
 }
@@ -659,6 +659,8 @@ function showErr(id, msg) {
   const e = $(id);
   e.textContent = msg;
   e.classList.remove('hidden');
+  const pad = $(id + '-pad');
+  if (pad) pad.classList.remove('hidden');
 }
 
 /* v1.5.40: startup sync — refresh the voucher map from Cloud (fresh
@@ -3133,7 +3135,9 @@ function diagStatusBadge(s) {
 function renderDiagResults() {
   const box = $('diag-results');
   if (!box) return;
-  if (!Diag.results.length) { box.innerHTML = ''; return; }
+  const pad = $('diag-results-pad');
+  if (!Diag.results.length) { box.innerHTML = ''; if (pad) pad.classList.add('hidden'); return; }
+  if (pad) pad.classList.remove('hidden');
   box.innerHTML = Diag.results.map(r =>
     `<div style="display:flex;align-items:flex-start;gap:4px;padding:8px 0;border-top:1px solid var(--hair, #eee)">`
     + `<div style="flex-shrink:0;padding-top:1px">${diagStatusBadge(r.status)}</div>`
@@ -3326,6 +3330,7 @@ async function saveSettings() {
     proxy: $('set-proxy').value.trim().replace(/\/+$/, '') || c.proxy,
   };
   $('set-err').classList.add('hidden');
+  const sep = $('set-err-pad'); if (sep) sep.classList.add('hidden');
   Api.saveCfg(nc);
   try {
     await Api.testConnection();
