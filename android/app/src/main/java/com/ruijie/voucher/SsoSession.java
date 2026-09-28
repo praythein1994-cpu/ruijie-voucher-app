@@ -65,6 +65,13 @@ public class SsoSession {
 
     private SsoSession() {}
 
+    private SecureCredentialStore credStore;
+
+    private synchronized SecureCredentialStore store(android.content.Context ctx) {
+        if (credStore == null) credStore = new SecureCredentialStore(ctx.getApplicationContext());
+        return credStore;
+    }
+
     /** Cheap check: SSO cookies present? (True validity is proven by API response codes.) */
     public boolean isLoggedIn() {
         try {
@@ -313,7 +320,7 @@ public class SsoSession {
         titles.addView(title);
 
         TextView sub = new TextView(activity);
-        sub.setText("အကောင့်အချက်အလက်များသည် Ruijie သို့သာ တိုက်ရိုက်ပေးပို့ပါသည်");
+        sub.setText("စကားဝှက်ကို စက်ထဲမှာ encrypted သိမ်းမယ် · Ruijie ကိုသာ ပေးပို့မယ်");
         sub.setTextColor(Color.parseColor("#D6E8FF"));
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         titles.addView(sub);
@@ -361,6 +368,13 @@ public class SsoSession {
         }
         webView.setWebChromeClient(new WebChromeClient());
 
+        // Glass cover bridge: the injected cover reads/writes the encrypted
+        // credential store and can dismiss the dialog. (The official Ruijie
+        // page keeps running underneath the cover.)
+        final SecureCredentialStore storeRef = store(activity);
+        webView.addJavascriptInterface(
+                new SsoCoverBridge(activity, dialog, storeRef, fired, cb), "SsoCover");
+
         final Dialog dlgRef = dialog;
         final LoginCallback cbRef = cb;
         final boolean[] firedRef = fired;
@@ -388,6 +402,7 @@ public class SsoSession {
             public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
                 traceUrl(url);
+                injectCoverIfNeeded(view, url);
                 checkAuth(url);
             }
             @Override
@@ -416,8 +431,55 @@ public class SsoSession {
         webView.loadUrl(SSO_LOGIN_URL);
     }
 
-    /** True once the WebView has left the SSO pages and reached the portal. */
-    private static boolean isAuthenticatedUrl(String url) {
+    /**
+     * Inject the glassmorphism cover over the official CAS login page.
+     * The official page keeps running underneath; the cover fills its
+     * fields and clicks its button. Guarded by window.__ssoCoverInjected
+     * so reloads of the login page never stack covers.
+     */
+    private void injectCoverIfNeeded(WebView webView, String url) {
+        if (url == null || !url.contains("/sso/login")) return;
+        try {
+            android.content.Context ctx = webView.getContext();
+            String css = readAsset(ctx, "www/sso-cover/sso-cover.css");
+            String html = readAsset(ctx, "www/sso-cover/sso-cover.html");
+            String js = readAsset(ctx, "www/sso-cover/sso-cover.js");
+            if (css == null || html == null || js == null) return; // no cover: official page stays usable
+            org.json.JSONObject prefs = new org.json.JSONObject();
+            String saved = store(ctx).loadJson();
+            prefs.put("hasCreds", saved != null);
+            prefs.put("autoLogin", store(ctx).getAutoLogin());
+            prefs.put("rememberWanted", store(ctx).getRememberWanted());
+            prefs.put("email", saved != null ? new org.json.JSONObject(saved).optString("e", "") : "");
+            String script = "(function(){"
+                    + "if(window.__ssoCoverInjected)return;window.__ssoCoverInjected=true;"
+                    + "var st=document.createElement('style');st.textContent="
+                    + org.json.JSONObject.quote(css) + ";document.head.appendChild(st);"
+                    + "var w=document.createElement('div');w.innerHTML="
+                    + org.json.JSONObject.quote(html) + ";"
+                    + "while(w.firstChild)document.body.appendChild(w.firstChild);"
+                    + js
+                    + "\n;window.__ssoCoverInit(" + prefs + ");"
+                    + "})();";
+            webView.evaluateJavascript(script, null);
+        } catch (Exception ignored) { /* official page remains usable */ }
+    }
+
+    private static String readAsset(android.content.Context ctx, String name) {
+        try {
+            java.io.InputStream in = ctx.getAssets().open(name);
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            in.close();
+            return new String(out.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** True once the WebView has left the SSO pages and reached the portal. */    private static boolean isAuthenticatedUrl(String url) {
         if (url == null || url.isEmpty()) return false;
         // Still on the SSO login page or inside the /webproxy/sso/back
         // ticket callback — the portal session is not established yet,

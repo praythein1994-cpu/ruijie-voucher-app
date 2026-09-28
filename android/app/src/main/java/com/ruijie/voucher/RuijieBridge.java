@@ -258,8 +258,13 @@ public class RuijieBridge {
     public String btState() {
         try {
             BluetoothPrinterManager m = bt();
+            String state = m.getConnectionState();
+            // Never report a stale CONNECTED: verify the socket is actually alive.
+            if (BluetoothPrinterManager.STATE_CONNECTED.equals(state) && !m.isSocketAlive()) {
+                state = BluetoothPrinterManager.STATE_DISCONNECTED;
+            }
             JSONObject o = new JSONObject();
-            o.put("state", m.getConnectionState());
+            o.put("state", state);
             o.put("deviceName", m.getConnectedDeviceName());
             o.put("deviceAddress", m.getConnectedDeviceAddress());
             o.put("error", m.getConnectionError());
@@ -348,9 +353,27 @@ public class RuijieBridge {
     @JavascriptInterface
     public String btDisconnect() {
         try {
-            bt().disconnect();
+            bt().userDisconnect();
             JSONObject o = new JSONObject();
             o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /**
+     * Enable/disable auto-reconnect after unexpected connection loss
+     * (e.g. printer power cycle). Persisted natively; mirrors the JS
+     * auto-connect toggle. Explicit user disconnect never reconnects.
+     */
+    @JavascriptInterface
+    public String btSetAutoReconnect(boolean enabled) {
+        try {
+            bt().setAutoReconnectEnabled(enabled);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            o.put("autoReconnect", enabled);
             return o.toString();
         } catch (Exception e) {
             return btErr(e.getMessage());
@@ -501,6 +524,54 @@ public class RuijieBridge {
         SsoSession.getInstance().logout();
         webView.post(() -> webView.evaluateJavascript(
                 "window._ssoEvent&&window._ssoEvent('logout')", null));
+    }
+
+    // ── SSO SAVED ACCOUNT (remember / auto-login, v1.5.52) ──────
+    // Credentials are Keystore-encrypted on this device; only the email
+    // (never the password) is ever exposed to the web layer.
+
+    /** JSON: {"has":bool,"email":"..","autoLogin":bool,"rememberWanted":bool}. */
+    @JavascriptInterface
+    public String ssoAccountInfo() {
+        try {
+            SecureCredentialStore store = new SecureCredentialStore(activity);
+            String j = store.loadJson();
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("has", j != null);
+            o.put("email", j != null ? new org.json.JSONObject(j).optString("e", "") : "");
+            o.put("autoLogin", store.getAutoLogin());
+            o.put("rememberWanted", store.getRememberWanted());
+            return o.toString();
+        } catch (Exception e) {
+            return "{\"has\":false,\"email\":\"\",\"autoLogin\":false,\"rememberWanted\":true}";
+        }
+    }
+
+    /** Persist the auto-login flag (credentials are saved by the cover on sign-in). */
+    @JavascriptInterface
+    public void ssoSetAutoLogin(boolean on) {
+        try { new SecureCredentialStore(activity).setAutoLogin(on); }
+        catch (Exception ignored) {}
+    }
+
+    /**
+     * Persist the remember-wanted flag. Turning it OFF also forgets any
+     * saved credentials immediately.
+     */
+    @JavascriptInterface
+    public void ssoSetRemember(boolean on) {
+        try {
+            SecureCredentialStore store = new SecureCredentialStore(activity);
+            store.setRememberWanted(on);
+            if (!on) { store.clear(); store.setAutoLogin(false); }
+        } catch (Exception ignored) {}
+    }
+
+    /** Forget the saved SSO account credentials (SSO cookies untouched). */
+    @JavascriptInterface
+    public void ssoForgetAccount() {
+        try { new SecureCredentialStore(activity).clear(); }
+        catch (Exception ignored) {}
     }
 
     // ── DIAGNOSTICS ──────────────────────────────────────────────
@@ -771,5 +842,69 @@ public class RuijieBridge {
                 gwResolve(callId, gwErr(e.getMessage() == null ? "request failed" : e.getMessage()));
             }
         });
+    }
+
+    // ── DEVICE OFFLINE MONITOR (v1.5.52) ─────────────────────────
+    // Background JobScheduler check (APs + Gateways) that notifies with a
+    // circular badge + custom sound even when the app is closed.
+
+    /** {enabled, scheduled, hasConfig} for the Settings toggle. */
+    @JavascriptInterface
+    public String monitorInfo() {
+        try {
+            JSONObject o = new JSONObject();
+            o.put("enabled", DeviceMonitor.prefs(activity).getBoolean("enabled", false));
+            o.put("scheduled", DeviceMonitor.isScheduled(activity));
+            o.put("hasConfig", DeviceMonitor.hasConfig(activity));
+            o.put("canNotify", Build.VERSION.SDK_INT < 33
+                    || activity.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                        == android.content.pm.PackageManager.PERMISSION_GRANTED);
+            return o.toString();
+        } catch (Exception e) {
+            return "{\"enabled\":false,\"scheduled\":false,\"hasConfig\":false,\"canNotify\":false}";
+        }
+    }
+
+    /** Save the Cloud connection the background monitor polls with. Never logs the secret. */
+    @JavascriptInterface
+    public void monitorSync(String json) {
+        try {
+            JSONObject o = new JSONObject(json);
+            DeviceMonitor.saveConfig(activity,
+                    o.optString("cloud", ""),
+                    o.optString("appid", ""),
+                    o.optString("secret", ""),
+                    o.optLong("groupId", 0));
+        } catch (Exception ignored) {}
+    }
+
+    /** Turn the background monitor on/off (schedules or cancels the job). */
+    @JavascriptInterface
+    public void monitorSetEnabled(boolean on) {
+        try {
+            DeviceMonitor.prefs(activity).edit().putBoolean("enabled", on).apply();
+            if (on) DeviceMonitor.schedule(activity);
+            else DeviceMonitor.cancel(activity);
+        } catch (Exception ignored) {}
+    }
+
+    /** Run one check right now on a background thread. */
+    @JavascriptInterface
+    public void monitorCheckNow() {
+        pool.execute(() -> {
+            try { DeviceMonitorJob.runCheckOnce(activity.getApplicationContext()); }
+            catch (Exception ignored) {}
+        });
+    }
+
+    /** Ask for the Android 13+ notification permission (no-op below 33). */
+    @JavascriptInterface
+    public void monitorRequestPermission() {
+        try {
+            if (Build.VERSION.SDK_INT >= 33) {
+                activity.requestPermissions(
+                        new String[]{"android.permission.POST_NOTIFICATIONS"}, 7102);
+            }
+        } catch (Exception ignored) {}
     }
 }
