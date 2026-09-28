@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.32';
+const APP_VERSION = '1.5.33';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2141,7 +2141,12 @@ const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn)))
  * auth-account field, but the Cloud portal's client list (authCount=true)
  * DOES carry per-client voucher accounts. When SSO is logged in, build a
  * MAC→voucher map from the portal and fill the Voucher column for any
- * gateway STA whose MAC appears there. Unmatched stays "—" (honest). */
+ * gateway STA whose MAC appears there. Unmatched stays "—" (honest).
+ * v1.5.33: MAC FORMAT FIX — the portal reports MACs dotted
+ * (60c7.be3a.bea5) while the gateway reports colon-separated
+ * (60:C7:BE:3A:BE:A5); plain uppercase-compare never matched. normMac
+ * strips every non-hex character so both sides compare equal. */
+const normMac = s => String(s || '').toUpperCase().replace(/[^0-9A-F]/g, '');
 async function renderGwApClients(apSn, apName, clients, staTotal) {
   const showNames = Store.load().clientShowNames !== false;
   if (!clients.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
@@ -2155,7 +2160,7 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
       const plist = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false });
       (plist || []).forEach(p => {
-        const mac = String(p.mac || p.staMac || '').toUpperCase().trim();
+        const mac = normMac(p.mac || p.staMac);
         const acct = String(p.account || p.authAccount || p.authName || '').trim();
         if (mac && acct && !vByMac.has(mac)) vByMac.set(mac, acct);
       });
@@ -2176,7 +2181,7 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
-      const vcode = vByMac.get(String(c.mac || '').toUpperCase().trim()) || '';
+      const vcode = vByMac.get(normMac(c.mac)) || '';
       const vcell = vcode ? `<b>${esc(vcode)}</b>` : '—';
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
         `<td>${vcell}</td>` +
