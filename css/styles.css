@@ -280,11 +280,11 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   max-width: 600px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-around;
-  background: linear-gradient(180deg, rgba(30, 64, 140, .82), rgba(15, 36, 88, .82));
-  -webkit-backdrop-filter: saturate(160%) blur(26px); backdrop-filter: saturate(160%) blur(26px);
-  border: 1px solid rgba(147, 197, 253, .22);
+  background: linear-gradient(180deg, rgba(125, 184, 255, .45), rgba(43, 108, 238, .45));
+  -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
+  border: 1px solid rgba(191, 219, 253, .38);
   border-radius: 999px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .07);
+  box-shadow: 0 18px 44px rgba(23, 80, 180, .35), inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -1px 0 rgba(255, 255, 255, .08);
   padding: 10px 8px;
   animation: tabbarin .45s var(--spring);
 }
@@ -304,30 +304,32 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   from { border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%; }
   to { border-radius: 58% 42% 44% 56% / 44% 58% 42% 56%; }
 }
-/* ── Global touch glow: a liquid blob that glides to every tap, anywhere ── */
-#touch-blob {
-  position: fixed; left: 0; top: 0; z-index: 40; pointer-events: none;
-  width: 120px; height: 120px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(147,197,253,.9), rgba(59,130,246,.55) 55%, rgba(59,130,246,0) 72%);
-  filter: blur(6px);
-  opacity: 0;
-  transform: translate(-300px, -300px);
-  transition: transform .55s cubic-bezier(.32,.72,0,1), opacity .6s ease;
-  animation: blobmorph 3.4s ease-in-out infinite alternate;
-  will-change: transform;
+/* ── Liquid touch ripple: a watery blob blooms from the tap point ── */
+.liq-host { position: relative; }
+.liq-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none; z-index: 6;
+  background: radial-gradient(circle at 38% 32%, rgba(191,219,254,.9), rgba(96,165,250,.55) 52%, rgba(59,130,246,0) 72%);
+  filter: blur(3px);
+  transform: scale(0); opacity: .9;
+  animation: liqrip .65s cubic-bezier(.25,.7,.3,1) forwards;
 }
-#touch-blob.on { opacity: .8; }
-#touch-blob.tap { animation: blobmorph 3.4s ease-in-out infinite alternate, blobtap .55s cubic-bezier(.32,.72,0,1); }
-@keyframes blobmorph {
-  from { border-radius: 58% 42% 55% 45% / 52% 55% 45% 48%; }
-  to { border-radius: 45% 55% 48% 52% / 55% 45% 58% 42%; }
+.liq-ripple::after {
+  content: ""; position: absolute; inset: 18%;
+  border-radius: 50%;
+  border: 2px solid rgba(191,219,254,.75);
+  transform: scale(.4); opacity: .8;
+  animation: liqring .65s cubic-bezier(.25,.7,.3,1) forwards;
 }
-@keyframes blobtap {
-  0% { scale: .55; }
-  45% { scale: 1.28; }
-  100% { scale: 1; }
+@keyframes liqrip {
+  0% { transform: scale(0); opacity: .9; }
+  55% { opacity: .55; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) { #touch-blob { display: none; } }
+@keyframes liqring {
+  0% { transform: scale(.4); opacity: .8; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .liq-ripple { display: none; } }
 .tab {
   position: relative; z-index: 1;
   flex: 1; border: none; background: none; padding: 6px 2px; color: #8b94a7;
@@ -520,6 +522,19 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
 @keyframes sheetup { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes sheetdown { to { transform: translateY(100%); } }
 .sheet-handle { width: 36px; height: 5px; border-radius: 3px; background: var(--separator); margin: 6px auto 14px; }
+/* ── Full-screen modal variant (voucher detail, typography, print layout) ── */
+.modal.fullscreen { align-items: stretch; padding: 0; background: var(--bg); animation: fadein .22s ease-out; }
+.modal.fullscreen .modal-box {
+  max-width: none; width: 100%; max-height: none; height: 100%; height: 100dvh;
+  border-radius: 0; box-shadow: none; animation: fadein .25s ease-out;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column;
+}
+.modal.fullscreen .sheet-handle { display: none; }
+.modal.fullscreen .modal-body-scroll { flex: 1; max-height: none; }
+.modal.fullscreen #modal-body { flex: 1; overflow-y: auto; min-height: 0; }
+.modal.fullscreen.closing { animation: dimout .2s ease-in forwards; }
+.modal.fullscreen.closing .modal-box { animation: none; }
 .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .modal-head h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
 .modal-actions { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 4px; }
@@ -776,119 +791,91 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 }
 
 
-/* ═══════════ v1.5.34 — usage-proportional roaring fire ═══════════
-   --burn (0..1) drives everything: the charred (consumed) region grows
-   from the bottom as the voucher is used — data vouchers burn by
-   usedQuota/quota, pure time vouchers by usedTime/timePeriod — and a wall
-   of roaring flames rides the burn front. Unused = clean paper. */
-.burn-paper {
+/* ═══════════ v1.5.47 — usage-proportional liquid fill ═══════════
+   --fill (0..1) drives everything: liquid rises from the bottom as the
+   voucher is used — data vouchers fill by usedQuota/quota, pure time
+   vouchers by usedTime/timePeriod — and a sliding wave rides the liquid
+   surface while in use. Unused = clean glass. */
+.liquid-paper {
   position: relative; overflow: hidden; border-radius: 16px;
   margin: 2px 0 14px; padding: 20px 16px 14px; text-align: center;
-  background: linear-gradient(180deg, #fffefb, #fdf4e3);
-  border: 1px solid rgba(120, 80, 20, .18); color: #1c1c1e;
+  background: linear-gradient(180deg, #f5faff, #e9f3fe);
+  border: 1px solid rgba(59, 130, 246, .28); color: #1c1c1e;
 }
-/* Charred (consumed) region — bottom-anchored, height follows --burn */
-.burn-char {
+/* Liquid (consumed) region — bottom-anchored, height follows --fill */
+.liquid-fill {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-  height: calc(var(--burn, 0) * 100%);
+  height: calc(var(--fill, 0) * 100%);
   background: linear-gradient(180deg,
-    rgba(30,16,8,0) 0%, rgba(26,14,7,.45) 20%,
-    rgba(15,8,4,.85) 55%, rgba(6,3,2,.97) 100%);
+    rgba(125, 211, 252, .5) 0%, rgba(56, 150, 248, .62) 34%,
+    rgba(37, 99, 235, .72) 100%);
   pointer-events: none;
   transition: height 1s ease;
 }
-/* jagged burnt edge — irregular bumps along the char front */
-.burn-char::before {
-  content: ""; position: absolute; top: -9px; left: -2%; right: -2%; height: 22px;
+/* wavy liquid surface — soft scallops along the fill front */
+.liquid-fill::before {
+  content: ""; position: absolute; top: -10px; left: -4%; right: -4%; height: 24px;
   background:
-    radial-gradient(ellipse 34px 20px at 4% 100%, rgba(12,6,3,.9) 0%, transparent 70%),
-    radial-gradient(ellipse 26px 15px at 13% 100%, rgba(12,6,3,.85) 0%, transparent 70%),
-    radial-gradient(ellipse 38px 24px at 24% 100%, rgba(10,5,2,.92) 0%, transparent 70%),
-    radial-gradient(ellipse 24px 13px at 35% 100%, rgba(12,6,3,.85) 0%, transparent 70%),
-    radial-gradient(ellipse 36px 22px at 46% 100%, rgba(10,5,2,.9) 0%, transparent 70%),
-    radial-gradient(ellipse 28px 16px at 57% 100%, rgba(12,6,3,.87) 0%, transparent 70%),
-    radial-gradient(ellipse 34px 21px at 68% 100%, rgba(10,5,2,.91) 0%, transparent 70%),
-    radial-gradient(ellipse 25px 14px at 79% 100%, rgba(12,6,3,.86) 0%, transparent 70%),
-    radial-gradient(ellipse 37px 23px at 90% 100%, rgba(10,5,2,.9) 0%, transparent 70%),
-    radial-gradient(ellipse 27px 15px at 98% 100%, rgba(12,6,3,.85) 0%, transparent 70%);
+    radial-gradient(ellipse 44px 22px at 4% 0%, rgba(125,211,252,.95) 0%, transparent 70%),
+    radial-gradient(ellipse 36px 17px at 13% 0%, rgba(147,197,253,.9) 0%, transparent 70%),
+    radial-gradient(ellipse 48px 26px at 24% 0%, rgba(125,211,252,.93) 0%, transparent 70%),
+    radial-gradient(ellipse 34px 15px at 35% 0%, rgba(147,197,253,.88) 0%, transparent 70%),
+    radial-gradient(ellipse 46px 24px at 46% 0%, rgba(125,211,252,.92) 0%, transparent 70%),
+    radial-gradient(ellipse 38px 18px at 57% 0%, rgba(147,197,253,.9) 0%, transparent 70%),
+    radial-gradient(ellipse 44px 23px at 68% 0%, rgba(125,211,252,.93) 0%, transparent 70%),
+    radial-gradient(ellipse 35px 16px at 79% 0%, rgba(147,197,253,.88) 0%, transparent 70%),
+    radial-gradient(ellipse 47px 25px at 90% 0%, rgba(125,211,252,.91) 0%, transparent 70%),
+    radial-gradient(ellipse 37px 17px at 98% 0%, rgba(147,197,253,.88) 0%, transparent 70%);
   pointer-events: none;
 }
-/* incandescent ember line glowing along the char front */
-.burn-char::after {
-  content: ""; position: absolute; top: -4px; left: 0; right: 0; height: 14px;
-  background: linear-gradient(180deg, rgba(255,140,20,0), rgba(255,120,15,.55) 55%, rgba(255,210,95,.9));
-  filter: blur(3px);
+/* bright highlight gliding along the liquid surface */
+.liquid-fill::after {
+  content: ""; position: absolute; top: -3px; left: 0; right: 0; height: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(224,242,254,.6) 55%, rgba(186,230,253,.85));
+  filter: blur(2px);
   pointer-events: none;
 }
-/* Roaring flame wall riding the burn front (only while in use) */
-.burn-flames { display: none; }
-.burn-paper.burning .burn-flames {
+/* Sliding wave riding the liquid surface (only while in use) */
+.liquid-wave { display: none; }
+.liquid-paper.filling .liquid-wave {
   display: block;
-  position: absolute; left: -6%; right: -6%; z-index: 3;
-  bottom: calc(var(--burn, 0) * 100% - 16px);
-  height: 130px; pointer-events: none;
-  transform-origin: 50% 100%;
+  position: absolute; left: -8%; right: -8%; z-index: 3;
+  bottom: calc(var(--fill, 0) * 100% - 11px);
+  height: 24px; pointer-events: none; opacity: .9;
   transition: bottom 1s ease;
-  animation: flameRoar .45s ease-in-out infinite alternate;
-  background:
-    linear-gradient(180deg, transparent 62%, rgba(255,90,0,.35) 88%, rgba(255,140,20,.5) 100%),
-    radial-gradient(ellipse 44px 78px at 2% 100%, rgba(255,100,0,.75) 0%, rgba(235,65,0,.45) 55%, transparent 78%),
-    radial-gradient(ellipse 52px 100px at 9% 100%, rgba(255,130,15,.8) 0%, rgba(245,85,0,.5) 55%, transparent 78%),
-    radial-gradient(ellipse 42px 72px at 17% 100%, rgba(255,95,0,.78) 0%, rgba(230,60,0,.48) 55%, transparent 78%),
-    radial-gradient(ellipse 56px 112px at 26% 100%, rgba(255,125,10,.85) 0%, rgba(240,75,0,.55) 55%, transparent 80%),
-    radial-gradient(ellipse 46px 82px at 34% 100%, rgba(255,105,5,.8) 0%, rgba(235,70,0,.5) 55%, transparent 78%),
-    radial-gradient(ellipse 54px 106px at 43% 100%, rgba(255,128,12,.84) 0%, rgba(242,80,0,.54) 55%, transparent 80%),
-    radial-gradient(ellipse 43px 74px at 51% 100%, rgba(255,98,0,.77) 0%, rgba(232,62,0,.47) 55%, transparent 78%),
-    radial-gradient(ellipse 55px 110px at 60% 100%, rgba(255,122,10,.82) 0%, rgba(238,76,0,.52) 55%, transparent 78%),
-    radial-gradient(ellipse 45px 80px at 68% 100%, rgba(255,102,0,.76) 0%, rgba(234,64,0,.46) 55%, transparent 78%),
-    radial-gradient(ellipse 53px 102px at 77% 100%, rgba(255,127,12,.83) 0%, rgba(241,78,0,.53) 55%, transparent 79%),
-    radial-gradient(ellipse 44px 76px at 85% 100%, rgba(255,99,0,.77) 0%, rgba(233,63,0,.47) 55%, transparent 78%),
-    radial-gradient(ellipse 50px 96px at 93% 100%, rgba(255,124,10,.81) 0%, rgba(239,77,0,.51) 55%, transparent 79%),
-    radial-gradient(ellipse 40px 70px at 99% 100%, rgba(255,101,0,.75) 0%, rgba(234,64,0,.45) 55%, transparent 78%);
+  background: radial-gradient(circle at 24px 10px, rgba(186,230,253,.95) 13px, rgba(186,230,253,0) 15px);
+  background-size: 48px 24px; background-repeat: repeat-x;
+  animation: waveSlide 2.8s linear infinite;
 }
-/* inner bright cores — hotter, faster flicker */
-.burn-paper.burning .burn-flames::after {
-  content: ""; position: absolute; inset: 0;
-  transform-origin: 50% 100%;
-  animation: flameRoar .3s ease-in-out infinite alternate-reverse;
-  background:
-    radial-gradient(ellipse 16px 46px at 12% 100%, rgba(255,236,150,.95) 0%, rgba(255,180,50,.75) 50%, transparent 75%),
-    radial-gradient(ellipse 20px 58px at 32% 100%, rgba(255,230,130,.95) 0%, rgba(255,175,45,.75) 50%, transparent 75%),
-    radial-gradient(ellipse 15px 42px at 52% 100%, rgba(255,238,160,.95) 0%, rgba(255,182,55,.75) 50%, transparent 75%),
-    radial-gradient(ellipse 19px 54px at 70% 100%, rgba(255,232,140,.95) 0%, rgba(255,178,48,.75) 50%, transparent 75%),
-    radial-gradient(ellipse 16px 44px at 88% 100%, rgba(255,236,150,.93) 0%, rgba(255,180,50,.72) 50%, transparent 75%);
+@keyframes waveSlide {
+  from { background-position-x: 0; }
+  to { background-position-x: 48px; }
 }
-@keyframes flameRoar {
-  0% { transform: scaleY(1) scaleX(1) skewX(0deg); opacity: .96; }
-  50% { transform: scaleY(1.24) scaleX(.95) skewX(-2.5deg); opacity: 1; }
-  100% { transform: scaleY(.93) scaleX(1.04) skewX(2deg); opacity: .9; }
-}
-/* rising-sparks canvas */
-.burn-embers { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: hidden; }
-.burn-label {
+/* rising-bubbles canvas */
+.liquid-bubbles { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: hidden; }
+.liquid-label {
   position: relative; z-index: 1;
   display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
   padding: 4px 14px; border-radius: 20px; background: rgba(52, 199, 89, .16); color: #248a3d; margin-bottom: 10px;
 }
-.burn-paper[data-st="2"] .burn-label { background: rgba(255, 149, 0, .18); color: #b25e00; }
-.burn-paper[data-st="3"] .burn-label, .burn-paper.burned-out .burn-label { background: rgba(0, 0, 0, .08); color: #6b6b70; }
-.burn-code {
+.liquid-paper[data-st="2"] .liquid-label { background: rgba(59, 130, 246, .16); color: #1d4ed8; }
+.liquid-paper[data-st="3"] .liquid-label, .liquid-paper.liquid-full .liquid-label { background: rgba(37, 99, 235, .14); color: #1d4ed8; }
+.liquid-code {
   position: relative; z-index: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: 800; font-size: 28px; letter-spacing: 2px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
 }
-.burn-sub { position: relative; z-index: 1; margin-top: 6px; font-size: 13px; color: #6b6b70; }
-.burn-perf { position: relative; z-index: 1; border-top: 2px dashed rgba(0, 0, 0, .14); margin: 12px 6px 0; }
-.burn-paper.burning {
-  box-shadow: 0 0 34px -6px rgba(255,110,10,.55), inset 0 -30px 30px -18px rgba(255,110,20,.35);
+.liquid-sub { position: relative; z-index: 1; margin-top: 6px; font-size: 13px; color: #4b5563; }
+.liquid-perf { position: relative; z-index: 1; border-top: 2px dashed rgba(37, 99, 235, .22); margin: 12px 6px 0; }
+.liquid-paper.filling {
+  box-shadow: 0 0 34px -6px rgba(59,130,246,.5), inset 0 -30px 30px -18px rgba(59,130,246,.3);
 }
-.burn-paper.burned-out {
-  background: linear-gradient(180deg, #e9e7e2, #d8d5ce);
-  filter: brightness(.92) grayscale(1); opacity: .85;
+.liquid-paper.liquid-full {
+  background: linear-gradient(180deg, #dbeafe, #bfdbfe);
 }
-.burn-paper.burned-out .burn-flames { display: none; }
+.liquid-paper.liquid-full .liquid-wave { display: none; }
 @media (prefers-reduced-motion: reduce) {
-  .burn-paper.burning .burn-flames, .burn-paper.burning .burn-flames::after { animation: none; }
+  .liquid-paper.filling .liquid-wave { animation: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
