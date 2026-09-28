@@ -110,7 +110,10 @@ public class RuijieBridge {
                              boolean retried) throws Exception {
         String token = getToken(cloud, appid, secret, false);
         String qs = buildQuery(query) + "&access_token=" + URLEncoder.encode(token, "UTF-8");
-        String url = cloud + "/service/api/" + path + "?" + qs;
+        // v1.5.23: a leading "/" means absolute path on the cloud host (e.g. logbiz
+        // APIs live at /logbizagent/..., NOT under /service/api/).
+        String apiPath = path.startsWith("/") ? path.substring(1) : "service/api/" + path;
+        String url = cloud + "/" + apiPath + "?" + qs;
         String resp = httpsJson(url, method, "POST".equals(method) ? (body != null ? body.toString() : "{}") : null);
         JSONObject rj = new JSONObject(resp);
         int code = rj.optInt("code", -1);
@@ -122,7 +125,7 @@ public class RuijieBridge {
         if (tokenBad && !retried) { // token invalid -> refresh once and retry
             token = getToken(cloud, appid, secret, true);
             String qs2 = buildQuery(query) + "&access_token=" + URLEncoder.encode(token, "UTF-8");
-            resp = httpsJson(cloud + "/service/api/" + path + "?" + qs2, method,
+            resp = httpsJson(cloud + "/" + apiPath + "?" + qs2, method,
                     "POST".equals(method) ? (body != null ? body.toString() : "{}") : null);
         }
         return resp;
