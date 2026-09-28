@@ -512,15 +512,30 @@ const Api = {
      `authType`, `linkedDevice` (the AP serial), `deviceName`, `activeSec`
      (seconds). page_index is 1-based. Response {code,list[],currentCount}.
      Android-APK-only (needs SSO session). */
-  async portalClients(groupId, { pageIndex = 1, pageSize = 500, linkedDevice = '' } = {}) {
+  async portalClients(groupId, { pageIndex = 1, pageSize = 500, linkedDevice = '', authCount = false } = {}) {
     const querys = { group_id: Number(groupId), page_index: pageIndex, page_size: pageSize, connect_type: 'wireless', lang: 'en' };
     if (linkedDevice) querys.linked_device = linkedDevice;
+    // Portal parity (from the portal's own client-list code): when the project
+    // has auth configured it sends authCount=true, which is what makes the
+    // backend join auth-account data into the client records.
+    if (authCount) querys.authCount = true;
     const env = { api: '/network/current/user/global/page', method: 'GET', module: 'logbiz', params: {}, querys };
     const j = await ssoCall('/network/current/user/global/page', env);
     if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
     const code = Number(j.code);
     if (code !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + code)));
     return Array.isArray(j.list) ? j.list : [];
+  },
+
+  /** Whether the portal project has auth (voucher/portal) configured.
+   * Portal: GET /intl/auth/v2/status/{groupId} -> {code, hasConfigAuth}.
+   * The portal only shows/requests the account column when this is true. */
+  async portalAuthStatus(groupId) {
+    const p = '/intl/auth/v2/status/' + Number(groupId);
+    const j = await ssoCall(p, { api: p, method: 'GET', module: 'default', params: {}, querys: { lang: 'en' } });
+    if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
+    if (Number(j.code) !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + j.code)));
+    return !!j.hasConfigAuth;
   },
 
   // ── Clients (online) ──
