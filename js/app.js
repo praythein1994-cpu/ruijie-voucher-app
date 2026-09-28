@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.35';
+const APP_VERSION = '1.5.36';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -1944,13 +1944,13 @@ function moreHome() {
 }
 /* v1.5.34: every More sub-page pushes a history entry carrying its depth,
  * so the SYSTEM back button walks More sub-pages (AP clients → Devices →
- * More menu) instead of jumping to whatever tab was open before. The
- * in-app back button simply goes back one history entry — popstate below
- * re-renders the right level. */
+ * More menu) instead of jumping to whatever tab was open before. v1.5.36:
+ * the in-app back button is removed per user request — the phone's system
+ * back button is the only way back; popstate below re-renders the right
+ * level from the history entry's moreDepth. */
 function moreShell(title, inner) {
   $('more-menu').classList.add('hidden');
-  $('more-content').innerHTML = `<button class="btn back-btn" id="more-back">${ic('back', 'sm')}<span>${t('more.back')}</span></button><div class="card"><h2>${title}</h2>${inner}</div>`;
-  $('more-back').addEventListener('click', () => { try { history.back(); } catch (e) { moreHome(); } });
+  $('more-content').innerHTML = `<div class="card"><h2>${title}</h2>${inner}</div>`;
   // The caller sets S.moreFn just before calling moreShell — capture it as
   // this level's re-renderer. Same-level re-renders (language refresh,
   // post-reboot refresh) don't push a duplicate entry.
