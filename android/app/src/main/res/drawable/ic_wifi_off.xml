@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <!-- wifi-off silhouette for the status-bar small icon (white) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,18.5c0.83,0 1.5,0.67 1.5,1.5s-0.67,1.5 -1.5,1.5 -1.5,-0.67 -1.5,-1.5 0.67,-1.5 1.5,-1.5zM12,13c1.48,0 2.9,0.35 4.17,0.96l-1.5,1.5C13.85,15.18 12.94,15 12,15c-0.5,0 -0.98,0.05 -1.44,0.14l-1.61,-1.61C9.85,13.2 10.9,13 12,13zM12,8c2.55,0 4.95,0.63 7.05,1.74l-1.5,1.5C15.9,10.5 14.02,10 12,10c-1.09,0 -2.14,0.15 -3.14,0.42l-1.53,-1.53C8.67,8.33 10.29,8 12,8zM12,3c3.87,0 7.47,1.04 10.56,2.85l-1.5,1.5C18.4,5.82 15.31,5 12,5c-1.79,0 -3.5,0.24 -5.13,0.66l-1.5,-1.5C6.99,3.42 9.42,3 12,3zM21.71,3.29L2.29,22.71l-1.42,-1.42L20.29,1.87l1.42,1.42z" />
+</vector>
