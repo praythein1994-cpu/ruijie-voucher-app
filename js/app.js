@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.27';
+const APP_VERSION = '1.5.28';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -367,6 +367,7 @@ const I18N = {
   'ac.portalErr': { my: 'Portal ခေါ်မရပါ', en: 'Portal request failed' },
   'ac.portalNoMatch': { my: 'ဒီ AP အတွက် portal မှာ client မတွေ့ပါ', en: 'Portal returned no clients for this AP' },
   'ac.portalNoAcct': { my: 'Portal client တွေမှာ auth account မပါပါ — voucher သုံးတဲ့ SSID မဟုတ်နိုင်ပါ', en: 'Portal clients carry no auth account — SSID may not use voucher auth' },
+  'ac.noAuthCfg': { my: 'ဒီ project မှာ auth (voucher/portal) မသတ်မှတ်ထားပါ', en: 'No auth (voucher/portal) configured on this project' },
   'ac.roamTitle': { my: 'AP ပြောင်းသွားမှု', en: 'Roaming' },
   'ac.roamFrom': { my: 'ပြောင်းလာတဲ့ AP', en: 'Roamed from' },
   'ac.roamNone': { my: 'roam မှတ်တမ်းမရှိပါ', en: 'No roam history' },
@@ -2128,15 +2129,25 @@ async function apClientsView(apSn, apName, apNames) {
     // was used and why vouchers are missing (SSO not logged in / portal
     // error / portal returned rows but no auth accounts), so a single
     // on-device test gives the definitive answer instead of silent "—".
+    // v1.5.28: portal parity — check /intl/auth/v2/status first and send
+    // authCount=true when the project has auth configured, exactly like the
+    // portal's own client list does. That flag is what makes the backend
+    // join auth-account data into the records.
     let clients = [], viaPortal = false, srcNote = '';
     const ssoOk = Api.ssoLoggedIn();
     if (ssoOk) {
       try {
-        const list = await Api.portalClients(pid, { linkedDevice: apSn });
+        let hasAuth = null;
+        try { hasAuth = await Api.portalAuthStatus(pid); }
+        catch (e) { hasAuth = null; }
+        const list = await Api.portalClients(pid, { linkedDevice: apSn, authCount: hasAuth !== false });
         const mineP = (list || []).filter(c =>
           String(c.linkedDevice || '') === String(apSn) ||
           (apName && String(c.deviceName || '') === String(apName)));
-        if (mineP.length) { clients = mineP; viaPortal = true; }
+        if (mineP.length) {
+          clients = mineP; viaPortal = true;
+          if (hasAuth === false) srcNote = t('ac.noAuthCfg');
+        }
         else srcNote = t('ac.portalNoMatch');
       } catch (e) { srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140); }
     } else {
@@ -2171,7 +2182,9 @@ async function apClientsView(apSn, apName, apNames) {
     // v1.5.27: portal returned rows but none carry an auth account — the
     // SSIDs here are not doing cloud voucher auth (e.g. WPA2-PSK or a
     // router-local portal), so "—" is the honest answer.
-    if (viaPortal && !mine.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
+    // v1.5.28: don't overwrite the no-auth-configured note — that's the
+    // more precise diagnosis.
+    if (viaPortal && !srcNote && !mine.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
       srcNote = t('ac.portalNoAcct');
     }
     const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}</p>`;
