@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0A72E8">
-<title>Ruijie Voucher App</title>
+<title>Pray Manager</title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="css/styles.css">
@@ -102,13 +102,13 @@
 <div id="view-connect" class="screen hidden">
   <div class="connect-card">
     <div class="connect-logo"><img src="icon.svg" alt="Ruijie Voucher"></div>
-    <h1 data-i18n="appTitle">Ruijie Voucher App</h1>
-    <p class="muted" data-i18n="connect.sub">Ruijie Cloud Open Platform နဲ့ ချိတ်ဆက်ပါ</p>
+    <h1 data-i18n="appTitle">Pray Manager</h1>
+    <p class="muted" data-i18n="connect.sub">Voucher စီမံခန့်ခွဲမှုစနစ်</p>
     <label><span data-i18n="connect.cloud">Cloud URL</span>
       <input id="cfg-cloud" type="url" value="https://cloud-as.ruijienetworks.com" autocomplete="off">
     </label>
     <label><span data-i18n="connect.appid">App ID</span>
-      <input id="cfg-appid" type="text" data-i18n-ph="connect.appidPh" placeholder="Ruijie Cloud Open Platform မှ App ID" autocomplete="off">
+      <input id="cfg-appid" type="text" data-i18n-ph="connect.appidPh" placeholder="App ID" autocomplete="off">
     </label>
     <label><span data-i18n="connect.secret">App Secret</span>
       <div class="input-wrap">
@@ -411,12 +411,13 @@
   <!-- Floating pill tab bar · center action -->
   <nav id="tabbar">
     <span id="liq-blob" aria-hidden="true"></span>
-    <button class="tab active" data-view="view-vouchers" data-liq="#2dd4bf"><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="tab.vouchers">ဗောက်ချာ</span></button>
-    <button class="tab" data-view="view-printer" data-liq="#fb923c"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="tab.printer">ပရင်တာ</span></button>
+    <button class="tab active" data-view="view-vouchers" data-liq="#38bdf8"><svg class="ic"><use href="#i-ticket"/></svg><span data-i18n="tab.vouchers">ဗောက်ချာ</span></button>
+    <button class="tab" data-view="view-printer" data-liq="#22d3ee"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="tab.printer">ပရင်တာ</span></button>
     <button class="tab center" data-view="view-generate" data-liq="#3b82f6"><span class="fab"><svg class="ic"><use href="#i-plus"/></svg></span><span data-i18n="tab.generate">ထုတ်မယ်</span></button>
-    <button class="tab" data-view="view-more" data-liq="#a78bfa"><svg class="ic"><use href="#i-dots"/></svg><span data-i18n="tab.more">More</span></button>
-    <button class="tab" data-view="view-settings" data-liq="#94a3b8"><svg class="ic"><use href="#i-gear"/></svg><span data-i18n="tab.settings">ဆက်တင်</span></button>
+    <button class="tab" data-view="view-more" data-liq="#6366f1"><svg class="ic"><use href="#i-dots"/></svg><span data-i18n="tab.more">More</span></button>
+    <button class="tab" data-view="view-settings" data-liq="#8b5cf6"><svg class="ic"><use href="#i-gear"/></svg><span data-i18n="tab.settings">ဆက်တင်</span></button>
   </nav>
+  <div id="touch-blob" aria-hidden="true"></div>
 </div>
 
 <!-- VOUCHER DETAIL MODAL -->
