@@ -4,15 +4,15 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.44';
+const APP_VERSION = '1.5.45';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
-  appTitle: { my: 'Ruijie Voucher App', en: 'Ruijie Voucher App' },
-  'connect.sub': { my: 'Ruijie Cloud Open Platform နဲ့ ချိတ်ဆက်ပါ', en: 'Connect with Ruijie Cloud Open Platform' },
+  appTitle: { my: 'Pray Manager', en: 'Pray Manager' },
+  'connect.sub': { my: 'Voucher စီမံခန့်ခွဲမှုစနစ်', en: 'Voucher management system' },
   'connect.cloud': { my: 'Cloud URL', en: 'Cloud URL' },
   'connect.appid': { my: 'App ID', en: 'App ID' },
-  'connect.appidPh': { my: 'Ruijie Cloud Open Platform မှ App ID', en: 'App ID from Ruijie Cloud Open Platform' },
+  'connect.appidPh': { my: 'App ID', en: 'App ID' },
   'connect.secret': { my: 'App Secret', en: 'App Secret' },
   'connect.proxy': { my: 'Proxy URL', en: 'Proxy URL' },
   'connect.proxyHelp': { my: 'CORS proxy server လိပ်စာ (ဥပမာ Render/Railway မှာ deploy ထားတာ)', en: 'CORS proxy server address (e.g. deployed on Render/Railway)' },
@@ -739,11 +739,36 @@ function moveLiqBlob() {
   const bw = blob.offsetWidth || 56, bh = blob.offsetHeight || 56;
   const x = ir.left - br.left + ir.width / 2 - bw / 2;
   const y = ir.top - br.top + ir.height / 2 - bh / 2;
-  blob.style.setProperty('--liq', active.dataset.liq || '#2dd4bf');
+  blob.style.setProperty('--liq', active.dataset.liq || '#3b82f6');
+  window.__liqColor = active.dataset.liq || '#3b82f6';
   blob.style.transform = 'translate(' + x + 'px,' + y + 'px)';
   blob.style.opacity = '1';
 }
 window.addEventListener('resize', () => { try { moveLiqBlob(); } catch (e) {} });
+
+/* ── Global touch glow: liquid blob glides to every tap, anywhere in the app ── */
+let touchBlobEl = null, touchBlobIdleT = null;
+function liqGlowBg(color) {
+  const c = /^#[0-9a-fA-F]{6}$/.test(color || '') ? color : '#3b82f6';
+  return 'radial-gradient(circle at 35% 30%, ' + c + 'E6, ' + c + '8C 55%, ' + c + '00 72%)';
+}
+function initTouchBlob() {
+  touchBlobEl = document.getElementById('touch-blob');
+  if (!touchBlobEl) return;
+  touchBlobEl.style.background = liqGlowBg(window.__liqColor);
+  document.addEventListener('pointerdown', e => {
+    if (e.clientX == null || e.clientY == null) return;
+    touchBlobEl.style.transform =
+      'translate(' + e.clientX + 'px,' + e.clientY + 'px) translate(-50%,-50%)';
+    touchBlobEl.style.background = liqGlowBg(window.__liqColor);
+    touchBlobEl.classList.add('on');
+    touchBlobEl.classList.remove('tap');
+    void touchBlobEl.offsetWidth; /* restart the pulse animation */
+    touchBlobEl.classList.add('tap');
+    clearTimeout(touchBlobIdleT);
+    touchBlobIdleT = setTimeout(() => { if (touchBlobEl) touchBlobEl.classList.remove('on'); }, 1400);
+  }, { passive: true });
+}
 
 // System back button: close an open modal first, else let popstate walk the view stack.
 function anyModalOpen() {
@@ -3306,6 +3331,7 @@ function init() {
   init._done = true;
   initTheme();
   initLang();
+  initTouchBlob();
 
   // password peek toggles
   document.querySelectorAll('[data-peek]').forEach(b => b.addEventListener('click', () => {
