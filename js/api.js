@@ -137,7 +137,8 @@ const GwApi = {
     if (!sid) {
       const gwMsg = d.msg ? String(d.msg).slice(0, 160) : '';
       const km = j._keyMode ? ' [key:' + j._keyMode + ']' : '';
-      throw new Error('Gateway login: ' + (gwMsg || 'sid မပါလာပါ') + ' (keys: ' + Object.keys(d).join(',') + ')' + km);
+      const tr = j._tried ? ' [tried:' + j._tried + ']' : '';
+      throw new Error('Gateway login: ' + (gwMsg || 'sid မပါလာပါ') + ' (keys: ' + Object.keys(d).join(',') + ')' + km + tr);
     }
     this.session = { ip, sid, sn: d.sn || '', token: d.token || '' };
     return this.session;
@@ -171,6 +172,59 @@ const GwApi = {
     return this.parseDevices(j);
   },
 
+  /**
+   * Gateway-local wireless client (STA) list, v1.5.29.
+   * The eWeb shows per-AP connected devices (IP/MAC), so the data exists —
+   * but the exact module name isn't captured. We probe several likely
+   * modules in ONE cmdArr batch and keep whichever blocks contain
+   * MAC-bearing records. Returns [{mac, ip, apSn, apMac, ssid, rssi, host}];
+   * empty array = not available (caller falls through honestly).
+   */
+  async staList() {
+    if (!this.loggedIn()) throw new Error('GW_NOT_LOGGED_IN');
+    const sub = (method, params) => ({ method, params });
+    const base = { noParse: true, async: null, remoteIp: false };
+    const body = {
+      method: 'cmdArr',
+      params: {
+        device: 'pc',
+        params: [
+          sub('devSta.get', Object.assign({ module: 'sta_list' }, base)),
+          sub('devSta.get', Object.assign({ module: 'sta_info' }, base)),
+          sub('devSta.get', Object.assign({ module: 'client_list' }, base)),
+          sub('devSta.get', Object.assign({ module: 'wireless_sta' }, base)),
+        ],
+      },
+    };
+    let j = null;
+    try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+    catch (_) { return []; }
+    const out = [];
+    const grab = (o) => {
+      if (!o || typeof o !== 'object') return;
+      if (Array.isArray(o)) { o.forEach(grab); return; }
+      // A STA record has a MAC and usually an AP serial/MAC + ssid.
+      const mac = o.mac || o.staMac || o.clientMac || o.stamac || '';
+      if (mac && /^[0-9a-fA-F:]{11,}/.test(String(mac))) {
+        out.push({
+          mac: String(mac).toUpperCase(),
+          ip: o.ip || o.staIp || o.clientIp || o.staip || '',
+          apSn: o.sn || o.devSN || o.apSn || o.apsn || o.linkedSn || o.ap_sn || '',
+          apMac: o.apMac || o.apmac || o.bssid || '',
+          ssid: o.ssid || '',
+          rssi: (o.rssi != null ? o.rssi : (o.signal != null ? o.signal : '')),
+          host: o.hostName || o.hostname || o.deviceName || o.staName || '',
+        });
+        return;
+      }
+      Object.keys(o).forEach(k => { if (k !== 'parent') grab(o[k]); });
+    };
+    grab(j && j.data ? j.data : j);
+    // Dedupe by MAC (multiple modules may return the same STAs).
+    const seen = new Set();
+    return out.filter(r => (seen.has(r.mac) ? false : (seen.add(r.mac), true)));
+  },
+
   /** Pull every {serialNumber,...} object out of a cmdArr response. */
   parseDevices(j) {
     const blocks = [];
@@ -192,6 +246,7 @@ const GwApi = {
           serialNumber: sn,
           name: o.hostName || o.deviceType || sn,
           model: o.devModel || o.deviceType || '',
+          deviceType: o.deviceType || '',
           product: o.product || '',
           ip: o.ip || o.localIp || '',
           mac: o.mac || '',

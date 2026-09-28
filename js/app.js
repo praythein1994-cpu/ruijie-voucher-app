@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.28';
+const APP_VERSION = '1.5.29';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -363,6 +363,7 @@ const I18N = {
   'ac.names': { my: 'အမည်', en: 'Names' },
   'ac.srcPortal': { my: 'Portal', en: 'Portal' },
   'ac.srcApi': { my: 'Cloud API', en: 'Cloud API' },
+  'ac.srcGateway': { my: 'Gateway', en: 'Gateway' },
   'ac.needSso': { my: 'Voucher မြင်ရဖို့ Settings → Ruijie အကောင့်မှာ login ဝင်ပါ', en: 'Log in via Settings → Ruijie account to see voucher info' },
   'ac.portalErr': { my: 'Portal ခေါ်မရပါ', en: 'Portal request failed' },
   'ac.portalNoMatch': { my: 'ဒီ AP အတွက် portal မှာ client မတွေ့ပါ', en: 'Portal returned no clients for this AP' },
@@ -2033,14 +2034,24 @@ async function moreDevices() {
           const rb = (!d.local && sn) ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
           // v1.5.22: per-AP client count badge → tap opens that AP's client list.
           // v1.5.24: WR (home router, e.g. EW3200GX-PRO in AP mode) counts too.
+          // v1.5.29: gateway-local APs (incl. China-version APs invisible to
+          //   Cloud) are AP rows when they carry staNum or an AP-like
+          //   deviceType/product/model — not just RAP models.
           const isApRow = (() => {
             const ct = String(d.commonType || '').toUpperCase();
             if (ct) return ct === 'AP' || ct === 'WR';
-            return d.local ? /^RAP/i.test(String(d.model || '')) : false;
+            if (!d.local) return false;
+            if (d.staNums != null) return true;
+            const hay = (String(d.deviceType || '') + ' ' + String(d.product || '') + ' ' + String(d.model || '')).toUpperCase();
+            if (/^RAP/i.test(String(d.model || ''))) return true;
+            return /\bAP\b/.test(hay) && !/SWITCH|GATEWAY/.test(hay);
           })();
           const ncli = (cliByAp && sn) ? (cliByAp.get(String(sn)) || []).length : 0;
-          const showCli = isApRow && sn && (ncli > 0 || !d.local);
-          const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncli}</span></button>` : '';
+          // v1.5.29: local APs show the gateway's staNum when Cloud has none.
+          const ncliLocal = (d.local && d.staNums != null) ? Number(d.staNums) : 0;
+          const ncliShow = ncli > 0 ? ncli : ncliLocal;
+          const showCli = isApRow && sn && (ncliShow > 0 || !d.local);
+          const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" data-aplocal="${d.local ? '1' : ''}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncliShow}</span></button>` : '';
           return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
@@ -2048,7 +2059,7 @@ async function moreDevices() {
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
-    document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames)));
+    document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames, b.dataset.aplocal === '1')));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#md-chips .chip').forEach(x => x.classList.remove('active'));
@@ -2115,12 +2126,66 @@ const fmtTs = ts => {
 };
 const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn))) || fallback || sn || '—';
 
-async function apClientsView(apSn, apName, apNames) {
+/* ── Gateway-local AP client list (China APs) · v1.5.29 ──
+ * Renders STA records from GwApi.staList() in the same table style as the
+ * Cloud per-AP client view. The gateway reports no auth-account field, so
+ * the Voucher column honestly shows "—" (never a device name). */
+function renderGwApClients(apSn, apName, clients, staTotal) {
+  const showNames = Store.load().clientShowNames !== false;
+  if (!clients.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
+  const srcLine = `<p class="muted small">📡 ${esc(t('ac.srcGateway'))}</p>`;
+  $('ac-list').innerHTML =
+    `<p class="muted small">${esc(tx('ac.total', { n: clients.length }))}</p>` +
+    srcLine +
+    `<div class="chips"><button class="chip${showNames ? ' active' : ''}" id="ac-names">👤 ${esc(t('ac.names'))}</button></div>` +
+    `<div class="wrap-scroll"><table class="data">` +
+    `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('ac.ssid')}</th><th>${t('ac.signal')}</th></tr>` +
+    clients.map(c => {
+      const mac = c.mac || '—';
+      const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
+      const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
+      const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
+      return `<tr><td>${esc(mac)}${hostLine}</td>` +
+        `<td>—</td>` +
+        `<td><small>${esc(c.ssid || '—')}</small></td>` +
+        `<td><small>${esc(sig)}</small></td></tr>`;
+    }).join('') + `</table></div>`;
+  $('ac-names').addEventListener('click', () => {
+    Store.save({ clientShowNames: !showNames });
+    apClientsView(apSn, apName, null, true);
+  });
+}
+
+async function apClientsView(apSn, apName, apNames, isLocalAp) {
   const pid = Number(S.projectId);
   moreShell(`${ic('user', 'sm')} ${esc(apName || apSn)} <small class="muted">· ${esc(t('ac.title'))}</small>`,
     `<div id="ac-list"><p class="muted">${t('more.loading')}</p></div>`);
-  S.moreFn = () => apClientsView(apSn, apName, apNames);
+  S.moreFn = () => apClientsView(apSn, apName, apNames, isLocalAp);
   try {
+    // v1.5.29: gateway-local APs (China-version APs invisible to Cloud) —
+    // their clients come from the gateway's own STA list, not Cloud.
+    if (isLocalAp && typeof GwApi !== 'undefined' && GwApi.loggedIn()) {
+      let stas = [];
+      try { stas = await GwApi.staList(); } catch (e) { stas = []; }
+      // Match STAs to this AP by serial or by AP MAC (find the AP's MAC
+      // from the last gateway device list when available).
+      let apMac = '';
+      try {
+        const devs = await GwApi.deviceList();
+        const me = (devs || []).find(d => String(d.serialNumber || '') === String(apSn));
+        if (me) apMac = String(me.mac || '').toUpperCase();
+      } catch (e) { /* device list optional for matching */ }
+      const mine = (stas || []).filter(s =>
+        String(s.apSn || '') === String(apSn) ||
+        (apMac && String(s.apMac || '').toUpperCase() === apMac));
+      // If STAs carry no AP link at all, show all (gateway-local view).
+      const clients = mine.length ? mine : ((stas || []).length && !(stas || []).some(s => s.apSn || s.apMac) ? stas : []);
+      if (clients.length || (stas || []).length) {
+        renderGwApClients(apSn, apName, clients, stas.length);
+        return;
+      }
+      // Gateway STA modules unavailable — fall through to Cloud (honest "—").
+    }
     // v1.5.25: prefer the portal client API (SSO) — its records carry
     // `account` (the auth account = voucher code for voucher-auth clients),
     // which the open-API sta_users does not return. Falls back to the
