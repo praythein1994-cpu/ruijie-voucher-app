@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.25';
+const APP_VERSION = '1.5.26';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -359,6 +359,8 @@ const I18N = {
   'ac.since': { my: 'စချိတ်ချိန်', en: 'Connected at' },
   'ac.duration': { my: 'ကြာချိန်', en: 'Duration' },
   'ac.signal': { my: 'ဆစ်ဂနယ်', en: 'Signal' },
+  'ac.ssid': { my: 'SSID', en: 'SSID' },
+  'ac.names': { my: 'အမည်', en: 'Names' },
   'ac.roamTitle': { my: 'AP ပြောင်းသွားမှု', en: 'Roaming' },
   'ac.roamFrom': { my: 'ပြောင်းလာတဲ့ AP', en: 'Roamed from' },
   'ac.roamNone': { my: 'roam မှတ်တမ်းမရှိပါ', en: 'No roam history' },
@@ -2008,18 +2010,36 @@ async function apClientsView(apSn, apName, apNames) {
     }
     let vmap = new Map();
     try { vmap = await apClientVoucherMap(pid); } catch (e) { /* voucher enrichment optional */ }
-    const acctOf = c => String((viaPortal ? (c.account || c.userName) : (c.username || c.hostname)) || '').trim();
+    // v1.5.26: the portal's own client table (GLOBAL_USERS, /network/current/user/
+    // global/page) renders its auth columns from record.account — the auth account
+    // (voucher code for voucher-auth clients), shown only when the project has
+    // auth configured. record.userName is the DEVICE/host name (portal display
+    // order: alias || userName || staModel || mac) — v1.5.25 wrongly fell back to
+    // it, which is why device names appeared in the Voucher column.
+    // The open-API sta_users has no account field at all: it can only attribute
+    // a voucher when the value verifies against the voucher map; otherwise "—".
+    // Device/host names are NEVER shown as vouchers.
+    const acctOf = c => {
+      if (viaPortal) return String(c.account || c.authAccount || c.authName || '').trim();
+      const u = String(c.username || '').trim();
+      return (u && vmap.has(u)) ? u : '';
+    };
+    const devNameOf = c => viaPortal
+      ? String(c.alias || c.userName || '').trim()
+      : String(c.hostname || '').trim();
+    const showNames = Store.load().clientShowNames !== false;
     const mine = clients;
     if (!mine.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
     const vCount = mine.filter(c => vmap.has(acctOf(c))).length;
     $('ac-list').innerHTML =
       `<p class="muted small">${esc(tx('ac.total', { n: mine.length }))} · ${esc(tx('ac.voucherN', { n: vCount }))}</p>` +
+      `<div class="chips"><button class="chip${showNames ? ' active' : ''}" id="ac-names">👤 ${esc(t('ac.names'))}</button></div>` +
       `<div class="wrap-scroll"><table class="data">` +
-      `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th></tr>` +
+      `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('ac.ssid')}</th><th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th></tr>` +
       mine.map((c, i) => {
         const mac = c.mac || '—';
-        const user = acctOf(c);
-        const v = user ? vmap.get(user) : null;
+        const acct = acctOf(c);
+        const v = acct ? vmap.get(acct) : null;
         const pkg = v ? voucherPkgName(v) : '';
         const price = v ? fmtMoney(pkgPriceNum(v)) : '';
         const since = fmtTs(c.onlineTime);
@@ -2031,16 +2051,21 @@ async function apClientsView(apSn, apName, apNames) {
             : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN));
         const sig = [c.rssi ? String(c.rssi) + ' dBm' : '', c.band || '', c.channel ? 'ch ' + c.channel : ''].filter(Boolean).join(' · ') || '—';
         const ip = viaPortal ? (c.ip || '') : (c.userIp || c.ip || '');
-        const sub = viaPortal
-          ? ((c.userName && String(c.userName) !== user) ? String(c.userName) : '')
-          : ((c.hostname && c.username) ? String(c.hostname) : '');
-        const hostLine = (ip || sub) ? `<br><small class="muted">${esc(ip)}${(ip && sub) ? '<br>' : ''}${esc(sub)}</small>` : '';
+        const dn = showNames ? devNameOf(c) : '';
+        const subs = [ip, dn].filter(Boolean).map(esc).join('<br>');
+        const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
+        const ssid = c.ssid || '—';
         return `<tr data-accli="${i}" style="cursor:pointer"><td>${esc(mac)}${hostLine}</td>` +
-          `<td>${esc(user || '—')}${v ? `<br><small class="muted">${esc(pkg)}${price ? ' · ' + esc(price) : ''}</small>` : ''}</td>` +
+          `<td>${esc(acct || '—')}${v ? `<br><small class="muted">${esc(pkg)}${price ? ' · ' + esc(price) : ''}</small>` : ''}</td>` +
+          `<td><small>${esc(ssid)}</small></td>` +
           `<td><small>${esc(since)}<br>${esc(fmtDur(durMs))}</small></td>` +
           `<td><small>${esc(sig)}</small></td></tr>` +
-          `<tr data-acroam="${i}" style="display:none"><td colspan="4"><div id="ac-roam-${i}"><p class="muted small">${t('more.loading')}</p></div></td></tr>`;
+          `<tr data-acroam="${i}" style="display:none"><td colspan="5"><div id="ac-roam-${i}"><p class="muted small">${t('more.loading')}</p></div></td></tr>`;
       }).join('') + `</table></div><p class="muted small">${esc(t('ac.tapRoam'))}</p>`;
+    $('ac-names').addEventListener('click', () => {
+      Store.save({ clientShowNames: !showNames });
+      apClientsView(apSn, apName, apNames);
+    });
     document.querySelectorAll('#ac-list [data-accli]').forEach(row => {
       row.addEventListener('click', async () => {
         const i = row.dataset.accli;
