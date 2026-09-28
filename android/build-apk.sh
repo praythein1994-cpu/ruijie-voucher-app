@@ -12,8 +12,8 @@ PLATFORM="$SDK/platforms/android-34"
 APP=app/src/main
 OUT=build/apk
 KS="$HOME/.ruijie-voucher.keystore"
-VERSION_CODE=62
-VERSION_NAME="1.5.51"
+VERSION_CODE=63
+VERSION_NAME="1.5.52"
 OUT_NAME="ruijie-voucher-${VERSION_NAME}.apk"
 
 echo "== 1. sync web app into assets =="
@@ -22,15 +22,17 @@ mkdir -p "$APP/assets/www"
 cp ../index.html "$APP/assets/www/"
 cp ../icon.svg ../apple-touch-icon.png "$APP/assets/www/"
 cp -r ../css ../js "$APP/assets/www/"
+cp -r ../sso-cover "$APP/assets/www/sso-cover"
 
 echo "== 2. aapt2 compile res + link =="
-rm -rf build && mkdir -p "$OUT"
+rm -rf build && mkdir -p "$OUT" build/gen
 "$BT/aapt2" compile --dir "$APP/res" -o build/res.zip
 "$BT/aapt2" link -o "$OUT/base.apk" \
   -I "$PLATFORM/android.jar" \
   --manifest "$APP/AndroidManifest.xml" \
   -A "$APP/assets" \
   -R build/res.zip \
+  --java build/gen \
   --min-sdk-version 24 --target-sdk-version 34 \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME"
 
@@ -39,7 +41,7 @@ mkdir -p build/classes
 "$JAVA_HOME/bin/javac" -encoding UTF-8 -source 8 -target 8 -nowarn \
   -classpath "$PLATFORM/android.jar" \
   -d build/classes \
-  $(find "$APP/java" -name "*.java")
+  $(find "$APP/java" -name "*.java") $(find build/gen -name "*.java")
 
 echo "== 4. d8 (dex) =="
 mkdir -p build/dex
