@@ -106,10 +106,18 @@ public class SsoSession {
             throw new SecurityException("Session expired (HTTP 401) — please log in again");
         }
         if (r.status == 403) {
-            // 403 is NOT treated as a dead session: minutes after a fresh
-            // login the session is alive, so the request itself was rejected
-            // (missing header/cookie/permission). Keep the session and
-            // surface Ruijie's answer instead of logging the user out.
+            // v1.5.53: distinguish a DEAD session from a rejected request.
+            // Ruijie answers a stale portal session with HTTP 403 + a body
+            // like {"code":-1,"data":{"ssoJump":"..."},"msg":"not login."}.
+            // That is a dead session: drop the stale cookies and throw
+            // SecurityException so the normal re-login chain fires (same as
+            // 401). Any other 403 keeps the old behavior: the request itself
+            // was rejected, the session is kept.
+            String bl = r.body == null ? "" : r.body.toLowerCase();
+            if (bl.contains("not login") || bl.contains("ssojump")) {
+                try { logout(); } catch (Exception ignored) {}
+                throw new SecurityException("Session expired (HTTP 403 not login) — please log in again");
+            }
             String detail = r.body;
             if (detail.length() > 200) detail = detail.substring(0, 200);
             throw new Exception("Ruijie rejected the request (HTTP 403)" + (detail.isEmpty() ? "" : ": " + detail));
