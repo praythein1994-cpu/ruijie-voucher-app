@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.33';
+const APP_VERSION = '1.5.34';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -615,6 +615,8 @@ const S = {
   queue: [],          // print queue: {code, pkg, period, quota}
   account: null,
   moreFn: null,       // active "more" screen renderer (for language re-render)
+  moreStack: [],      // v1.5.34: more sub-page renderers for system-back walking
+  _moreRestoring: false,
 };
 
 /* ═══════════ CONNECT ═══════════ */
@@ -695,10 +697,27 @@ window.addEventListener('popstate', (e) => {
   if (anyModalOpen()) {
     closeAnyModal();
     // restore the current entry so the next back press keeps working
-    try { history.pushState({ view: S.currentView || 'view-vouchers' }, ''); } catch (err) {}
+    // (preserve More depth so back keeps walking the sub-page stack)
+    try { history.pushState({ view: S.currentView || 'view-vouchers', moreDepth: S.moreStack.length || undefined }, ''); } catch (err) {}
     return;
   }
-  const v = e.state && e.state.view;
+  const st = e.state || {};
+  const v = st.view;
+  // v1.5.34: system back inside More walks the sub-page stack instead of
+  // jumping to the previously-open tab.
+  if (v === 'view-more') {
+    const md = Number(st.moreDepth || 0);
+    S._moreRestoring = true;
+    try {
+      S.moreStack.length = Math.min(md, S.moreStack.length);
+      if (md > 0 && S.moreStack[md - 1]) S.moreStack[md - 1]();
+      else { S.moreStack = []; moreHome(); }
+    } finally { S._moreRestoring = false; }
+    /* show the More view itself (popstate may arrive while another tab is
+     * visible, e.g. back from Vouchers into a More sub-page) */
+    switchView('view-more', false);
+    return;
+  }
   if (v && $(v)) switchView(v, false);
 });
 
@@ -835,13 +854,25 @@ function burnFrac(usedMin, periodMin) {
   if (p <= 0) return 0;
   return Math.min(1, Math.max(0, u / p));
 }
+/* v1.5.34 — burn follows DATA for quota vouchers (usedQuota/quota in MB),
+   TIME for pure time vouchers (usedTime/timePeriod in minutes).
+   usedTimeMinOverride lets the live ticker interpolate time smoothly. */
+function voucherBurnFrac(v, usedTimeMinOverride) {
+  const q = Number(v && v.quota) || 0;
+  if (q > 0) {
+    const u = Number(v.usedQuota) || 0;
+    return Math.min(1, Math.max(0, u / q));
+  }
+  const u = usedTimeMinOverride != null ? usedTimeMinOverride : (Number(v.usedTime) || 0);
+  return burnFrac(u, Number(v.timePeriod) || 0);
+}
 /* burn treatment for .voucher-row elements with status 2 (in-use) */
 function burnRowCls(v) {
   if (String(v.status) !== '2') return '';
-  const f = burnFrac(v.usedTime, v.timePeriod);
+  const f = voucherBurnFrac(v);
   return ' ' + (f >= 0.85 ? 'burn-high' : f >= 0.45 ? 'burn-med' : 'burn-low');
 }
-let burnRAF = null, burnGone = false;
+let burnRAF = null, burnGone = false, burnFrontFrac = 0;
 function stopBurnEmbers() {
   if (burnRAF) { cancelAnimationFrame(burnRAF); burnRAF = null; }
 }
@@ -857,8 +888,10 @@ function startBurnEmbers(mode) {
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
   const W = box.width, H = box.height;
+  // sparks rise from the burn front (frontY) with a little spread
+  const frontY = H * (1 - Math.min(1, Math.max(0, burnFrontFrac)));
   const mk = () => ({
-    x: Math.random() * W, y: H - Math.random() * H * 0.4,
+    x: Math.random() * W, y: Math.min(H - 2, Math.max(2, frontY + (Math.random() - 0.35) * H * 0.3)),
     r: 0.8 + Math.random() * 2.4, vy: 0.5 + Math.random() * 1.2,
     vx: (Math.random() - 0.5) * 0.6, life: 1, decay: 0.006 + Math.random() * 0.012,
   });
@@ -902,7 +935,8 @@ function setupBurnPaper(v) {
   const paper = $('burn-paper');
   if (!paper) return;
   const st = String(v.status);
-  const f = st === '3' ? 1 : burnFrac(v.usedTime, v.timePeriod);
+  const f = st === '3' ? 1 : voucherBurnFrac(v);
+  burnFrontFrac = f;
   paper.style.setProperty('--burn', f.toFixed(3));
   paper.classList.toggle('burning', st === '2' && f < 1);
   if (st === '3' || (st === '2' && f >= 1)) {
@@ -956,6 +990,8 @@ function openVoucherDetail(uuid) {
   const vst = String(v.status);
   $('modal-body').innerHTML = `
   <div class="burn-paper" id="burn-paper" data-st="${vst}">
+    <div class="burn-char" aria-hidden="true"></div>
+    <div class="burn-flames" aria-hidden="true"></div>
     <canvas class="burn-embers" id="burn-canvas" aria-hidden="true"></canvas>
     <span class="burn-label">${esc(statusTxt(v.status))}</span>
     <div class="burn-code">${esc(vCode(v))}</div>
@@ -982,13 +1018,16 @@ function startVoucherLive(v) {
     const elapsedMin = (Date.now() - liveBase.at) / 60000;
     const el = $('live-remtime');
     if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
-    /* v1.5.27: drive the burning-paper edge from the live clock — the charred
-       edge visibly spreads inward as expiry approaches */
+    /* v1.5.34: drive the burn from the live clock for time vouchers;
+       data vouchers burn from cloud data (refreshed by the poller) —
+       never interpolated. The charred edge visibly spreads as the
+       voucher is consumed. */
     const paper = $('burn-paper');
     if (paper) {
       const pst = String(modalVoucher.status);
       if (pst === '2') {
-        const bf = burnFrac(liveBase.usedTimeMin + elapsedMin, liveBase.timePeriodMin);
+        const bf = voucherBurnFrac(modalVoucher, liveBase.usedTimeMin + elapsedMin);
+        burnFrontFrac = bf;
         paper.style.setProperty('--burn', bf.toFixed(3));
         if (bf >= 1) triggerBurnAway();
       } else if (pst === '3') {
@@ -1890,19 +1929,36 @@ function wireTypoModal() {
 /* ═══════════ MORE ═══════════ */
 function moreHome() {
   S.moreFn = null;
+  S.moreStack = [];
   $('more-menu').classList.remove('hidden');
   $('more-content').innerHTML = '';
 }
+/* v1.5.34: every More sub-page pushes a history entry carrying its depth,
+ * so the SYSTEM back button walks More sub-pages (AP clients → Devices →
+ * More menu) instead of jumping to whatever tab was open before. The
+ * in-app back button simply goes back one history entry — popstate below
+ * re-renders the right level. */
 function moreShell(title, inner) {
   $('more-menu').classList.add('hidden');
   $('more-content').innerHTML = `<button class="btn back-btn" id="more-back">${ic('back', 'sm')}<span>${t('more.back')}</span></button><div class="card"><h2>${title}</h2>${inner}</div>`;
-  $('more-back').addEventListener('click', moreHome);
+  $('more-back').addEventListener('click', () => { try { history.back(); } catch (e) { moreHome(); } });
+  // The caller sets S.moreFn just before calling moreShell — capture it as
+  // this level's re-renderer. Same-level re-renders (language refresh,
+  // post-reboot refresh) don't push a duplicate entry.
+  const rerender = S.moreFn;
+  if (rerender && !S._moreRestoring) {
+    const top = S.moreStack[S.moreStack.length - 1];
+    if (top !== rerender) {
+      S.moreStack.push(rerender);
+      try { history.pushState({ view: 'view-more', moreDepth: S.moreStack.length }, ''); } catch (e) {}
+    }
+  }
 }
 
 async function moreAccounts() {
+  S.moreFn = moreAccounts;
   moreShell(`${ic('user', 'sm')} ${esc(t('ma.title'))}`, `<div id="ma-list"><p class="muted">${t('more.loading')}</p></div>
     <div class="row"><button class="btn" id="ma-add">${ic('plus', 'sm')}<span>${t('ma.add')}</span></button></div><div id="ma-form"></div>`);
-  S.moreFn = moreAccounts;
   $('ma-add').addEventListener('click', () => {
     const pkgOpts = S.packages.map(p => `<option value="${esc(pkgGroupId(p))}|${esc(pkgProfileId(p))}">${esc(pkgName(p))}</option>`).join('');
     $('ma-form').innerHTML = `<label>${t('ma.user')} <input id="ma-u"></label><label>${t('ma.pass')} <input id="ma-p"></label>
@@ -1934,8 +1990,8 @@ async function moreAccounts() {
 }
 
 async function moreUserGroups() {
-  moreShell(`${ic('box', 'sm')} ${esc(t('mg.title'))}`, `<div id="mg-list"><p class="muted">${t('more.loading')}</p></div>`);
   S.moreFn = moreUserGroups;
+  moreShell(`${ic('box', 'sm')} ${esc(t('mg.title'))}`, `<div id="mg-list"><p class="muted">${t('more.loading')}</p></div>`);
   try {
     await ensurePackages();
     $('mg-list').innerHTML = S.packages.length ? `<div class="wrap-scroll"><table class="data">
@@ -1959,6 +2015,7 @@ function devStatus(d) {
 }
 
 async function moreDevices() {
+  S.moreFn = moreDevices;
   moreShell(`${ic('signal', 'sm')} ${esc(t('md.title'))}`, `
     <div class="chips" id="md-chips">
       <button class="chip active" data-t="">${t('md.all')}</button>
@@ -1967,7 +2024,6 @@ async function moreDevices() {
       <button class="chip" data-t="Gateway">Gateway</button>
       <button class="chip" data-t="local">${t('md.local')}</button>
     </div>${Api.ssoLoggedIn() ? '' : `<p class="muted small">${t('md.needSsoHint')}</p>`}${GwApi.loggedIn() ? '' : `<p class="muted small">${t('md.needGw')}</p>`}<div id="md-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
-  S.moreFn = moreDevices;
   const DEV_TYPES = ['AP', 'Switch', 'Gateway'];
   const load = async (type) => {
     $('md-list').innerHTML = `<p class="muted">${t('more.loading')}</p>`;
@@ -2091,8 +2147,8 @@ async function rebootDevice(sn, name) {
 }
 
 async function moreClients() {
-  moreShell(`${ic('monitor', 'sm')} ${esc(t('mc.title'))}`, `<div id="mc-list"><p class="muted">${t('more.loading')}</p></div>`);
   S.moreFn = moreClients;
+  moreShell(`${ic('monitor', 'sm')} ${esc(t('mc.title'))}`, `<div id="mc-list"><p class="muted">${t('more.loading')}</p></div>`);
   try {
     const list = await Api.onlineClients(Number(S.projectId), 0, 100);
     $('mc-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
@@ -2196,9 +2252,9 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
 
 async function apClientsView(apSn, apName, apNames, isLocalAp) {
   const pid = Number(S.projectId);
+  S.moreFn = () => apClientsView(apSn, apName, apNames, isLocalAp);
   moreShell(`${ic('user', 'sm')} ${esc(apName || apSn)} <small class="muted">· ${esc(t('ac.title'))}</small>`,
     `<div id="ac-list"><p class="muted">${t('more.loading')}</p></div>`);
-  S.moreFn = () => apClientsView(apSn, apName, apNames, isLocalAp);
   try {
     // v1.5.29: gateway-local APs (China-version APs invisible to Cloud) —
     // their clients come from the gateway's own STA list, not Cloud.
@@ -2359,9 +2415,9 @@ async function apClientsView(apSn, apName, apNames, isLocalAp) {
 }
 
 async function moreNetworks() {
+  S.moreFn = moreNetworks;
   moreShell(`${ic('globe', 'sm')} ${esc(t('mn.title'))}`, `<div id="mn-tree"><p class="muted">${t('more.loading')}</p></div>
     <div class="row"><button class="btn" id="mn-add">${ic('plus', 'sm')}<span>${t('mn.add')}</span></button></div><div id="mn-form"></div>`);
-  S.moreFn = moreNetworks;
   const renderTree = (nodes, depth = 0) => (nodes || []).map(n => {
     const kids = n.children || n.subGroups || n.childGroups || [];
     return `<div style="margin-left:${depth * 16}px;padding:4px 0">${ic('folder', 'sm')} ${esc(n.groupName || n.name)} <small class="muted">(${(n.groupType || n.type || '').toUpperCase()})</small></div>` +
@@ -2408,6 +2464,7 @@ function voucherPkgName(v) { return v.packageName || v.userGroupName || ''; }
 
 async function moreSales() {
   const todayStr = new Date().toISOString().slice(0, 10);
+  S.moreFn = moreSales;
   moreShell(`${ic('chart', 'sm')} ${esc(t('sl.title'))}`,
     `<div class="chips" id="sl-chips">
        <button class="chip active" data-r="day1">${t('sl.day1')}</button>
@@ -2422,7 +2479,6 @@ async function moreSales() {
      <div id="sl-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>
      <div class="row"><button class="btn" id="sl-refresh">${ic('refresh', 'sm')}<span>${t('sl.refreshV')}</span></button></div>
      <p class="muted small">${t('sl.dateNote2')}</p>`);
-  S.moreFn = () => moreSales();
   await ensurePackages();
   const priceByPkg = {};
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
@@ -2546,14 +2602,14 @@ function onSsoButton() {
  * Direct LAN connection to the user's own gateway eWeb. The password is
  * entered here in Settings and kept on this device only — never in chat,
  * never in logs, never sent anywhere except the gateway itself. */
-const GW_STORE_KEYS = { ip: 'gwIp' };
-/* Gateway password lives in JS memory only — never persisted to
- * localStorage, so it does not survive an app restart and is never
- * written to disk by the web layer. */
+const GW_STORE_KEYS = { ip: 'gwIp', pass: 'gwPass' };
+/* Gateway password is remembered on this device (localStorage) once the
+ * user enters it — it stays until they change it. Never in chat, never in
+ * logs, never sent anywhere except the gateway itself. */
 const GwMem = { pass: '' };
 function gwStored() {
   const s = Store.load();
-  return { ip: s[GW_STORE_KEYS.ip] || '100.88.200.103', pass: GwMem.pass || '' };
+  return { ip: s[GW_STORE_KEYS.ip] || '100.88.200.103', pass: GwMem.pass || s[GW_STORE_KEYS.pass] || '' };
 }
 function refreshGwCard() {
   const statusEl = $('gw-status'), btn = $('btn-gw');
@@ -2586,10 +2642,11 @@ async function onGwButton() {
   if (!pass) { toast(t('gw.needInfo'), true); return; }
   btn.disabled = true;
   try {
-    Store.save({ [GW_STORE_KEYS.ip]: ip });
-    try { Store.save({ gwPass: '', gwUser: '' }); } catch (_) {} // drop legacy persisted secrets
-    GwMem.pass = pass;
     await GwApi.login(ip, 'admin', pass);
+    /* Remember the gateway password ONLY after a successful login — a
+     * failed attempt must never overwrite the previously remembered one. */
+    Store.save({ [GW_STORE_KEYS.ip]: ip, [GW_STORE_KEYS.pass]: pass });
+    GwMem.pass = pass;
     toast(t('gw.ok'));
   } catch (e) {
     const m = String((e && e.message) || e);

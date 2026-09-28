@@ -206,14 +206,19 @@ const GwApi = {
       // A STA record has a MAC and usually an AP serial/MAC + ssid.
       const mac = o.mac || o.staMac || o.clientMac || o.stamac || '';
       if (mac && /^[0-9a-fA-F:]{11,}/.test(String(mac))) {
+        // v1.5.34: the gateway's IP field name varies by firmware — probe
+        // every plausible key. Also scrub literal "NULL" strings the
+        // gateway uses for unknown hostnames.
+        const cleanNull = s => { s = String(s == null ? '' : s).trim(); return (/^null$/i.test(s) ? '' : s); };
+        const ip = cleanNull(o.ip || o.staIp || o.clientIp || o.staip || '');
         out.push({
           mac: String(mac).toUpperCase(),
-          ip: o.ip || o.staIp || o.clientIp || o.staip || '',
+          ip,
           apSn: o.sn || o.devSN || o.apSn || o.apsn || o.linkedSn || o.ap_sn || '',
           apMac: o.apMac || o.apmac || o.bssid || '',
           ssid: o.ssid || '',
           rssi: (o.rssi != null ? o.rssi : (o.signal != null ? o.signal : '')),
-          host: o.hostName || o.hostname || o.deviceName || o.staName || '',
+          host: cleanNull(o.hostName || o.hostname || o.deviceName || o.staName || ''),
         });
         return;
       }
