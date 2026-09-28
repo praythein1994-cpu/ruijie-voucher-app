@@ -324,87 +324,84 @@
 
     <!-- SETTINGS -->
     <section id="view-settings" class="view hidden">
-      <div class="large-title hidden" data-i18n="s.title">ဆက်တင်များ</div>
-      <div class="card">
-        <h2><svg class="ic"><use href="#i-user"/></svg><span data-i18n="s.account">အကောင့်အချက်အလက်</span></h2>
-        <div id="account-info" class="kv"></div>
-      </div>
-      <div class="card" id="sso-card">
-        <h2><svg class="ic"><use href="#i-lock"/></svg><span data-i18n="sso.title">Ruijie အကောင့်</span></h2>
-        <p class="muted small" style="margin:0 0 10px" data-i18n="sso.sub">ဝင်ထားမှ voucher ဖျက်လို့ရမယ်</p>
-        <div class="switch-row" style="margin-bottom:12px">
-          <div><div style="font-weight:700" id="sso-status">…</div></div>
+      <div class="large-title" data-i18n="s.title">ဆက်တင်များ</div>
+
+      <div class="set-group">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#8E8E93"><svg class="ic"><use href="#i-user"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="s.account">အကောင့်အချက်အလက်</div></div>
         </div>
-        <button id="btn-sso" class="btn primary"><svg class="ic"><use href="#i-lock"/></svg><span>အကောင့်ဝင်မယ်</span></button>
+        <div class="set-pad" id="account-info"></div>
       </div>
-      <div class="card" id="gw-card">
-        <h2><svg class="ic"><use href="#i-signal"/></svg><span data-i18n="gw.title">Gateway (ဒေသတွင်း)</span></h2>
-        <p class="muted small" style="margin:0 0 10px" data-i18n="gw.sub">LAN ထဲက gateway ကို တိုက်ရိုက်ချိတ်မယ် — Cloud မှာမရှိတဲ့ China AP တွေပါမြင်ရမယ်</p>
-        <label><span data-i18n="gw.ip">Gateway IP</span> <input id="gw-ip" type="text" inputmode="decimal" placeholder="100.88.200.103"></label>
-        <label><span data-i18n="gw.pass">စကားဝှက်</span>
-          <div class="input-wrap">
-            <input id="gw-pass" type="password" autocomplete="current-password">
-            <button type="button" class="peek" data-peek="gw-pass" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
-          </div>
-        </label>
-        <div class="switch-row" style="margin-bottom:12px">
-          <div><div style="font-weight:700" id="gw-status">…</div></div>
+
+      <div class="section-title" data-i18n="sso.title">Ruijie အကောင့်</div>
+      <div class="set-group" id="sso-card">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#5E5CE6"><svg class="ic"><use href="#i-lock"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="sso.title">Ruijie အကောင့်</div><div class="sub" data-i18n="sso.sub">ဝင်ထားမှ voucher ဖျက်လို့ရမယ်</div></div>
+          <span class="set-val" id="sso-status">…</span>
         </div>
-        <button id="btn-gw" class="btn primary"><svg class="ic"><use href="#i-signal"/></svg><span>ချိတ်မယ်</span></button>
+        <button type="button" class="set-row set-action" id="btn-sso"><span>အကောင့်ဝင်မယ်</span></button>
       </div>
-      <div class="card" id="diag-card">
-        <h2><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.title">စစ်ဆေးမှုများ</span></h2>
-        <p class="muted small" style="margin:0 0 10px" data-i18n="diag.sub">ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်</p>
-        <div class="switch-row">
-          <div><div style="font-weight:700" data-i18n="diag.login">Login စစ်မယ်</div><div class="muted small" data-i18n="diag.loginSub">App ID/Secret နဲ့ Ruijie အကောင့်</div></div>
+
+      <div class="section-title" data-i18n="gw.title">Gateway (ဒေသတွင်း)</div>
+      <div class="set-group" id="gw-card">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#34C759"><svg class="ic"><use href="#i-signal"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="gw.title">Gateway (ဒေသတွင်း)</div><div class="sub" data-i18n="gw.sub">LAN ထဲက gateway ကို တိုက်ရိုက်ချိတ်မယ်</div></div>
+          <span class="set-val" id="gw-status">…</span>
+        </div>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="gw.ip">Gateway IP</span><input id="gw-ip" class="fld-input" type="text" inputmode="decimal" placeholder="100.88.200.103"></label>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="gw.pass">စကားဝှက်</span><span class="input-wrap fld-wrap"><input id="gw-pass" type="password" autocomplete="current-password"><button type="button" class="peek" data-peek="gw-pass" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button></span></label>
+        <button type="button" class="set-row set-action" id="btn-gw"><span>ချိတ်မယ်</span></button>
+      </div>
+
+      <div class="section-title" data-i18n="diag.title">စစ်ဆေးမှုများ</div>
+      <div class="set-group" id="diag-card">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#007AFF"><svg class="ic"><use href="#i-search"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="diag.login">Login စစ်မယ်</div><div class="sub" data-i18n="diag.loginSub">App ID/Secret နဲ့ Ruijie အကောင့်</div></div>
           <label class="switch"><input type="checkbox" id="diag-login" checked><span class="track"></span></label>
         </div>
-        <div class="switch-row" style="margin-top:10px">
-          <div><div style="font-weight:700" data-i18n="diag.voucher">Voucher စစ်မယ်</div><div class="muted small" data-i18n="diag.voucherSub">စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)</div></div>
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#FF9500"><svg class="ic"><use href="#i-ticket"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="diag.voucher">Voucher စစ်မယ်</div><div class="sub" data-i18n="diag.voucherSub">စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)</div></div>
           <label class="switch"><input type="checkbox" id="diag-voucher" checked><span class="track"></span></label>
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <button id="btn-diag-run" class="btn primary"><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.run">စစ်မယ်</span></button>
-          <button id="btn-diag-save" class="btn hidden"><svg class="ic"><use href="#i-folder"/></svg><span data-i18n="diag.save">Report သိမ်းမယ်</span></button>
-        </div>
-        <div id="diag-results" style="margin-top:12px"></div>
+        <button type="button" class="set-row set-action" id="btn-diag-run"><span data-i18n="diag.run">စစ်မယ်</span></button>
+        <button type="button" class="set-row set-action hidden" id="btn-diag-save"><span data-i18n="diag.save">Report သိမ်းမယ်</span></button>
+        <div class="set-pad hidden" id="diag-results-pad"><div id="diag-results"></div></div>
       </div>
-      <div class="card">
-        <h2><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="s.appearance">အသွင်အပြင်</span></h2>
-        <div class="theme-grid" id="theme-grid" role="group" aria-label="Theme">
-          <button type="button" class="theme-opt" data-theme-opt="light"><span class="theme-dot t-light"></span><span data-i18n="s.themeLight">Premium</span></button>
-          <button type="button" class="theme-opt" data-theme-opt="dark"><span class="theme-dot t-dark"></span><span data-i18n="s.themeDark">Dark</span></button>
-          <button type="button" class="theme-opt" data-theme-opt="glass"><span class="theme-dot t-glass"></span><span data-i18n="s.themeGlass">Liquid Glass</span></button>
-          <button type="button" class="theme-opt" data-theme-opt="neo"><span class="theme-dot t-neo"></span><span data-i18n="s.themeNeo">Neumorphism</span></button>
-          <button type="button" class="theme-opt" data-theme-opt="clay"><span class="theme-dot t-clay"></span><span data-i18n="s.themeClay">Claymorphism</span></button>
-        </div>
+
+      <div class="section-title" data-i18n="s.appearance">အသွင်အပြင်</div>
+      <div class="set-group" id="theme-grid" role="group" aria-label="Theme">
+        <button type="button" class="set-row theme-opt" data-theme-opt="light"><span class="theme-dot t-light"></span><span class="t"><span class="t-main" data-i18n="s.themeLight">Premium</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+        <button type="button" class="set-row theme-opt" data-theme-opt="dark"><span class="theme-dot t-dark"></span><span class="t"><span class="t-main" data-i18n="s.themeDark">Dark</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+        <button type="button" class="set-row theme-opt" data-theme-opt="glass"><span class="theme-dot t-glass"></span><span class="t"><span class="t-main" data-i18n="s.themeGlass">Liquid Glass</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+        <button type="button" class="set-row theme-opt" data-theme-opt="neo"><span class="theme-dot t-neo"></span><span class="t"><span class="t-main" data-i18n="s.themeNeo">Neumorphism</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+        <button type="button" class="set-row theme-opt" data-theme-opt="clay"><span class="theme-dot t-clay"></span><span class="t"><span class="t-main" data-i18n="s.themeClay">Claymorphism</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
       </div>
-      <div class="card">
-        <h2><svg class="ic"><use href="#i-globe"/></svg><span data-i18n="s.language">ဘာသာစကား</span></h2>
-        <div class="segmented" id="lang-seg" style="margin-bottom:0" role="group" aria-label="Language">
-          <button type="button" data-lang="my" class="active">မြန်မာ</button>
-          <button type="button" data-lang="en">English</button>
-        </div>
+
+      <div class="section-title" data-i18n="s.language">ဘာသာစကား</div>
+      <div class="set-group" id="lang-seg" role="group" aria-label="Language">
+        <button type="button" class="set-row" data-lang="my"><span class="t"><span class="t-main">မြန်မာ</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+        <button type="button" class="set-row" data-lang="en"><span class="t"><span class="t-main">English</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
       </div>
-      <div class="card">
-        <h2><svg class="ic"><use href="#i-gear"/></svg><span data-i18n="s.conn">ချိတ်ဆက်မှုပြင်ဆင်မယ်</span></h2>
-        <label><span data-i18n="s.cloud">Cloud URL</span> <input id="set-cloud" type="url"></label>
-        <label><span data-i18n="s.appid">App ID</span> <input id="set-appid" type="text"></label>
-        <label><span data-i18n="s.secret">App Secret</span>
-          <div class="input-wrap">
-            <input id="set-secret" type="password" data-i18n-ph="s.secretPh" placeholder="(မပြောင်းလျှင် ချန်ထားပါ)">
-            <button type="button" class="peek" data-peek="set-secret" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
-          </div>
-        </label>
-        <label><span data-i18n="s.proxy">Proxy URL</span> <input id="set-proxy" type="url"></label>
-        <button id="btn-save-settings" class="btn primary"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="s.save">သိမ်းမယ်</span></button>
-        <p id="set-err" class="err hidden"></p>
+
+      <div class="section-title" data-i18n="s.conn">ချိတ်ဆက်မှုပြင်ဆင်မယ်</div>
+      <div class="set-group">
+        <label class="set-row set-field"><span class="fld-label" data-i18n="s.cloud">Cloud URL</span><input id="set-cloud" class="fld-input" type="url"></label>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="s.appid">App ID</span><input id="set-appid" class="fld-input" type="text"></label>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="s.secret">App Secret</span><span class="input-wrap fld-wrap"><input id="set-secret" type="password" data-i18n-ph="s.secretPh" placeholder="(မပြောင်းလျှင် ချန်ထားပါ)"><button type="button" class="peek" data-peek="set-secret" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button></span></label>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="s.proxy">Proxy URL</span><input id="set-proxy" class="fld-input" type="url"></label>
+        <button type="button" class="set-row set-action" id="btn-save-settings"><span data-i18n="s.save">သိမ်းမယ်</span></button>
+        <div class="set-pad hidden" id="set-err-pad"><p id="set-err" class="err hidden"></p></div>
       </div>
-      <div class="card">
-        <h2><svg class="ic"><use href="#i-dots"/></svg><span data-i18n="s.other">အခြား</span></h2>
-        <button id="btn-disconnect" class="btn danger"><span data-i18n="s.disconnect">အကောင့်ထွက်မယ် (ဒေတာရှင်းမယ်)</span></button>
-        <p class="muted small" id="app-version" data-i18n="s.version">Version 1.2.0 · Ruijie Cloud Open API</p>
+
+      <div class="set-group">
+        <button type="button" class="set-row set-action danger" id="btn-disconnect"><span data-i18n="s.disconnect">အကောင့်ထွက်မယ် (ဒေတာရှင်းမယ်)</span></button>
       </div>
+      <p class="footnote" id="app-version" data-i18n="s.version">Version 1.2.0 · Ruijie Cloud Open API</p>
     </section>
   </main>
 
