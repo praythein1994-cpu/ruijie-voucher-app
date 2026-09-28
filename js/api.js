@@ -70,6 +70,131 @@ function ssoCall(apiPath, envelope) {
   });
 }
 
+/* ── Gateway-local session (Android APK only) ───────────────────
+ * Direct LAN connection to the user's own gateway eWeb
+ * (https://<ip>/cgi-bin/luci/api/...). The https web app cannot reach a
+ * LAN IP, so this is APK-only like the SSO bridge. Used for devices
+ * Ruijie Cloud never sees (China-version APs) — the 9-device view.
+ * Responses come back base64-encoded via window._gwResolve(id, b64).
+ */
+let _gwSeq = 0;
+const _gwPending = {};
+window._gwResolve = (id, b64) => {
+  const p = _gwPending[id];
+  delete _gwPending[id];
+  if (!p) return;
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    p.resolve(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch (e) { p.reject(e); }
+};
+const hasGw = () => !!(window.RuijieBridge && window.RuijieBridge.gatewayLogin);
+function gwCall(kind, ...args) {
+  return new Promise((resolve, reject) => {
+    if (!hasGw()) return reject(new Error('Gateway ကို Android app မှာပဲ ချိတ်လို့ရပါတယ်'));
+    const id = 'g' + (++_gwSeq) + '_' + Date.now();
+    _gwPending[id] = { resolve, reject };
+    try {
+      if (kind === 'login') window.RuijieBridge.gatewayLogin(id, args[0], args[1], args[2]);
+      else window.RuijieBridge.gatewayCmd(id, args[0], args[1], args[2]);
+    } catch (e) { delete _gwPending[id]; reject(e); }
+    setTimeout(() => { if (_gwPending[id]) { delete _gwPending[id]; reject(new Error('Gateway timeout')); } }, 45000);
+  });
+}
+
+/**
+ * Gateway-local API (captured read-only from the gateway eWeb, 2026-09-28).
+ * Login: POST /cgi-bin/luci/api/auth
+ *   {method:"login",params:{username,time,isCheckReadAgreement:"true",encry:true,pwd}}
+ *   -> {code:0,data:{token,sn,sid}}
+ * Device list: POST /cgi-bin/luci/api/cmd?auth=<sid>
+ *   {method:"cmdArr",params:{device:"pc",params:[ ... ]}}
+ */
+const GwApi = {
+  /** Session: {ip, sid, sn, token}. Kept in memory only (never persisted). */
+  session: null,
+
+  /**
+   * Gateway login. The plaintext password is passed to the native bridge,
+   * which AES-encrypts it (Gibberish-AES compatible) before sending —
+   * it never crosses the JS bridge in plaintext-readable form beyond
+   * this call, and is never logged.
+   */
+  async login(ip, username, pwdPlain) {
+    const j = await gwCall('login', ip, username, pwdPlain);
+    if (!j || Number(j.code) !== 0) throw new Error((j && (j.msg || j.error)) || 'Gateway login မအောင်မြင်ပါ');
+    const d = j.data || {};
+    if (!d.sid) throw new Error('Gateway login: sid မပါလာပါ');
+    this.session = { ip, sid: d.sid, sn: d.sn || '', token: d.token || '' };
+    return this.session;
+  },
+  logout() { this.session = null; },
+  loggedIn() { return !!(this.session && this.session.sid); },
+
+  /** Exact cmdArr batch captured from the /admin/device page. */
+  deviceListBody() {
+    const sub = (method, params) => ({ method, params });
+    const base = { noParse: true, async: null, remoteIp: false };
+    return {
+      method: 'cmdArr',
+      params: {
+        device: 'pc',
+        params: [
+          sub('acConfig.get', Object.assign({ module: 'network_group' }, base)),
+          sub('devSta.get', Object.assign({ module: 'ap_list' }, base)),
+          sub('devSta.get', Object.assign({ module: 'esw_neighbor' }, base)),
+          sub('devSta.get', Object.assign({ module: 'neighbor', data: { product: 'GW_RGOS|FW_NTOS|NBR_NTOS' } }, base)),
+          sub('devSta.get', Object.assign({ module: 'all_ap_list' }, base)),
+        ],
+      },
+    };
+  },
+
+  /** Fetch + merge local devices, deduped by serialNumber. Each gets local:true. */
+  async deviceList() {
+    if (!this.loggedIn()) throw new Error('GW_NOT_LOGGED_IN');
+    const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(this.deviceListBody()));
+    return this.parseDevices(j);
+  },
+
+  /** Pull every {serialNumber,...} object out of a cmdArr response. */
+  parseDevices(j) {
+    const blocks = [];
+    const collect = (o) => {
+      if (!o || typeof o !== 'object') return;
+      if (Array.isArray(o)) { o.forEach(collect); return; }
+      blocks.push(o);
+      Object.keys(o).forEach(k => { if (k !== 'parent') collect(o[k]); });
+    };
+    collect(j && j.data ? j.data : j);
+    const seen = new Set(), out = [];
+    const grab = (o) => {
+      if (!o || typeof o !== 'object') return;
+      if (Array.isArray(o)) { o.forEach(grab); return; }
+      const sn = o.serialNumber || o.devSN || o.sn;
+      if (sn && (o.hostName || o.deviceType || o.devModel) && !seen.has(sn)) {
+        seen.add(sn);
+        out.push({
+          serialNumber: sn,
+          name: o.hostName || o.deviceType || sn,
+          model: o.devModel || o.deviceType || '',
+          product: o.product || '',
+          ip: o.ip || o.localIp || '',
+          mac: o.mac || '',
+          onlineStatus: (o.status || '').toUpperCase() === 'ON' ? 'ON' : 'OFF',
+          staNums: o.staNum != null ? Number(o.staNum) : null,
+          software: o.software || '',
+          local: true, // gateway-local device (may be invisible to Ruijie Cloud)
+        });
+        return;
+      }
+      Object.keys(o).forEach(k => grab(o[k]));
+    };
+    blocks.forEach(grab);
+    return out;
+  },
+};
+
 const Api = {
   cfg: null,
 

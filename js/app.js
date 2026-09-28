@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.15';
+const APP_VERSION = '1.5.16';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -88,6 +88,23 @@ const I18N = {
   'sso.onlyAndroid': { my: 'Ruijie အကောင့်ဝင်တာကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Ruijie account login is only available in the Android app' },
   'sso.welcome': { my: 'Ruijie အကောင့် ဝင်ပြီးပါပြီ', en: 'Logged in to Ruijie account' },
   'sso.bye': { my: 'အကောင့်ထွက်ပြီးပါပြီ', en: 'Logged out' },
+  'gw.title': { my: 'Gateway (ဒေသတွင်း)', en: 'Gateway (local)' },
+  'gw.sub': { my: 'LAN ထဲက gateway ကို တိုက်ရိုက်ချိတ်မယ် — Cloud မှာမရှိတဲ့ China AP တွေပါမြင်ရမယ်', en: 'Connect directly to the gateway over LAN — shows China APs invisible to Cloud' },
+  'gw.ip': { my: 'Gateway IP', en: 'Gateway IP' },
+  'gw.user': { my: 'အသုံးပြုသူအမည်', en: 'Username' },
+  'gw.pass': { my: 'စကားဝှက်', en: 'Password' },
+  'gw.connect': { my: 'ချိတ်မယ်', en: 'Connect' },
+  'gw.disconnect': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
+  'gw.connected': { my: '✓ ချိတ်ထားပြီး — local device တွေမြင်ရမယ်', en: '✓ Connected — local devices are visible' },
+  'gw.notConnected': { my: 'မချိတ်ရသေးပါ', en: 'Not connected' },
+  'gw.onlyAndroid': { my: 'Gateway ချိတ်တာကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Gateway connection is only available in the Android app' },
+  'gw.needInfo': { my: 'IP၊ အသုံးပြုသူအမည်နဲ့ စကားဝှက် ဖြည့်ပါ', en: 'Enter IP, username and password' },
+  'gw.ok': { my: 'Gateway ချိတ်ပြီးပါပြီ', en: 'Gateway connected' },
+  'gw.bye': { my: 'Gateway ဖြုတ်ပြီးပါပြီ', en: 'Gateway disconnected' },
+  'gw.encPending': { my: 'စကားဝှက် encrypt နည်းလမ်း မရသေးပါ — gateway login JS လိုနေပါတယ်', en: 'Password encryption method not captured yet — need the gateway login JS' },
+  'md.local': { my: '🏠 Local', en: '🏠 Local' },
+  'md.localTag': { my: 'local', en: 'local' },
+  'md.needGw': { my: 'Local device တွေမြင်ရရန် Settings → Gateway (ဒေသတွင်း) မှာ ချိတ်ပါ', en: 'Connect in Settings → Gateway (local) to see local devices' },
   'diag.title': { my: 'စစ်ဆေးမှုများ', en: 'Diagnostics' },
   'diag.sub': { my: 'ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်', en: 'Select which part to test' },
   'diag.login': { my: 'Login စစ်မယ်', en: 'Test login' },
@@ -1794,19 +1811,36 @@ async function moreDevices() {
       <button class="chip" data-t="AP">AP</button>
       <button class="chip" data-t="Switch">Switch</button>
       <button class="chip" data-t="Gateway">Gateway</button>
-    </div>${Api.ssoLoggedIn() ? '' : `<p class="muted small">${t('md.needSsoHint')}</p>`}<div id="md-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
+      <button class="chip" data-t="local">${t('md.local')}</button>
+    </div>${Api.ssoLoggedIn() ? '' : `<p class="muted small">${t('md.needSsoHint')}</p>`}${GwApi.loggedIn() ? '' : `<p class="muted small">${t('md.needGw')}</p>`}<div id="md-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
   S.moreFn = moreDevices;
   const DEV_TYPES = ['AP', 'Switch', 'Gateway'];
   const load = async (type) => {
     $('md-list').innerHTML = `<p class="muted">${t('more.loading')}</p>`;
+    // v1.5.16: "local" chip = gateway-local devices (LAN eWeb, incl. China APs).
+    // The All tab merges cloud + local-only devices (deduped by serialNumber).
+    if (type === 'local') {
+      try {
+        const list = await GwApi.deviceList();
+        renderDeviceRows(list, []);
+      } catch (e) {
+        const m = String((e && e.message) || e);
+        $('md-list').innerHTML = `<p class="err">${esc(m === 'GW_NOT_LOGGED_IN' ? t('md.needGw') : m === 'GW_PWD_ENC_PENDING' ? t('gw.encPending') : m)}</p>`;
+      }
+      return;
+    }
     // v1.5.15: SSO webproxy device list (portal API — every type works).
     // Open API fallback (no SSO): only AP works, Switch/Gateway 404.
     const sso = Api.ssoLoggedIn();
     const ssoType = tp => tp === 'Switch' ? 'SWITCH' : tp === 'Gateway' ? 'GATEWAY' : (tp || '');
     const types = type ? [type] : (sso ? [''] : DEV_TYPES);
-    const results = await Promise.allSettled(types.map(tp =>
+    const jobs = types.map(tp =>
       sso ? Api.deviceListSso(S.projectId, ssoType(tp), 1, 100)
-          : Api.deviceList(S.projectId, tp, 0, 100)));
+          : Api.deviceList(S.projectId, tp, 0, 100));
+    // All tab + gateway connected: also pull the local list for the merge.
+    const wantLocalMerge = !type && GwApi.loggedIn();
+    if (wantLocalMerge) jobs.push(GwApi.deviceList().catch(() => []));
+    const results = await Promise.allSettled(jobs);
     const seen = new Set(), list = [], errs = [];
     results.forEach((r, i) => {
       if (r.status === 'fulfilled') {
@@ -1814,8 +1848,11 @@ async function moreDevices() {
           const k = d.serialNumber || d.sn || d.mac || JSON.stringify(d);
           if (!seen.has(k)) { seen.add(k); list.push(d); }
         });
-      } else errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
+      } else if (i < types.length) errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
     });
+    renderDeviceRows(list, errs);
+  };
+  const renderDeviceRows = (list, errs) => {
     if (!list.length) { $('md-list').innerHTML = `<p class="err">${esc(errs.join(' · ') || t('md.none'))}</p>`; return; }
     const warn = errs.length ? `<p class="warn small">${esc(t('md.partial'))}: ${esc(errs.join(' · '))}</p>` : '';
     $('md-list').innerHTML = `${warn}<p class="muted small">${tx('md.total', { n: list.length })}</p>` +
@@ -1825,10 +1862,13 @@ async function moreDevices() {
           const sn = d.serialNumber || d.sn || '';
           const nm = d.aliasName || d.alias || d.deviceAliasName || d.name || sn;
           const st = devStatus(d);
-          return `<tr><td>${esc(nm)}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
+          const localTag = d.local ? ` <small class="muted">· ${esc(t('md.localTag'))}</small>` : '';
+          // Local reboot wire format not captured yet — no reboot button on local rows (v1.5.16).
+          const rb = (!d.local && sn) ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
+          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
-          <td>${sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : ''}</td></tr>`;
+          <td>${rb}</td></tr>`;
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
@@ -2020,6 +2060,7 @@ function fillSettings() {
   $('set-proxy').value = c.proxy || '';
   $('set-secret').value = '';
   refreshSsoCard();
+  refreshGwCard();
 }
 
 /* ── SSO session (Ruijie account login, Android APK only) ───────
@@ -2047,6 +2088,66 @@ function onSsoButton() {
   } else {
     try { window.RuijieBridge.ssoLogin(); }
     catch (e) { toast(t('sso.onlyAndroid'), true); }
+  }
+}
+
+/* ── Gateway-local session (Android APK only) ───────────────────
+ * Direct LAN connection to the user's own gateway eWeb. The password is
+ * entered here in Settings and kept on this device only — never in chat,
+ * never in logs, never sent anywhere except the gateway itself. */
+const GW_STORE_KEYS = { ip: 'gwIp', user: 'gwUser' };
+/* Gateway password lives in JS memory only — never persisted to
+ * localStorage, so it does not survive an app restart and is never
+ * written to disk by the web layer. */
+const GwMem = { pass: '' };
+function gwStored() {
+  const s = Store.load();
+  return { ip: s[GW_STORE_KEYS.ip] || '100.88.200.103', user: s[GW_STORE_KEYS.user] || 'admin', pass: GwMem.pass || '' };
+}
+function refreshGwCard() {
+  const statusEl = $('gw-status'), btn = $('btn-gw');
+  if (!statusEl || !btn) return;
+  const st = gwStored();
+  if ($('gw-ip') && !$('gw-ip').value) $('gw-ip').value = st.ip;
+  if ($('gw-user') && !$('gw-user').value) $('gw-user').value = st.user;
+  if ($('gw-pass') && !$('gw-pass').value) $('gw-pass').value = st.pass;
+  if (!hasGw()) {
+    statusEl.textContent = t('gw.onlyAndroid');
+    btn.classList.add('hidden');
+    return;
+  }
+  btn.classList.remove('hidden');
+  const on = GwApi.loggedIn();
+  statusEl.textContent = on ? t('gw.connected') : t('gw.notConnected');
+  btn.querySelector('span').textContent = on ? t('gw.disconnect') : t('gw.connect');
+  btn.dataset.mode = on ? 'logout' : 'login';
+}
+async function onGwButton() {
+  if (!hasGw()) { toast(t('gw.onlyAndroid'), true); return; }
+  const btn = $('btn-gw');
+  if (btn.dataset.mode === 'logout') {
+    GwApi.logout();
+    refreshGwCard();
+    toast(t('gw.bye'));
+    return;
+  }
+  const ip = ($('gw-ip').value || '').trim() || '100.88.200.103';
+  const user = ($('gw-user').value || '').trim() || 'admin';
+  const pass = $('gw-pass').value || '';
+  if (!pass) { toast(t('gw.needInfo'), true); return; }
+  btn.disabled = true;
+  try {
+    Store.save({ [GW_STORE_KEYS.ip]: ip, [GW_STORE_KEYS.user]: user });
+    try { Store.save({ gwPass: '' }); } catch (_) {} // drop any legacy persisted password
+    GwMem.pass = pass;
+    await GwApi.login(ip, user, pass);
+    toast(t('gw.ok'));
+  } catch (e) {
+    const m = String((e && e.message) || e);
+    toast(/password encrypt|GW_PWD_ENC_PENDING/.test(m) ? t('gw.encPending') : m, true);
+  } finally {
+    btn.disabled = false;
+    refreshGwCard();
   }
 }
 
@@ -2399,6 +2500,7 @@ function init() {
 
   $('btn-save-settings').addEventListener('click', saveSettings);
   $('btn-sso').addEventListener('click', onSsoButton);
+  $('btn-gw').addEventListener('click', onGwButton);
   $('btn-diag-run').addEventListener('click', runDiagnostics);
   $('btn-diag-save').addEventListener('click', saveDiagReport);
   // SSO login/logout events from the native dialog
