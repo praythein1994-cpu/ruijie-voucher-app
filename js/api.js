@@ -136,7 +136,8 @@ const GwApi = {
     }
     if (!sid) {
       const gwMsg = d.msg ? String(d.msg).slice(0, 160) : '';
-      throw new Error('Gateway login: ' + (gwMsg || 'sid မပါလာပါ') + ' (keys: ' + Object.keys(d).join(',') + ')');
+      const km = j._keyMode ? ' [key:' + j._keyMode + ']' : '';
+      throw new Error('Gateway login: ' + (gwMsg || 'sid မပါလာပါ') + ' (keys: ' + Object.keys(d).join(',') + ')' + km);
     }
     this.session = { ip, sid, sn: d.sn || '', token: d.token || '' };
     return this.session;
