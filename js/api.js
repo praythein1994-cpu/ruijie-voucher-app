@@ -123,9 +123,19 @@ const GwApi = {
   async login(ip, username, pwdPlain) {
     const j = await gwCall('login', ip, username, pwdPlain);
     if (!j || Number(j.code) !== 0) throw new Error((j && (j.msg || j.error)) || 'Gateway login မအောင်မြင်ပါ');
-    const d = j.data || {};
-    if (!d.sid) throw new Error('Gateway login: sid မပါလာပါ');
-    this.session = { ip, sid: d.sid, sn: d.sn || '', token: d.token || '' };
+    let d = j.data || {};
+    if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = {}; } }
+    // sid fallbacks: some firmware uses `stok`, or returns sid only as the
+    // <sn>=<sid> session cookie (captured by native code into _cookies).
+    let sid = d.sid || d.stok || j.sid || j.stok || '';
+    if (!sid && Array.isArray(j._cookies)) {
+      for (const ck of j._cookies) {
+        const m = String(ck).split(';')[0].match(/^[^=]+=(.+)$/);
+        if (m && m[1] && !/^(deleted|expired)$/i.test(m[1].trim())) { sid = m[1].trim(); break; }
+      }
+    }
+    if (!sid) throw new Error('Gateway login: sid မပါလာပါ (data keys: ' + Object.keys(d).join(',') + ')');
+    this.session = { ip, sid, sn: d.sn || '', token: d.token || '' };
     return this.session;
   },
   logout() { this.session = null; },
