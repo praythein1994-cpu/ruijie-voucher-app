@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.41';
+const APP_VERSION = '1.5.42';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -437,10 +437,11 @@ const tx = (k, vars) => {
 const ic = (name, cls) => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
 function initLang() {
-  try {
-    const l = localStorage.getItem('rv-lang');
-    if (l === 'en' || l === 'my') LANG = l;
-  } catch (e) {}
+  /* User decision (2026-09-28): the app ALWAYS starts in English —
+   * including the pre-login connect screen. A manual language switch
+   * still works for the session; the next startup is English again. */
+  LANG = 'en';
+  try { localStorage.setItem('rv-lang', 'en'); } catch (e) {}
 }
 function setLang(l) {
   LANG = (l === 'en') ? 'en' : 'my';
