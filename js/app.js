@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.24';
+const APP_VERSION = '1.5.25';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -1988,27 +1988,53 @@ async function apClientsView(apSn, apName, apNames) {
     `<div id="ac-list"><p class="muted">${t('more.loading')}</p></div>`);
   S.moreFn = () => apClientsView(apSn, apName, apNames);
   try {
-    const clients = await Api.allOnlineClients(pid);
+    // v1.5.25: prefer the portal client API (SSO) — its records carry
+    // `account` (the auth account = voucher code for voucher-auth clients),
+    // which the open-API sta_users does not return. Falls back to the
+    // open API when SSO is unavailable or the portal call fails/empties.
+    let clients = [], viaPortal = false;
+    if (Api.ssoLoggedIn()) {
+      try {
+        const list = await Api.portalClients(pid, { linkedDevice: apSn });
+        const mineP = (list || []).filter(c =>
+          String(c.linkedDevice || '') === String(apSn) ||
+          (apName && String(c.deviceName || '') === String(apName)));
+        if (mineP.length) { clients = mineP; viaPortal = true; }
+      } catch (e) { /* fall through to open API */ }
+    }
+    if (!viaPortal) {
+      const all = await Api.allOnlineClients(pid);
+      clients = (all || []).filter(c => String(c.sn || c.apSn || '') === String(apSn));
+    }
     let vmap = new Map();
     try { vmap = await apClientVoucherMap(pid); } catch (e) { /* voucher enrichment optional */ }
-    const mine = (clients || []).filter(c => String(c.sn || c.apSn || '') === String(apSn));
+    const acctOf = c => String((viaPortal ? (c.account || c.userName) : (c.username || c.hostname)) || '').trim();
+    const mine = clients;
     if (!mine.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
-    const vCount = mine.filter(c => vmap.has(String(c.username || ''))).length;
+    const vCount = mine.filter(c => vmap.has(acctOf(c))).length;
     $('ac-list').innerHTML =
       `<p class="muted small">${esc(tx('ac.total', { n: mine.length }))} · ${esc(tx('ac.voucherN', { n: vCount }))}</p>` +
       `<div class="wrap-scroll"><table class="data">` +
       `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th></tr>` +
       mine.map((c, i) => {
         const mac = c.mac || '—';
-        const user = String(c.username || c.hostname || '');
+        const user = acctOf(c);
         const v = user ? vmap.get(user) : null;
         const pkg = v ? voucherPkgName(v) : '';
         const price = v ? fmtMoney(pkgPriceNum(v)) : '';
         const since = fmtTs(c.onlineTime);
-        const durMs = Number(c.activeTime) > 0 ? Number(c.activeTime)
-          : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN);
+        // v1.5.25: portal records carry activeSec (seconds); open API uses activeTime (ms).
+        const durMs = viaPortal
+          ? (Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
+            : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN))
+          : (Number(c.activeTime) > 0 ? Number(c.activeTime)
+            : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN));
         const sig = [c.rssi ? String(c.rssi) + ' dBm' : '', c.band || '', c.channel ? 'ch ' + c.channel : ''].filter(Boolean).join(' · ') || '—';
-        const hostLine = (c.userIp || c.ip) ? `<br><small class="muted">${esc(c.userIp || c.ip)}${(c.hostname && c.username) ? '<br>' + esc(c.hostname) : ''}</small>` : '';
+        const ip = viaPortal ? (c.ip || '') : (c.userIp || c.ip || '');
+        const sub = viaPortal
+          ? ((c.userName && String(c.userName) !== user) ? String(c.userName) : '')
+          : ((c.hostname && c.username) ? String(c.hostname) : '');
+        const hostLine = (ip || sub) ? `<br><small class="muted">${esc(ip)}${(ip && sub) ? '<br>' : ''}${esc(sub)}</small>` : '';
         return `<tr data-accli="${i}" style="cursor:pointer"><td>${esc(mac)}${hostLine}</td>` +
           `<td>${esc(user || '—')}${v ? `<br><small class="muted">${esc(pkg)}${price ? ' · ' + esc(price) : ''}</small>` : ''}</td>` +
           `<td><small>${esc(since)}<br>${esc(fmtDur(durMs))}</small></td>` +
