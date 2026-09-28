@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.47';
+const APP_VERSION = '1.5.48';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -756,25 +756,27 @@ function moveLiqBlob() {
 window.addEventListener('resize', () => { try { moveLiqBlob(); } catch (e) {} });
 
 // System back button: close an open modal first, else let popstate walk the view stack.
-function initLiquidRipple() {
+/* v1.5.48 — whole-element liquid wobble: the touched button/card/voucher
+   row itself squishes and wobbles like jelly, pivoting at the tap point. */
+function initLiquidWobble() {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const SEL = 'button,.tab,.voucher-row,.menu-item,.card,.chip,a,[data-wobble]';
   document.addEventListener('pointerdown', e => {
     if (e.clientX == null || e.clientY == null || !e.target || !e.target.closest) return;
-    const el = e.target.closest('button, .tab, .voucher-row, .menu-item, .card, .chip, a, [data-ripple]');
+    const el = e.target.closest(SEL);
     if (!el || !el.getBoundingClientRect) return;
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    el.classList.add('liq-host');
-    const rip = document.createElement('span');
-    rip.className = 'liq-ripple';
-    rip.setAttribute('aria-hidden', 'true');
-    const size = Math.max(r.width, r.height) * 1.15;
-    rip.style.width = rip.style.height = Math.round(size) + 'px';
-    rip.style.left = Math.round(e.clientX - r.left - size / 2) + 'px';
-    rip.style.top = Math.round(e.clientY - r.top - size / 2) + 'px';
-    el.appendChild(rip);
-    setTimeout(() => { rip.remove(); }, 700);
+    el.style.transformOrigin = Math.round(e.clientX - r.left) + 'px ' + Math.round(e.clientY - r.top) + 'px';
+    el.classList.remove('liq-wobble');
+    void el.offsetWidth; /* restart the wobble when tapped again mid-animation */
+    el.classList.add('liq-wobble');
   }, { passive: true });
+  document.addEventListener('animationend', e => {
+    if (e.animationName === 'liqWobble' && e.target && e.target.classList) {
+      e.target.classList.remove('liq-wobble');
+    }
+  });
 }
 function anyModalOpen() {
   return !!document.querySelector('.modal:not(.hidden)');
@@ -3336,7 +3338,7 @@ function init() {
   init._done = true;
   initTheme();
   initLang();
-  initLiquidRipple();
+  initLiquidWobble();
 
   // password peek toggles
   document.querySelectorAll('[data-peek]').forEach(b => b.addEventListener('click', () => {
