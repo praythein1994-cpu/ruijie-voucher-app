@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>v1.5.47 visual test (temporary)</title>
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  body { margin: 0; }
+  .vt-sec { padding: 18px 16px 8px; max-width: 680px; margin: 0 auto; }
+  .vt-sec h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin: 18px 0 10px; }
+  .vt-spacer { height: 120px; }
+  .demo-btn { position: relative; overflow: hidden; }
+  .liq-ripple.paused { animation-play-state: paused; }
+  .liq-ripple.paused::after { animation-play-state: paused; }
+</style>
+</head>
+<body>
+<div class="vt-sec">
+  <h3>1. Liquid card — in use, fill 65%</h3>
+  <div class="liquid-paper filling" id="liquid-paper" data-st="2" style="--fill:0.65">
+    <div class="liquid-fill" aria-hidden="true"></div>
+    <div class="liquid-wave" aria-hidden="true"></div>
+    <canvas class="liquid-bubbles" aria-hidden="true"></canvas>
+    <span class="liquid-label">In use</span>
+    <div class="liquid-code">11745476</div>
+    <div class="liquid-sub">1GB · 1d</div>
+    <div class="liquid-perf"></div>
+  </div>
+
+  <h3>2. Liquid card — expired / full</h3>
+  <div class="liquid-paper liquid-full" data-st="3" style="--fill:1">
+    <div class="liquid-fill" aria-hidden="true"></div>
+    <div class="liquid-wave" aria-hidden="true"></div>
+    <span class="liquid-label">Expired</span>
+    <div class="liquid-code">14045577</div>
+    <div class="liquid-sub">1GB · 1d</div>
+    <div class="liquid-perf"></div>
+  </div>
+
+  <h3>3. Ripple look (paused mid-animation)</h3>
+  <button class="btn primary big demo-btn" style="width:100%">Print
+    <span class="liq-ripple paused" aria-hidden="true" style="width:230px;height:230px;left:40px;top:-90px;animation-delay:-.25s"></span>
+  </button>
+
+  <h3>4. Fullscreen modal frame</h3>
+  <p class="muted">Below: the modal below is rendered inline (not fixed) for screenshot purposes.</p>
+</div>
+
+<div class="modal fullscreen" style="position:static;height:70vh">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Typography / Font Settings</h2>
+      <button class="icon-btn" aria-label="close">✕</button>
+    </div>
+    <div class="modal-body-scroll">
+      <div class="fld"><span class="fld-label">LIVE VOUCHER PREVIEW (58mm)</span>
+        <div class="live-preview">voucher preview here</div>
+      </div>
+      <div class="fld"><span class="fld-label">Font size</span>
+        <div class="slider-row"><input type="range" min="10" max="30" value="18"><b>18</b></div>
+      </div>
+      <div class="fld"><span class="fld-label">Another setting</span>
+        <div class="slider-row"><input type="range" min="0" max="8" value="2"><b>2</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vt-spacer"></div>
+
+<nav id="tabbar" style="position:fixed">
+  <button class="tab active"><span>🎟</span><span>Vouchers</span></button>
+  <button class="tab"><span>🖨</span><span>Printer</span></button>
+  <button class="tab center"><span class="fab">＋</span><span>Generate</span></button>
+  <button class="tab"><span>⋯</span><span>More</span></button>
+  <button class="tab"><span>⚙</span><span>Settings</span></button>
+</nav>
+</body>
+</html>
