@@ -620,12 +620,28 @@ public class RuijieBridge {
     // Login password encryption: the gateway's login page encrypts the
     // password with Gibberish-AES (OpenSSL-compatible AES-256-CBC,
     // "Salted__" format) — replicated in GatewayCrypto. The passphrase
-    // argument comes from the login page's GibberishAES.enc call site.
+    // is derived at runtime exactly like the eWeb bundle:
+    //   (window.sctM || "Rj") + GibberishAES.dec(<seed>, "web").replace(/\s+/g,"")
+    // and the encrypted password has whitespace stripped, matching the
+    // bundle's GibberishAES.enc(e, t || Zt).replace(/\s/g, "") helper.
 
-    /** Passphrase used by the gateway login page's GibberishAES.enc call. */
-    private static final String GW_PWD_PASSPHRASE = "RjYkhwzx$2018!";
-    /** True once GW_PWD_PASSPHRASE is captured from the login JS. */
-    private static final boolean GW_PWD_ENC_READY = true;
+    /**
+     * Passphrase for the gateway login page's GibberishAES.enc call,
+     * derived at runtime from the firmware key-seed (see GatewayCrypto).
+     * Null when derivation fails, in which case GW_PWD_ENC_READY is false
+     * and login reports "not ready" instead of sending a bad password.
+     */
+    private static final String GW_PWD_PASSPHRASE = deriveGwKey();
+    /** True once GW_PWD_PASSPHRASE is derived from the firmware key-seed. */
+    private static final boolean GW_PWD_ENC_READY = GW_PWD_PASSPHRASE != null;
+
+    private static String deriveGwKey() {
+        try {
+            return GatewayCrypto.gatewayPasswordKey();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     private void gwResolve(final String callId, final String json) {
         String b64 = Base64.encodeToString(json.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
@@ -658,7 +674,8 @@ public class RuijieBridge {
             }
             try {
                 String cleanIp = ip.trim().replaceAll("^https?://", "").replaceAll("/.*$", "");
-                String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, GW_PWD_PASSPHRASE);
+                String pwdEnc = GatewayCrypto.gibberishAesEnc(passwordPlain, GW_PWD_PASSPHRASE)
+                        .replaceAll("\\s+", ""); // bundle: GibberishAES.enc(e, t || Zt).replace(/\s/g, "")
                 long ts = System.currentTimeMillis() / 1000L;
                 JSONObject params = new JSONObject()
                         .put("username", username)

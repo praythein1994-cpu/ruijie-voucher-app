@@ -63,6 +63,30 @@ public class GatewayCrypto {
     }
 
     /**
+     * Firmware key-seed, byte-identical to the value embedded in the
+     * gateway eWeb bundle, whose key derivation is:
+     *   var Zt = (window.sctM || "Rj")
+     *          + GibberishAES.dec("<seed>", "web").replace(/\s+/g, "");
+     * The runtime password key is "Rj" + whitespace-stripped decrypted
+     * seed (window.sctM is undefined in the app, so the bundle's "Rj"
+     * default applies). The seed is stored encrypted, exactly as the
+     * firmware ships it; the working key is derived at runtime and never
+     * hardcoded.
+     */
+    private static final String GW_KEY_SEED_ENC =
+            "U2FsdGVkX1+gwUMwIGpcEXYLnXoVg7IcwccoiHU1dfI=";
+
+    /**
+     * Derive the gateway login password key exactly like the eWeb bundle.
+     * Matches: (window.sctM || "Rj") + dec(seed,"web").replace(/\s+/g,"").
+     */
+    public static String gatewayPasswordKey() throws Exception {
+        String inner = gibberishAesDec(GW_KEY_SEED_ENC, "web").replaceAll("\\s+", "");
+        if (inner.isEmpty()) throw new Exception("empty gateway key seed");
+        return "Rj" + inner;
+    }
+
+    /**
      * Decrypt (for self-test only): verifies our encryption round-trips
      * and matches the OpenSSL format.
      */
