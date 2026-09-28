@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.39';
+const APP_VERSION = '1.5.40';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -660,6 +660,27 @@ function showErr(id, msg) {
   e.classList.remove('hidden');
 }
 
+/* v1.5.40: startup sync — refresh the voucher map from Cloud (fresh
+ * voucher statuses instead of session-stale) and warm the portal-client
+ * voucher cache, so the China-AP client views show vouchers immediately
+ * without opening Online Clients first. Fire-and-forget: silent,
+ * best-effort, never blocks or breaks startup. */
+async function startupSync() {
+  try {
+    const pid = Number(S.projectId);
+    if (!pid) return;
+    try { await apClientVoucherMap(pid, true); } catch (e) { /* offline: keep last-known map */ }
+    if (typeof Api !== 'undefined' && Api.ssoLoggedIn && Api.ssoLoggedIn()) {
+      try {
+        let hasAuth = null;
+        try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
+        const list = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false, connectType: '' });
+        try { cachePortalVouchers(list || []); } catch (e) { /* cache is best-effort */ }
+      } catch (e) { /* portal sync optional */ }
+    }
+  } catch (e) { /* never break startup */ }
+}
+
 /* ═══════════ APP SHELL ═══════════ */
 function enterApp() {
   $('view-connect').classList.add('hidden');
@@ -673,7 +694,7 @@ function enterApp() {
   const pp = $('print-paper').value || '80';
   document.querySelectorAll('#paper-seg button').forEach(b =>
     b.classList.toggle('active', b.dataset.paper === pp));
-  loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; });
+  loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; startupSync(); });
   // Vouchers start immediately with the stored project (in parallel with
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
@@ -2243,6 +2264,28 @@ const CST_META = {
   unknown: { key: 'mc.fUnknown' },
 };
 
+/* v1.5.40: shared voucher cell — plan · period · price + status color,
+ * identical on EVERY AP/client view (gateway China APs, Cloud APs,
+ * Online Clients). Status comes from the voucher object in the Cloud
+ * voucher list (status 2 = in use → green, 3 = expired → red); the map
+ * itself is refetched from Cloud on each view open (apClientVoucherMap
+ * force), so colors track Cloud in realtime instead of session cache.
+ * extraSubs: optional extra sub-lines shown above plan·period·price. */
+function voucherCellHtml(vcode, vmap, extraSubs) {
+  const code = String(vcode || '').trim();
+  if (!code) return '—';
+  const v = vmap ? vmap.get(code) : null;
+  const vpkg = v ? voucherPkgName(v) : '';
+  const vper = v && v.timePeriod ? fmtPeriod(v.timePeriod) : '';
+  const vprc = v ? fmtMoney(pkgPriceNum(v)) : '';
+  const vsub = [vpkg, vper, vprc].filter(Boolean).join(' · ');
+  const vst = v ? String(v.status) : '';
+  const vstCls = vst === '3' ? 'vcode-expired' : vst === '2' ? 'vcode-inuse' : '';
+  const subs = [].concat(extraSubs || [], vsub ? [vsub] : []).filter(Boolean).map(esc).join('<br>');
+  return `<b${vstCls ? ` class="${vstCls}"` : ''}>${esc(code)}</b>` +
+    (subs ? `<br><small class="muted">${subs}</small>` : '');
+}
+
 /* Online-Clients render cache: fetch once per visit, re-render locally on
  * filter/names-toggle so chips feel instant. */
 let mcCache = null;
@@ -2273,7 +2316,7 @@ async function moreClients() {
     catch (e) { $('mc-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
   }
   let vmap = new Map();
-  try { vmap = await apClientVoucherMap(pid); } catch (e) { /* voucher enrichment optional */ }
+  try { vmap = await apClientVoucherMap(pid, true); } catch (e) { /* voucher enrichment optional */ }
   if (viaPortal && !srcNote && !list.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
     srcNote = t('ac.portalNoAcct');
   }
@@ -2305,17 +2348,16 @@ function renderMcList() {
     if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
     const st = sts[i];
-    const v = f.acct ? vmap.get(f.acct) : null;
-    const pkg = v ? voucherPkgName(v) : '';
-    const price = v ? fmtMoney(pkgPriceNum(v)) : '';
+    // v1.5.40: shared voucher cell — plan · period · price + status color
+    // on every view; authType kept as an extra sub-line.
     const macSub = [f.ip !== '—' ? f.ip : '', (showNames && f.name) ? f.name : ''].filter(Boolean).map(esc).join('<br>');
-    const vSub = [f.authType, (pkg && price) ? pkg + ' · ' + price : pkg].filter(Boolean).map(esc).join('<br>');
+    const vCell = voucherCellHtml(f.acct, vmap, f.authType ? [f.authType] : []);
     const ssidSub = f.conn !== '—' ? `<br><small class="muted">${esc(f.conn)}</small>` : '';
     const trSub = f.live !== '—' ? `<br><small class="muted">⇅ ${esc(f.live)}</small>` : '';
     rows += `<tr class="cst cst-${st}"><td><span class="cst-dot cst-${st}"></span>${esc(f.mac)}` +
       `${macSub ? `<br><small class="muted">${macSub}</small>` : ''}` +
       `<br><small class="cst-lbl cst-${st}">${esc(t(CST_META[st].key))}</small></td>` +
-      `<td>${f.acct ? `<b>${esc(f.acct)}</b>` : '—'}${vSub ? `<br><small class="muted">${vSub}</small>` : ''}</td>` +
+      `<td>${vCell}</td>` +
       `<td><small>${esc(f.ssid)}${ssidSub}</small></td>` +
       `<td><small>${esc(f.ap)}</small></td>` +
       `<td><small>${esc(f.since)}<br>${esc(f.dur)}</small></td>` +
@@ -2352,13 +2394,23 @@ function renderMcList() {
    never guessed. Tapping a client loads its onofflineUserHistory — consecutive
    records on different AP serials mean the client roamed between APs. */
 let _acVMap = null, _acVMapPid = 0;
-async function apClientVoucherMap(pid) {
-  if (_acVMap && _acVMapPid === pid) return _acVMap;
-  const vs = await Api.voucherListAll(Number(pid), null);
-  const m = new Map();
-  (vs || []).forEach(v => { const c = vCode(v); if (c && !m.has(c)) m.set(c, v); });
-  _acVMap = m; _acVMapPid = pid;
-  return m;
+/* v1.5.40: force=true refetches the voucher list from Cloud so voucher
+ * statuses (expired/in-use) are realtime at view-open time. The old
+ * session-long cache is what kept expired vouchers green. On fetch
+ * failure the last-known map is returned instead of an empty one, so an
+ * offline view still shows the previous enrichment instead of losing it. */
+async function apClientVoucherMap(pid, force) {
+  if (!force && _acVMap && _acVMapPid === pid) return _acVMap;
+  try {
+    const vs = await Api.voucherListAll(Number(pid), null);
+    const m = new Map();
+    (vs || []).forEach(v => { const c = vCode(v); if (c && !m.has(c)) m.set(c, v); });
+    _acVMap = m; _acVMapPid = pid;
+    return m;
+  } catch (e) {
+    if (_acVMap && _acVMapPid === pid) return _acVMap;
+    throw e;
+  }
 }
 const fmtDur = ms => {
   ms = Number(ms);
@@ -2514,7 +2566,7 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
   // clients the live snapshot never lists. Priority: live > auth > cache.
   // Also try the local voucher map (open-API path) as a fallback.
   let vmap = new Map();
-  try { vmap = await apClientVoucherMap(Number(S.projectId)); } catch (e) {}
+  try { vmap = await apClientVoucherMap(Number(S.projectId), true); } catch (e) {}
   let vByMac = new Map(), vByIp = new Map();
   let aByMac = new Map(), aByIp = new Map();
   if (Api.ssoLoggedIn()) {
@@ -2545,19 +2597,8 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
       const vcode = gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, aByMac, aByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
-      // v1.5.38: show the voucher's plan / period / price like the portal
-      // Online Clients view does (voucher object from the open-API map).
-      const vv = vcode ? vmap.get(vcode) : null;
-      const vpkg = vv ? voucherPkgName(vv) : '';
-      const vper = vv && vv.timePeriod ? fmtPeriod(vv.timePeriod) : '';
-      const vprc = vv ? fmtMoney(pkgPriceNum(vv)) : '';
-      const vsub = [vpkg, vper, vprc].filter(Boolean).join(' · ');
-      // v1.5.38: voucher status color — expired red, in-use green.
-      const vst = vv ? String(vv.status) : '';
-      const vstCls = vst === '3' ? 'vcode-expired' : vst === '2' ? 'vcode-inuse' : '';
-      const vcell = vcode
-        ? `<b${vstCls ? ` class="${vstCls}"` : ''}>${esc(vcode)}</b>` + (vsub ? `<br><small class="muted">${esc(vsub)}</small>` : '')
-        : '—';
+      // v1.5.40: shared voucher cell (plan · period · price + status color).
+      const vcell = voucherCellHtml(vcode, vmap);
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
         `<td>${vcell}</td>` +
         `<td><small>${esc(c.ssid || '—')}</small></td>` +
@@ -2636,7 +2677,7 @@ async function apClientsView(apSn, apName, apNames, isLocalAp) {
       clients = (all || []).filter(c => String(c.sn || c.apSn || '') === String(apSn));
     }
     let vmap = new Map();
-    try { vmap = await apClientVoucherMap(pid); } catch (e) { /* voucher enrichment optional */ }
+    try { vmap = await apClientVoucherMap(pid, true); } catch (e) { /* voucher enrichment optional */ }
     // v1.5.26: the portal's own client table (GLOBAL_USERS, /network/current/user/
     // global/page) renders its auth columns from record.account — the auth account
     // (voucher code for voucher-auth clients), shown only when the project has
@@ -2676,9 +2717,8 @@ async function apClientsView(apSn, apName, apNames, isLocalAp) {
       mine.map((c, i) => {
         const mac = c.mac || '—';
         const acct = acctOf(c);
-        const v = acct ? vmap.get(acct) : null;
-        const pkg = v ? voucherPkgName(v) : '';
-        const price = v ? fmtMoney(pkgPriceNum(v)) : '';
+        // v1.5.40: shared voucher cell — plan · period · price + status
+        // color, same as the gateway AP view.
         const since = fmtTs(c.onlineTime);
         // v1.5.25: portal records carry activeSec (seconds); open API uses activeTime (ms).
         const durMs = viaPortal
@@ -2693,7 +2733,7 @@ async function apClientsView(apSn, apName, apNames, isLocalAp) {
         const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
         const ssid = c.ssid || '—';
         return `<tr data-accli="${i}" style="cursor:pointer"><td>${esc(mac)}${hostLine}</td>` +
-          `<td>${esc(acct || '—')}${v ? `<br><small class="muted">${esc(pkg)}${price ? ' · ' + esc(price) : ''}</small>` : ''}</td>` +
+          `<td>${voucherCellHtml(acct, vmap)}</td>` +
           `<td><small>${esc(ssid)}</small></td>` +
           `<td><small>${esc(since)}<br>${esc(fmtDur(durMs))}</small></td>` +
           `<td><small>${esc(sig)}</small></td></tr>` +
