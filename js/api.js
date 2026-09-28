@@ -502,8 +502,11 @@ const Api = {
 
   // ── Clients (online) ──
   // Manual: staType is MANDATORY — "currentUser" = current online data.
+  // NOTE: logbiz APIs live at /logbizagent/... directly (NO /service/api/ prefix).
+  // A leading "/" in the path means "absolute on the cloud host" (see native
+  // RuijieBridge.doApiCall + proxy/server.js).
   async onlineClients(groupId, pageIndex = 0, pageSize = 50) {
-    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize, staType: 'currentUser' });
+    const j = await this.call('POST', '/logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex, pageSize, staType: 'currentUser' });
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },
@@ -513,7 +516,7 @@ const Api = {
    * v1.5.22: powers the per-AP client view (counts, voucher use, roam).
    */
   async allOnlineClients(groupId) {
-    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 200, staType: 'currentUser' });
+    const j = await this.call('POST', '/logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 200, staType: 'currentUser' });
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },
@@ -523,7 +526,7 @@ const Api = {
    * v1.5.22.
    */
   async clientHistory(groupId, mac) {
-    const j = await this.call('POST', 'logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 100, staType: 'onofflineUserHistory', mac });
+    const j = await this.call('POST', '/logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 100, staType: 'onofflineUserHistory', mac });
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },
