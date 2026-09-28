@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.46';
+const APP_VERSION = '1.5.47';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -755,31 +755,27 @@ function moveLiqBlob() {
 }
 window.addEventListener('resize', () => { try { moveLiqBlob(); } catch (e) {} });
 
-/* ── Global touch glow: liquid blob glides to every tap, anywhere in the app ── */
-let touchBlobEl = null, touchBlobIdleT = null;
-function liqGlowBg(color) {
-  const c = /^#[0-9a-fA-F]{6}$/.test(color || '') ? color : '#3b82f6';
-  return 'radial-gradient(circle at 35% 30%, ' + c + 'E6, ' + c + '8C 55%, ' + c + '00 72%)';
-}
-function initTouchBlob() {
-  touchBlobEl = document.getElementById('touch-blob');
-  if (!touchBlobEl) return;
-  touchBlobEl.style.background = liqGlowBg(window.__liqColor);
+// System back button: close an open modal first, else let popstate walk the view stack.
+function initLiquidRipple() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   document.addEventListener('pointerdown', e => {
-    if (e.clientX == null || e.clientY == null) return;
-    touchBlobEl.style.transform =
-      'translate(' + e.clientX + 'px,' + e.clientY + 'px) translate(-50%,-50%)';
-    touchBlobEl.style.background = liqGlowBg(window.__liqColor);
-    touchBlobEl.classList.add('on');
-    touchBlobEl.classList.remove('tap');
-    void touchBlobEl.offsetWidth; /* restart the pulse animation */
-    touchBlobEl.classList.add('tap');
-    clearTimeout(touchBlobIdleT);
-    touchBlobIdleT = setTimeout(() => { if (touchBlobEl) touchBlobEl.classList.remove('on'); }, 1400);
+    if (e.clientX == null || e.clientY == null || !e.target || !e.target.closest) return;
+    const el = e.target.closest('button, .tab, .voucher-row, .menu-item, .card, .chip, a, [data-ripple]');
+    if (!el || !el.getBoundingClientRect) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    el.classList.add('liq-host');
+    const rip = document.createElement('span');
+    rip.className = 'liq-ripple';
+    rip.setAttribute('aria-hidden', 'true');
+    const size = Math.max(r.width, r.height) * 1.15;
+    rip.style.width = rip.style.height = Math.round(size) + 'px';
+    rip.style.left = Math.round(e.clientX - r.left - size / 2) + 'px';
+    rip.style.top = Math.round(e.clientY - r.top - size / 2) + 'px';
+    el.appendChild(rip);
+    setTimeout(() => { rip.remove(); }, 700);
   }, { passive: true });
 }
-
-// System back button: close an open modal first, else let popstate walk the view stack.
 function anyModalOpen() {
   return !!document.querySelector('.modal:not(.hidden)');
 }
@@ -925,7 +921,7 @@ function renderVouchers() {
     return;
   }
   el.innerHTML = list.slice(0, 300).map(v => `
-    <div class="voucher-row${burnRowCls(v)}" data-uuid="${esc(v.uuid)}">
+    <div class="voucher-row${fillRowCls(v)}" data-uuid="${esc(v.uuid)}">
       <span class="status-dot s${esc(v.status)}"></span>
       <div class="voucher-meta">
         <div class="voucher-code">${esc(vCode(v))}</div>
@@ -938,40 +934,38 @@ function renderVouchers() {
   el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', () => openVoucherDetail(r.dataset.uuid)));
 }
 
-/* ═══════════ v1.5.27 — burning-paper voucher ═══════════
-   Burn fraction = clamp(usedTime / timePeriod, 0, 1). Pure-CSS visuals are
-   driven by the --burn custom property; a tiny canvas paints ember particles
-   inside the modal paper block only. No per-frame JS layout work. */
-function burnFrac(usedMin, periodMin) {
+/* ═══════════ v1.5.47 — liquid-fill voucher ═══════════
+   Fill fraction = clamp(usedTime / timePeriod, 0, 1). Pure-CSS visuals are
+   driven by the --fill custom property; a tiny canvas paints rising bubble
+   particles inside the modal paper block only. No per-frame JS layout work. */
+function fillFrac(usedMin, periodMin) {
   const u = Number(usedMin) || 0, p = Number(periodMin) || 0;
   if (p <= 0) return 0;
   return Math.min(1, Math.max(0, u / p));
 }
-/* v1.5.34 — burn follows DATA for quota vouchers (usedQuota/quota in MB),
+/* v1.5.47 — fill follows DATA for quota vouchers (usedQuota/quota in MB),
    TIME for pure time vouchers (usedTime/timePeriod in minutes).
    usedTimeMinOverride lets the live ticker interpolate time smoothly. */
-function voucherBurnFrac(v, usedTimeMinOverride) {
+function voucherFillFrac(v, usedTimeMinOverride) {
   const q = Number(v && v.quota) || 0;
   if (q > 0) {
     const u = Number(v.usedQuota) || 0;
     return Math.min(1, Math.max(0, u / q));
   }
   const u = usedTimeMinOverride != null ? usedTimeMinOverride : (Number(v.usedTime) || 0);
-  return burnFrac(u, Number(v.timePeriod) || 0);
+  return fillFrac(u, Number(v.timePeriod) || 0);
 }
-/* burn treatment for .voucher-row elements with status 2 (in-use) */
-function burnRowCls(v) {
-  if (String(v.status) !== '2') return '';
-  const f = voucherBurnFrac(v);
-  return ' ' + (f >= 0.85 ? 'burn-high' : f >= 0.45 ? 'burn-med' : 'burn-low');
+/* v1.5.47: voucher rows carry no fire/liquid treatment (was dead CSS) */
+function fillRowCls(v) {
+  return '';
 }
-let burnRAF = null, burnGone = false, burnFrontFrac = 0;
-function stopBurnEmbers() {
-  if (burnRAF) { cancelAnimationFrame(burnRAF); burnRAF = null; }
+let liquidRAF = null, liquidGone = false, liquidFrontFrac = 0;
+function stopLiquidBubbles() {
+  if (liquidRAF) { cancelAnimationFrame(liquidRAF); liquidRAF = null; }
 }
-function startBurnEmbers(mode) {
-  stopBurnEmbers();
-  const cv = $('burn-canvas');
+function startLiquidBubbles(mode) {
+  stopLiquidBubbles();
+  const cv = $('liquid-canvas');
   if (!cv || !cv.parentElement) return;
   const box = cv.parentElement.getBoundingClientRect();
   if (box.width < 4 || box.height < 4) return;
@@ -981,76 +975,78 @@ function startBurnEmbers(mode) {
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
   const W = box.width, H = box.height;
-  // sparks rise from the burn front (frontY) with a little spread
-  const frontY = H * (1 - Math.min(1, Math.max(0, burnFrontFrac)));
+  // bubbles rise from the liquid front (frontY) with a little spread
+  const frontY = H * (1 - Math.min(1, Math.max(0, liquidFrontFrac)));
   const mk = () => ({
     x: Math.random() * W, y: Math.min(H - 2, Math.max(2, frontY + (Math.random() - 0.35) * H * 0.3)),
-    r: 0.8 + Math.random() * 2.4, vy: 0.5 + Math.random() * 1.2,
-    vx: (Math.random() - 0.5) * 0.6, life: 1, decay: 0.006 + Math.random() * 0.012,
+    r: 1 + Math.random() * 3.4, vy: 0.4 + Math.random() * 1.1,
+    vx: (Math.random() - 0.5) * 0.5, life: 1, decay: 0.004 + Math.random() * 0.009,
+    wob: Math.random() * 6.28,
   });
   const P = [];
-  const N = mode === 'burst' ? 42 : 16;
+  const N = mode === 'burst' ? 42 : 14;
   for (let i = 0; i < N; i++) { const p = mk(); p.y = Math.random() * H; P.push(p); }
   const loop = () => {
-    burnRAF = requestAnimationFrame(loop);
+    liquidRAF = requestAnimationFrame(loop);
     if (document.hidden) return;
     ctx.clearRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'lighter';
     let alive = 0;
     for (const p of P) {
-      p.x += p.vx + Math.sin(p.y * 0.05 + p.r * 9) * 0.3;
+      p.wob += 0.05;
+      p.x += p.vx + Math.sin(p.wob) * 0.4;
       p.y -= p.vy;
       p.life -= p.decay;
       if (p.life > 0 && p.y > -8) {
         alive++;
-        const a = Math.max(0, p.life);
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
-        g.addColorStop(0, 'rgba(255,' + Math.round(140 + 60 * a) + ',40,' + (0.8 * a).toFixed(2) + ')');
-        g.addColorStop(1, 'rgba(255,60,0,0)');
-        ctx.fillStyle = g;
+        const a = Math.max(0, Math.min(1, p.life));
+        ctx.strokeStyle = 'rgba(147,197,253,' + (0.75 * a).toFixed(2) + ')';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * 3, 0, 7);
+        ctx.arc(p.x, p.y, p.r, 0, 6.2832);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.5 * a).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(p.x - p.r * 0.3, p.y - p.r * 0.3, Math.max(0.4, p.r * 0.28), 0, 6.2832);
         ctx.fill();
       } else if (mode === 'live') {
         Object.assign(p, mk());
         alive++;
       }
     }
-    ctx.globalCompositeOperation = 'source-over';
-    if (mode === 'burst' && alive === 0) stopBurnEmbers();
+    if (mode === 'burst' && alive === 0) stopLiquidBubbles();
   };
   loop();
 }
 /* set up the paper header block in the voucher detail modal */
-function setupBurnPaper(v) {
-  stopBurnEmbers();
-  burnGone = false;
-  const paper = $('burn-paper');
+function setupLiquidPaper(v) {
+  stopLiquidBubbles();
+  liquidGone = false;
+  const paper = $('liquid-paper');
   if (!paper) return;
   const st = String(v.status);
-  const f = st === '3' ? 1 : voucherBurnFrac(v);
-  burnFrontFrac = f;
-  paper.style.setProperty('--burn', f.toFixed(3));
-  paper.classList.toggle('burning', st === '2' && f < 1);
+  const f = st === '3' ? 1 : voucherFillFrac(v);
+  liquidFrontFrac = f;
+  paper.style.setProperty('--fill', f.toFixed(3));
+  paper.classList.toggle('filling', st === '2' && f < 1);
   if (st === '3' || (st === '2' && f >= 1)) {
-    paper.classList.add('burned-out');
-    burnGone = true;
-    startBurnEmbers('burst');
+    paper.classList.add('liquid-full');
+    liquidGone = true;
+    startLiquidBubbles('burst');
   } else {
-    paper.classList.remove('burned-out');
-    if (st === '2') startBurnEmbers('live');
+    paper.classList.remove('liquid-full');
+    if (st === '2') startLiquidBubbles('live');
   }
 }
-/* one-time burn-away: paper chars fully, ember burst, then rests as ash */
-function triggerBurnAway() {
-  if (burnGone) return;
-  burnGone = true;
-  const paper = $('burn-paper');
+/* one-time fill-up: liquid reaches the top, bubble burst, then rests full */
+function triggerLiquidFull() {
+  if (liquidGone) return;
+  liquidGone = true;
+  const paper = $('liquid-paper');
   if (!paper) return;
-  paper.classList.remove('burning');
-  paper.style.setProperty('--burn', '1');
-  paper.classList.add('burned-out');
-  startBurnEmbers('burst');
+  paper.classList.remove('filling');
+  paper.style.setProperty('--fill', '1');
+  paper.classList.add('liquid-full');
+  startLiquidBubbles('burst');
 }
 
 let modalVoucher = null;
@@ -1082,20 +1078,20 @@ function openVoucherDetail(uuid) {
   ];
   const vst = String(v.status);
   $('modal-body').innerHTML = `
-  <div class="burn-paper" id="burn-paper" data-st="${vst}">
-    <div class="burn-char" aria-hidden="true"></div>
-    <div class="burn-flames" aria-hidden="true"></div>
-    <canvas class="burn-embers" id="burn-canvas" aria-hidden="true"></canvas>
-    <span class="burn-label">${esc(statusTxt(v.status))}</span>
-    <div class="burn-code">${esc(vCode(v))}</div>
-    <div class="burn-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
-    <div class="burn-perf"></div>
+  <div class="liquid-paper" id="liquid-paper" data-st="${vst}">
+    <div class="liquid-fill" aria-hidden="true"></div>
+    <div class="liquid-wave" aria-hidden="true"></div>
+    <canvas class="liquid-bubbles" id="liquid-canvas" aria-hidden="true"></canvas>
+    <span class="liquid-label">${esc(statusTxt(v.status))}</span>
+    <div class="liquid-code">${esc(vCode(v))}</div>
+    <div class="liquid-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
+    <div class="liquid-perf"></div>
   </div>
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
   startVoucherLive(v);
-  setupBurnPaper(v);
+  setupLiquidPaper(v);
 }
 
 /* Live voucher detail: remaining time ticks every second from the local clock
@@ -1111,20 +1107,20 @@ function startVoucherLive(v) {
     const elapsedMin = (Date.now() - liveBase.at) / 60000;
     const el = $('live-remtime');
     if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
-    /* v1.5.34: drive the burn from the live clock for time vouchers;
-       data vouchers burn from cloud data (refreshed by the poller) —
-       never interpolated. The charred edge visibly spreads as the
+    /* v1.5.47: drive the liquid fill from the live clock for time vouchers;
+       data vouchers fill from cloud data (refreshed by the poller) —
+       never interpolated. The liquid surface visibly rises as the
        voucher is consumed. */
-    const paper = $('burn-paper');
+    const paper = $('liquid-paper');
     if (paper) {
       const pst = String(modalVoucher.status);
       if (pst === '2') {
-        const bf = voucherBurnFrac(modalVoucher, liveBase.usedTimeMin + elapsedMin);
-        burnFrontFrac = bf;
-        paper.style.setProperty('--burn', bf.toFixed(3));
-        if (bf >= 1) triggerBurnAway();
+        const bf = voucherFillFrac(modalVoucher, liveBase.usedTimeMin + elapsedMin);
+        liquidFrontFrac = bf;
+        paper.style.setProperty('--fill', bf.toFixed(3));
+        if (bf >= 1) triggerLiquidFull();
       } else if (pst === '3') {
-        triggerBurnAway();
+        triggerLiquidFull();
       }
     }
     const age = $('live-age');
@@ -1160,7 +1156,7 @@ function stopVoucherLive() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
   if (livePoller) { clearInterval(livePoller); livePoller = null; }
   liveBase = null;
-  stopBurnEmbers();
+  stopLiquidBubbles();
 }
 
 async function deleteVoucher() {
@@ -2313,7 +2309,7 @@ const mcFields = (c, viaPortal, vmap) => {
  *               code was never entered (gray)
  *   unknown   — account present but the voucher is not in the voucher list
  *               (deleted/aged out) (purple)
- * Follows the v1.5.34 burn rule: quota vouchers are governed by DATA
+ * Follows the v1.5.47 fill rule: quota vouchers are governed by DATA
  * (usedQuota/quota), pure-time vouchers by TIME (usedTime/timePeriod).
  * Never guesses: anything unverifiable is 'noauth' or 'unknown'. */
 const clientStatusOf = (acct, vmap) => {
@@ -2325,7 +2321,7 @@ const clientStatusOf = (acct, vmap) => {
   const p = Number(v.timePeriod) || 0, ut = Number(v.usedTime) || 0;
   // Each dimension is checked on its own: a quota voucher whose time ran
   // out while data remains is 'timeup', not 'datalimit'. When both are
-  // spent, data takes priority per the v1.5.34 burn convention.
+  // spent, data takes priority per the v1.5.47 fill convention.
   if (q > 0 && uq >= q) return 'datalimit';
   if (p > 0 && ut >= p) return 'timeup';
   // Expired with no fully-spent dimension (e.g. past expiry date): fall back
@@ -3340,7 +3336,7 @@ function init() {
   init._done = true;
   initTheme();
   initLang();
-  initTouchBlob();
+  initLiquidRipple();
 
   // password peek toggles
   document.querySelectorAll('[data-peek]').forEach(b => b.addEventListener('click', () => {
