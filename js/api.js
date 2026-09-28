@@ -572,8 +572,12 @@ const Api = {
      `authType`, `linkedDevice` (the AP serial), `deviceName`, `activeSec`
      (seconds). page_index is 1-based. Response {code,list[],currentCount}.
      Android-APK-only (needs SSO session). */
-  async portalClients(groupId, { pageIndex = 1, pageSize = 500, linkedDevice = '', authCount = false } = {}) {
-    const querys = { group_id: Number(groupId), page_index: pageIndex, page_size: pageSize, connect_type: 'wireless', lang: 'en' };
+  async portalClients(groupId, { pageIndex = 1, pageSize = 500, linkedDevice = '', authCount = false, connectType = 'wireless' } = {}) {
+    const querys = { group_id: Number(groupId), page_index: pageIndex, page_size: pageSize, lang: 'en' };
+    // The portal's own client list sends connect_type "" for the "All" tab,
+    // "wireless"/"wire" for the filtered tabs. Default 'wireless' preserves
+    // the existing per-AP callers; pass '' for the unfiltered global list.
+    if (connectType) querys.connect_type = connectType;
     if (linkedDevice) querys.linked_device = linkedDevice;
     // Portal parity (from the portal's own client-list code): when the project
     // has auth configured it sends authCount=true, which is what makes the

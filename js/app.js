@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.34';
+const APP_VERSION = '1.5.35';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -351,6 +351,15 @@ const I18N = {
   'mc.total': { my: 'စုစုပေါင်း {n}', en: '{n} total' },
   'mc.mac': { my: 'MAC / IP', en: 'MAC / IP' },
   'mc.ssid': { my: 'SSID', en: 'SSID' },
+  'mc.ap': { my: 'AP', en: 'AP' },
+  'mc.traffic': { my: 'ဒေတာ', en: 'Traffic' },
+  'mc.device': { my: 'စက်', en: 'Device' },
+  'mc.fAll': { my: 'အားလုံး', en: 'All' },
+  'mc.fActive': { my: 'သုံးနေဆဲ', en: 'Active' },
+  'mc.fTimeUp': { my: 'အချိန်ကုန်', en: 'Time up' },
+  'mc.fDataUp': { my: 'ဒေတာပြည့်', en: 'Data up' },
+  'mc.fNoAuth': { my: 'Portal မဝင်', en: 'No portal' },
+  'mc.fUnknown': { my: 'အခြား', en: 'Other' },
   'ac.title': { my: 'AP ချိတ်ဆက်သူများ', en: 'AP clients' },
   'ac.none': { my: 'ချိတ်ဆက်ထားသူမရှိပါ', en: 'No connected clients' },
   'ac.total': { my: 'စုစုပေါင်း {n} ယောက်', en: '{n} clients' },
@@ -2146,17 +2155,192 @@ async function rebootDevice(sn, name) {
   if (S.moreFn === moreDevices) moreDevices();
 }
 
+/* Extract display values for one Online-Clients record. Pure and
+ * unit-testable. Field names verified 2026-09-28 against the portal's own
+ * GLOBAL_USERS response (read-only): mac, ip, userName (capital N — the app
+ * previously read `username`, which is why the Details column was empty),
+ * ssid, deviceName (AP), account/authType (voucher), band/channel/rssi,
+ * activeSec/onlineTime, flowUpDown/downRate/upRate, staLabelName,
+ * manufacturer/staModel/staOs, connectType. Missing → '—', never fabricated.
+ * Open-API fallback records (sta_users) carry a subset; portal-only fields
+ * stay '—' there. */
+const mcFields = (c, viaPortal, vmap) => {
+  c = c || {};
+  const mac = c.mac || '—';
+  const ip = viaPortal ? (c.ip || '—') : (c.userIp || c.ip || '—');
+  const name = viaPortal
+    ? String(c.alias || c.userName || c.staModel || '').trim()
+    : String(c.hostname || c.username || c.userName || '').trim();
+  // v1.5.26 rule: the open-API sta_users has no account field — attribute a
+  // voucher only when the username verifies against the voucher map.
+  // Device/host names are NEVER shown as vouchers.
+  const acct = viaPortal
+    ? String(c.account || c.authAccount || c.authName || '').trim()
+    : (() => { const u = String(c.username || '').trim(); return (u && vmap && vmap.has(u)) ? u : ''; })();
+  const authType = viaPortal ? String(c.authType || '').trim() : '';
+  const ssid = c.ssid || '—';
+  const ap = viaPortal ? (c.deviceName || '—') : '—';
+  const since = fmtTs(c.onlineTime);
+  const durMs = viaPortal
+    ? (Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
+      : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN))
+    : (Number(c.activeTime) > 0 ? Number(c.activeTime)
+      : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN));
+  const sig = [c.rssi != null && c.rssi !== '' ? String(c.rssi) + ' dBm' : '',
+               c.band || '', c.channel ? 'ch ' + c.channel : ''].filter(Boolean).join(' · ') || '—';
+  const total = viaPortal ? fmtBytes(c.flowUpDown) : '—';
+  const live = !viaPortal ? '—'
+    : ((c.downRate == null || c.downRate === '') && (c.upRate == null || c.upRate === '')
+      ? '—' : [fmtRate(c.downRate), fmtRate(c.upRate)].join(' / '));
+  const dev = viaPortal
+    ? (() => {
+        const maker = String(c.manufacturer || '').trim();
+        const model = String(c.staModel || '').trim();
+        const modelFull = (maker && model && model.toLowerCase().startsWith(maker.toLowerCase()))
+          ? model : [maker, model].filter(Boolean).join(' ');
+        return [c.staLabelName || '', modelFull, c.staOs || ''].filter(Boolean).join(' · ') || '—';
+      })()
+    : '—';
+  const conn = viaPortal ? (c.connectType || '—') : '—';
+  return { mac, ip, name, acct, authType, ssid, ap, since, dur: fmtDur(durMs), sig, total, live, dev, conn };
+};
+
+/* Client connection status for the Online-Clients view. Pure and
+ * unit-testable.
+ *   active    — voucher-authenticated, voucher still valid (green)
+ *   timeup    — voucher's time quota exhausted (pure-time voucher) (orange)
+ *   datalimit — voucher's data quota exhausted (quota voucher) (red)
+ *   noauth    — WiFi associated but no portal/voucher account: the portal
+ *               code was never entered (gray)
+ *   unknown   — account present but the voucher is not in the voucher list
+ *               (deleted/aged out) (purple)
+ * Follows the v1.5.34 burn rule: quota vouchers are governed by DATA
+ * (usedQuota/quota), pure-time vouchers by TIME (usedTime/timePeriod).
+ * Never guesses: anything unverifiable is 'noauth' or 'unknown'. */
+const clientStatusOf = (acct, vmap) => {
+  const a = String(acct || '').trim();
+  if (!a) return 'noauth';
+  const v = vmap ? vmap.get(a) : null;
+  if (!v) return 'unknown';
+  const q = Number(v.quota) || 0, uq = Number(v.usedQuota) || 0;
+  const p = Number(v.timePeriod) || 0, ut = Number(v.usedTime) || 0;
+  // Each dimension is checked on its own: a quota voucher whose time ran
+  // out while data remains is 'timeup', not 'datalimit'. When both are
+  // spent, data takes priority per the v1.5.34 burn convention.
+  if (q > 0 && uq >= q) return 'datalimit';
+  if (p > 0 && ut >= p) return 'timeup';
+  // Expired with no fully-spent dimension (e.g. past expiry date): fall back
+  // to the voucher's governing dimension, mirroring the voucher list.
+  if (String(v.status) === '3') return q > 0 ? 'datalimit' : 'timeup';
+  return 'active';
+};
+const CSTS = ['active', 'timeup', 'datalimit', 'noauth', 'unknown'];
+const CST_META = {
+  active: { key: 'mc.fActive' },
+  timeup: { key: 'mc.fTimeUp' },
+  datalimit: { key: 'mc.fDataUp' },
+  noauth: { key: 'mc.fNoAuth' },
+  unknown: { key: 'mc.fUnknown' },
+};
+
+/* Online-Clients render cache: fetch once per visit, re-render locally on
+ * filter/names-toggle so chips feel instant. */
+let mcCache = null;
 async function moreClients() {
   S.moreFn = moreClients;
   moreShell(`${ic('monitor', 'sm')} ${esc(t('mc.title'))}`, `<div id="mc-list"><p class="muted">${t('more.loading')}</p></div>`);
-  try {
-    const list = await Api.onlineClients(Number(S.projectId), 0, 100);
-    $('mc-list').innerHTML = list.length ? `<div class="wrap-scroll"><table class="data">
-      <tr><th>${t('mc.mac')}</th><th>${t('mc.ssid')}</th><th>${t('mc.detail')}</th></tr>
-      ${list.map(c => `<tr><td>${esc(c.mac || '')}<br><small class="muted">${esc(c.ip || '')}</small></td>
-        <td>${esc(c.ssid || '')}</td><td><small>${esc(c.username || c.hostname || '')}</small></td></tr>`).join('')}
-      </table></div><p class="muted small">${tx('mc.total', { n: list.length })}</p>` : `<p class="muted">${t('mc.none')}</p>`;
-  } catch (e) { $('mc-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  const pid = Number(S.projectId);
+  // Prefer the portal client API (SSO): its records carry the full verified
+  // field set (voucher account/authType, AP deviceName, rssi/band/channel,
+  // activeSec/onlineTime, traffic, device model/OS). Falls back to the open
+  // API when SSO is unavailable or the portal call fails.
+  let list = [], viaPortal = false, srcNote = '';
+  const ssoOk = Api.ssoLoggedIn();
+  if (ssoOk) {
+    try {
+      let hasAuth = null;
+      try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
+      list = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false, connectType: '' }) || [];
+      viaPortal = true;
+      if (hasAuth === false) srcNote = t('ac.noAuthCfg');
+    } catch (e) { srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140); }
+  } else {
+    srcNote = t('ac.needSso');
+  }
+  if (!viaPortal) {
+    try { list = await Api.onlineClients(pid, 0, 200) || []; }
+    catch (e) { $('mc-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+  }
+  let vmap = new Map();
+  try { vmap = await apClientVoucherMap(pid); } catch (e) { /* voucher enrichment optional */ }
+  if (viaPortal && !srcNote && !list.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
+    srcNote = t('ac.portalNoAcct');
+  }
+  mcCache = {
+    list, viaPortal, vmap, srcNote,
+    filter: (mcCache && mcCache.filter) || 'all',
+    showNames: Store.load().clientShowNames !== false,
+  };
+  renderMcList();
+}
+
+function renderMcList() {
+  const { list, viaPortal, vmap, srcNote } = mcCache;
+  const { filter, showNames } = mcCache;
+  const sts = list.map(c => clientStatusOf(mcFields(c, viaPortal, vmap).acct, vmap));
+  const counts = { all: list.length };
+  CSTS.forEach(s => counts[s] = 0);
+  sts.forEach(s => counts[s]++);
+  const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}</p>`;
+  const chip = (key, label, n, dotCls) =>
+    `<button class="chip${filter === key ? ' active' : ''}" data-mcf="${key}">` +
+    (dotCls ? `<span class="dot ${dotCls}"></span>` : '') + `${esc(label)} (${n})</button>`;
+  const chipsHtml = `<div class="chips">` +
+    chip('all', t('mc.fAll'), counts.all, '') +
+    CSTS.map(s => chip(s, t(CST_META[s].key), counts[s], 'cst-' + s)).join('') +
+    `<button class="chip${showNames ? ' active' : ''}" id="mc-names">👤 ${esc(t('ac.names'))}</button></div>`;
+  let rows = '';
+  list.forEach((c, i) => {
+    if (filter !== 'all' && sts[i] !== filter) return;
+    const f = mcFields(c, viaPortal, vmap);
+    const st = sts[i];
+    const v = f.acct ? vmap.get(f.acct) : null;
+    const pkg = v ? voucherPkgName(v) : '';
+    const price = v ? fmtMoney(pkgPriceNum(v)) : '';
+    const macSub = [f.ip !== '—' ? f.ip : '', (showNames && f.name) ? f.name : ''].filter(Boolean).map(esc).join('<br>');
+    const vSub = [f.authType, (pkg && price) ? pkg + ' · ' + price : pkg].filter(Boolean).map(esc).join('<br>');
+    const ssidSub = f.conn !== '—' ? `<br><small class="muted">${esc(f.conn)}</small>` : '';
+    const trSub = f.live !== '—' ? `<br><small class="muted">⇅ ${esc(f.live)}</small>` : '';
+    rows += `<tr class="cst cst-${st}"><td><span class="cst-dot cst-${st}"></span>${esc(f.mac)}` +
+      `${macSub ? `<br><small class="muted">${macSub}</small>` : ''}` +
+      `<br><small class="cst-lbl cst-${st}">${esc(t(CST_META[st].key))}</small></td>` +
+      `<td>${f.acct ? `<b>${esc(f.acct)}</b>` : '—'}${vSub ? `<br><small class="muted">${vSub}</small>` : ''}</td>` +
+      `<td><small>${esc(f.ssid)}${ssidSub}</small></td>` +
+      `<td><small>${esc(f.ap)}</small></td>` +
+      `<td><small>${esc(f.since)}<br>${esc(f.dur)}</small></td>` +
+      `<td><small>${esc(f.sig)}</small></td>` +
+      `<td><small>${esc(f.total)}${trSub}</small></td>` +
+      `<td><small>${esc(f.dev)}</small></td></tr>`;
+  });
+  $('mc-list').innerHTML =
+    `<p class="muted small">${esc(tx('mc.total', { n: list.length }))}</p>` +
+    srcLine + chipsHtml +
+    (rows
+      ? `<div class="wrap-scroll"><table class="data">` +
+        `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('mc.ssid')}</th><th>${t('mc.ap')}</th>` +
+        `<th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th><th>${t('mc.traffic')}</th><th>${t('mc.device')}</th></tr>` +
+        rows + `</table></div>`
+      : `<p class="muted">${esc(t('mc.none'))}</p>`);
+  document.querySelectorAll('#mc-list [data-mcf]').forEach(b => b.addEventListener('click', () => {
+    mcCache.filter = b.dataset.mcf;
+    renderMcList();
+  }));
+  const nb = $('mc-names');
+  if (nb) nb.addEventListener('click', () => {
+    mcCache.showNames = !mcCache.showNames;
+    Store.save({ clientShowNames: mcCache.showNames });
+    renderMcList();
+  });
 }
 
 /* ── Per-AP clients · v1.5.22 ──
@@ -2188,6 +2372,25 @@ const fmtTs = ts => {
   if (!Number.isFinite(n) || n <= 0) return '—';
   try { return new Date(n).toLocaleString(); } catch (e) { return '—'; }
 };
+// Portal client records carry flowUpDown (total traffic, bytes) and
+// downRate/upRate (live traffic, bps). Units verified against the portal's
+// own rendering (MB for totals, bps/Kbps for live rates). Missing → '—'.
+const fmtBytes = b => {
+  if (b == null || b === '') return '—';
+  const n = Number(b);
+  if (!Number.isFinite(n) || n < 0) return '—';
+  if (n < 1024) return `${n} B`;
+  if (n < 1048576) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1048576).toFixed(2)} MB`;
+};
+const fmtRate = bps => {
+  if (bps == null || bps === '') return '—';
+  const n = Number(bps);
+  if (!Number.isFinite(n) || n < 0) return '—';
+  if (n < 1000) return `${n}bps`;
+  if (n < 1000000) return `${(n / 1000).toFixed(2)}Kbps`;
+  return `${(n / 1000000).toFixed(2)}Mbps`;
+};
 const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn))) || fallback || sn || '—';
 
 /* ── Gateway-local AP client list (China APs) · v1.5.29 ──
@@ -2203,23 +2406,42 @@ const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn)))
  * (60:C7:BE:3A:BE:A5); plain uppercase-compare never matched. normMac
  * strips every non-hex character so both sides compare equal. */
 const normMac = s => String(s || '').toUpperCase().replace(/[^0-9A-F]/g, '');
+/* Build MAC→voucher and IP→voucher lookup maps from portal client records.
+ * Pure and unit-testable. Portal records carry `account` (the voucher code
+ * for voucher-auth clients) — verified 2026-09-28 against the portal's own
+ * GLOBAL_USERS response. MAC is the primary key (normMac-normalized, so the
+ * portal's dotted form 60c7.be3a.bea5 matches the gateway's 60:C7:BE:3A:BE:A5);
+ * IP is a secondary fallback for STAs whose MAC didn't match. */
+const gwVoucherMaps = plist => {
+  const byMac = new Map(), byIp = new Map();
+  (plist || []).forEach(p => {
+    const acct = String(p.account || p.authAccount || p.authName || '').trim();
+    if (!acct) return;
+    const mac = normMac(p.mac || p.staMac);
+    if (mac && !byMac.has(mac)) byMac.set(mac, acct);
+    const ip = String(p.ip || '').trim();
+    if (ip && !byIp.has(ip)) byIp.set(ip, acct);
+  });
+  return { byMac, byIp };
+};
+/* Voucher account for one gateway STA record: MAC match first, then IP
+ * fallback. Returns '' when nothing matches — never fabricated. */
+const gwVoucherForSta = (sta, byMac, byIp) =>
+  (byMac && byMac.get(normMac(sta && sta.mac))) ||
+  (byIp && sta && sta.ip && byIp.get(String(sta.ip).trim())) || '';
 async function renderGwApClients(apSn, apName, clients, staTotal) {
   const showNames = Store.load().clientShowNames !== false;
   if (!clients.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
   // MAC → voucher code from the Cloud portal (SSO). The portal joins
   // auth-account data when authCount=true (v1.5.28 parity).
-  const vByMac = new Map();
+  let vByMac = new Map(), vByIp = new Map();
   if (Api.ssoLoggedIn()) {
     try {
       const pid = Number(S.projectId);
       let hasAuth = null;
       try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
       const plist = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false });
-      (plist || []).forEach(p => {
-        const mac = normMac(p.mac || p.staMac);
-        const acct = String(p.account || p.authAccount || p.authName || '').trim();
-        if (mac && acct && !vByMac.has(mac)) vByMac.set(mac, acct);
-      });
+      ({ byMac: vByMac, byIp: vByIp } = gwVoucherMaps(plist));
     } catch (e) { /* portal voucher enrichment optional — stay honest "—" */ }
   }
   // Also try the local voucher map (open-API path) as a fallback.
@@ -2237,7 +2459,7 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
-      const vcode = vByMac.get(normMac(c.mac)) || '';
+      const vcode = gwVoucherForSta(c, vByMac, vByIp);
       const vcell = vcode ? `<b>${esc(vcode)}</b>` : '—';
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
         `<td>${vcell}</td>` +
