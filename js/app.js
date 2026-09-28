@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.26';
+const APP_VERSION = '1.5.27';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -30,7 +30,7 @@ const I18N = {
   'tab.more': { my: 'More', en: 'More' },
   'tab.settings': { my: 'ဆက်တင်', en: 'Settings' },
   'v.title': { my: 'ဗောက်ချာများ', en: 'Vouchers' },
-  'stat.active': { my: 'မသုံးရသေး', en: 'Active' },
+  'stat.active': { my: 'မသုံးရသေး', en: 'Unused' },
   'stat.used': { my: 'သုံးနေဆဲ', en: 'In use' },
   'stat.expired': { my: 'သက်တမ်းကုန်', en: 'Expired' },
   'stat.total': { my: 'စုစုပေါင်း', en: 'Total' },
@@ -39,7 +39,7 @@ const I18N = {
   'search.clear': { my: 'ရှင်းမယ်', en: 'Clear' },
   'search.refresh': { my: 'ပြန်ဆွဲမယ်', en: 'Refresh' },
   'chip.all': { my: 'အားလုံး', en: 'All' },
-  'chip.s1': { my: 'မသုံးရသေး', en: 'Active' },
+  'chip.s1': { my: 'မသုံးရသေး', en: 'Unused' },
   'chip.s2': { my: 'သုံးနေဆဲ', en: 'In use' },
   'chip.s3': { my: 'သက်တမ်းကုန်', en: 'Expired' },
   'v.loading': { my: 'ဆွဲနေသည်…', en: 'Loading…' },
@@ -51,7 +51,7 @@ const I18N = {
   'v.empty': { my: 'ဗောက်ချာမရှိပါ', en: 'No vouchers' },
   'v.emptySub': { my: '「ထုတ်မယ်」 tab မှ အသစ်ထုတ်နိုင်ပါတယ်', en: 'Generate new ones from the Generate tab' },
   'v.first300': { my: 'အစဆုံး ၃၀၀ သာပြထားသည် — ရှာဖွေမှုနဲ့ စစ်ထုတ်ပါ', en: 'Showing first 300 — use search or filters' },
-  'status.1': { my: 'မသုံးရသေး', en: 'Active' },
+  'status.1': { my: 'မသုံးရသေး', en: 'Unused' },
   'status.2': { my: 'သုံးနေဆဲ', en: 'In use' },
   'status.3': { my: 'သက်တမ်းကုန်', en: 'Expired' },
   'd.code': { my: 'ကုဒ်နံပါတ်', en: 'Code' },
@@ -361,6 +361,12 @@ const I18N = {
   'ac.signal': { my: 'ဆစ်ဂနယ်', en: 'Signal' },
   'ac.ssid': { my: 'SSID', en: 'SSID' },
   'ac.names': { my: 'အမည်', en: 'Names' },
+  'ac.srcPortal': { my: 'Portal', en: 'Portal' },
+  'ac.srcApi': { my: 'Cloud API', en: 'Cloud API' },
+  'ac.needSso': { my: 'Voucher မြင်ရဖို့ Settings → Ruijie အကောင့်မှာ login ဝင်ပါ', en: 'Log in via Settings → Ruijie account to see voucher info' },
+  'ac.portalErr': { my: 'Portal ခေါ်မရပါ', en: 'Portal request failed' },
+  'ac.portalNoMatch': { my: 'ဒီ AP အတွက် portal မှာ client မတွေ့ပါ', en: 'Portal returned no clients for this AP' },
+  'ac.portalNoAcct': { my: 'Portal client တွေမှာ auth account မပါပါ — voucher သုံးတဲ့ SSID မဟုတ်နိုင်ပါ', en: 'Portal clients carry no auth account — SSID may not use voucher auth' },
   'ac.roamTitle': { my: 'AP ပြောင်းသွားမှု', en: 'Roaming' },
   'ac.roamFrom': { my: 'ပြောင်းလာတဲ့ AP', en: 'Roamed from' },
   'ac.roamNone': { my: 'roam မှတ်တမ်းမရှိပါ', en: 'No roam history' },
@@ -797,7 +803,7 @@ function renderVouchers() {
     return;
   }
   el.innerHTML = list.slice(0, 300).map(v => `
-    <div class="voucher-row" data-uuid="${esc(v.uuid)}">
+    <div class="voucher-row${burnRowCls(v)}" data-uuid="${esc(v.uuid)}">
       <span class="status-dot s${esc(v.status)}"></span>
       <div class="voucher-meta">
         <div class="voucher-code">${esc(vCode(v))}</div>
@@ -808,6 +814,106 @@ function renderVouchers() {
     </div>`).join('');
   if (list.length > 300) el.innerHTML += `<div class="empty" style="padding:20px"><p class="small">${t('v.first300')}</p></div>`;
   el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', () => openVoucherDetail(r.dataset.uuid)));
+}
+
+/* ═══════════ v1.5.27 — burning-paper voucher ═══════════
+   Burn fraction = clamp(usedTime / timePeriod, 0, 1). Pure-CSS visuals are
+   driven by the --burn custom property; a tiny canvas paints ember particles
+   inside the modal paper block only. No per-frame JS layout work. */
+function burnFrac(usedMin, periodMin) {
+  const u = Number(usedMin) || 0, p = Number(periodMin) || 0;
+  if (p <= 0) return 0;
+  return Math.min(1, Math.max(0, u / p));
+}
+/* burn treatment for .voucher-row elements with status 2 (in-use) */
+function burnRowCls(v) {
+  if (String(v.status) !== '2') return '';
+  const f = burnFrac(v.usedTime, v.timePeriod);
+  return ' ' + (f >= 0.85 ? 'burn-high' : f >= 0.45 ? 'burn-med' : 'burn-low');
+}
+let burnRAF = null, burnGone = false;
+function stopBurnEmbers() {
+  if (burnRAF) { cancelAnimationFrame(burnRAF); burnRAF = null; }
+}
+function startBurnEmbers(mode) {
+  stopBurnEmbers();
+  const cv = $('burn-canvas');
+  if (!cv || !cv.parentElement) return;
+  const box = cv.parentElement.getBoundingClientRect();
+  if (box.width < 4 || box.height < 4) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(box.width * dpr);
+  cv.height = Math.round(box.height * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = box.width, H = box.height;
+  const mk = () => ({
+    x: Math.random() * W, y: H - Math.random() * H * 0.4,
+    r: 0.8 + Math.random() * 2.4, vy: 0.5 + Math.random() * 1.2,
+    vx: (Math.random() - 0.5) * 0.6, life: 1, decay: 0.006 + Math.random() * 0.012,
+  });
+  const P = [];
+  const N = mode === 'burst' ? 42 : 16;
+  for (let i = 0; i < N; i++) { const p = mk(); p.y = Math.random() * H; P.push(p); }
+  const loop = () => {
+    burnRAF = requestAnimationFrame(loop);
+    if (document.hidden) return;
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+    let alive = 0;
+    for (const p of P) {
+      p.x += p.vx + Math.sin(p.y * 0.05 + p.r * 9) * 0.3;
+      p.y -= p.vy;
+      p.life -= p.decay;
+      if (p.life > 0 && p.y > -8) {
+        alive++;
+        const a = Math.max(0, p.life);
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
+        g.addColorStop(0, 'rgba(255,' + Math.round(140 + 60 * a) + ',40,' + (0.8 * a).toFixed(2) + ')');
+        g.addColorStop(1, 'rgba(255,60,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 3, 0, 7);
+        ctx.fill();
+      } else if (mode === 'live') {
+        Object.assign(p, mk());
+        alive++;
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    if (mode === 'burst' && alive === 0) stopBurnEmbers();
+  };
+  loop();
+}
+/* set up the paper header block in the voucher detail modal */
+function setupBurnPaper(v) {
+  stopBurnEmbers();
+  burnGone = false;
+  const paper = $('burn-paper');
+  if (!paper) return;
+  const st = String(v.status);
+  const f = st === '3' ? 1 : burnFrac(v.usedTime, v.timePeriod);
+  paper.style.setProperty('--burn', f.toFixed(3));
+  paper.classList.toggle('burning', st === '2' && f < 1);
+  if (st === '3' || (st === '2' && f >= 1)) {
+    paper.classList.add('burned-out');
+    burnGone = true;
+    startBurnEmbers('burst');
+  } else {
+    paper.classList.remove('burned-out');
+    if (st === '2') startBurnEmbers('live');
+  }
+}
+/* one-time burn-away: paper chars fully, ember burst, then rests as ash */
+function triggerBurnAway() {
+  if (burnGone) return;
+  burnGone = true;
+  const paper = $('burn-paper');
+  if (!paper) return;
+  paper.classList.remove('burning');
+  paper.style.setProperty('--burn', '1');
+  paper.classList.add('burned-out');
+  startBurnEmbers('burst');
 }
 
 let modalVoucher = null;
@@ -837,10 +943,20 @@ function openVoucherDetail(uuid) {
     [t('d.note'), esc(v.comment || v.nameRef || '—')],
     [t('d.macbind'), v.bindMac ? 'Yes' : 'No'],
   ];
-  $('modal-body').innerHTML = `<dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
+  const vst = String(v.status);
+  $('modal-body').innerHTML = `
+  <div class="burn-paper" id="burn-paper" data-st="${vst}">
+    <canvas class="burn-embers" id="burn-canvas" aria-hidden="true"></canvas>
+    <span class="burn-label">${esc(statusTxt(v.status))}</span>
+    <div class="burn-code">${esc(vCode(v))}</div>
+    <div class="burn-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
+    <div class="burn-perf"></div>
+  </div>
+  <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
   startVoucherLive(v);
+  setupBurnPaper(v);
 }
 
 /* Live voucher detail: remaining time ticks every second from the local clock
@@ -856,6 +972,19 @@ function startVoucherLive(v) {
     const elapsedMin = (Date.now() - liveBase.at) / 60000;
     const el = $('live-remtime');
     if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
+    /* v1.5.27: drive the burning-paper edge from the live clock — the charred
+       edge visibly spreads inward as expiry approaches */
+    const paper = $('burn-paper');
+    if (paper) {
+      const pst = String(modalVoucher.status);
+      if (pst === '2') {
+        const bf = burnFrac(liveBase.usedTimeMin + elapsedMin, liveBase.timePeriodMin);
+        paper.style.setProperty('--burn', bf.toFixed(3));
+        if (bf >= 1) triggerBurnAway();
+      } else if (pst === '3') {
+        triggerBurnAway();
+      }
+    }
     const age = $('live-age');
     if (age) age.textContent = liveBase.dataAt ? ' · ' + Math.max(0, Math.round((Date.now() - liveBase.dataAt) / 1000)) + t('fmt.sec') + ' ago' : '';
   };
@@ -889,6 +1018,7 @@ function stopVoucherLive() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
   if (livePoller) { clearInterval(livePoller); livePoller = null; }
   liveBase = null;
+  stopBurnEmbers();
 }
 
 async function deleteVoucher() {
@@ -1994,15 +2124,23 @@ async function apClientsView(apSn, apName, apNames) {
     // `account` (the auth account = voucher code for voucher-auth clients),
     // which the open-API sta_users does not return. Falls back to the
     // open API when SSO is unavailable or the portal call fails/empties.
-    let clients = [], viaPortal = false;
-    if (Api.ssoLoggedIn()) {
+    // v1.5.27: self-diagnosing — the view now reports exactly which source
+    // was used and why vouchers are missing (SSO not logged in / portal
+    // error / portal returned rows but no auth accounts), so a single
+    // on-device test gives the definitive answer instead of silent "—".
+    let clients = [], viaPortal = false, srcNote = '';
+    const ssoOk = Api.ssoLoggedIn();
+    if (ssoOk) {
       try {
         const list = await Api.portalClients(pid, { linkedDevice: apSn });
         const mineP = (list || []).filter(c =>
           String(c.linkedDevice || '') === String(apSn) ||
           (apName && String(c.deviceName || '') === String(apName)));
         if (mineP.length) { clients = mineP; viaPortal = true; }
-      } catch (e) { /* fall through to open API */ }
+        else srcNote = t('ac.portalNoMatch');
+      } catch (e) { srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140); }
+    } else {
+      srcNote = t('ac.needSso');
     }
     if (!viaPortal) {
       const all = await Api.allOnlineClients(pid);
@@ -2030,9 +2168,17 @@ async function apClientsView(apSn, apName, apNames) {
     const showNames = Store.load().clientShowNames !== false;
     const mine = clients;
     if (!mine.length) { $('ac-list').innerHTML = `<p class="muted">${esc(t('ac.none'))}</p>`; return; }
+    // v1.5.27: portal returned rows but none carry an auth account — the
+    // SSIDs here are not doing cloud voucher auth (e.g. WPA2-PSK or a
+    // router-local portal), so "—" is the honest answer.
+    if (viaPortal && !mine.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
+      srcNote = t('ac.portalNoAcct');
+    }
+    const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}</p>`;
     const vCount = mine.filter(c => vmap.has(acctOf(c))).length;
     $('ac-list').innerHTML =
       `<p class="muted small">${esc(tx('ac.total', { n: mine.length }))} · ${esc(tx('ac.voucherN', { n: vCount }))}</p>` +
+      srcLine +
       `<div class="chips"><button class="chip${showNames ? ' active' : ''}" id="ac-names">👤 ${esc(t('ac.names'))}</button></div>` +
       `<div class="wrap-scroll"><table class="data">` +
       `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('ac.ssid')}</th><th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th></tr>` +
