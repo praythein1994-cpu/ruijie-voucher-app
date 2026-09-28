@@ -344,6 +344,22 @@
         </div>
         <button id="btn-sso" class="btn primary"><svg class="ic"><use href="#i-lock"/></svg><span>အကောင့်ဝင်မယ်</span></button>
       </div>
+      <div class="card" id="gw-card">
+        <h2><svg class="ic"><use href="#i-signal"/></svg><span data-i18n="gw.title">Gateway (ဒေသတွင်း)</span></h2>
+        <p class="muted small" style="margin:0 0 10px" data-i18n="gw.sub">LAN ထဲက gateway ကို တိုက်ရိုက်ချိတ်မယ် — Cloud မှာမရှိတဲ့ China AP တွေပါမြင်ရမယ်</p>
+        <label><span data-i18n="gw.ip">Gateway IP</span> <input id="gw-ip" type="text" inputmode="decimal" placeholder="100.88.200.103"></label>
+        <label><span data-i18n="gw.user">အသုံးပြုသူအမည်</span> <input id="gw-user" type="text" placeholder="admin" autocomplete="username"></label>
+        <label><span data-i18n="gw.pass">စကားဝှက်</span>
+          <div class="input-wrap">
+            <input id="gw-pass" type="password" autocomplete="current-password">
+            <button type="button" class="peek" data-peek="gw-pass" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
+          </div>
+        </label>
+        <div class="switch-row" style="margin-bottom:12px">
+          <div><div style="font-weight:700" id="gw-status">…</div></div>
+        </div>
+        <button id="btn-gw" class="btn primary"><svg class="ic"><use href="#i-signal"/></svg><span>ချိတ်မယ်</span></button>
+      </div>
       <div class="card" id="diag-card">
         <h2><svg class="ic"><use href="#i-search"/></svg><span data-i18n="diag.title">စစ်ဆေးမှုများ</span></h2>
         <p class="muted small" style="margin:0 0 10px" data-i18n="diag.sub">ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်</p>
