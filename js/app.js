@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.42';
+const APP_VERSION = '1.5.43';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -1635,12 +1635,18 @@ function btAutoConnect(quiet) {
 }
 
 function initBtPrinter() {
-  // auto-connect preference (persisted)
+  // auto-connect preference (persisted) — also drives native auto-reconnect
+  // after unexpected loss (printer power cycle). Explicit disconnect never reconnects.
   const acBox = $('bt-autoconnect');
+  const syncAutoReconnect = () => {
+    try { btCall(B => (B.btSetAutoReconnect ? B.btSetAutoReconnect(!!acBox.checked) : null)); } catch (e) {}
+  };
   if (acBox) {
     acBox.checked = !!Store.load().btAutoConnect;
+    syncAutoReconnect();
     acBox.addEventListener('change', () => {
       Store.save({ btAutoConnect: acBox.checked });
+      syncAutoReconnect();
       if (acBox.checked) btAutoConnect(true);
     });
   }
@@ -1666,6 +1672,15 @@ function initBtPrinter() {
 function doPrint(items) {
   if (!items.length) return toast(t('err.noPrint'), true);
   const st = printSettings();
+  // APK + Bluetooth thermal printer connected: print-all goes straight to the
+  // thermal printer (same path as the queue print button).
+  const bt = btCacheState();
+  if (bt && bt.state === 'CONNECTED') {
+    const r = btCall(B => B.btPrint(JSON.stringify(btVoucherPayload(items)), nativePrintSettings(),
+      st.header || '', st.paper, st.copies));
+    if (r) { btRefreshSoon(); return; }
+    // fall through to system print if the BT call failed
+  }
   const blanks = PS.betweenBlanks > 0 ? `<div style="height:${PS.betweenBlanks * 14}px"></div>` : '';
   const html = items.map(it => ticketHtml(it, st)).join(blanks);
   // APK: native Android print via PrintManager (window.print() does nothing in WebView)
