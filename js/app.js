@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.16';
+const APP_VERSION = '1.5.18';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2095,21 +2095,20 @@ function onSsoButton() {
  * Direct LAN connection to the user's own gateway eWeb. The password is
  * entered here in Settings and kept on this device only — never in chat,
  * never in logs, never sent anywhere except the gateway itself. */
-const GW_STORE_KEYS = { ip: 'gwIp', user: 'gwUser' };
+const GW_STORE_KEYS = { ip: 'gwIp' };
 /* Gateway password lives in JS memory only — never persisted to
  * localStorage, so it does not survive an app restart and is never
  * written to disk by the web layer. */
 const GwMem = { pass: '' };
 function gwStored() {
   const s = Store.load();
-  return { ip: s[GW_STORE_KEYS.ip] || '100.88.200.103', user: s[GW_STORE_KEYS.user] || 'admin', pass: GwMem.pass || '' };
+  return { ip: s[GW_STORE_KEYS.ip] || '100.88.200.103', pass: GwMem.pass || '' };
 }
 function refreshGwCard() {
   const statusEl = $('gw-status'), btn = $('btn-gw');
   if (!statusEl || !btn) return;
   const st = gwStored();
   if ($('gw-ip') && !$('gw-ip').value) $('gw-ip').value = st.ip;
-  if ($('gw-user') && !$('gw-user').value) $('gw-user').value = st.user;
   if ($('gw-pass') && !$('gw-pass').value) $('gw-pass').value = st.pass;
   if (!hasGw()) {
     statusEl.textContent = t('gw.onlyAndroid');
@@ -2132,15 +2131,14 @@ async function onGwButton() {
     return;
   }
   const ip = ($('gw-ip').value || '').trim() || '100.88.200.103';
-  const user = ($('gw-user').value || '').trim() || 'admin';
   const pass = $('gw-pass').value || '';
   if (!pass) { toast(t('gw.needInfo'), true); return; }
   btn.disabled = true;
   try {
-    Store.save({ [GW_STORE_KEYS.ip]: ip, [GW_STORE_KEYS.user]: user });
-    try { Store.save({ gwPass: '' }); } catch (_) {} // drop any legacy persisted password
+    Store.save({ [GW_STORE_KEYS.ip]: ip });
+    try { Store.save({ gwPass: '', gwUser: '' }); } catch (_) {} // drop legacy persisted secrets
     GwMem.pass = pass;
-    await GwApi.login(ip, user, pass);
+    await GwApi.login(ip, 'admin', pass);
     toast(t('gw.ok'));
   } catch (e) {
     const m = String((e && e.message) || e);
