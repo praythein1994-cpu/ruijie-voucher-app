@@ -554,16 +554,17 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
 .modal-head h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
 .modal-actions { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 4px; }
 /* ── v1.5.53: voucher detail as iOS liquid glass ──
+   v1.5.54: extended to typography + print-layout modals.
    Transparent frosted UI: blurred dimmed backdrop + floating glass card.
-   Scoped to #modal (voucher detail) only — typography/print-layout modals
-   keep the plain fullscreen look. Action buttons are compact. */
-#modal.modal.fullscreen {
+   Scoped to #modal (voucher detail), #layout-modal, #typo-modal.
+   Action buttons are compact. */
+#modal.modal.fullscreen, #layout-modal.modal.fullscreen, #typo-modal.modal.fullscreen {
   background: rgba(18, 28, 46, .38);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
   backdrop-filter: blur(18px) saturate(1.4);
   align-items: center; justify-content: center; padding: 16px;
 }
-#modal.modal.fullscreen .modal-box {
+#modal.modal.fullscreen .modal-box, #layout-modal.modal.fullscreen .modal-box, #typo-modal.modal.fullscreen .modal-box {
   height: auto; max-height: 92dvh; width: 100%; max-width: 480px;
   border-radius: 26px; border: .5px solid rgba(255, 255, 255, .65);
   background: rgba(255, 255, 255, .62);
@@ -572,13 +573,15 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
   box-shadow: 0 24px 64px rgba(10, 30, 70, .30), inset 0 1px 0 rgba(255, 255, 255, .7);
   animation: sheetup .45s var(--spring);
 }
-#modal.modal.fullscreen.closing { animation: dimout .2s ease-in forwards; }
+#modal.modal.fullscreen.closing, #layout-modal.modal.fullscreen.closing, #typo-modal.modal.fullscreen.closing { animation: dimout .2s ease-in forwards; }
 #modal .modal-actions { background: transparent; gap: 8px; padding-bottom: 2px; }
-#modal .modal-actions .btn {
+#modal .modal-actions .btn, #layout-modal .modal-actions .btn, #typo-modal .modal-actions .btn {
   padding: 9px 10px; font-size: 13.5px; border-radius: 13px; gap: 6px; flex: 1;
 }
 #modal .modal-actions .btn .ic { width: 16px; height: 16px; }
-[data-theme="dark"] #modal.modal.fullscreen .modal-box {
+[data-theme="dark"] #modal.modal.fullscreen .modal-box,
+[data-theme="dark"] #layout-modal.modal.fullscreen .modal-box,
+[data-theme="dark"] #typo-modal.modal.fullscreen .modal-box {
   background: rgba(30, 30, 34, .62); border-color: rgba(255, 255, 255, .14);
   box-shadow: 0 24px 64px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .12);
 }
@@ -1238,3 +1241,48 @@ button.set-row { cursor: pointer; }
 .printer-dot { display: inline-flex; align-items: center; gap: 6px; }
 .btn-row { display: flex; gap: 10px; }
 .btn-row .btn { flex: 1; margin: 0; }
+
+/* v1.5.54: compact layout — Printer/Generate/Preview views fit more in first viewport.
+   Tighter vertical rhythm; Settings keeps its comfortable spacing. */
+#view-printer .set-group .set-row, #view-generate .set-group .set-row {
+  padding: 8px 14px; min-height: 44px; font-size: 16px; gap: 10px;
+}
+#view-printer .set-pad, #view-generate .set-pad { padding: 10px 14px; }
+#view-printer .fld-label, #view-generate .fld-label { font-size: 14px; }
+#view-printer .set-group .codetype, #view-generate .set-group .codetype { padding: 8px 6px; }
+#view-printer .set-group .qty-grid button, #view-generate .set-group .qty-grid button { padding: 8px 4px; font-size: 14px; }
+#view-printer .btn, #view-generate .btn { padding: 10px 14px; font-size: 15px; }
+#view-printer .btn.big, #view-generate .btn.big { padding: 12px 14px; }
+#view-printer .set-note, #view-generate .set-note { padding: 8px 14px; font-size: 12px; }
+
+/* v1.5.54: pull-to-refresh indicator */
+.ptr-indicator {
+  display: flex; align-items: center; justify-content: center;
+  height: 0; overflow: hidden; opacity: 0;
+  transition: height .18s ease, opacity .18s ease;
+  color: var(--blue);
+}
+.ptr-indicator.show { height: 44px; opacity: 1; }
+.ptr-indicator .ic { width: 22px; height: 22px; }
+.ptr-indicator .spin { animation: ptrspin 1s linear infinite; }
+@keyframes ptrspin { to { transform: rotate(360deg); } }
+
+/* v1.5.54: expiry alert banner */
+.warn-banner {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255, 149, 0, .12); border: .5px solid rgba(255, 149, 0, .35);
+  color: #b26a00; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px;
+  font-size: 14px; cursor: pointer;
+}
+[data-theme="dark"] .warn-banner { color: #ffb340; background: rgba(255, 149, 0, .15); }
+
+/* v1.5.54: bulk select */
+.bulk-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border-radius: 12px; padding: 8px 12px; margin-bottom: 10px;
+  box-shadow: var(--shadow-card); position: sticky; top: 0; z-index: 5;
+}
+.bulk-bar.hidden { display: none; }
+.voucher-row .bulk-check { display: none; width: 22px; height: 22px; flex: none; accent-color: var(--blue); }
+.bulk-mode .voucher-row .bulk-check { display: block; }
+.bulk-mode .voucher-row .chev { display: none; }
