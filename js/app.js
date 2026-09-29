@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.60';
+const APP_VERSION = '1.5.61';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -209,6 +209,9 @@ const I18N = {
   'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
   'kick.pending': { my: 'Kick မရသေးဘူး — cloud ကောင်းမှ verify လုပ်မယ်', en: 'Kick not available yet — will verify when the cloud is healthy' },
+  'kick.done': { my: 'ဖြုတ်ပြီးပြီ', en: 'Disconnected' },
+  'kick.norecord': { my: 'Client အချက်အလက် ရှာမတွေ့ပါ', en: 'Client auth record not found' },
+  'kick.active': { my: 'အသင့်ဖြစ်နေပြီ', en: 'Active' },
   'kick.standby': { my: 'စောင့်နေတယ်', en: 'Standby' },
   'tkt.profileName': { my: 'Profile အမည်: ', en: 'Profile Name: ' },
   'pl.openLayout': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
@@ -2247,14 +2250,15 @@ function printDocHtml(ticketsHtml, st) {
 
 /* ── print preview (sample ticket with current settings) ── */
 function ticketPreviewHtml(item, st) {
-  return `<div class="ticket-preview">${ticketInnerHtml(item, st, PS, true)}</div>
-  <p class="muted small" style="text-align:center">${tx('pv.meta', { paper: esc(st.paper), copies: esc(String(st.copies)) })}</p>`;
+  return `<div class="ticket-preview"><div class="pv-fit">${ticketInnerHtml(item, st, PS, true)}</div>
+  <p class="muted small" style="text-align:center">${tx('pv.meta', { paper: esc(st.paper), copies: esc(String(st.copies)) })}</p></div>`;
 }
 function openPrintPreview() {
   const st = printSettings();
   $('preview-body').innerHTML = ticketPreviewHtml(
     { code: 'XXXX-XXXX', pkg: t('pv.sample'), period: 60, quota: 1024 }, st);
   $('preview-modal').classList.remove('hidden');
+  fitLivePreviews();
 }
 
 /* ═══════════ PRINT LAYOUT & SPACING MODAL ═══════════ */
@@ -2477,13 +2481,46 @@ function updateLivePreviews() {
     // 3 sample tickets so the Between-Voucher gap is visible and testable live
     // (same gap formula as the real system-print path in doPrint, from the live draft)
     const gap = tearGapHtml(layoutDraft);
-    $('layout-preview').innerHTML = previewSampleItems().map(it => ticketInnerHtml(it, st, layoutDraft, true)).join(gap);
+    $('layout-preview').innerHTML = '<div class="pv-fit">' + previewSampleItems().map(it => ticketInnerHtml(it, st, layoutDraft, true)).join(gap) + '</div>';
   }
   if (typoDraft) {
-    $('typo-preview').innerHTML = ticketInnerHtml(item, st, typoDraft, true);
+    $('typo-preview').innerHTML = '<div class="pv-fit">' + ticketInnerHtml(item, st, typoDraft, true) + '</div>';
     $('typo-real-badge').classList.toggle('hidden', !item.real);
   }
+  fitLivePreviews();
 }
+/* v1.5.61: fit the true-scale paper preview to narrow phone screens.
+   The ticket renders at true native scale (80mm = 396 CSS px); on a phone that
+   overflows the modal stage, so the whole preview block is scaled down to fit
+   the stage width. Desktop/tablet keep the 1:1 true scale. */
+function fitLivePreviews() {
+  document.querySelectorAll('.live-preview .pv-fit, .ticket-preview .pv-fit').forEach(fit => {
+    // reset to natural size for measuring
+    fit.style.transform = ''; fit.style.width = ''; fit.style.height = '';
+    fit.style.overflow = ''; fit.style.margin = '';
+    const stage = fit.parentElement;
+    if (!stage || stage.clientWidth === 0) return; // modal hidden — nothing to fit
+    const paper = fit.querySelector('.pv-paper');
+    const ticketW = paper ? (parseFloat(paper.style.width) || paper.offsetWidth || 0) : 0;
+    if (!ticketW) return;
+    const cs = getComputedStyle(stage);
+    const avail = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const s = Math.min(1, avail / ticketW);
+    if (s >= 1) return; // fits: keep the true 1:1 scale
+    const h = fit.scrollHeight;
+    fit.style.transform = 'scale(' + s + ')';
+    fit.style.transformOrigin = 'top left';
+    fit.style.width = (ticketW * s) + 'px';
+    fit.style.height = (h * s) + 'px';
+    fit.style.overflow = 'hidden';
+    fit.style.margin = '0 auto';
+  });
+}
+let _fitPvT = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(_fitPvT);
+  _fitPvT = setTimeout(() => { try { fitLivePreviews(); } catch (e) {} }, 150);
+});
 function wireLayoutModal() {
   $('layout-between').addEventListener('input', e => {
     layoutDraft.betweenBlanks = Number(e.target.value);
@@ -3161,20 +3198,58 @@ function refreshReveals(scope) {
   });
 }
 
-/* ═══════════ v1.5.55 · client kick (sticky clients) ═══════════
+/* ═══════════ v1.5.61 · client kick (sticky clients) ═══════════
    Two UX forms ship now: (a) Settings auto-kick toggle, (b) per-client
-   Disconnect button on sticky rows. EXECUTION IS GATED: the kick wire
-   format is NOT verified (cloud itself is erroring), so KICK_VERIFIED
-   stays false until a live test proves it — requestKick() refuses until
-   then and says so honestly. Never kicks non-sticky clients. */
-const KICK_VERIFIED = false;
+   Disconnect button on sticky rows. The wire format is VERIFIED — captured
+   from the live Ruijie portal's own Disconnect button (Chrome DevTools,
+   2026-09-29): POST .../webproxy/common/api?/samTransfer/kick/user/offline
+   with params {group_id, account, auth_type, mac (dotted), id}.
+   requestKick() resolves the portal auth record (portalAuthUsers) for the
+   exact account/mac/id triple the portal itself uses — never guessed.
+   Disconnect only; the voucher is never deleted. Field test pending on the
+   user's authorized test client. */
+const KICK_VERIFIED = true;
+/* Find the portal auth record for a client: prefer the voucher account
+ * match, fall back to MAC. Returns the raw record or null. */
+async function kickAuthRecord(c) {
+  const pid = Number(S.projectId);
+  let recs = [];
+  try { recs = await Api.portalAuthUsers(pid); } catch (e) { return null; }
+  const acct = String((c && (c.account || '')) || '').trim();
+  const mac = normMac(c && (c.mac || c.userMac || ''));
+  let rec = acct ? recs.find(r => String(r.account || '').trim() === acct) : null;
+  if (!rec && mac) rec = recs.find(r => normMac(r.userMac) === mac);
+  return rec || null;
+}
 async function requestKick(c, opts) {
   opts = opts || {};
   if (!KICK_VERIFIED) {
     if (!opts.auto) toast(t('kick.pending'), true);
     return false;
   }
-  return false; // unreachable until verified
+  if (!Api.ssoLoggedIn()) {
+    if (!opts.auto) toast(t('ac.needSso'), true);
+    return false;
+  }
+  const rec = await kickAuthRecord(c);
+  if (!rec || !rec.id || !rec.account) {
+    if (!opts.auto) toast(t('kick.norecord'), true);
+    return false;
+  }
+  try {
+    await Api.clientKickSso(Number(S.projectId), {
+      account: rec.account,
+      authType: rec.authType,
+      userMac: dottedMac(rec.userMac) || String(rec.userMac || '').toLowerCase(),
+      id: rec.id,
+    });
+  } catch (e) {
+    if (!opts.auto) toast(String((e && e.message) || e || ''), true);
+    return false;
+  }
+  if (!opts.auto) toast(t('kick.done'));
+  try { await moreClients(); } catch (e) { /* list refresh best-effort */ }
+  return true;
 }
 function kickStickyClient(c) {
   const mac = c && (c.mac || c.userMac);
@@ -3189,7 +3264,7 @@ function initKickSettings() {
     tg.addEventListener('change', () => Store.save({ kickAuto: tg.checked }));
   }
   const st = $('kick-status');
-  if (st) st.textContent = t('kick.standby');
+  if (st) st.textContent = t(KICK_VERIFIED ? 'kick.active' : 'kick.standby');
 }
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
@@ -3551,6 +3626,12 @@ const apNameOf = (sn, apNames, fallback) => (apNames && apNames.get(String(sn)))
  * (60:C7:BE:3A:BE:A5); plain uppercase-compare never matched. normMac
  * strips every non-hex character so both sides compare equal. */
 const normMac = s => String(s || '').toUpperCase().replace(/[^0-9A-F]/g, '');
+/* v1.5.61: dotted-lowercase MAC for the kick envelope (portal reports
+ * 461a.f562.bb5b form). Returns '' when the input has no 12 hex digits. */
+const dottedMac = s => {
+  const h = normMac(s);
+  return h.length === 12 ? (h.slice(0, 4) + '.' + h.slice(4, 8) + '.' + h.slice(8)).toLowerCase() : '';
+};
 /* Build MAC→voucher and IP→voucher lookup maps from portal client records.
  * Pure and unit-testable. Portal records carry `account` (the voucher code
  * for voucher-auth clients) — verified 2026-09-28 against the portal's own
