@@ -435,6 +435,20 @@
 </div>
 
 <!-- PRINT PREVIEW MODAL -->
+<div id="print-progress-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="sheet-handle"></div>
+    <div class="modal-head">
+      <h2><svg class="ic"><use href="#i-printer"/></svg> <span data-i18n="pp.title">ပရင့်ထုတ်နေသည်</span></h2>
+      <button id="pp-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="pp-body"></div>
+    <div class="row modal-actions">
+      <button id="pp-done" class="btn primary"><span data-i18n="pp.close">ပိတ်မယ်</span></button>
+    </div>
+  </div>
+</div>
+
 <div id="preview-modal" class="modal hidden">
   <div class="modal-box">
     <div class="sheet-handle"></div>
