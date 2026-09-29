@@ -458,6 +458,17 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 }
 .mc-flag.flag-suspicious { background: rgba(245,158,11,.16); }
 .mc-flag.flag-sticky { background: rgba(239,68,68,.13); }
+/* v1.5.62: kicked-device mark — green, distinct from the red sticky flag. */
+.mc-flag.flag-kicked { color: #15803d; background: rgba(34,197,94,.16); white-space: nowrap; }
+/* v1.5.64: keep "✓ Kicked · 06:40 pm" on one line — the time was wrapping. */
+/* v1.5.62: stale-while-revalidate spinner — the old list stays visible
+   during refresh; only this small spinner shows in the header. */
+.mc-sync {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex: none;
+  border: 2px solid rgba(120,120,128,.25); border-top-color: #0a84ff;
+  animation: mcsync .7s linear infinite; align-self: center; margin-left: 2px;
+}
+@keyframes mcsync { to { transform: rotate(360deg); } }
 .mc-kick {
   background: none; border: none; color: var(--red); font-size: 15px; font-weight: 500;
   font-family: inherit; padding: 4px 0; cursor: pointer; flex: none;
@@ -492,6 +503,7 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 [data-theme="dark"] .ios-sheet-danger { background: rgba(255,69,58,.20); }
 [data-theme="dark"] .mc-flag.flag-suspicious { color: #fbbf24; background: rgba(245,158,11,.20); }
 [data-theme="dark"] .mc-flag.flag-sticky { color: #f87171; background: rgba(239,68,68,.20); }
+[data-theme="dark"] .mc-flag.flag-kicked { color: #4ade80; background: rgba(34,197,94,.20); }
 .chip.active { background: var(--blue); color: #fff; font-weight: 600; }
 .chip:active { transform: scale(.95); }
 
@@ -593,7 +605,11 @@ table.data th, table.data td { padding: 11px 14px; border-bottom: .5px solid var
 table.data th { font-size: 13px; color: var(--gray); font-weight: 600; }
 table.data tr:last-child td { border-bottom: none; }
 table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.wrap-scroll { overflow-x: auto; border-radius: var(--radius-s); }
+.wrap-scroll { overflow-x: auto; border-radius: var(--radius-s); max-width: 100%; -webkit-overflow-scrolling: touch; }
+/* v1.5.64: data tables (sales ledger, devices, accounts, packages) keep
+   their natural column widths on phones instead of being crushed or cut
+   off — the wrapper scrolls horizontally inside the card, never stretches it. */
+.wrap-scroll > table.data { width: max-content; min-width: 100%; }
 
 details.advanced { margin: 12px 0; background: var(--fill-bg); border-radius: 12px; padding: 12px 14px; }
 details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; color: var(--blue); }
@@ -707,11 +723,16 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
 }
 
 @media (min-width: 700px) {
-  .modal { align-items: center; padding: 20px; }
-  .modal-box { border-radius: 16px; }
-  .sheet-handle { display: none; }
-  .menu-grid { grid-template-columns: repeat(5, 1fr); }
+  html:not([data-layout="phone"]) .modal { align-items: center; padding: 20px; }
+  html:not([data-layout="phone"]) .modal-box { border-radius: 16px; }
+  html:not([data-layout="phone"]) .sheet-handle { display: none; }
+  html:not([data-layout="phone"]) .menu-grid { grid-template-columns: repeat(5, 1fr); }
 }
+/* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
+html[data-layout="tablet"] .modal { align-items: center; padding: 20px; }
+html[data-layout="tablet"] .modal-box { border-radius: 16px; }
+html[data-layout="tablet"] .sheet-handle { display: none; }
+html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
 
 /* ═══════════════════════════════════════════════════════════════
    UI 3.0 — SVG icon system · icon search · tablet layouts
@@ -755,29 +776,49 @@ details.advanced summary { font-weight: 600; cursor: pointer; font-size: 15px; c
 .grid-2 { display: grid; gap: 14px; }
 
 @media (min-width: 768px) {
-  .view { max-width: 980px; }
-  #main { padding-left: 22px; padding-right: 22px; }
-  .toolbar { margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px; }
-  .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+  html:not([data-layout="phone"]) .view { max-width: 980px; }
+  html:not([data-layout="phone"]) #main { padding-left: 22px; padding-right: 22px; }
+  html:not([data-layout="phone"]) .toolbar { margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px; }
+  html:not([data-layout="phone"]) .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
   /* voucher list becomes a 2-column card grid */
-  #voucher-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: none; box-shadow: none; overflow: visible; }
-  .voucher-row { background: var(--card); border-radius: var(--radius); border-bottom: none; box-shadow: var(--shadow-card); }
-  #voucher-list .empty, #voucher-list .skel {
+  html:not([data-layout="phone"]) #voucher-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: none; box-shadow: none; overflow: visible; }
+  html:not([data-layout="phone"]) .voucher-row { background: var(--card); border-radius: var(--radius); border-bottom: none; box-shadow: var(--shadow-card); }
+  html:not([data-layout="phone"]) #voucher-list .empty, html:not([data-layout="phone"]) #voucher-list .skel {
     grid-column: 1 / -1; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
   }
-  .stat-grid { gap: 12px; }
-  .stat { padding: 14px 6px 12px; }
-  .stat .n { font-size: 24px; }
-  .modal-box { max-width: 640px; }
-  #tabbar { max-width: 620px; left: 20px; right: 20px; }
-  .connect-card { max-width: 440px; padding: 38px 32px; }
+  html:not([data-layout="phone"]) .stat-grid { gap: 12px; }
+  html:not([data-layout="phone"]) .stat { padding: 14px 6px 12px; }
+  html:not([data-layout="phone"]) .stat .n { font-size: 24px; }
+  html:not([data-layout="phone"]) .modal-box { max-width: 640px; }
+  html:not([data-layout="phone"]) #tabbar { max-width: 620px; left: 20px; right: 20px; }
+  html:not([data-layout="phone"]) .connect-card { max-width: 440px; padding: 38px 32px; }
 }
+/* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
+html[data-layout="tablet"] .view { max-width: 980px; }
+html[data-layout="tablet"] #main { padding-left: 22px; padding-right: 22px; }
+html[data-layout="tablet"] .toolbar { margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px; }
+html[data-layout="tablet"] .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+html[data-layout="tablet"] #voucher-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: none; box-shadow: none; overflow: visible; }
+html[data-layout="tablet"] .voucher-row { background: var(--card); border-radius: var(--radius); border-bottom: none; box-shadow: var(--shadow-card); }
+html[data-layout="tablet"] #voucher-list .empty, html[data-layout="tablet"] #voucher-list .skel {
+  grid-column: 1 / -1; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
+}
+html[data-layout="tablet"] .stat-grid { gap: 12px; }
+html[data-layout="tablet"] .stat { padding: 14px 6px 12px; }
+html[data-layout="tablet"] .stat .n { font-size: 24px; }
+html[data-layout="tablet"] .modal-box { max-width: 640px; }
+html[data-layout="tablet"] #tabbar { max-width: 620px; left: 20px; right: 20px; }
+html[data-layout="tablet"] .connect-card { max-width: 440px; padding: 38px 32px; }
 
 @media (min-width: 1100px) {
-  .view { max-width: 1180px; }
-  #voucher-list { grid-template-columns: 1fr 1fr 1fr; }
-  #tabbar { max-width: 680px; }
+  html:not([data-layout="phone"]) .view { max-width: 1180px; }
+  html:not([data-layout="phone"]) #voucher-list { grid-template-columns: 1fr 1fr 1fr; }
+  html:not([data-layout="phone"]) #tabbar { max-width: 680px; }
 }
+/* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
+html[data-layout="tablet"] .view { max-width: 1180px; }
+html[data-layout="tablet"] #voucher-list { grid-template-columns: 1fr 1fr 1fr; }
+html[data-layout="tablet"] #tabbar { max-width: 680px; }
 
 /* ═══════════ v1.3.0 — Generate redesign · Layout & Typography modals ═══════════ */
 .fld { margin-bottom: 14px; }
@@ -885,9 +926,12 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 .size-stepper .stepper input { width: 64px; text-align: center; }
 
 @media (min-width: 768px) {
-  .modal-box.wide { max-width: 640px; }
-  .codetype-grid { gap: 12px; }
+  html:not([data-layout="phone"]) .modal-box.wide { max-width: 640px; }
+  html:not([data-layout="phone"]) .codetype-grid { gap: 12px; }
 }
+/* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
+html[data-layout="tablet"] .modal-box.wide { max-width: 640px; }
+html[data-layout="tablet"] .codetype-grid { gap: 12px; }
 
 /* ═══════════ v1.5.11 — real-time printer status dot · recently generated panel ═══════════ */
 .printer-line { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; }
@@ -903,6 +947,19 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 }
 .printer-dot.on { color: var(--green, #34c759); }
 .printer-dot.on .pd { background: var(--green, #34c759); }
+/* v1.5.64: Bluetooth device list — stacked rows (name over MAC) instead of
+   the code-pill flex row, whose <br> never broke lines and whose text
+   wrapped awkwardly on phones. */
+#bt-devices { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.bt-dev {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; text-align: left; cursor: pointer;
+  background: var(--fill-bg); border: none; border-radius: 12px; padding: 10px 14px;
+  font: inherit; color: var(--label);
+}
+.bt-dev:active { opacity: .6; }
+.bt-dev-name { font-weight: 600; font-size: 16px; }
+.bt-dev-mac { font-size: 13px; color: var(--gray); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
 /* ═══════════ v1.5.12 — live ticking indicator in voucher detail ═══════════ */
 .live-dot {
@@ -1123,7 +1180,10 @@ button.set-row { cursor: pointer; }
 .set-row .t { flex: 1; min-width: 0; }
 .set-row .t-main { font-size: 17px; }
 .set-row .sub { font-size: 13px; color: var(--gray); margin-top: 1px; }
-.set-val { font-size: 15px; color: var(--gray); flex: none; }
+.set-val { font-size: 15px; color: var(--gray); flex: 0 1 auto; min-width: 0; text-align: right; }
+/* v1.5.64: was flex:none — a long status ("Connected — voucher delete is
+   available") crushed the title column to per-word wrapping on phones.
+   Now the shrink is shared with .t so both stay readable. */
 .set-chev { color: #C7C7CC; flex: none; font-size: 18px; font-weight: 600; }
 [data-theme="dark"] .set-chev { color: #48484A; }
 /* action rows: iOS blue text */
@@ -1337,21 +1397,34 @@ button.set-row { cursor: pointer; }
   /* NOTE: full selector needed — the glass card rule
      (#layout-modal.modal.fullscreen .modal-box, max-width 480px) has higher
      specificity and would otherwise keep the modal narrow, crushing the panes. */
-  #layout-modal.modal.fullscreen .modal-box, #typo-modal.modal.fullscreen .modal-box { max-width: 980px; }
-  .pv-split { display: flex; gap: 22px; align-items: flex-start; }
+  html:not([data-layout="phone"]) #layout-modal.modal.fullscreen .modal-box, html:not([data-layout="phone"]) #typo-modal.modal.fullscreen .modal-box { max-width: 980px; }
+  html:not([data-layout="phone"]) .pv-split { display: flex; gap: 22px; align-items: flex-start; }
   /* 440px pane fits the widest native ticket (80mm = 396px) + preview padding */
-  .pv-pane { position: sticky; top: 0; flex: 0 0 440px; max-width: 460px; }
-  .pv-fields { flex: 1; min-width: 0; }
+  html:not([data-layout="phone"]) .pv-pane { position: sticky; top: 0; flex: 0 0 440px; max-width: 460px; }
+  html:not([data-layout="phone"]) .pv-fields { flex: 1; min-width: 0; }
 }
+/* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
+html[data-layout="tablet"] #layout-modal.modal.fullscreen .modal-box, html[data-layout="tablet"] #typo-modal.modal.fullscreen .modal-box { max-width: 980px; }
+html[data-layout="tablet"] .pv-split { display: flex; gap: 22px; align-items: flex-start; }
+html[data-layout="tablet"] .pv-pane { position: sticky; top: 0; flex: 0 0 440px; max-width: 460px; }
+html[data-layout="tablet"] .pv-fields { flex: 1; min-width: 0; }
 @media (max-width: 899px) {
-  .pv-pane {
+  html:not([data-layout="tablet"]) .pv-pane {
     position: sticky; top: 0; z-index: 6;
     background: rgba(255,255,255,.72);
     -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
     border-radius: 0 0 16px 16px; margin: 0 -2px; padding: 2px 2px 10px;
   }
-  [data-theme="dark"] .pv-pane { background: rgba(30,30,34,.72); }
+  html:not([data-layout="tablet"])[data-theme="dark"] .pv-pane { background: rgba(30,30,34,.72); }
 }
+/* v1.5.63 — forced phone layout: the phone rules above, without the media query */
+html[data-layout="phone"] .pv-pane {
+  position: sticky; top: 0; z-index: 6;
+  background: rgba(255,255,255,.72);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-radius: 0 0 16px 16px; margin: 0 -2px; padding: 2px 2px 10px;
+}
+html[data-layout="phone"][data-theme="dark"] .pv-pane { background: rgba(30,30,34,.72); }
 
 /* ── Glass footer: kill the white block behind Save/Cancel ──
    (voucher detail #modal already had this; extend to layout/typo/preview) */
@@ -1447,8 +1520,10 @@ button.set-row { cursor: pointer; }
 }
 #view-settings .section-title { margin-left: 16px; }
 @media (min-width: 900px) {
-  #view-settings { max-width: 760px; }
+  html:not([data-layout="phone"]) #view-settings { max-width: 760px; }
 }
+/* v1.5.63 — forced tablet layout: the wide-screen rule above, without the media query */
+html[data-layout="tablet"] #view-settings { max-width: 760px; }
 
 /* ── v1.5.55 · tabbar press-drag: liquid wobble + floating page preview ── */
 #tabbar { touch-action: pan-y; }
@@ -1472,3 +1547,82 @@ button.set-row { cursor: pointer; }
   box-shadow: 0 12px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.10);
 }
 @media (prefers-reduced-motion: reduce) { .tab-preview { animation: none; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   v1.5.65 — dedicated iOS-compact phone system (html.ph-compact)
+   Toggled by syncCompactClass() in js/app.js: on when Settings →
+   Layout is "phone", or when "auto" lands on a ≤680px screen
+   (matchMedia listener keeps it right on rotate/resize).
+   One class scopes the whole system so every compact rule is
+   written once. Goal: iOS Settings-like density — smaller type,
+   tighter rows, hairline grouped lists, no oversized cards.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* — base density — */
+html.ph-compact body { font-size: 15.5px; }
+html.ph-compact .section-title { margin: 18px 14px 6px; font-size: 12.5px; }
+html.ph-compact #main { padding-left: 12px; padding-right: 12px; }
+html.ph-compact .toolbar { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
+
+/* — settings rows: compact, title never crushed to per-word wrapping — */
+html.ph-compact .set-group { border-radius: 14px; }
+html.ph-compact .set-group .set-row { padding: 9px 14px; min-height: 46px; gap: 10px; font-size: 15.5px; }
+html.ph-compact .set-row .t { flex: 1 1 46%; min-width: 0; }
+html.ph-compact .set-row .t-main { font-size: 15.5px; }
+/* v1.5.66 — No.4: long settings text clamps to max 2 lines with ellipsis —
+   never a tall per-word strip. */
+html.ph-compact .set-row .sub { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+html.ph-compact .set-val { font-size: 13.5px; flex: 0 1 auto; min-width: 0; max-width: 54%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-align: right; }
+html.ph-compact .set-ico { width: 28px; height: 28px; border-radius: 7px; }
+html.ph-compact .set-ico .ic { width: 16px; height: 16px; }
+html.ph-compact .set-chev { font-size: 16px; }
+html.ph-compact .set-field .fld-label, html.ph-compact .set-field .fld-input { font-size: 15.5px; }
+html.ph-compact .set-group .segmented { font-size: 13.5px; }
+
+/* — bluetooth devices: iOS grouped list rows, not big cards — */
+html.ph-compact #bt-devices { gap: 0; background: var(--card); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-card); margin: 8px 0; }
+html.ph-compact .bt-dev { background: none; border-radius: 0; padding: 8px 14px; border-bottom: .5px solid var(--hairline); gap: 1px; }
+html.ph-compact .bt-dev:last-child { border-bottom: none; }
+html.ph-compact .bt-dev-name { font-size: 15px; }
+html.ph-compact .bt-dev-mac { font-size: 12px; }
+
+/* — More → Devices: table becomes compact card rows so every column
+     (name, SN, model, status, actions) is visible with no sideways scroll — */
+html.ph-compact #md-list .wrap-scroll { overflow: visible; }
+/* v1.5.66 — No.3 ROOT FIX: the v1.5.64 base rule gives every
+   .wrap-scroll > table.data a width of max-content, and the compact block
+   never overrode it — so on narrow phones the device table overflowed the
+   viewport; with .wrap-scroll at overflow:visible the overflow reached
+   #main (overflow-x:auto) and one sideways swipe shifted the whole view
+   and stuck it there. Force the table to the viewport width. */
+html.ph-compact #md-list .wrap-scroll > table.data { width: 100%; max-width: 100%; }
+html.ph-compact #md-list table.data, html.ph-compact #md-list table.data tbody { display: block; background: none; }
+html.ph-compact #md-list table.data tr { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; background: var(--card); border-radius: 12px; padding: 9px 12px; margin: 0 0 8px; box-shadow: var(--shadow-card); }
+html.ph-compact #md-list table.data tr:first-child { display: none; } /* column headers */
+html.ph-compact #md-list table.data td { display: block; border: none; padding: 0; }
+html.ph-compact #md-list table.data td:nth-child(1) { flex: 1 1 40%; min-width: 0; font-size: 15px; font-weight: 600; }
+html.ph-compact #md-list table.data td:nth-child(1) small { display: block; font-weight: 400; font-size: 12px; color: var(--gray); margin-top: 1px; }
+html.ph-compact #md-list table.data td:nth-child(2) { flex: 1 1 100%; order: 3; font-size: 12.5px; color: var(--gray); }
+html.ph-compact #md-list table.data td:nth-child(3) { margin-left: auto; font-size: 12.5px; white-space: nowrap; }
+html.ph-compact #md-list table.data td:nth-child(4) { flex: 1 1 100%; order: 4; display: flex; gap: 8px; margin-top: 5px; }
+html.ph-compact #md-list table.data td:nth-child(4) .btn { padding: 6px 12px; font-size: 13px; border-radius: 9px; }
+html.ph-compact #md-list table.data td:nth-child(4) .btn .ic { width: 14px; height: 14px; }
+
+/* — every other data table: denser cells on phone — */
+html.ph-compact table.data { font-size: 13.5px; }
+html.ph-compact table.data th, html.ph-compact table.data td { padding: 8px 10px; }
+html.ph-compact table.data th { font-size: 12px; }
+
+/* — chips, buttons, menu, stats, tab bar — */
+html.ph-compact .chip { padding: 6px 12px; font-size: 13.5px; }
+html.ph-compact .btn { padding: 11px 16px; font-size: 15.5px; }
+html.ph-compact .btn.big { padding: 13px; }
+html.ph-compact .btn.sm { padding: 7px 12px; font-size: 13.5px; }
+html.ph-compact .menu-item { padding: 14px 6px 12px; font-size: 28px; }
+html.ph-compact .stat { padding: 8px 4px 7px; }
+html.ph-compact .stat .n { font-size: 18px; }
+html.ph-compact .tool-btn { width: 40px; height: 40px; }
+html.ph-compact #tabbar { padding: 7px 6px; left: 10px; right: 10px; }
+html.ph-compact .tab { padding: 4px 2px; gap: 2px; }
+html.ph-compact .tab .ic { width: 22px; height: 22px; }
+html.ph-compact .voucher-row { padding: 10px 14px; }
