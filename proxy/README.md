@@ -8,13 +8,26 @@ Ruijie Cloud open API က browser ကနေ တိုက်ရိုက်ခေ
 
 ```bash
 node server.js
-# PORT=3001 (default), env: PORT, ALLOWED_ORIGINS, RATE_PER_MIN
+# PORT=3001 (default), env: PORT, ALLOWED_ORIGINS, RATE_PER_MIN, TELEMETRY_KEY
 ```
+
+## Telemetry (app monitoring)
+
+The app POSTs lifecycle/error events here so a monitoring agent can poll
+`GET /telemetry?since=` and alert the owner on problems. In-memory ring
+buffer (last 300 events) — nothing is written to disk. The app must NEVER
+send secrets (appid/secret/password/token); credential-looking keys are
+stripped server-side as well. Set `TELEMETRY_KEY` on Render to require
+`?key=` for reads.
 
 ## API
 
 - `GET /health` → `{ ok: true, ... }`
 - `POST /api/ruijie`
+- `POST /telemetry` — app event inbox (monitoring): `{ events: [{ ts, app, type, msg, data }] }`
+  (single event object also accepted; max 50 per request)
+- `GET /telemetry?since=<ms>` — recent events for the monitoring agent
+  (if `TELEMETRY_KEY` env is set, requires `?key=TELEMETRY_KEY`)
 
 ```json
 {
