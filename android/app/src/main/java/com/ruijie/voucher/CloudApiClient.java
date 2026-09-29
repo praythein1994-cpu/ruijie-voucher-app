@@ -53,6 +53,35 @@ public class CloudApiClient {
         return arr;
     }
 
+    /** GET open/auth/voucher/getList/{groupId} (all pages). Returns the raw
+     *  voucher array (may be empty, never null). Same envelope the web app's
+     *  Api.voucherListAll() uses: {code:0, voucherData:{count, list}}. */
+    public static JSONArray getVouchers(String cloud, String appid, String secret,
+                                       long groupId) throws Exception {
+        JSONArray out = new JSONArray();
+        int start = 0, pageSize = 200, total = Integer.MAX_VALUE;
+        while (start < total) {
+            JSONObject query = new JSONObject();
+            query.put("start", start);
+            query.put("pageSize", pageSize);
+            String resp = apiCall(cloud, appid, secret, "GET",
+                    "open/auth/voucher/getList/" + groupId, query, null, false);
+            JSONObject rj = new JSONObject(resp);
+            if (rj.optInt("code", -1) != 0) {
+                throw new Exception("Ruijie: " + rj.optString("msg", "code " + rj.optInt("code", -1)));
+            }
+            JSONObject vd = rj.optJSONObject("voucherData");
+            if (vd == null) vd = new JSONObject();
+            total = vd.optInt("count", 0);
+            JSONArray list = vd.optJSONArray("list");
+            if (list == null) list = new JSONArray();
+            for (int i = 0; i < list.length(); i++) out.put(list.opt(i));
+            start += list.length();
+            if (list.length() == 0) break;
+        }
+        return out;
+    }
+
     private static String apiCall(String cloud, String appid, String secret,
                                   String method, String path, JSONObject query, JSONObject body,
                                   boolean retried) throws Exception {

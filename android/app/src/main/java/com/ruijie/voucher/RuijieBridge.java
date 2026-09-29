@@ -907,4 +907,54 @@ public class RuijieBridge {
             }
         } catch (Exception ignored) {}
     }
+
+    // ── BACKGROUND AUTO-KICK (v1.5.66) ──────────────────────────
+    // JobScheduler job that disconnects quota/time-spent voucher clients
+    // even when the screen is off. Same toggle as the in-app auto-kick.
+
+    /** {enabled, scheduled, hasConfig} for the Settings auto-kick toggle. */
+    @JavascriptInterface
+    public String autoKickInfo() {
+        try {
+            JSONObject o = new JSONObject();
+            o.put("enabled", AutoKick.prefs(activity).getBoolean("enabled", false));
+            o.put("scheduled", AutoKick.isScheduled(activity));
+            o.put("hasConfig", AutoKick.hasConfig(activity));
+            return o.toString();
+        } catch (Exception e) {
+            return "{\"enabled\":false,\"scheduled\":false,\"hasConfig\":false}";
+        }
+    }
+
+    /** Push the current Cloud connection into the background auto-kick. */
+    @JavascriptInterface
+    public void autoKickSync(String json) {
+        try {
+            JSONObject o = new JSONObject(json);
+            AutoKick.saveConfig(activity,
+                    o.optString("cloud", ""),
+                    o.optString("appid", ""),
+                    o.optString("secret", ""),
+                    o.optLong("groupId", 0));
+        } catch (Exception ignored) {}
+    }
+
+    /** Turn background auto-kick on/off (schedules or cancels the job). */
+    @JavascriptInterface
+    public void autoKickSetEnabled(boolean on) {
+        try {
+            AutoKick.prefs(activity).edit().putBoolean("enabled", on).apply();
+            if (on) AutoKick.schedule(activity);
+            else AutoKick.cancel(activity);
+        } catch (Exception ignored) {}
+    }
+
+    /** Run one background kick cycle right now on a background thread. */
+    @JavascriptInterface
+    public void autoKickNow() {
+        pool.execute(() -> {
+            try { AutoKickJob.runKickOnce(activity.getApplicationContext()); }
+            catch (Exception ignored) {}
+        });
+    }
 }
