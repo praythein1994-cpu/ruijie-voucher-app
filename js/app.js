@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.57';
+const APP_VERSION = '1.5.58';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -236,6 +236,7 @@ const I18N = {
   'pl.lineLabel': { my: 'အညွှန်း', en: 'Label' },
   'pl.lineValue': { my: 'တန်ဖိုး', en: 'Value' },
   'pl.removeLine': { my: 'ဖြုတ်မယ်', en: 'Remove' },
+  'pl.nudge': { my: 'ဘေးရွေ့ (mm)', en: 'Nudge sideways (mm)' },
   'pl.align': { my: 'တန်းညှိခြင်း', en: 'Alignment' },
   'pl.fHeader': { my: 'ခေါင်းစဉ် / Brand', en: 'Header / Brand' },
   'pl.fCode': { my: 'ဗောက်ချာကုဒ်', en: 'Voucher Code' },
@@ -436,6 +437,23 @@ const I18N = {
   'mc.fUnknown': { my: 'အခြား', en: 'Other' },
   'mc.flag.suspicious': { my: 'သံသယရှိ — စစ်ဆေးရန်', en: 'Unattributed, active — review' },
   'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
+  'mc.dVoucher': { my: 'ဗောက်ချာ', en: 'Voucher' },
+  'mc.dNetwork': { my: 'ကွန်ရက်', en: 'Network' },
+  'mc.dSession': { my: 'ဆက်ရှင်', en: 'Session' },
+  'mc.dDevice': { my: 'စက်', en: 'Device' },
+  'mc.dIp': { my: 'IP', en: 'IP' },
+  'mc.dMac': { my: 'MAC', en: 'MAC' },
+  'mc.dSsid': { my: 'SSID', en: 'SSID' },
+  'mc.dAp': { my: 'AP', en: 'AP' },
+  'mc.dConn': { my: 'ချိတ်ဆက်မှု', en: 'Connection' },
+  'mc.dSince': { my: 'စချိန်', en: 'Since' },
+  'mc.dDur': { my: 'ကြာချိန်', en: 'Duration' },
+  'mc.dSig': { my: 'ဆစ်ဂနယ်', en: 'Signal' },
+  'mc.dTraffic': { my: 'ဒေတာစုစုပေါင်း', en: 'Total traffic' },
+  'mc.dLive': { my: 'လက်ရှိမြန်နှုန်း', en: 'Live rate' },
+  'mc.dProfile': { my: 'ပက်ကေ့ချ်', en: 'Package' },
+  'mc.dPrice': { my: 'ဈေး', en: 'Price' },
+  'mc.dStatus': { my: 'အခြေအနေ', en: 'Status' },
   'ac.title': { my: 'AP ချိတ်ဆက်သူများ', en: 'AP clients' },
   'ac.none': { my: 'ချိတ်ဆက်ထားသူမရှိပါ', en: 'No connected clients' },
   'ac.total': { my: 'စုစုပေါင်း {n} ယောက်', en: '{n} clients' },
@@ -1370,12 +1388,7 @@ function openVoucherDetail(uuid) {
     [t('d.note'), esc(v.comment || v.nameRef || '—')],
     [t('d.macbind'), v.bindMac ? 'Yes' : 'No'],
   ];
-  const vst = String(v.status);
   $('modal-body').innerHTML = `
-  <div class="detail-head">
-    <span class="badge s${vst}">${esc(statusTxt(v.status))}</span>
-    <div class="detail-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
-  </div>
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
@@ -1541,6 +1554,7 @@ function defaultCustomLine() {
     size: 20,
     align: 'left',
     bold: false,
+    dx: 0, // v1.5.58: free horizontal nudge in mm (+right / -left), beyond left/center/right
   };
 }
 
@@ -1645,20 +1659,42 @@ function ticketInnerHtml(item, st, style, preview) {
     const codeLbl = F.code.label ? esc(labelPrefix(F.code, 'tkt.code')) : '';
     h += `<div class="lv" style="${fieldCss(F.code, style, preview)};border:2px dashed ${preview ? (F.code.color || style.color || '#111') : '#000'};padding:2mm;border-radius:2mm;">${codeLbl}${code}</div>`;
   }
-  if (F.profile.show && item.pkg)
-    h += `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(labelPrefix(F.profile, 'tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
-  // custom free-text lines (after profile, before period — the user's "WIFI Name / Nang Oo" slot)
-  (style.customLines || []).forEach(cl => {
-    if (!cl || !cl.show) return;
-    const lines = [cl.label, cl.value].map(s => String(s == null ? '' : s).trim()).filter(Boolean);
-    if (!lines.length) return;
+  // custom free-text lines: the FIRST visible line docks — its label shares the
+  // profile row (right side), its value shares the validity row (right side).
+  // Lines 2..n keep their own rows between profile and validity.
+  const visCls = (style.customLines || []).filter(cl => cl && cl.show &&
+    [cl.label, cl.value].some(s => String(s == null ? '' : s).trim()));
+  const dockCl = visCls[0] || null;
+  const dockLabel = dockCl ? String(dockCl.label || '').trim() : '';
+  const dockValue = dockCl ? String(dockCl.value || '').trim() : '';
+  const clPartCss = (cl, align) => {
     const size = Math.min(48, Math.max(8, Number(cl.size) || 20));
     const fs = preview ? (size * PV_PX_PER_DOT).toFixed(1) + 'px' : size + 'pt';
-    const al = ['left', 'center', 'right'].includes(cl.align) ? cl.align : 'left';
-    h += `<div class="lv" style="font-size:${fs};text-align:${al};${cl.bold ? 'font-weight:bold;' : ''}margin:2mm 0;">${lines.map(esc).join('<br>')}</div>`;
+    const al = align || (['left', 'center', 'right'].includes(cl.align) ? cl.align : 'left');
+    // v1.5.58: free horizontal nudge (+mm right / -mm left), beyond left/center/right
+    const dx = Number(cl.dx) || 0;
+    return `font-size:${fs};text-align:${al};${cl.bold ? 'font-weight:bold;' : ''}margin:2mm 0;${dx ? `transform:translateX(${dx}mm);` : ''}`;
+  };
+  const dockRow = (leftHtml, text, cl) =>
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4mm">${leftHtml}<div class="lv" style="${clPartCss(cl, 'right')}">${esc(text)}</div></div>`;
+  const showProfile = F.profile.show && item.pkg;
+  if (showProfile) {
+    const left = `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(labelPrefix(F.profile, 'tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
+    h += dockLabel ? dockRow(left, dockLabel, dockCl) : left;
+  } else if (dockLabel) {
+    h += `<div class="lv" style="${clPartCss(dockCl)}">${esc(dockLabel)}</div>`;
+  }
+  visCls.slice(1).forEach(cl => {
+    [cl.label, cl.value].map(s => String(s == null ? '' : s).trim()).filter(Boolean)
+      .forEach(t => { h += `<div class="lv" style="${clPartCss(cl)}">${esc(t)}</div>`; });
   });
-  if (F.period.show && item.period)
-    h += `<div class="lv" style="${fieldCss(F.period, style, preview)}">${F.period.label ? esc(labelPrefix(F.period, 'tkt.validity')) : ''}${esc(fmtPeriod(item.period))}</div>`;
+  const showPeriod = F.period.show && item.period;
+  if (showPeriod) {
+    const left = `<div class="lv" style="${fieldCss(F.period, style, preview)}">${F.period.label ? esc(labelPrefix(F.period, 'tkt.validity')) : ''}${esc(fmtPeriod(item.period))}</div>`;
+    h += dockValue ? dockRow(left, dockValue, dockCl) : left;
+  } else if (dockValue) {
+    h += `<div class="lv" style="${clPartCss(dockCl)}">${esc(dockValue)}</div>`;
+  }
   if (F.quota.show && item.quota != null)
     h += `<div class="lv" style="${fieldCss(F.quota, style, preview)}">${F.quota.label ? esc(labelPrefix(F.quota, 'tkt.quota')) : ''}${esc(fmtQuota(item.quota))}</div>`;
   if (F.datetime.show)
@@ -1902,6 +1938,7 @@ function nativePrintSettings() {
       bold: !!cl.bold,
       alignment: ['LEFT', 'CENTER', 'RIGHT'].includes(String(cl.align || '').toUpperCase())
         ? String(cl.align).toUpperCase() : 'LEFT',
+      dxMm: Math.max(-20, Math.min(20, +cl.dx || 0)),
     })),
   });
 }
@@ -2211,17 +2248,24 @@ function openLayoutModal() {
   refreshReveals($('layout-modal'));
 }
 const LABEL_TOGGLE_FIELDS = ['code', 'profile', 'period', 'quota', 'datetime'];
+// iOS-style toggle row (same switch as the field on/off toggle) — replaces the
+// old circle checkboxes, whose checked state did not visibly change on device.
+function layoutTglRow(fdId, k, checked, label) {
+  return `<div class="switch-row"><span>${label}</span>`
+    + `<label class="switch"><input type="checkbox" data-lf="${fdId}" data-k="${k}"${checked ? ' checked' : ''}><span class="track"></span></label></div>`;
+}
 function layoutFieldCard(fd) {
   const f = layoutDraft.fields[fd.id];
-  const boldChecked = (f.weight === 'bold' || f.weight === 'semibold') ? 'checked' : '';
+  const boldOn = f.weight === 'bold' || f.weight === 'semibold';
   const headerRow = fd.id === 'header'
     ? `<div class="fld" style="margin:0 0 10px"><span class="fld-label">${t('pl.headerText')}</span>
          <input type="text" id="layout-header-text" class="fld-input" placeholder="${esc(t('pl.headerText'))}" value="${esc(layoutDraft.headerText || '')}"></div>` : '';
   const labelBlock = LABEL_TOGGLE_FIELDS.includes(fd.id)
-    ? `<div class="fld" style="margin:8px 0 0"><label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="label" ${f.label ? 'checked' : ''}> ${t('pl.label')}</label>
-       ${f.label ? `<input type="text" class="fld-input" style="margin-top:6px" data-lft="${fd.id}" placeholder="${esc(t('pl.labelText'))}" value="${esc(f.labelText || '')}">` : ''}</div>` : '';
+    ? `${layoutTglRow(fd.id, 'label', !!f.label, t('pl.label'))}`
+      + `${f.label ? `<input type="text" class="fld-input" data-lft="${fd.id}" placeholder="${esc(t('pl.labelText'))}" value="${esc(f.labelText || '')}">` : ''}` : '';
   const spacedRow = fd.id === 'code'
-    ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="spaced" ${f.spaced ? 'checked' : ''}> ${t('pl.spaced')}</label>` : '';
+    ? layoutTglRow(fd.id, 'spaced', !!f.spaced, t('pl.spaced')) : '';
+  const boldRow = layoutTglRow(fd.id, 'bold', boldOn, t('pl.bold'));
   return `<div class="field-card rv">
     <div class="fc-head"><span>${t(fd.labelKey)}</span>
       <label class="switch"><input type="checkbox" data-lf="${fd.id}" data-k="show" ${f.show ? 'checked' : ''}><span class="track"></span></label>
@@ -2231,10 +2275,8 @@ function layoutFieldCard(fd) {
       <div class="fld" style="margin:0"><span class="fld-label">${t('pl.fontSize')}</span>
         <div class="slider-row"><input type="range" min="8" max="48" step="1" value="${f.size}" data-lfr="${fd.id}"><b data-lfv="${fd.id}">${f.size} pt</b></div>
       </div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="bold" ${boldChecked}> ${t('pl.bold')}</label>
-        ${spacedRow}
-      </div>
+      ${boldRow}
+      ${spacedRow}
       ${labelBlock}
       <div class="fld" style="margin:0"><span class="fld-label">${t('pl.align')}</span>
         <div class="mini-seg">${['left', 'center', 'right'].map(a =>
@@ -2264,11 +2306,14 @@ function customLineCard(cl, idx) {
       <div class="fld" style="margin:8px 0 0"><span class="fld-label">${t('pl.fontSize')}</span>
         <div class="slider-row"><input type="range" min="8" max="48" step="1" value="${cl.size || 20}" data-cl-size="${cl.id}"><b data-cl-sizeval="${cl.id}">${cl.size || 20} pt</b></div>
       </div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-        <label class="check-row"><input type="checkbox" data-cl-bold="${cl.id}"${cl.bold ? ' checked' : ''}> ${t('pl.bold')}</label>
+      <div class="switch-row"><span>${t('pl.bold')}</span><label class="switch"><input type="checkbox" data-cl-bold="${cl.id}"${cl.bold ? ' checked' : ''}><span class="track"></span></label></div>
+      <div class="fld" style="margin:0"><span class="fld-label">${t('pl.align')}</span>
         <div class="mini-seg">${['left', 'center', 'right'].map(a =>
           `<button type="button" data-cl-align="${cl.id}" data-a="${a}" class="${(cl.align || 'left') === a ? 'active' : ''}">${t('ty.' + a)}</button>`).join('')}
         </div>
+      </div>
+      <div class="fld" style="margin:8px 0 0"><span class="fld-label">${t('pl.nudge')}</span>
+        <div class="slider-row"><input type="range" min="-20" max="20" step="0.5" value="${Number(cl.dx) || 0}" data-cl-dx="${cl.id}"><b data-cl-dxval="${cl.id}">${Number(cl.dx) || 0} mm</b></div>
       </div>
     </div>
   </div>`;
@@ -2310,6 +2355,14 @@ function renderCustomLines() {
     b.addEventListener('click', () => {
       findCl(b.dataset.clAlign).align = b.dataset.a;
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+      updateLivePreviews();
+    });
+  });
+  // v1.5.58: free horizontal nudge (live, no re-render)
+  wrap.querySelectorAll('input[data-cl-dx]').forEach(r => {
+    r.addEventListener('input', () => {
+      findCl(r.dataset.clDx).dx = Number(r.value);
+      wrap.querySelector(`[data-cl-dxval="${r.dataset.clDx}"]`).textContent = `${r.value} mm`;
       updateLivePreviews();
     });
   });
@@ -3246,17 +3299,11 @@ function renderMcList() {
     }
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
     const title = (showNames && f.name) ? f.name : f.mac;
-    const sub1 = [(title !== f.mac ? f.mac : ''), (f.ip !== '—' ? f.ip : '')].filter(Boolean).join(' · ');
     const vLine = f.acct ? voucherInline(f.acct, vmap) : `<span class="muted">—</span>`;
-    // device line: drop the model token when it duplicates the shown name
-    let devTxt = f.dev;
-    if (showNames && f.name && devTxt && devTxt !== '—') {
-      const parts = devTxt.split(' · ').filter(p => p.trim().toLowerCase() !== f.name.trim().toLowerCase());
-      devTxt = parts.join(' · ') || '—';
-    }
-    const info = [f.ssid, f.conn, f.ap, f.since, f.dur, f.sig,
-      (f.total !== '—' ? f.total : ''), (f.live !== '—' ? '⇅ ' + f.live : ''),
-      (devTxt !== '—' ? devTxt : '')].filter(x => x && x !== '—').join(' · ');
+    // v1.5.58: iOS-clean rows — title + voucher + one quiet IP·AP line only.
+    // The old 10-field mega-line (SSID, signal, traffic, device…) moved to the
+    // tap-to-open detail sheet (openMcDetail).
+    const net = [(f.ip !== '—' ? f.ip : ''), (f.ap !== '—' ? f.ap : '')].filter(Boolean).join(' · ');
     // v1.5.55: per-client disconnect on sticky rows (quota spent, still online).
     // Execution gated by KICK_VERIFIED — the button explains until then.
     const kickBtn = flags.includes('sticky')
@@ -3264,13 +3311,12 @@ function renderMcList() {
     const foot = (flags.length || kickBtn)
       ? `<div class="mc-foot"><span>${flags.map(fl =>
         `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`).join('')}</span>${kickBtn}</div>` : '';
-    cells += `<div class="set-row mc-row">` +
+    cells += `<div class="set-row mc-row" data-mc="${i}" role="button" tabindex="0">` +
       `<span class="set-ico mc-ico cst-${st}">${ic(clientIcon(f), '')}</span>` +
       `<div class="t"><div class="mc-top"><span class="t-main">${esc(title)}</span>` +
       `<span class="mc-badge cst-${st}">${esc(t(CST_META[st].key))}</span></div>` +
-      (sub1 ? `<div class="sub">${esc(sub1)}</div>` : '') +
       `<div class="sub">${vLine}</div>` +
-      (info ? `<div class="sub">${esc(info)}</div>` : '') +
+      (net ? `<div class="sub mc-net">${esc(net)}</div>` : '') +
       foot + `</div></div>`;
   });
   $('mc-list').innerHTML =
@@ -3293,6 +3339,84 @@ function renderMcList() {
     Store.save({ clientShowNames: mcCache.showNames });
     renderMcList();
   });
+  // v1.5.58: tap a row for the full detail sheet (Disconnect keeps its own tap)
+  document.querySelectorAll('#mc-list [data-mc]').forEach(row => {
+    const open = () => openMcDetail(Number(row.dataset.mc));
+    row.addEventListener('click', e => {
+      if (e.target.closest('[data-kick]')) return;
+      open();
+    });
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
+}
+
+/* ── v1.5.58 · Online Clients detail sheet ──
+   Rows stay iOS-clean; every removed field lives here, grouped iOS-style.
+   The sticky Disconnect action is offered here too (same KICK_VERIFIED gate). */
+function openMcDetail(idx) {
+  const { list, viaPortal, vmap } = mcCache;
+  const c = list && list[idx];
+  if (!c) return;
+  const f = mcFields(c, viaPortal, vmap);
+  const st = clientStatusOf(f.acct, vmap);
+  const vm = f.acct && vmap ? vmap.get(f.acct) : null;
+  const title = (mcCache.showNames && f.name) ? f.name : f.mac;
+  const kv = (k, v) => (v != null && v !== '' && v !== '—')
+    ? `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>` : '';
+  const sec = s => `<div class="kv-sec">${esc(s)}</div>`;
+  const grp = inner => inner ? `<div class="kv-group">${inner}</div>` : '';
+  const flags = [];
+  if (st === 'noauth' && viaPortal) {
+    const bytes = Number(c.flowUpDown) || 0;
+    const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
+      : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : 0);
+    if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
+  }
+  if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
+  let body = '';
+  if (flags.length) body += `<div class="mc-sheet-flags">${flags.map(fl =>
+    `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`).join('')}</div>`;
+  if (f.acct) {
+    body += sec(t('mc.dVoucher')) + grp(
+      kv(t('ac.voucher'), f.acct) +
+      (vm ? kv(t('mc.dProfile'), voucherPkgName(vm)) : '') +
+      (vm ? kv(t('mc.dPrice'), fmtMoney(pkgPriceNum(vm))) : '') +
+      kv(t('mc.dStatus'), t(CST_META[st].key)));
+  } else {
+    body += sec(t('mc.dVoucher')) + grp(kv(t('mc.dStatus'), t(CST_META[st].key)));
+  }
+  body += sec(t('mc.dNetwork')) + grp(
+    kv(t('mc.dIp'), f.ip) + kv(t('mc.dMac'), f.mac) +
+    kv(t('mc.dSsid'), f.ssid) + kv(t('mc.dAp'), f.ap) + kv(t('mc.dConn'), f.conn));
+  body += sec(t('mc.dSession')) + grp(
+    kv(t('mc.dSince'), f.since) + kv(t('mc.dDur'), f.dur) +
+    kv(t('mc.dSig'), f.sig) + kv(t('mc.dTraffic'), f.total) +
+    kv(t('mc.dLive'), f.live === '—' ? '' : '⇅ ' + f.live));
+  if (f.dev && f.dev !== '—') body += sec(t('mc.dDevice')) + grp(kv(t('mc.device'), f.dev));
+  if (flags.includes('sticky')) {
+    body += `<button type="button" class="ios-sheet-danger" id="mc-sheet-kick">${esc(t('kick.btn'))}</button>`;
+  }
+  closeIosPicker();
+  const ov = document.createElement('div');
+  ov.className = 'ios-sheet-ov';
+  const sheet = document.createElement('div');
+  sheet.className = 'ios-sheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.innerHTML = `<div class="sheet-handle"></div><div class="ios-sheet-title">${esc(title)}</div><div class="ios-sheet-body">${body}</div>`;
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'ios-sheet-cancel';
+  cancel.textContent = t('a.cancel');
+  cancel.addEventListener('click', closeIosPicker);
+  sheet.appendChild(cancel);
+  const kb = sheet.querySelector('#mc-sheet-kick');
+  if (kb) kb.addEventListener('click', () => { closeIosPicker(); kickStickyClient(c); });
+  ov.appendChild(sheet);
+  ov.addEventListener('click', e => { if (e.target === ov) closeIosPicker(); });
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open')));
 }
 
 /* ── Per-AP clients · v1.5.22 ──
