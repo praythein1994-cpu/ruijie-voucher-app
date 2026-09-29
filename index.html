@@ -40,6 +40,9 @@
     <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M9.5 5.5L16 12l-6.5 6.5"/>
     </symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.5 5.5L16 12l-6.5 6.5"/>
+    </symbol>
     <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>
     </symbol>
@@ -201,7 +204,7 @@
               <button type="button" data-qty="50">50</button>
               <button type="button" data-qty="100">100</button>
             </div></div></div>
-        <label class="set-row set-field"><span class="fld-label" data-i18n="g.customQty">Custom Quantity</span>
+        <label class="set-row set-field qty-center"><span class="fld-label" data-i18n="g.customQty">Custom Quantity</span>
             <input id="gen-qty" class="fld-input" type="number" min="1" max="500" value="10" inputmode="numeric"></label>
         <div class="set-row"><div class="btn-row"><button id="btn-generate" class="btn big"><svg class="ic"><use href="#i-plus"/></svg><span id="btn-generate-label" data-i18n="g.btn">ထုတ်မယ်</span></button>
             <button id="btn-generate-print" class="btn primary big"><svg class="ic"><use href="#i-printer"/></svg><span id="btn-generate-print-label" data-i18n="g.btnPrint">Generate &amp; Print</span></button></div></div>
@@ -340,6 +343,20 @@
         <button type="button" class="set-row set-action" id="btn-mon-check"><span data-i18n="mon.checkNow">အခုပဲ စစ်မယ်</span></button>
       </div>
 
+      <div class="section-title" data-i18n="kick.title">Client ဖြုတ်ချခြင်း</div>
+      <div class="set-group" id="kick-card">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#FF3B30"><svg class="ic"><use href="#i-x"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="kick.auto">Quota ပြည့်ရင် အလိုအလျောက် ဖြုတ်မယ်</div><div class="sub" data-i18n="kick.autoSub">Voucher limit ပြည့်ပြီး ဆက်ချိတ်နေတဲ့ client ကို ဖြုတ်ခိုင်းမယ်</div></div>
+          <label class="switch"><input type="checkbox" id="kick-auto"><span class="track"></span></label>
+        </div>
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#8E8E93"><svg class="ic"><use href="#i-alert"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="kick.status">အခြေအနေ</div><div class="sub" data-i18n="kick.soon">Cloud verify ပြီးမှ အလုပ်လုပ်မယ်</div></div>
+          <span class="set-val" id="kick-status">…</span>
+        </div>
+      </div>
+
       <div class="section-title" data-i18n="diag.title">စစ်ဆေးမှုများ</div>
       <div class="set-group" id="diag-card">
         <div class="set-row">
@@ -443,19 +460,22 @@
         <button id="layout-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
       </div>
     </div>
-    <div class="modal-body-scroll">
-      <div class="fld">
-        <span class="fld-label live-label" id="layout-live-label" data-i18n="pl.live">LIVE OUTPUT PREVIEW (58mm / 384 dots):</span>
-        <div id="layout-preview" class="live-preview"></div>
+    <div class="modal-body-scroll pv-split">
+      <div class="pv-pane">
+        <div class="fld">
+          <span class="fld-label live-label" id="layout-live-label" data-i18n="pl.live">LIVE OUTPUT PREVIEW (58mm / 384 dots):</span>
+          <div id="layout-preview" class="live-preview"></div>
+        </div>
       </div>
-      <button id="layout-open-typo" class="btn big"><svg class="ic"><use href="#i-text"/></svg><span data-i18n="pl.advTypo">Advanced Typography &amp; Fonts</span></button>
-      <h4 class="sec-title" data-i18n="pl.spacing">Spacing Configuration</h4>
-      <div class="fld">
+      <div class="pv-fields">
+      <button id="layout-open-typo" class="btn big rv"><svg class="ic"><use href="#i-text"/></svg><span data-i18n="pl.advTypo">Advanced Typography &amp; Fonts</span></button>
+      <h4 class="sec-title rv" data-i18n="pl.spacing">Spacing Configuration</h4>
+      <div class="fld rv">
         <span class="fld-label" data-i18n="pl.between">Between Voucher Blank Lines</span>
         <small class="muted" data-i18n="pl.betweenSub">Feed blank lines between printed vouchers</small>
         <div class="slider-row"><input type="range" id="layout-between" min="0" max="5" step="1" value="1"><b id="layout-between-val">1</b></div>
       </div>
-      <div class="fld">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="pl.inside">Inside Voucher Spacing</span>
         <small class="muted" data-i18n="pl.insideSub">Vertical spacing between fields inside each voucher</small>
         <div class="slider-row"><input type="range" id="layout-inside" min="0" max="8" step="1" value="0"><b id="layout-inside-val">0</b></div>
@@ -464,6 +484,7 @@
       <div class="row modal-actions">
         <button id="layout-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
         <button id="layout-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="pl.save">Save Layout</span></button>
+      </div>
       </div>
     </div>
   </div>
@@ -483,12 +504,15 @@
         <button id="typo-close" class="icon-btn" data-i18n-aria="a.close" aria-label="ပိတ်မယ်"><svg class="ic"><use href="#i-x"/></svg></button>
       </div>
     </div>
-    <div class="modal-body-scroll">
-      <div class="fld">
-        <span class="fld-label live-label"><span id="typo-live-label" data-i18n="ty.live">LIVE VOUCHER PREVIEW (58mm)</span> <span id="typo-real-badge" class="badge hidden" data-i18n="ty.realBadge">REAL CLOUD VOUCHER</span></span>
-        <div id="typo-preview" class="live-preview"></div>
+    <div class="modal-body-scroll pv-split">
+      <div class="pv-pane">
+        <div class="fld">
+          <span class="fld-label live-label"><span id="typo-live-label" data-i18n="ty.live">LIVE VOUCHER PREVIEW (58mm)</span> <span id="typo-real-badge" class="badge hidden" data-i18n="ty.realBadge">REAL CLOUD VOUCHER</span></span>
+          <div id="typo-preview" class="live-preview"></div>
+        </div>
       </div>
-      <div class="fld">
+      <div class="pv-fields">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="ty.presets">Typography Presets</span>
         <div class="chip-grid" id="typo-presets" role="group">
           <button type="button" data-preset="default" class="chip active" data-i18n="ty.pDefault">Default</button>
@@ -498,7 +522,7 @@
           <button type="button" data-preset="custom" class="chip" data-i18n="ty.pCustom">Custom</button>
         </div>
       </div>
-      <div class="fld">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="ty.fontFamily">Global Font Family</span>
         <div class="chip-grid" id="typo-fontfamily" role="group">
           <button type="button" data-ff="default" class="chip active" data-i18n="ty.ffDefault">Default</button>
@@ -507,7 +531,7 @@
           <button type="button" data-ff="mono" class="chip">Monospace</button>
         </div>
       </div>
-      <div class="fld">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="ty.align">Alignment</span>
         <div class="segmented" id="typo-align" role="group">
           <button type="button" data-align="left" data-i18n="ty.left">Left</button>
@@ -515,11 +539,11 @@
           <button type="button" data-align="right" data-i18n="ty.right">Right</button>
         </div>
       </div>
-      <div class="fld">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="ty.color">Text Color</span>
         <div class="swatches" id="typo-colors"></div>
       </div>
-      <div class="fld">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="ty.letterSpacing">Letter Spacing (Voucher Code &amp; Fields)</span>
         <div class="chip-grid" id="typo-ls" role="group">
           <button type="button" data-ls="compact" class="chip" data-i18n="ty.lsCompact">Compact</button>
@@ -528,24 +552,25 @@
           <button type="button" data-ls="custom" class="chip" data-i18n="ty.lsCustom">Custom</button>
         </div>
       </div>
-      <div class="fld">
+      <div class="fld rv">
         <span class="fld-label" data-i18n="ty.lineSpacing">Extra Line Spacing</span>
         <div class="slider-row"><input type="range" id="typo-linespacing" min="0" max="12" step="1" value="0"><b id="typo-linespacing-val">+0 px</b></div>
       </div>
-      <div class="switch-row">
+      <div class="switch-row rv">
         <div><div style="font-weight:700" data-i18n="ty.shadow">Text Shadow</div><div class="muted small" data-i18n="ty.shadowSub">Rendered in preview; thermal print output remains crisp and safe.</div></div>
         <label class="switch"><input type="checkbox" id="typo-shadow"><span class="track"></span></label>
       </div>
-      <div class="switch-row">
+      <div class="switch-row rv">
         <div><div style="font-weight:700" data-i18n="ty.outline">Text Outline / Stroke</div><div class="muted small" data-i18n="ty.outlineSub">Accents text edges cleanly.</div></div>
         <label class="switch"><input type="checkbox" id="typo-outline"><span class="track"></span></label>
       </div>
-      <h4 class="sec-title" data-i18n="ty.fieldTitle">Field Typography &amp; Styling</h4>
-      <div class="tabs" id="typo-tabs" role="tablist"></div>
+      <h4 class="sec-title rv" data-i18n="ty.fieldTitle">Field Typography &amp; Styling</h4>
+      <div class="tabs rv" id="typo-tabs" role="tablist"></div>
       <div id="typo-field-config"></div>
       <div class="row modal-actions">
         <button id="typo-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
         <button id="typo-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="ty.save">Save Typography</span></button>
+      </div>
       </div>
     </div>
   </div>
