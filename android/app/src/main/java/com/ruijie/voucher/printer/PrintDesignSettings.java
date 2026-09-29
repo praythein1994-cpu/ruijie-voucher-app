@@ -103,6 +103,9 @@ public class PrintDesignSettings {
 
     // 7. Between Voucher Blank-Line Spacing
     public int betweenVoucherSpacing;
+    // 7b. v1.5.60: tear-off guide line between vouchers + middle divider on docked rows
+    public boolean tearLine;
+    public boolean midDivider;
 
     // 8. Print Date/Time
     public boolean showPrintDateTime;
@@ -207,6 +210,8 @@ public class PrintDesignSettings {
 
         insideVoucherSpacing = 0;
         betweenVoucherSpacing = 1;
+        tearLine = false;
+        midDivider = false;
 
         showPrintDateTime = false;
         printDateTimeFontSize = 20f;
@@ -303,6 +308,8 @@ public class PrintDesignSettings {
         c.headerColor = headerColor;
         c.insideVoucherSpacing = insideVoucherSpacing;
         c.betweenVoucherSpacing = betweenVoucherSpacing;
+        c.tearLine = tearLine;
+        c.midDivider = midDivider;
         c.showPrintDateTime = showPrintDateTime;
         c.printDateTimeFontSize = printDateTimeFontSize;
         c.printDateTimeBold = printDateTimeBold;
@@ -456,6 +463,8 @@ public class PrintDesignSettings {
 
             obj.put("insideVoucherSpacing", insideVoucherSpacing);
             obj.put("betweenVoucherSpacing", betweenVoucherSpacing);
+            obj.put("tearLine", tearLine);
+            obj.put("midDivider", midDivider);
 
             obj.put("showPrintDateTime", showPrintDateTime);
             obj.put("printDateTimeFontSize", (double) printDateTimeFontSize);
@@ -530,6 +539,8 @@ public class PrintDesignSettings {
             else if (obj.has("blankLines")) between = obj.optInt("blankLines", 1);
             else between = 1;
             s.betweenVoucherSpacing = Math.max(0, Math.min(8, between));
+            s.tearLine = obj.optBoolean("tearLine", false);
+            s.midDivider = obj.optBoolean("midDivider", false);
 
             boolean codeB = obj.optBoolean("codeBold", false);
             boolean profB = obj.optBoolean("profileNameBold", false);
