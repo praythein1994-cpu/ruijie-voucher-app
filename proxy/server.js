@@ -7,15 +7,22 @@
  *
  *  POST /api/ruijie   { cloud, appid, secret, method, path, query, body }
  *  GET  /health
+ *  POST /telemetry   { events: [{ ts, app, type, msg, data }] } — app event inbox
+ *  GET  /telemetry?since=<ms>[&key=...] — read recent events (monitoring)
  *
  * - Tokens are cached in memory per (cloud, appid) and auto-refreshed.
  * - App secrets are NEVER written to disk or logs; tokens live only in RAM.
++ * - Telemetry is an in-memory ring buffer (last 300 events); the app must
++ *   NEVER send secrets (appid/secret/password/token) — only event types,
++ *   voucher codes and error messages. Keys that look like credentials are
++ *   stripped server-side as a second layer of defense.
  * - Zero npm dependencies: runs with plain `node server.js`.
  *
  * Env:
  *   PORT            default 3001
  *   ALLOWED_ORIGINS comma-separated list, default "*"
  *   RATE_PER_MIN    simple per-IP rate limit, default 120
++ *   TELEMETRY_KEY   if set, GET /telemetry requires ?key=TELEMETRY_KEY
  */
 
 'use strict';
@@ -34,6 +41,55 @@ const MAX_BODY = 1 * 1024 * 1024;
 const tokenCache = new Map();
 // in-memory rate limiter: ip -> { count, windowStart }
 const rateMap = new Map();
+
+// ---- Telemetry inbox (v1.5.75): the app POSTs lifecycle/error events here;
+// a monitoring agent GETs recent events and alerts the owner on problems.
+// In-memory ring buffer (last TELEMETRY_MAX events); nothing hits disk.
+// The app must NEVER send secrets — only event types, voucher codes and
+// error messages. Credential-looking keys are stripped here as well.
+const TELEMETRY_KEY = process.env.TELEMETRY_KEY || '';
+const TELEMETRY_MAX = 300;
+const telemetryBuf = []; // oldest-first: { ts, app, type, msg, data }
+function telePush(ev) {
+  const clean = {
+    ts: Number(ev.ts) || Date.now(),
+    app: String(ev.app || '').slice(0, 16),
+    type: String(ev.type || 'unknown').slice(0, 48),
+    msg: String(ev.msg || '').slice(0, 500),
+  };
+  if (ev.data && typeof ev.data === 'object') {
+    const d = {};
+    for (const k of Object.keys(ev.data).slice(0, 12)) {
+      if (/secret|password|token|appid|api_?key|auth|cookie|session/i.test(k)) continue;
+      const val = ev.data[k];
+      d[String(k).slice(0, 32)] =
+        typeof val === 'string' ? val.slice(0, 200) : (typeof val === 'number' && isFinite(val) ? val : null);
+    }
+    if (Object.keys(d).length) clean.data = d;
+  }
+  telemetryBuf.push(clean);
+  if (telemetryBuf.length > TELEMETRY_MAX) telemetryBuf.splice(0, telemetryBuf.length - TELEMETRY_MAX);
+}
+async function handleTelemetryPost(req, res) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  const events = Array.isArray(payload.events) ? payload.events : (payload && payload.type ? [payload] : []);
+  if (!events.length || events.length > 50) return send(res, req, 400, { code: -1, msg: 'events must be a non-empty array (max 50)' });
+  let n = 0;
+  for (const ev of events) { if (ev && typeof ev === 'object') { telePush(ev); n++; } }
+  return send(res, req, 200, { ok: true, received: n });
+}
+function handleTelemetryGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  if (TELEMETRY_KEY && u.searchParams.get('key') !== TELEMETRY_KEY) {
+    return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  }
+  const since = Number(u.searchParams.get('since')) || 0;
+  const list = telemetryBuf.filter(e => e.ts > since).slice(-100);
+  return send(res, req, 200, { ok: true, count: list.length, events: list });
+}
 
 function corsHeaders(req) {
   const origin = req.headers.origin || '';
@@ -182,6 +238,8 @@ const server = http.createServer(async (req, res) => {
       if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
       return handleRuijie(req, res);
     }
+    if (u.pathname === '/telemetry' && req.method === 'POST') return handleTelemetryPost(req, res);
+    if (u.pathname === '/telemetry' && req.method === 'GET') return handleTelemetryGet(req, res, u);
     return send(res, req, 404, { code: -5, msg: 'Not found' });
   } catch (e) {
     return send(res, req, 500, { code: -9, msg: 'Proxy error: ' + String(e.message || e) });
