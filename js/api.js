@@ -531,6 +531,52 @@ const Api = {
     return j;
   },
 
+  /* ── Client kick / disconnect (Cloud webproxy, SSO session) ──
+   * EXACT shape captured from the live Ruijie portal (Chrome DevTools,
+   * 2026-09-29, user's authorized test client): the portal's own Disconnect
+   * button on the Clients page sends
+   * outer POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/samTransfer/kick/user/offline
+   * inner {"api":"/samTransfer/kick/user/offline",
+   *         "authParams":{"api":"/samTransfer/kick/user/offline","method":"POST"},
+   *         "method":"POST","module":"default",
+   *         "params":{"group_id":<project id>,"account":"<voucher code>",
+   *                   "auth_type":"15","mac":"<dotted-lowercase mac>","id":<auth record id>},
+   *         "querys":{"lang":"en","cloudType":"smb"}}
+   * Notes: params is an OBJECT here (unlike voucher delete's array); mac is
+   * the dotted-lowercase form the portal reports (e.g. 461a.f562.bb5b);
+   * auth_type "15" = Voucher (portal's own authType map). Disconnect only —
+   * the voucher is never deleted. Android-APK-only (needs SSO session).
+   * Throws on portal error; returns the raw response on success. */
+  ssoKickEnvelope(groupId, rec) {
+    const api = '/samTransfer/kick/user/offline';
+    const mac = String(rec.userMac || rec.mac || '').toLowerCase();
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: {
+        group_id: Number(groupId),
+        account: String(rec.account || ''),
+        auth_type: String(rec.authType || rec.auth_type || ''),
+        mac,
+        id: Number(rec.id),
+      },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Disconnect one client through the SSO session. Throws on portal error. */
+  async clientKickSso(groupId, rec) {
+    const env = this.ssoKickEnvelope(groupId, rec);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('ဖြုတ်မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
   /* ── Portal device reboot (Cloud webproxy, SSO session) · v1.5.13 ──
    * Verified 2026-09-28 from the portal's own frontend JS (read-only):
    * outer  POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/maint/device/reboot
