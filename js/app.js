@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.67';
+const APP_VERSION = '1.5.72';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -666,14 +666,17 @@ const statusTxt = s => t('status.' + s) || String(s);
 /* v1.5.53: remaining-resource info for voucher rows.
    Data vouchers: remaining = quota - usedQuota (MB).
    Time vouchers: remaining = timePeriod - usedTime (minutes).
+   v1.5.68: used = 0 (nothing consumed yet) means 100% REMAINS → full blue
+   fill, not white. White is reserved for fully-consumed vouchers; a fresh
+   in-use voucher must never look "spent".
    Returns {pct, txt} or null → null means "original row" (no fill):
-   unused, fully consumed, or usage data missing (never guessed). */
+   fully consumed, or usage data missing (never guessed). */
 function remainInfo(v) {
   const q = Number(v && v.quota) || 0;
   if (q > 0) {
     if (v.usedQuota === null || v.usedQuota === undefined || v.usedQuota === '') return null;
     const used = Number(v.usedQuota);
-    if (!isFinite(used) || used <= 0) return null;
+    if (!isFinite(used) || used < 0) return null;
     const rem = q - used;
     if (rem <= 0) return null;
     return { pct: Math.max(0, Math.min(100, (rem / q) * 100)), txt: fmtQuota(rem) };
@@ -682,7 +685,7 @@ function remainInfo(v) {
   if (p > 0) {
     if (v.usedTime === null || v.usedTime === undefined || v.usedTime === '') return null;
     const used = Number(v.usedTime);
-    if (!isFinite(used) || used <= 0) return null;
+    if (!isFinite(used) || used < 0) return null;
     const rem = p - used;
     if (rem <= 0) return null;
     return { pct: Math.max(0, Math.min(100, (rem / p) * 100)), txt: fmtRemain(rem) };
@@ -1463,11 +1466,11 @@ function openVoucherDetail(uuid) {
   $('modal-body').innerHTML = `
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
-  // v1.5.67: In-use vouchers show Disconnect in Print's spot (user request);
-  // Unused/Expired keep Print (nothing to disconnect there).
-  const vdInUse = vEffStatus(v) === '2';
-  $('modal-print').classList.toggle('hidden', vdInUse);
-  $('modal-disconnect').classList.toggle('hidden', !vdInUse);
+  // v1.5.68: Disconnect on EVERY voucher preview (user request) — it takes
+  // Print's spot for all vouchers, not just In use. (Queue / top-bar print
+  // paths remain for printing.)
+  $('modal-print').classList.add('hidden');
+  $('modal-disconnect').classList.remove('hidden');
   $('modal').classList.remove('hidden');
   startVoucherLive(v);
 }
@@ -2362,6 +2365,10 @@ function openLayoutModal() {
   renderLayoutModal();
   $('layout-modal').classList.remove('hidden');
   refreshReveals($('layout-modal'));
+  // v1.5.70: the render above ran while hidden (stage width 0, fit skipped) —
+  // re-fit once the modal is actually laid out so the 80mm ticket never
+  // overflows the right edge on phone.
+  requestAnimationFrame(() => { try { fitLivePreviews(); } catch (e) {} });
 }
 const LABEL_TOGGLE_FIELDS = ['code', 'profile', 'period', 'quota', 'datetime'];
 // iOS-style toggle row (same switch as the field on/off toggle) — replaces the
@@ -2548,10 +2555,9 @@ function updateLivePreviews() {
   const tl = $('typo-live-label');
   if (tl) tl.textContent = tx('ty.liveFmt', { paper: st.paper || '58' });
   if (layoutDraft) {
-    // 3 sample tickets so the Between-Voucher gap is visible and testable live
-    // (same gap formula as the real system-print path in doPrint, from the live draft)
-    const gap = tearGapHtml(layoutDraft);
-    $('layout-preview').innerHTML = '<div class="pv-fit">' + previewSampleItems().map(it => ticketInnerHtml(it, st, layoutDraft, true)).join(gap) + '</div>';
+    // v1.5.71 — ONE ticket preview (the two-up strip clipped on phone).
+    // Same ticket the printer outputs, zoom-fitted to the stage below.
+    $('layout-preview').innerHTML = '<div class="pv-fit">' + ticketInnerHtml(previewSampleItems()[0], st, layoutDraft, true) + '</div>';
   }
   if (typoDraft) {
     $('typo-preview').innerHTML = '<div class="pv-fit">' + ticketInnerHtml(item, st, typoDraft, true) + '</div>';
@@ -2559,15 +2565,17 @@ function updateLivePreviews() {
   }
   fitLivePreviews();
 }
-/* v1.5.61: fit the true-scale paper preview to narrow phone screens.
-   The ticket renders at true native scale (80mm = 396 CSS px); on a phone that
-   overflows the modal stage, so the whole preview block is scaled down to fit
-   the stage width. Desktop/tablet keep the 1:1 true scale. */
+/* v1.5.71: fit the true-scale paper preview to narrow phone screens.
+   The ticket renders at true native scale (80mm = 396 CSS px); on a phone
+   that overflows the modal stage, so the preview block is zoomed down to
+   fit the stage width. CSS `zoom` (not transform: scale) scales the layout
+   box too — nothing clips, no leftover whitespace, no scrollbars.
+   (transform: scale only scaled the paint: the old code then shrank the
+   layout box to the scaled size, clipping the ticket's right/bottom —
+   the "half ticket" bug.) Desktop/tablet keep the 1:1 true scale. */
 function fitLivePreviews() {
   document.querySelectorAll('.live-preview .pv-fit, .ticket-preview .pv-fit').forEach(fit => {
-    // reset to natural size for measuring
-    fit.style.transform = ''; fit.style.width = ''; fit.style.height = '';
-    fit.style.overflow = ''; fit.style.margin = '';
+    fit.style.zoom = ''; // reset to natural size for measuring
     const stage = fit.parentElement;
     if (!stage || stage.clientWidth === 0) return; // modal hidden — nothing to fit
     const paper = fit.querySelector('.pv-paper');
@@ -2577,13 +2585,7 @@ function fitLivePreviews() {
     const avail = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const s = Math.min(1, avail / ticketW);
     if (s >= 1) return; // fits: keep the true 1:1 scale
-    const h = fit.scrollHeight;
-    fit.style.transform = 'scale(' + s + ')';
-    fit.style.transformOrigin = 'top left';
-    fit.style.width = (ticketW * s) + 'px';
-    fit.style.height = (h * s) + 'px';
-    fit.style.overflow = 'hidden';
-    fit.style.margin = '0 auto';
+    fit.style.zoom = s;
   });
 }
 let _fitPvT = 0;
@@ -2651,6 +2653,8 @@ function openTypoModal() {
   renderTypoModal();
   $('typo-modal').classList.remove('hidden');
   refreshReveals($('typo-modal'));
+  // v1.5.70: same fit-after-visible as the layout modal.
+  requestAnimationFrame(() => { try { fitLivePreviews(); } catch (e) {} });
 }
 function touchTypo() {
   if (typoDraft.preset !== 'custom') {
