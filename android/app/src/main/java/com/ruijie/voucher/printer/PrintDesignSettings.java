@@ -7,6 +7,7 @@ import com.ruijie.voucher.printer.PrinterEnums.LetterSpacingMode;
 import com.ruijie.voucher.printer.PrinterEnums.PrintAlignment;
 import com.ruijie.voucher.printer.PrinterEnums.TypographyPreset;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -18,6 +19,29 @@ import org.json.JSONObject;
  */
 public class PrintDesignSettings {
 
+    /** One user-defined free-text line (label + value, independently editable). */
+    public static class CustomLine {
+        public String label = "";
+        public String value = "";
+        public float fontSize = 20f;
+        public boolean bold = false;
+        public PrintAlignment alignment = PrintAlignment.LEFT;
+        public float dxMm = 0f; // v1.5.58: free horizontal nudge in mm (+right / -left)
+
+        public CustomLine() {}
+
+        public CustomLine copy() {
+            CustomLine c = new CustomLine();
+            c.label = label;
+            c.value = value;
+            c.fontSize = fontSize;
+            c.bold = bold;
+            c.alignment = alignment;
+            c.dxMm = dxMm;
+            return c;
+        }
+    }
+
     // 1. Voucher Code
     public boolean showVoucherCode;
     public float codeFontSize;
@@ -27,6 +51,8 @@ public class PrintDesignSettings {
     public PrintAlignment codeAlignment;
     public boolean codeSpaced;
     public long codeColor;
+    public boolean showCodeLabel;
+    public String codeLabelText;
 
     // 2. Profile Name
     public boolean showProfileName;
@@ -36,6 +62,7 @@ public class PrintDesignSettings {
     public AppFontStyle profileNameFontStyle;
     public PrintAlignment profileNameAlignment;
     public boolean showProfileNameLabel;
+    public String profileNameLabelText;
     public long profileNameColor;
 
     // 3. Period
@@ -46,6 +73,7 @@ public class PrintDesignSettings {
     public AppFontStyle periodFontStyle;
     public PrintAlignment periodAlignment;
     public boolean showPeriodLabel;
+    public String periodLabelText;
     public long periodColor;
 
     // 4. Quota
@@ -56,6 +84,7 @@ public class PrintDesignSettings {
     public AppFontStyle quotaFontStyle;
     public PrintAlignment quotaAlignment;
     public boolean showQuotaLabel;
+    public String quotaLabelText;
     public long quotaColor;
 
     // 5. Header (Customer / Site / Brand Name)
@@ -83,6 +112,8 @@ public class PrintDesignSettings {
     public AppFontStyle printDateTimeFontStyle;
     public PrintAlignment printDateTimeAlignment;
     public long printDateTimeColor;
+    public boolean showPrintDateTimeLabel;
+    public String printDateTimeLabelText;
 
     // 9. Status
     public boolean showStatus;
@@ -119,6 +150,9 @@ public class PrintDesignSettings {
     // 15. Active Preset
     public TypographyPreset activePreset;
 
+    // 16. Custom free-text lines (max 5; rendered after profile, before period)
+    public java.util.List<CustomLine> customLines;
+
     public PrintDesignSettings() {
         showVoucherCode = true;
         codeFontSize = 28f;
@@ -128,6 +162,8 @@ public class PrintDesignSettings {
         codeAlignment = PrintAlignment.LEFT;
         codeSpaced = true;
         codeColor = 0xFF000000L;
+        showCodeLabel = false;
+        codeLabelText = "Voucher Code";
 
         showProfileName = true;
         profileNameFontSize = 24f;
@@ -136,6 +172,7 @@ public class PrintDesignSettings {
         profileNameFontStyle = AppFontStyle.NORMAL;
         profileNameAlignment = PrintAlignment.LEFT;
         showProfileNameLabel = true;
+        profileNameLabelText = "Profile Name";
         profileNameColor = 0xFF000000L;
 
         showPeriod = true;
@@ -145,6 +182,7 @@ public class PrintDesignSettings {
         periodFontStyle = AppFontStyle.NORMAL;
         periodAlignment = PrintAlignment.LEFT;
         showPeriodLabel = true;
+        periodLabelText = "Period";
         periodColor = 0xFF000000L;
 
         showQuota = false;
@@ -154,6 +192,7 @@ public class PrintDesignSettings {
         quotaFontStyle = AppFontStyle.NORMAL;
         quotaAlignment = PrintAlignment.LEFT;
         showQuotaLabel = true;
+        quotaLabelText = "Quota";
         quotaColor = 0xFF000000L;
 
         showHeader = true;
@@ -176,6 +215,8 @@ public class PrintDesignSettings {
         printDateTimeFontStyle = AppFontStyle.NORMAL;
         printDateTimeAlignment = PrintAlignment.LEFT;
         printDateTimeColor = 0xFF000000L;
+        showPrintDateTimeLabel = false;
+        printDateTimeLabelText = "Print Date/Time";
 
         showStatus = false;
         statusFontSize = 20f;
@@ -204,6 +245,7 @@ public class PrintDesignSettings {
         outlineWidth = 1f;
 
         activePreset = TypographyPreset.DEFAULT;
+        customLines = new java.util.ArrayList<>();
     }
 
     /** Backwards-compatibility aliases (mirrors Kotlin val lineSpacing / blankLines). */
@@ -221,6 +263,8 @@ public class PrintDesignSettings {
         c.codeAlignment = codeAlignment;
         c.codeSpaced = codeSpaced;
         c.codeColor = codeColor;
+        c.showCodeLabel = showCodeLabel;
+        c.codeLabelText = codeLabelText;
         c.showProfileName = showProfileName;
         c.profileNameFontSize = profileNameFontSize;
         c.profileNameBold = profileNameBold;
@@ -228,6 +272,7 @@ public class PrintDesignSettings {
         c.profileNameFontStyle = profileNameFontStyle;
         c.profileNameAlignment = profileNameAlignment;
         c.showProfileNameLabel = showProfileNameLabel;
+        c.profileNameLabelText = profileNameLabelText;
         c.profileNameColor = profileNameColor;
         c.showPeriod = showPeriod;
         c.periodFontSize = periodFontSize;
@@ -236,6 +281,7 @@ public class PrintDesignSettings {
         c.periodFontStyle = periodFontStyle;
         c.periodAlignment = periodAlignment;
         c.showPeriodLabel = showPeriodLabel;
+        c.periodLabelText = periodLabelText;
         c.periodColor = periodColor;
         c.showQuota = showQuota;
         c.quotaFontSize = quotaFontSize;
@@ -244,6 +290,7 @@ public class PrintDesignSettings {
         c.quotaFontStyle = quotaFontStyle;
         c.quotaAlignment = quotaAlignment;
         c.showQuotaLabel = showQuotaLabel;
+        c.quotaLabelText = quotaLabelText;
         c.quotaColor = quotaColor;
         c.showHeader = showHeader;
         c.headerFontSize = headerFontSize;
@@ -263,6 +310,8 @@ public class PrintDesignSettings {
         c.printDateTimeFontStyle = printDateTimeFontStyle;
         c.printDateTimeAlignment = printDateTimeAlignment;
         c.printDateTimeColor = printDateTimeColor;
+        c.showPrintDateTimeLabel = showPrintDateTimeLabel;
+        c.printDateTimeLabelText = printDateTimeLabelText;
         c.showStatus = showStatus;
         c.statusFontSize = statusFontSize;
         c.statusBold = statusBold;
@@ -284,6 +333,10 @@ public class PrintDesignSettings {
         c.outlineColor = outlineColor;
         c.outlineWidth = outlineWidth;
         c.activePreset = activePreset;
+        c.customLines = new java.util.ArrayList<>();
+        if (customLines != null) {
+            for (CustomLine cl : customLines) c.customLines.add(cl == null ? new CustomLine() : cl.copy());
+        }
         return c;
     }
 
@@ -358,6 +411,8 @@ public class PrintDesignSettings {
             obj.put("codeAlignment", codeAlignment.name());
             obj.put("codeSpaced", codeSpaced);
             obj.put("codeColor", codeColor);
+            obj.put("showCodeLabel", showCodeLabel);
+            obj.put("codeLabelText", codeLabelText);
 
             obj.put("showProfileName", showProfileName);
             obj.put("profileNameFontSize", (double) profileNameFontSize);
@@ -366,6 +421,7 @@ public class PrintDesignSettings {
             obj.put("profileNameFontStyle", profileNameFontStyle.name());
             obj.put("profileNameAlignment", profileNameAlignment.name());
             obj.put("showProfileNameLabel", showProfileNameLabel);
+            obj.put("profileNameLabelText", profileNameLabelText);
             obj.put("profileNameColor", profileNameColor);
 
             obj.put("showPeriod", showPeriod);
@@ -375,6 +431,7 @@ public class PrintDesignSettings {
             obj.put("periodFontStyle", periodFontStyle.name());
             obj.put("periodAlignment", periodAlignment.name());
             obj.put("showPeriodLabel", showPeriodLabel);
+            obj.put("periodLabelText", periodLabelText);
             obj.put("periodColor", periodColor);
 
             obj.put("showQuota", showQuota);
@@ -384,6 +441,7 @@ public class PrintDesignSettings {
             obj.put("quotaFontStyle", quotaFontStyle.name());
             obj.put("quotaAlignment", quotaAlignment.name());
             obj.put("showQuotaLabel", showQuotaLabel);
+            obj.put("quotaLabelText", quotaLabelText);
             obj.put("quotaColor", quotaColor);
 
             obj.put("showHeader", showHeader);
@@ -406,6 +464,8 @@ public class PrintDesignSettings {
             obj.put("printDateTimeFontStyle", printDateTimeFontStyle.name());
             obj.put("printDateTimeAlignment", printDateTimeAlignment.name());
             obj.put("printDateTimeColor", printDateTimeColor);
+            obj.put("showPrintDateTimeLabel", showPrintDateTimeLabel);
+            obj.put("printDateTimeLabelText", printDateTimeLabelText);
 
             obj.put("showStatus", showStatus);
             obj.put("statusFontSize", (double) statusFontSize);
@@ -432,6 +492,22 @@ public class PrintDesignSettings {
             obj.put("outlineWidth", (double) outlineWidth);
 
             obj.put("activePreset", activePreset.name());
+
+            JSONArray cla = new JSONArray();
+            if (customLines != null) {
+                for (CustomLine cl : customLines) {
+                    if (cl == null) continue;
+                    JSONObject o = new JSONObject();
+                    o.put("label", cl.label == null ? "" : cl.label);
+                    o.put("value", cl.value == null ? "" : cl.value);
+                    o.put("fontSize", (double) cl.fontSize);
+                    o.put("bold", cl.bold);
+                    o.put("alignment", cl.alignment == null ? "LEFT" : cl.alignment.name());
+                    o.put("dxMm", (double) cl.dxMm);
+                    cla.put(o);
+                }
+            }
+            obj.put("customLines", cla);
             return obj.toString();
         } catch (Exception e) {
             return "{}";
@@ -472,6 +548,8 @@ public class PrintDesignSettings {
             s.codeAlignment = PrintAlignment.fromString(obj.optString("codeAlignment", "LEFT"));
             s.codeSpaced = obj.optBoolean("codeSpaced", true);
             s.codeColor = obj.optLong("codeColor", 0xFF000000L);
+            s.showCodeLabel = obj.optBoolean("showCodeLabel", false);
+            s.codeLabelText = obj.optString("codeLabelText", "Voucher Code");
 
             s.showProfileName = obj.optBoolean("showProfileName", true);
             s.profileNameFontSize = (float) obj.optDouble("profileNameFontSize", 24.0);
@@ -481,6 +559,7 @@ public class PrintDesignSettings {
             s.profileNameFontStyle = AppFontStyle.fromString(obj.optString("profileNameFontStyle", "NORMAL"));
             s.profileNameAlignment = PrintAlignment.fromString(obj.optString("profileNameAlignment", "LEFT"));
             s.showProfileNameLabel = obj.optBoolean("showProfileNameLabel", true);
+            s.profileNameLabelText = obj.optString("profileNameLabelText", "Profile Name");
             s.profileNameColor = obj.optLong("profileNameColor", 0xFF000000L);
 
             s.showPeriod = obj.optBoolean("showPeriod", true);
@@ -491,6 +570,7 @@ public class PrintDesignSettings {
             s.periodFontStyle = AppFontStyle.fromString(obj.optString("periodFontStyle", "NORMAL"));
             s.periodAlignment = PrintAlignment.fromString(obj.optString("periodAlignment", "LEFT"));
             s.showPeriodLabel = obj.optBoolean("showPeriodLabel", true);
+            s.periodLabelText = obj.optString("periodLabelText", "Period");
             s.periodColor = obj.optLong("periodColor", 0xFF000000L);
 
             s.showQuota = obj.optBoolean("showQuota", false);
@@ -501,6 +581,7 @@ public class PrintDesignSettings {
             s.quotaFontStyle = AppFontStyle.fromString(obj.optString("quotaFontStyle", "NORMAL"));
             s.quotaAlignment = PrintAlignment.fromString(obj.optString("quotaAlignment", "LEFT"));
             s.showQuotaLabel = obj.optBoolean("showQuotaLabel", true);
+            s.quotaLabelText = obj.optString("quotaLabelText", "Quota");
             s.quotaColor = obj.optLong("quotaColor", 0xFF000000L);
 
             s.showHeader = obj.optBoolean("showHeader", true);
@@ -522,6 +603,8 @@ public class PrintDesignSettings {
             s.printDateTimeFontStyle = AppFontStyle.fromString(obj.optString("printDateTimeFontStyle", "NORMAL"));
             s.printDateTimeAlignment = PrintAlignment.fromString(obj.optString("printDateTimeAlignment", "LEFT"));
             s.printDateTimeColor = obj.optLong("printDateTimeColor", 0xFF000000L);
+            s.showPrintDateTimeLabel = obj.optBoolean("showPrintDateTimeLabel", false);
+            s.printDateTimeLabelText = obj.optString("printDateTimeLabelText", "Print Date/Time");
 
             s.showStatus = obj.optBoolean("showStatus", false);
             s.statusFontSize = (float) obj.optDouble("statusFontSize", 20.0);
@@ -549,6 +632,23 @@ public class PrintDesignSettings {
             s.outlineWidth = (float) obj.optDouble("outlineWidth", 1.0);
 
             s.activePreset = TypographyPreset.fromString(obj.optString("activePreset", "DEFAULT"));
+
+            s.customLines = new java.util.ArrayList<>();
+            JSONArray cla = obj.optJSONArray("customLines");
+            if (cla != null) {
+                for (int i = 0; i < cla.length() && s.customLines.size() < 5; i++) {
+                    JSONObject o = cla.optJSONObject(i);
+                    if (o == null) continue;
+                    CustomLine cl = new CustomLine();
+                    cl.label = o.optString("label", "");
+                    cl.value = o.optString("value", "");
+                    cl.fontSize = Math.max(8f, Math.min(48f, (float) o.optDouble("fontSize", 20.0)));
+                    cl.bold = o.optBoolean("bold", false);
+                    cl.alignment = PrintAlignment.fromString(o.optString("alignment", "LEFT"));
+                    cl.dxMm = Math.max(-20f, Math.min(20f, (float) o.optDouble("dxMm", 0.0)));
+                    s.customLines.add(cl);
+                }
+            }
             return s;
         } catch (Exception e) {
             return new PrintDesignSettings();
