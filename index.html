@@ -132,6 +132,7 @@
   </header>
 
   <main id="main">
+    <div id="ptr-indicator" class="ptr-indicator" aria-hidden="true"><svg class="ic spin"><use href="#i-refresh"/></svg></div>
     <!-- VOUCHERS -->
     <section id="view-vouchers" class="view">
       <div class="large-title hidden" data-i18n="v.title">ဗောက်ချာများ</div>
@@ -155,7 +156,13 @@
           <button class="chip" data-s="3"><span class="dot" style="background:var(--muted)"></span><span data-i18n="chip.s3">သက်တမ်းကုန်</span></button>
         </div>
       </div>
-      <div id="voucher-count" class="muted small"></div>
+      <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div class="row" style="gap:8px;align-items:center"><div id="voucher-fetched" class="muted small"></div><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button></div></div>
+      <div id="bulk-bar" class="bulk-bar hidden">
+        <span id="bulk-count" class="muted small"></span>
+        <button id="btn-bulk-print" class="btn small primary"><svg class="ic sm"><use href="#i-printer"/></svg><span data-i18n="v.bulkPrint">ပရင့်ထုတ်မယ်</span></button>
+        <button id="btn-bulk-delete" class="btn small danger-ghost"><span data-i18n="v.bulkDelete">ဖျက်မယ်</span></button>
+        <button id="btn-bulk-cancel" class="btn small"><span data-i18n="a.cancel">မလုပ်တော့ဘူး</span></button>
+      </div>
       <div id="voucher-list" class="list"></div>
       <div id="voucher-loading" class="loading hidden"></div>
     </section>
@@ -163,7 +170,6 @@
     <!-- GENERATE -->
     <section id="view-generate" class="view hidden">
       <div class="large-title hidden" data-i18n="g.title">ဗောက်ချာထုတ်မယ်</div>
-      <div class="section-title" data-i18n="g.new">ဗောက်ချာအသစ်ထုတ်မယ်</div>
       <div class="set-group">
         <div class="set-row"><div style="width:100%"><div class="printer-line">
             <span class="printer-dot" data-printer-dot><svg class="ic sm"><use href="#i-printer"/></svg><span class="pd"></span></span>
@@ -220,7 +226,6 @@
     <!-- PRINTER -->
     <section id="view-printer" class="view hidden">
       <div class="large-title hidden" data-i18n="p.title">ပရင်တာ</div>
-      <div class="section-title" data-i18n="p.bt">ဘလူးတုသ် ပရင်တာ</div>
       <div class="set-group" id="bt-card">
         <div class="set-row"><div class="fld-stack">
           <div style="display:flex;align-items:center;gap:8px"><span class="fld-label" data-i18n="p.bt">ဘလူးတုသ် ပရင်တာ</span><span class="printer-dot" data-printer-dot style="margin-left:auto"><svg class="ic sm"><use href="#i-printer"/></svg><span class="pd"></span></span></div>
@@ -273,6 +278,7 @@
         <button class="menu-item" data-more="usergroups"><svg class="ic lg"><use href="#i-box"/></svg><span data-i18n="m.usergroups">User Groups</span><small data-i18n="m.usergroupsSub">အုပ်စုများ</small></button>
         <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
         <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
+        <button class="menu-item" data-more="history"><svg class="ic lg"><use href="#i-clock"/></svg><span data-i18n="m.history">History</span><small data-i18n="m.historySub">ဝင်ထွက်မှတ်တမ်း</small></button>
         <button class="menu-item" data-more="networks"><svg class="ic lg"><use href="#i-globe"/></svg><span data-i18n="m.networks">Networks</span><small data-i18n="m.networksSub">ကွန်ရက်များ</small></button>
         <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
       </div>
