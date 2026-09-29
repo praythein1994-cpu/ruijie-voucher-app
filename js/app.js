@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.59';
+const APP_VERSION = '1.5.60';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -222,6 +222,10 @@ const I18N = {
   'pl.betweenSub': { my: 'ပရင့်ထုတ်ထားသော ဗောက်ချာများကြား စာကြောင်းအလွတ်များ ထည့်သွင်းခြင်း', en: 'Feed blank lines between printed vouchers' },
   'pl.inside': { my: 'ဗောက်ချာအတွင်း အကွာအဝေး', en: 'Inside Voucher Spacing' },
   'pl.insideSub': { my: 'ဗောက်ချာတစ်ခုအတွင်းရှိ အချက်အလက်များကြား ဒေါင်လိုက်အကွာအဝေး', en: 'Vertical spacing between fields inside each voucher' },
+  'pl.tearLine': { my: 'ဖြဲဖို့ မျဉ်းကြောင်း', en: 'Tear-off line between vouchers' },
+  'pl.tearLineSub': { my: 'ဗောက်ချာများကြား ဖြဲရန် မျဉ်းကြောင်း — စာရွက်အပို မကုန်ပါ', en: 'Dashed cut guide inside the existing gap — no extra paper' },
+  'pl.midDivider': { my: 'အလယ် ခြားမျဉ်း', en: 'Middle divider line' },
+  'pl.midDividerSub': { my: 'ကပ်ထားသော စာကြောင်းများကြား ဒေါင်လိုက်မျဉ်း', en: 'Vertical divider between docked custom-line parts' },
   'pl.save': { my: 'Layout သိမ်းမယ်', en: 'Save Layout' },
   'pl.field': { my: 'အကွက်', en: 'Field' },
   'pl.show': { my: 'ပြမယ်', en: 'Show' },
@@ -1567,6 +1571,7 @@ function defaultPrintStyle() {
     ls: 'normal', lsCustom: 2,
     lineSpacing: 0, shadow: false, outline: false,
     betweenBlanks: 1, insideSpacing: 0,
+    tearLine: false, midDivider: false,
     fields,
     customLines: [],
   };
@@ -1576,6 +1581,7 @@ function mergePrintStyle(saved) {
   const d = defaultPrintStyle();
   if (!saved || typeof saved !== 'object') return d;
   const out = Object.assign(d, saved);
+  out.tearLine = !!saved.tearLine; out.midDivider = !!saved.midDivider;
   out.fields = {};
   TYPO_FIELD_DEFS.forEach(f => {
     out.fields[f.id] = Object.assign(defaultField(f.id), (saved.fields && saved.fields[f.id]) || {});
@@ -1598,7 +1604,7 @@ function applyPreset(st, name) {
   const setAll = (fn) => TYPO_FIELD_DEFS.forEach(d => fn(F[d.id]));
   if (name === 'default') {
     const d = defaultPrintStyle();
-    Object.assign(st, { fontFamily: d.fontFamily, align: d.align, color: d.color, ls: d.ls, lsCustom: d.lsCustom, lineSpacing: 0, shadow: false, outline: false, betweenBlanks: 1, insideSpacing: 0 });
+    Object.assign(st, { fontFamily: d.fontFamily, align: d.align, color: d.color, ls: d.ls, lsCustom: d.lsCustom, lineSpacing: 0, shadow: false, outline: false, betweenBlanks: 1, insideSpacing: 0, tearLine: false, midDivider: false });
     TYPO_FIELD_DEFS.forEach(fd => { F[fd.id] = defaultField(fd.id); });
   } else if (name === 'compact') {
     setAll(f => { f.size = Math.max(12, f.size - 6); f.ls = 'compact'; });
@@ -1683,8 +1689,14 @@ function ticketInnerHtml(item, st, style, preview) {
       : '2mm';
     return `font-size:${fs};text-align:${al};${cl.bold ? 'font-weight:bold;' : ''}margin:${vm} 0;${dx ? `transform:translateX(${dx}mm);` : ''}`;
   };
-  const dockRow = (leftHtml, text, cl) =>
-    `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4mm">${leftHtml}<div class="lv" style="${clPartCss(cl, 'right', true)}">${esc(text)}</div></div>`;
+  const dockRow = (leftHtml, text, cl) => {
+    // v1.5.60: optional vertical divider between the field (left) and the
+    // docked custom-line part (right) — toggleable, 2px, adds no row height.
+    const midDiv = style.midDivider
+      ? `<div style="align-self:stretch;border-left:2px dashed ${preview ? (style.color || '#111') : '#000'};margin:1mm 0"></div>`
+      : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4mm">${leftHtml}${midDiv}<div class="lv" style="${clPartCss(cl, 'right', true)}">${esc(text)}</div></div>`;
+  };
   const showProfile = F.profile.show && item.pkg;
   if (showProfile) {
     const left = `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(labelPrefix(F.profile, 'tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
@@ -1740,7 +1752,12 @@ async function generateVouchers(btnId, lblId) {
       codeSize: S.genOpts.vlen,
       packageName: pkg ? pkgName(pkg) : '',
     });
-    const items = list.map(v => ({ code: vCode(v), pkg: pkg && pkgName(pkg), period: v.timePeriod, quota: v.quota }));
+    // v1.5.60: voucher/create response carries no timePeriod/quota (manual §2.3.1)
+    // → fall back to the selected package's validity/quota so the ticket shows the real period.
+    const pkgPeriod = pkg ? pkg.timePeriod : undefined, pkgQuota = pkg ? pkg.quota : undefined;
+    const items = list.map(v => ({ code: vCode(v), pkg: pkg && pkgName(pkg),
+      period: v.timePeriod != null ? v.timePeriod : pkgPeriod,
+      quota: v.quota != null ? v.quota : pkgQuota }));
     showGenResult(items);
     // v1.5.54: remember session-generated codes so bulk delete can prove provenance
     try { items.forEach(i => { if (i.code) S.sessionGenCodes.add(i.code); }); } catch (e) {}
@@ -1927,6 +1944,7 @@ function nativePrintSettings() {
     headerColor: BLACK,
     insideVoucherSpacing: Math.max(0, Math.min(4, PS.insideSpacing | 0)),
     betweenVoucherSpacing: Math.max(0, Math.min(8, PS.betweenBlanks == null ? 1 : PS.betweenBlanks | 0)),
+    tearLine: !!PS.tearLine, midDivider: !!PS.midDivider,
     showPrintDateTime: !!F.datetime.show, printDateTimeFontSize: +F.datetime.size || 20,
     printDateTimeBold: F.datetime.weight === 'bold', printDateTimeFontWeight: W(F.datetime),
     printDateTimeFontStyle: ST(F.datetime), printDateTimeAlignment: A(F.datetime),
@@ -2183,6 +2201,16 @@ function btPrintWithProgress(items, st) {
   return true;
 }
 
+/** Gap between vouchers: betweenBlanks blank lines, or a tear-off line drawn
+ *  inside the same space (zero extra paper). betweenBlanks=0 + tear line =
+ *  exactly one line — the same paper as betweenBlanks=1. */
+function tearGapHtml(st) {
+  const n = Math.max(0, Number(st.betweenBlanks) || 0);
+  if (!st.tearLine) return n > 0 ? `<div style="height:${n * 14}px"></div>` : '';
+  const h = Math.max(n, 1) * 14;
+  return `<div style="height:${h}px;position:relative">`
+    + `<div style="position:absolute;left:0;right:0;top:50%;border-top:2px dashed #555"></div></div>`;
+}
 function doPrint(items) {
   if (!items.length) return toast(t('err.noPrint'), true);
   const st = printSettings();
@@ -2193,7 +2221,7 @@ function doPrint(items) {
     if (btPrintWithProgress(items, st)) { btRefreshSoon(); return; }
     // fall through to system print if the BT call failed
   }
-  const blanks = PS.betweenBlanks > 0 ? `<div style="height:${PS.betweenBlanks * 14}px"></div>` : '';
+  const blanks = tearGapHtml(PS);
   const html = items.map(it => ticketHtml(it, st)).join(blanks);
   // APK: native Android print via PrintManager (window.print() does nothing in WebView)
   if (window.RuijieBridge && window.RuijieBridge.printHtml) {
@@ -2390,6 +2418,8 @@ function renderLayoutModal() {
   $('layout-between-val').textContent = `${d.betweenBlanks} ${t('pl.lines')}`;
   $('layout-inside').value = d.insideSpacing;
   $('layout-inside-val').textContent = d.insideSpacing === 0 ? `0 (${t('pl.compact')})` : String(d.insideSpacing);
+  $('layout-tearline').checked = !!d.tearLine;
+  $('layout-middivider').checked = !!d.midDivider;
   $('layout-fields').innerHTML = TYPO_FIELD_DEFS.map(layoutFieldCard).join('');
   // checkboxes (full re-render ok)
   $('layout-fields').querySelectorAll('input[data-lf]').forEach(inp => {
@@ -2446,7 +2476,7 @@ function updateLivePreviews() {
   if (layoutDraft) {
     // 3 sample tickets so the Between-Voucher gap is visible and testable live
     // (same gap formula as the real system-print path in doPrint, from the live draft)
-    const gap = layoutDraft.betweenBlanks > 0 ? `<div style="height:${layoutDraft.betweenBlanks * 14}px"></div>` : '';
+    const gap = tearGapHtml(layoutDraft);
     $('layout-preview').innerHTML = previewSampleItems().map(it => ticketInnerHtml(it, st, layoutDraft, true)).join(gap);
   }
   if (typoDraft) {
@@ -2463,6 +2493,15 @@ function wireLayoutModal() {
   $('layout-inside').addEventListener('input', e => {
     layoutDraft.insideSpacing = Number(e.target.value);
     $('layout-inside-val').textContent = layoutDraft.insideSpacing === 0 ? `0 (${t('pl.compact')})` : String(layoutDraft.insideSpacing);
+    updateLivePreviews();
+  });
+  // v1.5.60: tear-off line + middle divider toggles (live preview, saved with layout)
+  $('layout-tearline').addEventListener('change', e => {
+    layoutDraft.tearLine = e.target.checked;
+    updateLivePreviews();
+  });
+  $('layout-middivider').addEventListener('change', e => {
+    layoutDraft.midDivider = e.target.checked;
     updateLivePreviews();
   });
   $('layout-reset').addEventListener('click', () => {
