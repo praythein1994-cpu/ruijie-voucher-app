@@ -683,6 +683,20 @@ public class BluetoothPrinterManager {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new Date());
     }
 
+    /** v1.5.60: dashed tear-off guide line between vouchers.
+     *  Printed as one text line: exactly one line of paper, identical to
+     *  feedPaper(1). So betweenSpacing=0 + tear line == betweenSpacing=1,
+     *  and for N>=1 the line replaces one blank feed (zero extra paper). */
+    private void printTearLine(EscPosPrinter escPos, PaperConfiguration paperConfig, int betweenSpacing) {
+        int pairs = Math.max(8, paperConfig.widthDots / 24); // 16 for 58mm, 24 for 80mm
+        StringBuilder sb = new StringBuilder(pairs * 2);
+        for (int i = 0; i < pairs; i++) sb.append("- ");
+        escPos.printTextLine(sb.toString().trim());
+        int rest = Math.max(0, betweenSpacing - 1);
+        if (rest > 0) escPos.feedPaper(rest);
+        escPos.flush();
+    }
+
     /** Async single-voucher print (background thread). */
     public void printSingleAsync(final VoucherData voucher, final PrintDesignSettings settings,
                                  final PaperConfiguration paperConfig, final String siteName,
@@ -712,7 +726,9 @@ public class BluetoothPrinterManager {
 
                     if (copyIndex < n - 1) {
                         int betweenSpacing = Math.max(0, Math.min(8, settings.betweenVoucherSpacing));
-                        if (betweenSpacing > 0) {
+                        if (settings.tearLine) {
+                            printTearLine(escPos, paperConfig, betweenSpacing);
+                        } else if (betweenSpacing > 0) {
                             escPos.feedPaper(betweenSpacing);
                             escPos.flush();
                         }
@@ -773,9 +789,13 @@ public class BluetoothPrinterManager {
                         printMessage = "Printing " + printedJobs + " / " + totalJobs + "...";
 
                         int betweenSpacing = Math.max(0, Math.min(8, settings.betweenVoucherSpacing));
-                        if (betweenSpacing > 0 && printedJobs < totalJobs) {
-                            escPos.feedPaper(betweenSpacing);
-                            escPos.flush();
+                        if (printedJobs < totalJobs) {
+                            if (settings.tearLine) {
+                                printTearLine(escPos, paperConfig, betweenSpacing);
+                            } else if (betweenSpacing > 0) {
+                                escPos.feedPaper(betweenSpacing);
+                                escPos.flush();
+                            }
                         }
                         try { Thread.sleep(350); } catch (InterruptedException ie) { return; }
                     }
