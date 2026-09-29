@@ -2,6 +2,7 @@ package com.ruijie.voucher.printer;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 
@@ -651,6 +652,18 @@ public final class PrintRenderer {
         float edgeX = width - 16f + cl.dxMm * dotsPerMm;
         edgeX = Math.min(width - 8f, Math.max(drawnW + 8f, edgeX));
         drawWithOutline(canvas, settings, text, edgeX, y, p, isThermalOutput);
+        // v1.5.60: optional vertical divider between the field (left) and the
+        // docked custom-line part (right) — 2px dashed, spans this row only.
+        if (settings.midDivider) {
+            Paint divPaint = new Paint();
+            divPaint.setColor(0xFF000000);
+            divPaint.setStyle(Paint.Style.STROKE);
+            divPaint.setStrokeWidth(2f);
+            divPaint.setPathEffect(new DashPathEffect(new float[]{6f, 4f}, 0f));
+            divPaint.setAntiAlias(!isThermalOutput);
+            float divX = width / 2f;
+            canvas.drawLine(divX, y + p.ascent(), divX, y + p.descent(), divPaint);
+        }
     }
 
     private static void drawWithOutline(Canvas canvas, PrintDesignSettings settings,
