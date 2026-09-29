@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.65';
+const APP_VERSION = '1.5.67';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -431,6 +431,8 @@ const I18N = {
   'md.needSsoHint': { my: 'Switch/Gateway အပြည့်အစုံမြင်ရရန် Settings မှာ Ruijie အကောင့်ဝင်ပါ', en: 'Log in to your Ruijie account in Settings to see Switch/Gateway' },
   'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
+  'mc.search': { my: 'Voucher / IP / MAC နဲ့ရှာမယ်', en: 'Search voucher / IP / MAC' },
+  'mc.noMatch': { my: 'ရှာမတွေ့ပါ', en: 'No matches' },
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
   'mc.none': { my: 'Online client မရှိပါ', en: 'No online clients' },
   'mc.total': { my: 'စုစုပေါင်း {n}', en: '{n} total' },
@@ -1461,6 +1463,11 @@ function openVoucherDetail(uuid) {
   $('modal-body').innerHTML = `
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
+  // v1.5.67: In-use vouchers show Disconnect in Print's spot (user request);
+  // Unused/Expired keep Print (nothing to disconnect there).
+  const vdInUse = vEffStatus(v) === '2';
+  $('modal-print').classList.toggle('hidden', vdInUse);
+  $('modal-disconnect').classList.toggle('hidden', !vdInUse);
   $('modal').classList.remove('hidden');
   startVoucherLive(v);
 }
@@ -3562,6 +3569,7 @@ async function moreClients() {
   mcCache = {
     list, viaPortal, vmap, srcNote,
     filter: (mcCache && mcCache.filter) || 'all',
+    q: (mcCache && mcCache.q) || '', // v1.5.67: search text survives refresh
     showNames: Store.load().clientShowNames !== false,
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
@@ -3606,6 +3614,16 @@ async function moreHistory() {
   }
 }
 
+/* v1.5.67: Online Clients search — voucher code, IP, or MAC. A MAC typed
+   without separators still matches (normalized compare). */
+function mcMatchQ(f, q) {
+  q = String(q || '').trim().toLowerCase();
+  if (!q) return true;
+  const hay = [f.acct || '', f.ip || '', f.mac || ''].map(s => String(s).toLowerCase());
+  if (hay.some(h => h && h !== '—' && h.includes(q))) return true;
+  const nq = normMac(q);
+  return !!(nq && normMac(f.mac || '').includes(nq));
+}
 function renderMcList() {
   const { list, viaPortal, vmap, srcNote } = mcCache;
   const { filter, showNames } = mcCache;
@@ -3619,6 +3637,34 @@ function renderMcList() {
   const segHtml = `<div class="segmented seg-scroll" role="tablist">` +
     seg('all', t('mc.fAll'), counts.all) +
     CSTS.map(s => seg(s, t(CST_META[s].key), counts[s])).join('') + `</div>`;
+  // v1.5.67: search box — typing re-renders only the cells, input keeps focus.
+  const searchHtml = `<div class="mc-search">${ic('search', 'sm')}<input id="mc-q" type="search" value="${esc(mcCache.q || '')}" placeholder="${esc(t('mc.search'))}" autocomplete="off" aria-label="${esc(t('mc.search'))}"></div>`;
+  $('mc-list').innerHTML =
+    `<div class="mc-head"><p class="mc-sub">${esc(tx('mc.total', { n: list.length }))} · ${srcLine}</p>` +
+    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button></div>` +
+    searchHtml +
+    segHtml +
+    `<div id="mc-cells"></div>`;
+  renderMcCells();
+  document.querySelectorAll('#mc-list [data-mcf]').forEach(b => b.addEventListener('click', () => {
+    mcCache.filter = b.dataset.mcf;
+    renderMcList();
+  }));
+  const nb = $('mc-names');
+  if (nb) nb.addEventListener('click', () => {
+    mcCache.showNames = !mcCache.showNames;
+    Store.save({ clientShowNames: mcCache.showNames });
+    renderMcList();
+  });
+  const qi = $('mc-q');
+  if (qi) qi.addEventListener('input', () => { mcCache.q = qi.value; renderMcCells(); });
+}
+/* v1.5.67: cells-only render — called by renderMcList and by the search box
+   on every keystroke (no focus loss, no list wipe). */
+function renderMcCells() {
+  const { list, viaPortal, vmap } = mcCache;
+  const { filter, showNames, q } = mcCache;
+  const sts = list.map(c => clientStatusOf(mcFields(c, viaPortal, vmap).acct, vmap));
   /* v1.5.57: iOS client cells — status-tinted device icon tile, headline +
      sub-lines, status badge; replaces the 8-column desktop table. */
   const clientIcon = f => {
@@ -3632,6 +3678,7 @@ function renderMcList() {
   list.forEach((c, i) => {
     if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
+    if (!mcMatchQ(f, q)) return;
     const st = sts[i];
     // v1.5.53: anomaly flags — neutral wording, never accusatory.
     // "suspicious": online with no voucher attribution but showing real
@@ -3673,28 +3720,15 @@ function renderMcList() {
       (net ? `<div class="sub mc-net">${esc(net)}</div>` : '') +
       foot + `</div></div>`;
   });
-  $('mc-list').innerHTML =
-    `<div class="mc-head"><p class="mc-sub">${esc(tx('mc.total', { n: list.length }))} · ${srcLine}</p>` +
-    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button></div>` +
-    segHtml +
-    (cells ? `<div class="set-group mc-list">${cells}</div>` : `<p class="muted">${esc(t('mc.none'))}</p>`);
-  document.querySelectorAll('#mc-list [data-kick]').forEach(b => b.addEventListener('click', () => {
+  $('mc-cells').innerHTML =
+    cells ? `<div class="set-group mc-list">${cells}</div>` : `<p class="muted">${esc(q && String(q).trim() ? t('mc.noMatch') : t('mc.none'))}</p>`;
+  document.querySelectorAll('#mc-cells [data-kick]').forEach(b => b.addEventListener('click', () => {
     const list = (mcCache && mcCache.list) || [];
     const c = list.find(x => normMac(x.mac || x.userMac) === normMac(b.dataset.kick));
     if (c) kickStickyClient(c);
   }));
-  document.querySelectorAll('#mc-list [data-mcf]').forEach(b => b.addEventListener('click', () => {
-    mcCache.filter = b.dataset.mcf;
-    renderMcList();
-  }));
-  const nb = $('mc-names');
-  if (nb) nb.addEventListener('click', () => {
-    mcCache.showNames = !mcCache.showNames;
-    Store.save({ clientShowNames: mcCache.showNames });
-    renderMcList();
-  });
   // v1.5.58: tap a row for the full detail sheet (Disconnect keeps its own tap)
-  document.querySelectorAll('#mc-list [data-mc]').forEach(row => {
+  document.querySelectorAll('#mc-cells [data-mc]').forEach(row => {
     const open = () => openMcDetail(Number(row.dataset.mc));
     row.addEventListener('click', e => {
       if (e.target.closest('[data-kick]')) return;
@@ -4950,6 +4984,16 @@ function init() {
   $('modal-close').addEventListener('click', () => closeModal('modal'));
   $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal('modal'); });
   $('modal-print').addEventListener('click', () => { if (modalVoucher) doPrint([{ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }]); });
+  // v1.5.67: Disconnect from the voucher detail sheet — same verified flow
+  // as the sticky-row button (confirm → SSO kick → voucher marked Expired).
+  // The voucher code is the portal auth account for voucher-auth clients;
+  // no auth record (client offline) → honest "not found" toast, no-op.
+  $('modal-disconnect').addEventListener('click', async () => {
+    if (!modalVoucher) return;
+    if (!confirm(t('kick.confirm'))) return;
+    const ok = await requestKick({ account: vCode(modalVoucher) }, { auto: false });
+    if (ok) { modalVoucher = null; closeModal('modal'); loadVouchers(); }
+  });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
   $('modal-delete').addEventListener('click', deleteVoucher);
 
