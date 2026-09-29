@@ -249,7 +249,10 @@
                 <button type="button" data-paper="80" class="active">80mm</button>
                 <button type="button" data-paper="58">58mm</button>
               </div>
-          <div style="display:flex;gap:8px"><button type="button" class="icon-btn" id="btn-print-layout" data-i18n-aria="pl.openLayout" aria-label="Print Layout & Spacing" title="Print Layout & Spacing"><svg class="ic"><use href="#i-roller"/></svg></button><button type="button" class="icon-btn" id="btn-print-typo" data-i18n-aria="ty.openTypo" aria-label="Typography / Font Settings" title="Typography / Font Settings"><svg class="ic"><use href="#i-text"/></svg></button></div><select id="print-paper" class="hidden" aria-hidden="true" tabindex="-1">
+          <div class="segmented" id="layout-typo-seg" role="group" aria-label="Print Layout & Typography" style="margin-top:8px;margin-bottom:0">
+              <button type="button" id="btn-print-layout" data-i18n-aria="pl.openLayout" aria-label="Print Layout & Spacing"><svg class="ic"><use href="#i-roller"/></svg> <span data-i18n="p.layoutBtn">Print Layout</span></button>
+              <button type="button" id="btn-print-typo" data-i18n-aria="ty.openTypo" aria-label="Typography / Font Settings"><svg class="ic"><use href="#i-text"/></svg> <span data-i18n="p.typoBtn">Typography</span></button>
+            </div><select id="print-paper" class="hidden" aria-hidden="true" tabindex="-1">
               <option value="80">80mm (thermal)</option>
               <option value="58">58mm (thermal)</option>
             </select></div></div>
@@ -298,6 +301,19 @@
           <div class="t"><div class="t-main" data-i18n="s.account">အကောင့်အချက်အလက်</div></div>
         </div>
         <div class="set-pad" id="account-info"></div>
+      </div>
+
+      <div class="section-title" data-i18n="live.title">ဗောက်ချာ တိုက်ရိုက်စာရင်း</div>
+      <div class="set-group" id="live-card">
+        <div class="set-row"><div class="t"><div class="t-main" data-i18n="live.enable">စာရင်း အလိုအလျောက် ပြန်ဆွဲမယ်</div><div class="sub" data-i18n="live.enableSub">တစ်ယောက်ယောက် voucher စသုံးလိုက်ရင် အရေအတွက် ချက်ချင်းပြောင်းမယ်</div></div>
+          <label class="switch"><input type="checkbox" id="live-enable" checked><span class="track"></span></label></div>
+        <div class="set-row" id="live-int-row"><div class="t"><div class="t-main" data-i18n="live.interval">ပြန်ဆွဲမယ့် ကြားချိန်</div></div>
+          <div class="segmented" id="live-int-seg" role="group" aria-label="Refresh interval">
+            <button type="button" data-live-int="30">30s</button>
+            <button type="button" data-live-int="60" class="active">1m</button>
+            <button type="button" data-live-int="120">2m</button>
+            <button type="button" data-live-int="300">5m</button>
+          </div></div>
       </div>
 
       <div class="section-title" data-i18n="sso.title">Ruijie အကောင့်</div>
@@ -495,6 +511,9 @@
         <div class="slider-row"><input type="range" id="layout-inside" min="0" max="8" step="1" value="0"><b id="layout-inside-val">0</b></div>
       </div>
       <div id="layout-fields"></div>
+          <h4 class="sec-title rv" data-i18n="pl.customLines">Custom Lines</h4>
+          <div id="layout-custom-lines"></div>
+          <button type="button" id="layout-add-line" class="btn rv" style="margin-bottom:12px">+ <span data-i18n="pl.addLine">Add Custom Line</span></button>
       <div class="row modal-actions">
         <button id="layout-cancel" class="btn big"><span data-i18n="a.cancel">Cancel</span></button>
         <button id="layout-save" class="btn primary big"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="pl.save">Save Layout</span></button>
