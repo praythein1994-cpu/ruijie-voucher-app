@@ -1284,3 +1284,153 @@ button.set-row { cursor: pointer; }
 .voucher-row .bulk-check { display: none; width: 22px; height: 22px; flex: none; accent-color: var(--blue); }
 .bulk-mode .voucher-row .bulk-check { display: block; }
 .bulk-mode .voucher-row .chev { display: none; }
+
+/* ═══════════ v1.5.55 ═══════════ */
+
+/* ── Sticky two-pane preview (Print Layout + Typography modals) ──
+   Wide screens (tablet landscape): preview sticks to the LEFT while the
+   settings fields scroll on the RIGHT. Narrow screens: preview sticks to
+   the top of the scroll area. Fields reveal with a subtle iOS spring. */
+.pv-split { display: block; }
+.pv-pane { min-width: 0; }
+.pv-fields { min-width: 0; }
+.rv { opacity: 0; transform: translateY(14px); transition: opacity .45s var(--spring), transform .45s var(--spring); }
+.rv.inview { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rv { opacity: 1; transform: none; transition: none; }
+}
+@media (min-width: 900px) {
+  #layout-modal .modal-box, #typo-modal .modal-box { max-width: 940px; }
+  .pv-split { display: flex; gap: 22px; align-items: flex-start; }
+  .pv-pane { position: sticky; top: 0; flex: 0 0 330px; max-width: 350px; }
+  .pv-fields { flex: 1; min-width: 0; }
+}
+@media (max-width: 899px) {
+  .pv-pane {
+    position: sticky; top: 0; z-index: 6;
+    background: rgba(255,255,255,.72);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border-radius: 0 0 16px 16px; margin: 0 -2px; padding: 2px 2px 10px;
+  }
+  [data-theme="dark"] .pv-pane { background: rgba(30,30,34,.72); }
+}
+
+/* ── Glass footer: kill the white block behind Save/Cancel ──
+   (voucher detail #modal already had this; extend to layout/typo/preview) */
+#layout-modal .modal-actions, #typo-modal .modal-actions, #preview-modal .modal-actions {
+  background: transparent;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-radius: 16px;
+}
+[data-theme="neo"] #layout-modal .modal-actions,
+[data-theme="neo"] #typo-modal .modal-actions,
+[data-theme="neo"] #preview-modal .modal-actions { background: transparent; }
+
+/* ── iOS bottom-sheet picker (replaces native select dropdowns) ── */
+.ios-native-hide { position: absolute !important; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.ios-picker-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; font-family: inherit; cursor: pointer;
+  background: none; border: none; padding: 4px 0; color: var(--label);
+}
+.set-field .ios-picker-btn { flex: 1; min-width: 0; justify-content: flex-end; }
+.ios-picker-btn .ios-picker-val {
+  font-size: 17px; color: var(--label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.set-field .ios-picker-btn .ios-picker-val { text-align: right; }
+.ios-picker-btn .ic { width: 14px; height: 14px; color: #C7C7CC; flex: none; }
+#topbar .ios-picker-btn { width: auto; }
+#topbar .ios-picker-btn .ios-picker-val { color: var(--blue); font-weight: 600; font-size: 17px; }
+.ios-sheet-ov {
+  position: fixed; inset: 0; z-index: 1200; background: rgba(10,18,32,.38);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; transition: opacity .25s ease;
+}
+.ios-sheet-ov.open { opacity: 1; }
+.ios-sheet {
+  width: 100%; max-width: 560px; max-height: 72dvh; display: flex; flex-direction: column;
+  background: rgba(248,248,250,.88);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5);
+  border-radius: 22px 22px 0 0; border: .5px solid rgba(255,255,255,.6); border-bottom: none;
+  box-shadow: 0 -12px 48px rgba(10,30,70,.25);
+  padding: 6px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(103%); transition: transform .5s var(--spring);
+}
+.ios-sheet-ov.open .ios-sheet { transform: none; }
+.ios-sheet .sheet-handle { width: 40px; height: 5px; border-radius: 3px; background: rgba(120,120,128,.4); margin: 8px auto 4px; flex: none; }
+.ios-sheet-opts { overflow-y: auto; }
+.ios-sheet-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+  padding: 13px 16px; font-size: 17px; font-family: inherit; color: var(--label);
+  background: none; border: none; border-bottom: .5px solid var(--hairline); cursor: pointer; text-align: left;
+}
+.ios-sheet-opt:last-child { border-bottom: none; }
+.ios-sheet-opt.active { color: var(--blue); font-weight: 600; }
+.ios-sheet-opt .ic { width: 20px; height: 20px; flex: none; }
+.ios-sheet-cancel {
+  margin-top: 10px; width: 100%; padding: 14px; border: none; border-radius: 16px;
+  background: rgba(255,255,255,.92); color: var(--blue); font-size: 17px; font-weight: 600; font-family: inherit; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(10,30,70,.10);
+}
+[data-theme="dark"] .ios-sheet { background: rgba(36,36,40,.88); }
+[data-theme="dark"] .ios-sheet-cancel { background: rgba(60,60,66,.92); }
+
+/* ── Custom Quantity: centered (cursor handle falls below glyphs) ── */
+.qty-center { flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.qty-center .fld-label { text-align: center; width: 100%; }
+.qty-center #gen-qty {
+  flex: none; width: 200px; max-width: 70%; margin: 6px auto 0; display: block;
+  text-align: center; caret-color: var(--blue); font-size: 20px; font-weight: 600;
+  padding: 8px 12px;
+}
+
+/* ── Old/unknown voucher marker (code not in the Cloud voucher list) ── */
+.vcode-unknown { color: var(--gray); font-size: 11px; }
+
+/* ── Kick: per-client disconnect button ── */
+.kick-btn {
+  margin-top: 4px; padding: 5px 10px; font-size: 12px; border-radius: 9px;
+  border: .5px solid rgba(255,59,48,.4); color: var(--red); background: rgba(255,59,48,.08);
+  font-family: inherit; cursor: pointer;
+}
+
+/* ── Settings: iOS liquid-glass transparent ── */
+#view-settings .set-group {
+  background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  border: .5px solid rgba(255,255,255,.65); border-radius: 20px;
+  box-shadow: 0 10px 28px rgba(20,40,80,.10), inset 0 1px 0 rgba(255,255,255,.7);
+  overflow: hidden;
+}
+[data-theme="dark"] #view-settings .set-group {
+  background: rgba(44,44,48,.55); border-color: rgba(255,255,255,.14);
+  box-shadow: 0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.10);
+}
+#view-settings .section-title { margin-left: 16px; }
+@media (min-width: 900px) {
+  #view-settings { max-width: 760px; }
+}
+
+/* ── v1.5.55 · tabbar press-drag: liquid wobble + floating page preview ── */
+#tabbar { touch-action: pan-y; }
+.tab-preview {
+  position: fixed; z-index: 1300; pointer-events: none;
+  transform: translate(-50%, -100%);
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  background: rgba(255,255,255,.88);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+  border: .5px solid rgba(255,255,255,.65); border-radius: 16px;
+  padding: 10px 16px; font-size: 15px; font-weight: 600; color: var(--label);
+  box-shadow: 0 12px 32px rgba(10,30,70,.28), inset 0 1px 0 rgba(255,255,255,.6);
+  animation: previewpop .35s var(--spring);
+}
+.tab-preview .ic { width: 22px; height: 22px; color: var(--blue); flex: none; }
+@keyframes previewpop {
+  from { opacity: 0; transform: translate(-50%, -85%) scale(.75); }
+}
+[data-theme="dark"] .tab-preview {
+  background: rgba(44,44,48,.88); border-color: rgba(255,255,255,.14);
+  box-shadow: 0 12px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.10);
+}
+@media (prefers-reduced-motion: reduce) { .tab-preview { animation: none; } }
