@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.54';
+const APP_VERSION = '1.5.55';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -193,6 +193,16 @@ const I18N = {
   'g.customQty': { my: 'စိတ်ကြိုက် အရေအတွက်', en: 'Custom Quantity' },
   'g.btnPrint': { my: 'ထုတ်ပြီး ပရင့်မယ်', en: 'Generate & Print' },
   'a.cancel': { my: 'မလုပ်တော့ပါ', en: 'Cancel' },
+  'v.unknown': { my: 'အဟောင်း/မသိ', en: 'old/unknown' },
+  'kick.title': { my: 'Client ဖြုတ်ချခြင်း', en: 'Client Disconnect' },
+  'kick.auto': { my: 'Quota ပြည့်ရင် အလိုအလျောက် ဖြုတ်မယ်', en: 'Auto-disconnect when quota is spent' },
+  'kick.autoSub': { my: 'Voucher limit ပြည့်ပြီး ဆက်ချိတ်နေတဲ့ client ကို ဖြုတ်ခိုင်းမယ်', en: 'Disconnect clients still online after their voucher quota is spent' },
+  'kick.status': { my: 'အခြေအနေ', en: 'Status' },
+  'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
+  'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
+  'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
+  'kick.pending': { my: 'Kick မရသေးဘူး — cloud ကောင်းမှ verify လုပ်မယ်', en: 'Kick not available yet — will verify when the cloud is healthy' },
+  'kick.standby': { my: 'စောင့်နေတယ်', en: 'Standby' },
   'tkt.profileName': { my: 'Profile အမည်: ', en: 'Profile Name: ' },
   'pl.openLayout': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
   'pl.title': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
@@ -861,6 +871,93 @@ function initLiquidWobble() {
     }
   });
 }
+/* v1.5.55 — tabbar press-drag: press and slide along the bottom bar and the
+   tab under the finger wobbles like liquid, the glow blob follows, and a
+   small preview of that page floats above the bar. Release to enter the
+   page; a plain tap keeps the normal click behavior (no double switch). */
+function initTabbarDrag() {
+  const bar = $('tabbar');
+  if (!bar || bar._dragInit) return;
+  bar._dragInit = true;
+  let downTab = null, downX = 0, downY = 0, curTab = null, dragging = false, previewEl = null;
+  const tabs = () => Array.from(bar.querySelectorAll('.tab'));
+  const tabFromX = x => tabs().find(tb => {
+    const r = tb.getBoundingClientRect();
+    return r.width && x >= r.left && x <= r.right;
+  }) || null;
+  const wobbleTab = el => {
+    if (!el || !el.classList) return;
+    el.classList.remove('liq-wobble');
+    void el.offsetWidth;
+    el.classList.add('liq-wobble');
+  };
+  const blobTo = tab => {
+    const blob = $('liq-blob');
+    if (!blob || !tab) return;
+    const br = bar.getBoundingClientRect(), ir = (tab.querySelector('.ic') || tab).getBoundingClientRect();
+    if (!br.width || !ir.width) return;
+    const bw = blob.offsetWidth || 56, bh = blob.offsetHeight || 56;
+    blob.style.setProperty('--liq', tab.dataset.liq || '#3b82f6');
+    blob.style.transform = 'translate(' + (ir.left - br.left + ir.width / 2 - bw / 2) + 'px,' + (ir.top - br.top + ir.height / 2 - bh / 2) + 'px)';
+    blob.style.opacity = '1';
+  };
+  const hidePreview = () => { if (previewEl) { previewEl.remove(); previewEl = null; } };
+  const showPreview = tab => {
+    hidePreview();
+    previewEl = document.createElement('div');
+    previewEl.className = 'tab-preview';
+    const svg = tab.querySelector('svg');
+    if (svg) previewEl.appendChild(svg.cloneNode(true));
+    const spans = tab.querySelectorAll('span');
+    const lbl = document.createElement('span');
+    lbl.textContent = spans.length ? spans[spans.length - 1].textContent.trim() : '';
+    previewEl.appendChild(lbl);
+    document.body.appendChild(previewEl);
+  };
+  const movePreview = x => {
+    if (!previewEl) return;
+    const br = bar.getBoundingClientRect();
+    previewEl.style.left = x + 'px';
+    previewEl.style.bottom = ((window.innerHeight || 800) - br.top + 10) + 'px';
+  };
+  const setCur = (tab, x) => {
+    if (tab === curTab) { if (x != null) movePreview(x); return; }
+    curTab = tab;
+    if (tab) { wobbleTab(tab); blobTo(tab); showPreview(tab); if (x != null) movePreview(x); }
+    else hidePreview();
+  };
+  bar.addEventListener('pointerdown', e => {
+    const tab = e.target && e.target.closest ? e.target.closest('.tab') : null;
+    if (!tab) return;
+    downTab = tab; downX = e.clientX || 0; downY = e.clientY || 0;
+    curTab = tab; dragging = false;
+  });
+  window.addEventListener('pointermove', e => {
+    if (!downTab || e.clientX == null) return;
+    if (!dragging && Math.hypot(e.clientX - downX, e.clientY - downY) > 12) dragging = true;
+    if (!dragging) return;
+    setCur(tabFromX(e.clientX), e.clientX);
+  }, { passive: true });
+  const end = () => {
+    if (!downTab) return;
+    const wasDrag = dragging, target = curTab, start = downTab;
+    dragging = false; downTab = null; curTab = null;
+    hidePreview();
+    try { moveLiqBlob(); } catch (err) {}
+    // Dragged to a different tab: switch now. The browser dispatches the
+    // click to the common ancestor (nav), not to a tab button, so the
+    // normal tap handler can't double-fire. Plain tap: do nothing here.
+    if (wasDrag && target && target !== start && target.dataset.view) {
+      switchView(target.dataset.view);
+    }
+  };
+  window.addEventListener('pointerup', end, { passive: true });
+  window.addEventListener('pointercancel', () => {
+    dragging = false; downTab = null; curTab = null;
+    hidePreview();
+    try { moveLiqBlob(); } catch (err) {}
+  }, { passive: true });
+}
 function anyModalOpen() {
   return !!document.querySelector('.modal:not(.hidden)');
 }
@@ -923,6 +1020,7 @@ async function loadProjects() {
   }
   const sel = $('project-select');
   sel.innerHTML = S.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') || '<option value="">—</option>';
+  syncIosPickerBtn(sel);
   const st = Store.load();
   const validId = st.projectId && S.projects.some(p => p.id === st.projectId) ? st.projectId : (S.projects[0] && S.projects[0].id);
   if (validId !== S.projectId) {
@@ -933,6 +1031,7 @@ async function loadProjects() {
   } else if (S.projectId) {
     sel.value = S.projectId;
   }
+  syncIosPickerBtn(sel); // v1.5.55: programmatic .value= fires no change event — sync the sheet label
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
   syncMonitorConfig();
@@ -1385,6 +1484,7 @@ function fillPackageSelects() {
     return `<option value="${esc(uid)}|${esc(pid)}">${esc(label)}</option>`;
   }).join('');
   $('gen-package').innerHTML = opts || '<option value="">—</option>';
+  syncIosPickerBtn($('gen-package'));
 }
 function selectedPackage(selId) {
   const sel = $(selId);
@@ -1613,12 +1713,20 @@ function wireGenerateView() {
     document.querySelectorAll('#qty-presets button').forEach(x =>
       x.classList.toggle('active', String(v) === x.dataset.qty));
   });
+  // v1.5.55: Custom Quantity — never select-all; collapse the caret to the
+  // end of the existing value on focus so append/delete just works.
+  // (type=number ignores setSelectionRange — native tap caret applies there.)
+  $('gen-qty').addEventListener('focus', () => {
+    const q = $('gen-qty');
+    try { const n = String(q.value).length; q.setSelectionRange(n, n); } catch (e) {}
+  });
 }
 function syncGenUserGroup() {
   const ug = $('gen-usergroup');
   if (!ug) return;
   ug.innerHTML = S.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') || '<option value="">—</option>';
   ug.value = S.projectId || '';
+  syncIosPickerBtn(ug);
 }
 
 let genResultItems = [];
@@ -1977,6 +2085,7 @@ function openLayoutModal() {
   layoutDraft = cloneStyle(PS);
   renderLayoutModal();
   $('layout-modal').classList.remove('hidden');
+  refreshReveals($('layout-modal'));
 }
 function layoutFieldCard(fd) {
   const f = layoutDraft.fields[fd.id];
@@ -1985,7 +2094,7 @@ function layoutFieldCard(fd) {
     ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="spaced" ${f.spaced ? 'checked' : ''}> ${t('pl.spaced')}</label>`
     : (['profile', 'period', 'quota'].includes(fd.id)
       ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="label" ${f.label ? 'checked' : ''}> ${t('pl.label')}</label>` : '');
-  return `<div class="field-card">
+  return `<div class="field-card rv">
     <div class="fc-head"><span>${t(fd.labelKey)}</span>
       <label class="switch"><input type="checkbox" data-lf="${fd.id}" data-k="show" ${f.show ? 'checked' : ''}><span class="track"></span></label>
     </div>
@@ -2041,6 +2150,7 @@ function renderLayoutModal() {
     });
   });
   updateLivePreviews();
+  refreshReveals($('layout-modal'));
 }
 function updateLivePreviews() {
   const item = previewSampleItem();
@@ -2088,6 +2198,7 @@ function openTypoModal() {
   typoTab = 'code';
   renderTypoModal();
   $('typo-modal').classList.remove('hidden');
+  refreshReveals($('typo-modal'));
 }
 function touchTypo() {
   if (typoDraft.preset !== 'custom') {
@@ -2162,6 +2273,8 @@ function renderTypoFieldConfig() {
       </div>
       ${f.ls === 'custom' ? `<div class="slider-row" style="margin-top:10px"><input type="range" id="typo-flscustom" min="0" max="12" step="1" value="${f.lsCustom}"><b>+${f.lsCustom} px</b></div>` : ''}
     </div>`;
+  $('typo-field-config').querySelectorAll(':scope > .fld').forEach(el => el.classList.add('rv'));
+  refreshReveals($('typo-modal'));
   // size presets
   document.querySelectorAll('#typo-szpresets .chip').forEach(b => b.addEventListener('click', () => {
     const v = Number(b.dataset.sz);
@@ -2592,9 +2705,154 @@ function voucherCellHtml(vcode, vmap, extraSubs) {
   const vsub = [vpkg, vper, vprc].filter(Boolean).join(' · ');
   const vst = v ? String(v.status) : '';
   const vstCls = (vst === '3' || voucherQuotaGone(v)) ? 'vcode-expired' : vst === '2' ? 'vcode-inuse' : '';
+  // v1.5.55: code seen on a client but absent from the Cloud voucher list
+  // (deleted/aged-out) — mark old/unknown instead of bare black. Only when
+  // the map actually loaded (non-empty); an empty map means load failure.
+  const unknownMark = (!v && vmap && vmap.size > 0)
+    ? `<br><small class="vcode-unknown">⚑ ${esc(t('v.unknown'))}</small>` : '';
   const subs = [].concat(extraSubs || [], vsub ? [vsub] : []).filter(Boolean).map(esc).join('<br>');
-  return `<b${vstCls ? ` class="${vstCls}"` : ''}>${esc(code)}</b>` +
+  return `<b${vstCls ? ` class="${vstCls}"` : ''}>${esc(code)}</b>` + unknownMark +
     (subs ? `<br><small class="muted">${subs}</small>` : '');
+}
+
+/* ═══════════ v1.5.55 · iOS bottom-sheet picker ═══════════
+   Replaces the native <select> dropdown animation with an iOS action
+   sheet (spring slide-up from the bottom). The native select stays in the
+   DOM (hidden) so all existing .value reads and 'change' handlers keep
+   working; the sheet mirrors its options at open time (always fresh). */
+function iosPickerLabel(sel) {
+  const o = sel.options[sel.selectedIndex];
+  return o ? o.textContent.trim() : '—';
+}
+function syncIosPickerBtn(sel) {
+  const btn = sel && sel._iosBtn;
+  if (btn) {
+    const v = btn.querySelector('.ios-picker-val');
+    if (v) v.textContent = iosPickerLabel(sel);
+  }
+}
+function enhanceIosPicker(sel) {
+  if (!sel || sel._iosBtn) return;
+  sel.classList.add('ios-native-hide');
+  sel.setAttribute('tabindex', '-1');
+  sel.setAttribute('aria-hidden', 'true');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ios-picker-btn';
+  btn.setAttribute('aria-label', sel.getAttribute('aria-label') || iosPickerLabel(sel));
+  btn.innerHTML = `<span class="ios-picker-val"></span><svg class="ic"><use href="#i-chev-r"/></svg>`;
+  sel.parentNode.insertBefore(btn, sel.nextSibling);
+  sel._iosBtn = btn;
+  btn.addEventListener('click', () => openIosPicker(sel));
+  sel.addEventListener('change', () => syncIosPickerBtn(sel));
+  syncIosPickerBtn(sel);
+}
+function openIosPicker(sel) {
+  closeIosPicker();
+  const ov = document.createElement('div');
+  ov.className = 'ios-sheet-ov';
+  const sheet = document.createElement('div');
+  sheet.className = 'ios-sheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.innerHTML = `<div class="sheet-handle"></div><div class="ios-sheet-opts"></div>`;
+  const optsEl = sheet.querySelector('.ios-sheet-opts');
+  Array.from(sel.options).forEach(o => {
+    if (!o.value && !o.textContent.trim()) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ios-sheet-opt' + (o.selected ? ' active' : '');
+    const lbl = document.createElement('span');
+    lbl.textContent = o.textContent.trim() || '—';
+    b.appendChild(lbl);
+    if (o.selected) b.insertAdjacentHTML('beforeend', '<svg class="ic"><use href="#i-check"/></svg>');
+    b.addEventListener('click', () => {
+      sel.value = o.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      syncIosPickerBtn(sel);
+      closeIosPicker();
+    });
+    optsEl.appendChild(b);
+  });
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'ios-sheet-cancel';
+  cancel.textContent = t('a.cancel');
+  cancel.addEventListener('click', closeIosPicker);
+  sheet.appendChild(cancel);
+  ov.appendChild(sheet);
+  ov.addEventListener('click', e => { if (e.target === ov) closeIosPicker(); });
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open')));
+}
+function closeIosPicker() {
+  const ov = document.querySelector('.ios-sheet-ov');
+  if (ov) ov.remove();
+}
+function initIosPickers() {
+  ['project-select', 'gen-usergroup', 'gen-package'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) enhanceIosPicker(sel);
+  });
+}
+
+/* ═══════════ v1.5.55 · scroll-reveal (iOS spring) ═══════════ */
+let _rvObserver = null;
+function refreshReveals(scope) {
+  const root = scope || document;
+  if (!('IntersectionObserver' in window)) {
+    root.querySelectorAll('.rv:not(.inview)').forEach(el => el.classList.add('inview'));
+    return;
+  }
+  if (!_rvObserver) {
+    _rvObserver = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) { en.target.classList.add('inview'); _rvObserver.unobserve(en.target); }
+      });
+    }, { threshold: 0.08 });
+  }
+  root.querySelectorAll('.rv:not(.inview):not([data-rv])').forEach(el => {
+    el.setAttribute('data-rv', '1');
+    _rvObserver.observe(el);
+  });
+}
+
+/* ═══════════ v1.5.55 · client kick (sticky clients) ═══════════
+   Two UX forms ship now: (a) Settings auto-kick toggle, (b) per-client
+   Disconnect button on sticky rows. EXECUTION IS GATED: the kick wire
+   format is NOT verified (cloud itself is erroring), so KICK_VERIFIED
+   stays false until a live test proves it — requestKick() refuses until
+   then and says so honestly. Never kicks non-sticky clients. */
+const KICK_VERIFIED = false;
+async function requestKick(c, opts) {
+  opts = opts || {};
+  if (!KICK_VERIFIED) {
+    if (!opts.auto) toast(t('kick.pending'), true);
+    return false;
+  }
+  return false; // unreachable until verified
+}
+function kickStickyClient(c) {
+  const mac = c && (c.mac || c.userMac);
+  if (!mac) return;
+  if (!confirm(t('kick.confirm'))) return;
+  requestKick(c, { auto: false });
+}
+function initKickSettings() {
+  const tg = $('kick-auto');
+  if (tg) {
+    tg.checked = !!Store.load().kickAuto;
+    tg.addEventListener('change', () => Store.save({ kickAuto: tg.checked }));
+  }
+  const st = $('kick-status');
+  if (st) st.textContent = t('kick.standby');
+}
+function autoKickScan(list) {
+  if (!KICK_VERIFIED) return;
+  if (!Store.load().kickAuto) return;
+  (list || []).forEach(c => {
+    const st = clientStatusOf(String(c.account || c.authAccount || '').trim(), mcCache && mcCache.vmap);
+    if (st === 'datalimit' || st === 'timeup') requestKick(c, { auto: true });
+  });
 }
 
 /* Online-Clients render cache: fetch once per visit, re-render locally on
@@ -2714,13 +2972,17 @@ function renderMcList() {
     // on every view (raw authType hidden since v1.5.53).
     const macSub = [f.ip !== '—' ? f.ip : '', (showNames && f.name) ? f.name : ''].filter(Boolean).map(esc).join('<br>');
     const vCell = voucherCellHtml(f.acct, vmap); // v1.5.53: raw authType ("15") hidden
+    // v1.5.55: per-client disconnect on sticky rows (quota spent, still online).
+    // Execution gated by KICK_VERIFIED — the button explains until then.
+    const kickBtn = flags.includes('sticky')
+      ? `<br><button type="button" class="kick-btn" data-kick="${esc(f.mac)}">${esc(t('kick.btn'))}</button>` : '';
     const ssidSub = f.conn !== '—' ? `<br><small class="muted">${esc(f.conn)}</small>` : '';
     const trSub = f.live !== '—' ? `<br><small class="muted">⇅ ${esc(f.live)}</small>` : '';
     rows += `<tr class="cst cst-${st}"><td><span class="cst-dot cst-${st}"></span>${esc(f.mac)}` +
       `${macSub ? `<br><small class="muted">${macSub}</small>` : ''}` +
       `${flagHtml}` +
       `<br><small class="cst-lbl cst-${st}">${esc(t(CST_META[st].key))}</small></td>` +
-      `<td>${vCell}</td>` +
+      `<td>${vCell}${kickBtn}</td>` +
       `<td><small>${esc(f.ssid)}${ssidSub}</small></td>` +
       `<td><small>${esc(f.ap)}</small></td>` +
       `<td><small>${esc(f.since)}<br>${esc(f.dur)}</small></td>` +
@@ -2737,6 +2999,11 @@ function renderMcList() {
         `<th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th><th>${t('mc.traffic')}</th><th>${t('mc.device')}</th></tr>` +
         rows + `</table></div>`
       : `<p class="muted">${esc(t('mc.none'))}</p>`);
+  document.querySelectorAll('#mc-list [data-kick]').forEach(b => b.addEventListener('click', () => {
+    const list = (mcCache && mcCache.list) || [];
+    const c = list.find(x => normMac(x.mac || x.userMac) === normMac(b.dataset.kick));
+    if (c) kickStickyClient(c);
+  }));
   document.querySelectorAll('#mc-list [data-mcf]').forEach(b => b.addEventListener('click', () => {
     mcCache.filter = b.dataset.mcf;
     renderMcList();
@@ -3796,6 +4063,9 @@ function init() {
   initLang();
   initLiquidWobble();
   initPullToRefresh();
+  initIosPickers();   // v1.5.55: bottom-sheet pickers for project/usergroup/package
+  initKickSettings(); // v1.5.55: kick toggle + status
+  initTabbarDrag();   // v1.5.55: press-drag along the tabbar to switch pages
 
   // password peek toggles
   document.querySelectorAll('[data-peek]').forEach(b => b.addEventListener('click', () => {
