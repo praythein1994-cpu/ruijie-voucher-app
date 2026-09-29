@@ -519,7 +519,9 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .voucher-row:active { background: var(--fill-bg); }
 /* v1.5.53: remaining-resource fill — blurred Basic-button-style bar behind the
    row text. Width = remaining % (shrinks as the voucher is consumed).
-   Hidden when unused, fully consumed, or when usage data is missing. */
+   Hidden when fully consumed or when usage data is missing.
+   v1.5.68: a voucher with 0 used shows a FULL bar (100% remains) — white is
+   reserved for fully-consumed vouchers only. */
 .voucher-row { position: relative; overflow: hidden; }
 .remain-fill {
   position: absolute; top: 0; bottom: 0; left: 0; z-index: 0;
@@ -1641,3 +1643,60 @@ html.ph-compact .voucher-row { padding: 10px 14px; }
   font: inherit; font-size: 15px; color: var(--label); padding: 0;
 }
 .mc-search input::placeholder { color: var(--gray); opacity: .8; }
+
+/* ═══════════ v1.5.70 · phone print-preview redesign ═══════════
+   Two vouchers side-by-side pinned at the top; settings scroll below.
+   Compact type/icons/spacing for phone. The pinned pane uses a SOLID
+   card background so scrolling fields never show through (fixes the
+   ghosting). Desktop/tablet two-pane layout is untouched. */
+
+/* v1.5.71 — phone: the Print Layout modal opens straight into the pinned
+   live preview. The title bar (title + Reset Defaults + X) is hidden —
+   Cancel in the footer closes without saving. */
+html.ph-compact #layout-modal .modal-head { display: none; }
+
+/* pinned preview: solid background — same selectors as the v1.5.55 phone
+   rules, later in the file so they win at equal specificity */
+@media (max-width: 899px) {
+  html:not([data-layout="tablet"]) .pv-pane {
+    background: var(--card);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    border-bottom: 1px solid var(--hairline);
+    box-shadow: 0 8px 18px rgba(0,0,0,.10);
+  }
+}
+html[data-layout="phone"] .pv-pane {
+  background: var(--card);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: 0 8px 18px rgba(0,0,0,.10);
+}
+
+/* — compact modal chrome for phone — */
+html.ph-compact #layout-modal .modal-head,
+html.ph-compact #typo-modal .modal-head { margin-bottom: 2px; }
+html.ph-compact #layout-modal .modal-head h2,
+html.ph-compact #typo-modal .modal-head h2 { font-size: 17px; }
+html.ph-compact #layout-modal .modal-head .ic,
+html.ph-compact #typo-modal .modal-head .ic { width: 17px; height: 17px; }
+html.ph-compact #layout-modal .modal-head small.muted,
+html.ph-compact #typo-modal .modal-head small.muted { font-size: 12px; }
+html.ph-compact .live-label { font-size: 11.5px; letter-spacing: .2px; }
+html.ph-compact .live-preview { padding: 8px 6px; margin: 2px auto 4px; }
+
+/* — tighten vertical spacing inside the settings — */
+html.ph-compact .pv-fields .fld { margin-bottom: 10px; }
+html.ph-compact .pv-fields .fld-label { font-size: 13.5px; margin-bottom: 5px; }
+html.ph-compact .pv-fields .sec-title { margin: 12px 0 6px; font-size: 15px; }
+html.ph-compact .pv-fields .field-card { padding: 10px; margin-bottom: 8px; }
+html.ph-compact .pv-fields .field-card .fc-body { margin-top: 8px; gap: 8px; }
+html.ph-compact .pv-fields .slider-row { gap: 8px; }
+
+/* ═══════════ v1.5.72 · phone: refresh-interval row stacks ═══════════
+   The 4-option segmented (30s/1m/2m/5m) overflowed its half of the
+   settings row on phone — "2m" clipped, "5m" hidden. Stack it full-width
+   under the label so all four options show. Desktop keeps the side-by-side
+   row (it has room). */
+html.ph-compact #live-int-row { flex-direction: column; align-items: stretch; gap: 8px; }
+html.ph-compact #live-int-row > .t { width: 100%; }
+html.ph-compact #live-int-seg { width: 100%; }
