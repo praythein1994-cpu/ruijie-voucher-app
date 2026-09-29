@@ -82,6 +82,10 @@ const I18N = {
   'a.close': { my: 'ပိတ်မယ်', en: 'Close' },
   'del.confirm': { my: '"{code}" ကို ဖျက်မှာသေချာပါသလား?', en: 'Delete "{code}"?' },
   'del.confirmBulk': { my: 'ဗောက်ချာ {n} ခုကို ဖျက်မှာသေချာပါသလား?', en: 'Delete {n} vouchers?' },
+  // v1.5.54: bulk delete is restricted to vouchers generated in the current session
+  'del.confirmBulkNew': { my: 'ယခု session မှာထုတ်ထားသော ဗောက်ချာ {n} ခုကို ဖျက်မှာသေချာပါသလား?{skip}', en: 'Delete {n} newly-generated vouchers?{skip}' },
+  'del.skipOld': { my: '\n({n} ခုမှာ session အတွင်းထုတ်ထားတာမဟုတ်လို့ ကျော်ပါမယ်)', en: '\n({n} skipped — not generated in this session)' },
+  'del.noNew': { my: 'ရွေးထားတဲ့ဗောက်ချာတွေမှာ ယခု session အတွင်းထုတ်ထားတာမရှိပါ — ဖျက်လို့မရပါ', en: 'None of the selected vouchers were generated in this session — nothing to delete' },
   'del.done': { my: 'ဖျက်ပြီးပါပြီ', en: 'Deleted' },
   'del.unsupported': { my: 'ဖျက်မရပါ — Ruijie Open API မှာ voucher ဖျက်တဲ့လုပ်ဆောင်ချက်မပါဝင်ပါ', en: 'Cannot delete — the Ruijie Open API has no voucher-delete operation' },
   'del.needSso': { my: 'ဖျက်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Deleting needs Ruijie account login (Settings → Ruijie account)' },
@@ -194,6 +198,7 @@ const I18N = {
   'pl.title': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
   'pl.reset': { my: 'မူလအတိုင်း ပြန်ထားမယ်', en: 'Reset Defaults' },
   'pl.live': { my: 'တိုက်ရိုက်အစမ်းကြည့်ခြင်း (58mm / 384 dots):', en: 'LIVE OUTPUT PREVIEW (58mm / 384 dots):' },
+  'pl.liveFmt': { my: 'တိုက်ရိုက်အစမ်းကြည့်ခြင်း ({paper}mm / {dots} dots):', en: 'LIVE OUTPUT PREVIEW ({paper}mm / {dots} dots):' },
   'pl.advTypo': { my: 'အဆင့်မြင့် Typography & Fonts', en: 'Advanced Typography & Fonts' },
   'pl.spacing': { my: 'အကွာအဝေး ပြင်ဆင်ခြင်း', en: 'Spacing Configuration' },
   'pl.between': { my: 'ဗောက်ချာများကြား စာကြောင်းအလွတ်', en: 'Between Voucher Blank Lines' },
@@ -221,6 +226,7 @@ const I18N = {
   'ty.sub': { my: 'ဖောင့်၊ အရွယ်အစားနှင့် အပြင်အဆင်စတိုင်များ ပြင်ဆင်ပါ', en: 'Configure fonts, sizes, and layout styles' },
   'ty.resetColors': { my: 'အရောင်များ ပြန်ထားမယ်', en: 'Reset Colors' },
   'ty.live': { my: 'တိုက်ရိုက်ဗောက်ချာအစမ်းကြည့်ခြင်း (58mm)', en: 'LIVE VOUCHER PREVIEW (58mm)' },
+  'ty.liveFmt': { my: 'တိုက်ရိုက်ဗောက်ချာအစမ်းကြည့်ခြင်း ({paper}mm)', en: 'LIVE VOUCHER PREVIEW ({paper}mm)' },
   'ty.realBadge': { my: 'REAL CLOUD VOUCHER', en: 'REAL CLOUD VOUCHER' },
   'ty.presets': { my: 'Typography Presets', en: 'Typography Presets' },
   'ty.pDefault': { my: 'မူလ', en: 'Default' },
@@ -692,6 +698,8 @@ const S = {
   moreFn: null,       // active "more" screen renderer (for language re-render)
   moreStack: [],      // v1.5.34: more sub-page renderers for system-back walking
   _moreRestoring: false,
+  sessionGenCodes: new Set(), // v1.5.54: codes generated in THIS session only (memory-only).
+                              // Bulk delete may only touch these — never existing/old vouchers.
 };
 
 /* ═══════════ CONNECT ═══════════ */
@@ -1079,15 +1087,22 @@ async function bulkPrint() {
 async function bulkDelete() {
   const uuids = bulkSelectedUuids();
   if (!uuids.length) return;
-  if (!confirm(tx('del.confirmBulk', { n: uuids.length }))) return;
+  // v1.5.54 safety: bulk delete may ONLY touch vouchers generated in this session.
+  // Provenance = code present in S.sessionGenCodes (memory-only; empty after restart = nothing deletable).
+  const vs = uuids.map(u => S.vouchers.find(x => x.uuid === u)).filter(Boolean);
+  const fresh = vs.filter(v => S.sessionGenCodes.has(vCode(v)));
+  const stale = vs.length - fresh.length;
+  if (!fresh.length) { toast(t('del.noNew')); return; }
+  const skipTxt = stale ? tx('del.skipOld', { n: stale }) : '';
+  if (!confirm(tx('del.confirmBulkNew', { n: fresh.length, skip: skipTxt }))) return;
   let ok = 0, fail = 0;
-  for (const u of uuids) {
-    const v = S.vouchers.find(x => x.uuid === u);
-    if (!v) continue;
+  for (const v of fresh) {
     try { await Api.voucherDelete(S.projectId, v); ok++; }
     catch (e) { fail++; }
   }
-  toast(`${ok} ✓${fail ? ` · ${fail} ✗` : ''}`);
+  // Remove successfully deleted codes from the session set
+  try { fresh.forEach(v => S.sessionGenCodes.delete(vCode(v))); } catch (e) {}
+  toast(`${ok} ✓${fail ? ` · ${fail} ✗` : ''}${stale ? ` · ${stale} ⏭` : ''}`);
   toggleBulkMode();
   loadVouchers();
 }
@@ -1457,13 +1472,35 @@ function applyPreset(st, name) {
 }
 
 /* ── shared ticket HTML builder (layout + typography aware) ── */
+/* WYSIWYG preview scale — the native thermal renderer draws on a paper-dots-wide
+   bitmap (384 dots = 58mm, 576 = 80mm) using each font size directly as dot-pixels.
+   The on-screen preview maps dots -> CSS px at a fixed ratio so on-screen sizes keep
+   the exact proportions of the real printout (V1 preview behavior). */
+const PAPER_DOTS = { '58': 384, '80': 576 };
+const PV_PX_PER_DOT = 0.6875; /* 58mm -> 264 CSS px ticket */
+function pvDots(paper) { return PAPER_DOTS[paper] || 384; }
+function pvTicketWidth(paper) { return Math.round(pvDots(paper) * PV_PX_PER_DOT); }
 function fieldCss(f, st, preview) {
   const lsPx = f.ls === 'custom' ? (Number(f.lsCustom) || 0) : (LS_PX[f.ls] != null ? LS_PX[f.ls] : 1);
   const color = preview ? (f.color || st.color || '#111111') : '#000000';
-  let css = `font-size:${Number(f.size) || 20}pt;font-weight:${WEIGHT_NUM[f.weight] || 400};` +
-    `font-style:${f.style === 'italic' ? 'italic' : 'normal'};text-align:${f.align || 'left'};` +
-    `letter-spacing:${lsPx}px;color:${color};` +
-    `line-height:calc(1.35em + ${Number(st.lineSpacing) || 0}px);margin:${Number(st.insideSpacing) || 0}px 0;`;
+  let css;
+  if (preview) {
+    /* paper-scale: sizes are native dot-pixels -> CSS px (same proportion as the thermal bitmap) */
+    const k = PV_PX_PER_DOT;
+    const size = ((Number(f.size) || 20) * k).toFixed(2);
+    const ls = (lsPx * k).toFixed(2);
+    const lineExtra = ((Number(st.lineSpacing) || 0) * k).toFixed(2);
+    const inside = (Math.min(Math.max(Number(st.insideSpacing) || 0, 0), 4) * 8 * k).toFixed(2);
+    css = `font-size:${size}px;font-weight:${WEIGHT_NUM[f.weight] || 400};` +
+      `font-style:${f.style === 'italic' ? 'italic' : 'normal'};text-align:${f.align || 'left'};` +
+      `letter-spacing:${ls}px;color:${color};` +
+      `line-height:calc(1.35em + ${lineExtra}px);margin:${inside}px 0;`;
+  } else {
+    css = `font-size:${Number(f.size) || 20}pt;font-weight:${WEIGHT_NUM[f.weight] || 400};` +
+      `font-style:${f.style === 'italic' ? 'italic' : 'normal'};text-align:${f.align || 'left'};` +
+      `letter-spacing:${lsPx}px;color:${color};` +
+      `line-height:calc(1.35em + ${Number(st.lineSpacing) || 0}px);margin:${Number(st.insideSpacing) || 0}px 0;`;
+  }
   if (preview && st.shadow) css += 'text-shadow:1px 1px 2px rgba(0,0,0,.35);';
   if (preview && st.outline) css += '-webkit-text-stroke:.6px currentColor;';
   return css;
@@ -1472,7 +1509,9 @@ function ticketInnerHtml(item, st, style, preview) {
   const F = style.fields;
   const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const ff = FF_STACK[style.fontFamily] || FF_STACK.default;
-  let h = `<div class="lv-wrap" style="font-family:${ff}">`;
+  let h = preview
+    ? `<div class="pv-paper" style="width:${pvTicketWidth(st.paper)}px"><div class="lv-wrap" style="font-family:${ff}">`
+    : `<div class="lv-wrap" style="font-family:${ff}">`;
   if (st.header && F.header.show)
     h += `<div class="lv" style="${fieldCss(F.header, style, preview)}">${esc(st.header)}</div>`;
   if (F.code.show) {
@@ -1488,8 +1527,9 @@ function ticketInnerHtml(item, st, style, preview) {
   if (F.datetime.show)
     h += `<div class="lv" style="${fieldCss(F.datetime, style, preview)}">${esc(now)}</div>`;
   if (st.footer)
-    h += `<hr><div class="lv" style="font-size:9pt;text-align:center;margin:2mm 0;">${esc(st.footer)}</div>`;
+    h += `<hr><div class="lv" style="font-size:${preview ? (9 * PV_PX_PER_DOT).toFixed(1) + 'px' : '9pt'};text-align:center;margin:2mm 0;">${esc(st.footer)}</div>`;
   h += `</div>`;
+  if (preview) h += `</div>`;
   return h;
 }
 
@@ -1521,6 +1561,8 @@ async function generateVouchers(btnId, lblId) {
     });
     const items = list.map(v => ({ code: vCode(v), pkg: pkg && pkgName(pkg), period: v.timePeriod, quota: v.quota }));
     showGenResult(items);
+    // v1.5.54: remember session-generated codes so bulk delete can prove provenance
+    try { items.forEach(i => { if (i.code) S.sessionGenCodes.add(i.code); }); } catch (e) {}
     try { Store.save({ lastGen: { when: Date.now(), pkg: pkg ? pkgName(pkg) : '', items } }); } catch (e) {}
     renderRecentGen();
     S.vouchers = []; // refresh list next time
@@ -2003,6 +2045,11 @@ function renderLayoutModal() {
 function updateLivePreviews() {
   const item = previewSampleItem();
   const st = previewBasics();
+  const dots = pvDots(st.paper);
+  const ll = $('layout-live-label');
+  if (ll) ll.textContent = tx('pl.liveFmt', { paper: st.paper || '58', dots });
+  const tl = $('typo-live-label');
+  if (tl) tl.textContent = tx('ty.liveFmt', { paper: st.paper || '58' });
   if (layoutDraft) $('layout-preview').innerHTML = ticketInnerHtml(item, st, layoutDraft, true);
   if (typoDraft) {
     $('typo-preview').innerHTML = ticketInnerHtml(item, st, typoDraft, true);
