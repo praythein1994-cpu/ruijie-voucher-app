@@ -414,6 +414,62 @@ tr.cst-timeup td:first-child { border-left-color: #f59e0b; }
 tr.cst-datalimit td:first-child { border-left-color: #ef4444; }
 tr.cst-noauth td:first-child { border-left-color: #9ca3af; }
 tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
+
+/* ═══════════ v1.5.57 · Online Clients iOS redesign ═══════════
+   iOS grouped-list client cells replace the 8-column desktop table:
+   status-tinted device icon tile, headline + sub-lines, tinted status
+   badge, flag badges, iOS destructive-text Disconnect. */
+.mc-head { display: flex; align-items: flex-start; gap: 10px; margin: 2px 0 10px; }
+.mc-sub { flex: 1; min-width: 0; font-size: 13px; color: var(--gray); margin: 0; }
+.ios-text-btn {
+  background: none; border: none; color: var(--blue); font-size: 15px; font-weight: 500;
+  font-family: inherit; padding: 0; cursor: pointer; flex: none;
+}
+.ios-text-btn.on { font-weight: 700; }
+.ios-text-btn:active { opacity: .5; }
+.segmented.seg-scroll { overflow-x: auto; scrollbar-width: none; }
+.segmented.seg-scroll::-webkit-scrollbar { display: none; }
+.segmented.seg-scroll button { flex: none; padding: 8px 14px; white-space: nowrap; }
+.set-group.mc-list { margin-top: 2px; }
+.mc-row { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+.mc-ico.cst-active { --tile: #22c55e; }
+.mc-ico.cst-timeup { --tile: #f59e0b; }
+.mc-ico.cst-datalimit { --tile: #ef4444; }
+.mc-ico.cst-noauth { --tile: #9ca3af; }
+.mc-ico.cst-unknown { --tile: #a78bfa; }
+.mc-top { display: flex; align-items: center; gap: 8px; }
+.mc-top .t-main {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-weight: 600;
+}
+.mc-badge {
+  flex: none; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+}
+.mc-badge.cst-active { color: #16a34a; background: rgba(34,197,94,.14); }
+.mc-badge.cst-timeup { color: #b45309; background: rgba(245,158,11,.16); }
+.mc-badge.cst-datalimit { color: #dc2626; background: rgba(239,68,68,.13); }
+.mc-badge.cst-noauth { color: #6b7280; background: rgba(156,163,175,.18); }
+.mc-badge.cst-unknown { color: #7c3aed; background: rgba(167,139,250,.16); }
+.mc-row .sub { overflow-wrap: anywhere; }
+.mc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.mc-flag {
+  display: inline-block; font-size: 12px; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px; margin: 2px 6px 2px 0;
+}
+.mc-flag.flag-suspicious { background: rgba(245,158,11,.16); }
+.mc-flag.flag-sticky { background: rgba(239,68,68,.13); }
+.mc-kick {
+  background: none; border: none; color: var(--red); font-size: 15px; font-weight: 500;
+  font-family: inherit; padding: 4px 0; cursor: pointer; flex: none;
+}
+.mc-kick:active { opacity: .5; }
+[data-theme="dark"] .mc-badge.cst-active { color: #4ade80; background: rgba(34,197,94,.20); }
+[data-theme="dark"] .mc-badge.cst-timeup { color: #fbbf24; background: rgba(245,158,11,.20); }
+[data-theme="dark"] .mc-badge.cst-datalimit { color: #f87171; background: rgba(239,68,68,.20); }
+[data-theme="dark"] .mc-badge.cst-noauth { color: #9ca3af; background: rgba(156,163,175,.22); }
+[data-theme="dark"] .mc-badge.cst-unknown { color: #c4b5fd; background: rgba(167,139,250,.22); }
+[data-theme="dark"] .mc-flag.flag-suspicious { color: #fbbf24; background: rgba(245,158,11,.20); }
+[data-theme="dark"] .mc-flag.flag-sticky { color: #f87171; background: rgba(239,68,68,.20); }
 .chip.active { background: var(--blue); color: #fff; font-weight: 600; }
 .chip:active { transform: scale(.95); }
 
