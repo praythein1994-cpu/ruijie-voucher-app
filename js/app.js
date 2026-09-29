@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.61';
+const APP_VERSION = '1.5.65';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -213,6 +213,10 @@ const I18N = {
   'kick.norecord': { my: 'Client အချက်အလက် ရှာမတွေ့ပါ', en: 'Client auth record not found' },
   'kick.active': { my: 'အသင့်ဖြစ်နေပြီ', en: 'Active' },
   'kick.standby': { my: 'စောင့်နေတယ်', en: 'Standby' },
+  'kick.bgOn': { my: 'နောက်ခံ auto-kick ပွင့်နေပြီ — ဖုန်းမှိန်နေလည်း ၁၅ မိနစ်တစ်ခါ စစ်ပေးမယ်', en: 'Background auto-kick on — checks every 15 min, even with the screen off' },
+  'kick.bgOff': { my: 'ပိတ်ထားတယ်', en: 'Off' },
+  'kick.bgNoConfig': { my: 'ဖွင့်ထားပေမဲ့ cloud ချိတ်ဆက်မှုမရှိသေးဘူး', en: 'On, but no cloud connection saved yet' },
+  'kick.bgSoon': { my: 'နောက်ခံစနစ် စတင်နေပြီ…', en: 'Starting background service…' },
   'tkt.profileName': { my: 'Profile အမည်: ', en: 'Profile Name: ' },
   'pl.openLayout': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
   'pl.title': { my: 'Print Layout & Spacing', en: 'Print Layout & Spacing' },
@@ -444,6 +448,7 @@ const I18N = {
   'mc.fUnknown': { my: 'အခြား', en: 'Other' },
   'mc.flag.suspicious': { my: 'သံသယရှိ — စစ်ဆေးရန်', en: 'Unattributed, active — review' },
   'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
+  'mc.flag.kicked': { my: 'ဖြုတ်ပြီး', en: 'Kicked' },
   'mc.dVoucher': { my: 'ဗောက်ချာ', en: 'Voucher' },
   'mc.dNetwork': { my: 'ကွန်ရက်', en: 'Network' },
   'mc.dSession': { my: 'ဆက်ရှင်', en: 'Session' },
@@ -500,6 +505,13 @@ const I18N = {
   's.themeNeo': { my: 'Neumorphism', en: 'Neumorphism' },
   's.themeClay': { my: 'Claymorphism', en: 'Claymorphism' },
   's.language': { my: 'ဘာသာစကား', en: 'Language' },
+  's.layout': { my: 'အပြင်အဆင်', en: 'Layout' },
+  's.layoutAuto': { my: 'အလိုအလျောက်', en: 'Auto' },
+  's.layoutAutoSub': { my: 'စခရင်အရွယ်အစားအလိုက် ရွေးမယ်', en: 'Follow screen size' },
+  's.layoutPhone': { my: 'ဖုန်း', en: 'Phone' },
+  's.layoutPhoneSub': { my: 'ဖုန်း view အမြဲသုံးမယ်', en: 'Always use phone view' },
+  's.layoutTablet': { my: 'တက်ဘလက်', en: 'Tablet' },
+  's.layoutTabletSub': { my: 'တက်ဘလက် view အမြဲသုံးမယ်', en: 'Always use tablet view' },
   's.conn': { my: 'ချိတ်ဆက်မှုပြင်ဆင်မယ်', en: 'Edit connection' },
   's.cloud': { my: 'Cloud URL', en: 'Cloud URL' },
   's.appid': { my: 'App ID', en: 'App ID' },
@@ -725,6 +737,50 @@ function initTheme() {
   applyTheme(theme);
 }
 
+/* ── v1.5.63: layout mode — Auto / Phone / Tablet ──
+   Auto (default): no data-layout attribute; the min-width media queries decide.
+   Phone: html[data-layout="phone"] — wide-screen rules suppressed via
+     html:not([data-layout="phone"]) prefixes; phone rules forced.
+   Tablet: html[data-layout="tablet"] — duplicate wide-screen rules apply
+     without the media query. */
+const LAYOUTS = ['auto', 'phone', 'tablet'];
+function applyLayoutMode(mode) {
+  if (!LAYOUTS.includes(mode)) mode = 'auto';
+  const root = document.documentElement;
+  if (mode === 'auto') root.removeAttribute('data-layout');
+  else root.setAttribute('data-layout', mode);
+  try { localStorage.setItem('rv-layout', mode); } catch (e) {}
+  document.querySelectorAll('#layout-seg [data-layout-opt]').forEach(b =>
+    b.classList.toggle('active', b.dataset.layoutOpt === mode));
+  syncCompactClass(mode); // v1.5.65: dedicated iOS-compact phone system
+}
+/* v1.5.65 — dedicated compact phone view. One class drives the whole
+ * compact system (css: html.ph-compact …): on when layout is forced to
+ * phone, or when Auto lands on a narrow (phone-width) screen. A single
+ * class avoids duplicating every compact rule for [data-layout] and
+ * @media; the matchMedia listener keeps Auto correct on rotate/resize. */
+let _compactMql = null;
+function syncCompactClass(mode) {
+  const root = document.documentElement;
+  const m = LAYOUTS.includes(mode) ? mode : 'auto';
+  const narrow = () => { try { return window.matchMedia('(max-width: 680px)').matches; } catch (e) { return false; } };
+  const apply = () => root.classList.toggle('ph-compact', m === 'phone' || (m === 'auto' && narrow()));
+  apply();
+  if (m === 'auto' && !_compactMql) {
+    try {
+      _compactMql = window.matchMedia('(max-width: 680px)');
+      const onChange = () => { if (!document.documentElement.hasAttribute('data-layout')) apply(); };
+      if (_compactMql.addEventListener) _compactMql.addEventListener('change', onChange);
+      else if (_compactMql.addListener) _compactMql.addListener(onChange);
+    } catch (e) {}
+  }
+}
+function initLayoutMode() {
+  let m = null;
+  try { m = localStorage.getItem('rv-layout'); } catch (e) {}
+  applyLayoutMode(m);
+}
+
 /* ── iOS sheet close with animation ── */
 function closeModal(id) {
   const m = $(id);
@@ -780,6 +836,7 @@ async function doConnect() {
   btn.disabled = true; lbl.textContent = t('btn.connecting');
   Api.saveCfg(cfg);
   syncMonitorConfig(); // v1.5.52: push cloud creds to the bg offline monitor
+  syncAutoKickConfig(); // v1.5.66: same creds for the bg auto-kick
   try {
     const info = await Api.testConnection();
     S.account = info;
@@ -1120,6 +1177,7 @@ async function loadProjects() {
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
   syncMonitorConfig();
+  syncAutoKickConfig(); // v1.5.66
 }
 
 function onProjectChange() {
@@ -1127,6 +1185,7 @@ function onProjectChange() {
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
   syncMonitorConfig();
+  syncAutoKickConfig(); // v1.5.66
   S.vouchers = [];
   S.packages = [];
   loadVouchers();
@@ -1212,7 +1271,9 @@ async function liveStatsTick(force) {
 function filteredVouchers() {
   const q = S.vFilter.trim().toLowerCase();
   return S.vouchers.filter(v => {
-    if (S.vStatus && String(v.status) !== S.vStatus) return false;
+    // v1.5.66: filter on EFFECTIVE status — spent/kicked vouchers leave
+    // "In use" and appear under "Expired" even while Cloud still says 2.
+    if (S.vStatus && vEffStatus(v) !== S.vStatus) return false;
     if (q && !vCode(v).toLowerCase().includes(q) && !(v.comment || '').toLowerCase().includes(q) && !(v.nameRef || '').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -1249,9 +1310,10 @@ function animNum(el, to, fmt, fromOverride) {
 
 function renderVouchers() {
   // dashboard stats (all vouchers, not just filtered) — animated on change
-  const n1 = S.vouchers.filter(v => String(v.status) === '1').length;
-  const n2 = S.vouchers.filter(v => String(v.status) === '2').length;
-  const n3 = S.vouchers.filter(v => String(v.status) === '3').length;
+  // v1.5.66: effective status — stats match the filters exactly.
+  const n1 = S.vouchers.filter(v => vEffStatus(v) === '1').length;
+  const n2 = S.vouchers.filter(v => vEffStatus(v) === '2').length;
+  const n3 = S.vouchers.filter(v => vEffStatus(v) === '3').length;
   animNum($('stat-active'), n1);
   animNum($('stat-used'), n2);
   animNum($('stat-expired'), n3);
@@ -1268,7 +1330,7 @@ function renderVouchers() {
   // v1.5.54: expiry alerts — vouchers expiring within 24h (in-use or unused)
   const now = Date.now(), DAY = 86400000;
   const expiring = S.vouchers.filter(v => {
-    const st = String(v.status);
+    const st = vEffStatus(v); // v1.5.66: spent/kicked are expired, not "expiring"
     if (st !== '1' && st !== '2') return false;
     const exp = Number(v.expiryTime);
     return exp > now && exp <= now + DAY;
@@ -1284,17 +1346,18 @@ function renderVouchers() {
   }
   el.innerHTML = expBanner + list.slice(0, 300).map(v => {
     const ri = remainInfo(v); // v1.5.53: decreasing remaining-resource fill
+    const es = vEffStatus(v); // v1.5.66: badge/dot follow effective status
     return `
     <div class="voucher-row" data-uuid="${esc(v.uuid)}">
       <input type="checkbox" class="bulk-check" data-bulk="${esc(v.uuid)}" aria-label="select">
       ${ri ? `<div class="remain-fill" style="width:${ri.pct.toFixed(1)}%"></div>` : ''}
-      <span class="status-dot s${esc(v.status)}"></span>
+      <span class="status-dot s${esc(es)}"></span>
       <div class="voucher-meta">
         <div class="voucher-code">${esc(vCode(v))}</div>
         <div class="pkg">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
       </div>
       ${ri ? `<span class="remain-txt">${esc(ri.txt)}</span>` : ''}
-      <span class="badge s${esc(v.status)}">${esc(statusTxt(v.status))}</span>
+      <span class="badge s${esc(es)}">${esc(statusTxt(es))}</span>
       <span class="chev">${ic('chev')}</span>
     </div>`;
   }).join('');
@@ -1376,7 +1439,7 @@ function openVoucherDetail(uuid) {
   $('modal-title').innerHTML = ic('ticket', 'sm') + ' ' + esc(vCode(v));
   const rows = [
     [t('d.code'), `<b class="voucher-code">${esc(vCode(v))}</b> <button class="icon-btn" id="modal-copy" title="${t('a.copy')}" style="width:30px;height:30px">${ic('copy', 'sm')}</button>`],
-    [t('d.status'), `<span class="badge s${esc(v.status)}">${esc(statusTxt(v.status))}</span>`],
+    [t('d.status'), `<span class="badge s${esc(vEffStatus(v))}">${esc(statusTxt(vEffStatus(v)))}</span>`],
     [t('d.pkg'), esc(v.packageName || v.userGroupName || '—')],
     [t('d.validity'), esc(fmtPeriod(v.timePeriod))],
     [t('d.usedTime'), `<span id="live-usedtime">${v.usedTime ? esc(fmtRemain(v.usedTime)) : '—'}</span>`],
@@ -2011,7 +2074,7 @@ function btRefresh() {
   let devs = [];
   try { devs = JSON.parse(B.btDevices() || '[]'); } catch (e) {}
   devEl.innerHTML = devs.length ? devs.map((d, i) =>
-    `<button class="code-pill" data-i="${i}" style="cursor:pointer">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}<br><small class="muted">${esc(d.address)}</small></button>`
+    `<button class="bt-dev" data-i="${i}"><span class="bt-dev-name">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}</span><span class="bt-dev-mac">${esc(d.address)}</span></button>`
   ).join('') : `<p class="muted">${t('p.btNoDevices')}</p>`;
   devEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
     const d = devs[Number(b.dataset.i)];
@@ -3069,6 +3132,13 @@ function voucherQuotaGone(v) {
   return q > 0 && uq >= q;
 }
 
+/* v1.5.66: hours fully spent — the hour-voucher twin of voucherQuotaGone.
+ * Missing usedTime → not "gone" (never guess). */
+function voucherHoursGone(v) {
+  const p = Number(v && v.timePeriod) || 0, ut = Number(v && v.usedTime) || 0;
+  return p > 0 && ut >= p;
+}
+
 /* v1.5.40: shared voucher cell — plan · period · price + status color,
  * identical on EVERY AP/client view (gateway China APs, Cloud APs,
  * Online Clients). v1.5.41: red when Cloud says expired (status 3) OR the
@@ -3209,6 +3279,73 @@ function refreshReveals(scope) {
    Disconnect only; the voucher is never deleted. Field test pending on the
    user's authorized test client. */
 const KICK_VERIFIED = true;
+/* v1.5.62: kicked-device marks — a manual or auto kick leaves a visible
+ * "kicked" badge on the row, so the user can tell it was kicked even while
+ * the portal's online list still shows it (portal cache lags 30-60s).
+ * Marks persist with a timestamp and expire after 24h. The same timestamp
+ * doubles as the auto-kick cooldown: a client kicked (manually or auto)
+ * within KICK_AUTO_COOLDOWN is not auto-kicked again — this also prevents
+ * a kick → refresh → still-sticky → kick loop. */
+const KICK_MARK_TTL = 24 * 3600 * 1000;
+const KICK_AUTO_COOLDOWN = 5 * 60 * 1000;
+function kickedMarks() {
+  let m = null;
+  try { m = Store.load().kicked || {}; } catch (e) { m = {}; }
+  return (m && typeof m === 'object') ? m : {};
+}
+function kickedAt(mac) {
+  const k = normMac(mac || '');
+  if (!k) return 0;
+  const ts = Number(kickedMarks()[k] || 0);
+  if (!ts || Date.now() - ts > KICK_MARK_TTL) return 0;
+  return ts;
+}
+function markKicked(c) {
+  const k = normMac((c && (c.mac || c.userMac)) || '');
+  if (!k) return;
+  const m = kickedMarks();
+  m[k] = Date.now();
+  try { Store.save({ kicked: m }); } catch (e) {}
+}
+/* v1.5.66: voucher-level kick marks. markKicked() tracks the client MAC
+ * (Online-Clients badge + auto-kick cooldown); kickedVouchers tracks the
+ * VOUCHER CODE so the voucher list moves a kicked voucher straight to
+ * "Expired" — auto or manual, per user decision. Same 24h TTL. */
+function kickedVoucherMarks() {
+  let m = null;
+  try { m = Store.load().kickedVouchers || {}; } catch (e) { m = {}; }
+  return (m && typeof m === 'object') ? m : {};
+}
+function voucherKicked(v) {
+  const code = String(vCode(v) || '').trim();
+  if (!code) return false;
+  const ts = Number(kickedVoucherMarks()[code] || 0);
+  return !!ts && (Date.now() - ts <= KICK_MARK_TTL);
+}
+function markKickedVoucher(code) {
+  code = String(code || '').trim();
+  if (!code) return;
+  const m = kickedVoucherMarks();
+  m[code] = Date.now();
+  try { Store.save({ kickedVouchers: m }); } catch (e) {}
+}
+/* v1.5.66: effective status for filters, dashboard stats and row badges.
+ * Cloud status lags reality: a voucher whose data quota is fully spent or
+ * whose hours are used up can still report status 2 ("in use"), and a
+ * freshly kicked voucher stays status 2 until Cloud catches up. Per user
+ * decision such vouchers are effectively expired — never shown under
+ * "In use", always under "Expired". Pure JS logic: identical on phone and
+ * tablet, no layout dependency. */
+function vEffStatus(v) {
+  if (String(v && v.status) === '3' || voucherQuotaGone(v) || voucherHoursGone(v) || voucherKicked(v)) return '3';
+  return String(v && v.status);
+}
+function autoKickDue(c) {
+  const k = normMac((c && (c.mac || c.userMac)) || '');
+  if (!k) return false;
+  const last = Number(kickedMarks()[k] || 0);
+  return !last || (Date.now() - last > KICK_AUTO_COOLDOWN);
+}
 /* Find the portal auth record for a client: prefer the voucher account
  * match, fall back to MAC. Returns the raw record or null. */
 async function kickAuthRecord(c) {
@@ -3248,7 +3385,15 @@ async function requestKick(c, opts) {
     return false;
   }
   if (!opts.auto) toast(t('kick.done'));
-  try { await moreClients(); } catch (e) { /* list refresh best-effort */ }
+  // v1.5.62: mark the row and re-render locally — no list wipe, no white
+  // flash. The portal list lags 30-60s anyway, so an immediate refetch
+  // would just show the same stale rows.
+  markKicked(c);
+  // v1.5.66: move the voucher straight to "Expired" (auto or manual kick).
+  // rec.account is the voucher code for voucher-auth clients; for other
+  // auth types the mark simply never matches a voucher — harmless.
+  markKickedVoucher(rec.account);
+  try { if (mcCache) renderMcList(); } catch (e) { /* best-effort */ }
   return true;
 }
 function kickStickyClient(c) {
@@ -3257,21 +3402,72 @@ function kickStickyClient(c) {
   if (!confirm(t('kick.confirm'))) return;
   requestKick(c, { auto: false });
 }
+/* ── Background auto-kick (Android APK only, v1.5.66) ─────────
+ * The Settings auto-kick toggle enables BOTH the in-app scan (while the
+ * app is open) and the native JobScheduler job (screen off / app closed).
+ * Kick goes through the SSO portal session — the voucher is never deleted. */
+function hasAutoKickBg() {
+  return !!(window.RuijieBridge && window.RuijieBridge.autoKickInfo);
+}
+/** Push the current Cloud connection into the background auto-kick. */
+function syncAutoKickConfig() {
+  if (!hasAutoKickBg()) return;
+  try {
+    const cfg = Api.cfg || Api.loadCfg();
+    if (!cfg) return;
+    window.RuijieBridge.autoKickSync(JSON.stringify({
+      cloud: cfg.cloud || '', appid: cfg.appid || '',
+      secret: cfg.secret || '', groupId: Number(S.projectId) || 0,
+    }));
+  } catch (e) {}
+}
+function refreshKickStatus() {
+  const st = $('kick-status');
+  if (!st) return;
+  if (!hasAutoKickBg()) { // web build: in-app scan only
+    st.textContent = t(KICK_VERIFIED ? 'kick.active' : 'kick.standby');
+    return;
+  }
+  let info = {};
+  try { info = JSON.parse(window.RuijieBridge.autoKickInfo()); } catch (e) {}
+  const on = !!Store.load().kickAuto;
+  st.textContent = !on ? t('kick.bgOff')
+    : (!info.hasConfig ? t('kick.bgNoConfig')
+    : (info.enabled && info.scheduled) ? t('kick.bgOn') : t('kick.bgSoon'));
+}
+function onKickToggle() {
+  const tg = $('kick-auto');
+  const on = !!(tg && tg.checked);
+  Store.save({ kickAuto: on });
+  if (hasAutoKickBg()) {
+    try {
+      if (on) {
+        syncAutoKickConfig();
+        window.RuijieBridge.monitorRequestPermission(); // same notif permission
+      }
+      window.RuijieBridge.autoKickSetEnabled(on);
+    } catch (e) {}
+    setTimeout(refreshKickStatus, 400);
+  } else {
+    refreshKickStatus();
+  }
+}
 function initKickSettings() {
   const tg = $('kick-auto');
   if (tg) {
     tg.checked = !!Store.load().kickAuto;
-    tg.addEventListener('change', () => Store.save({ kickAuto: tg.checked }));
+    tg.addEventListener('change', onKickToggle);
   }
-  const st = $('kick-status');
-  if (st) st.textContent = t(KICK_VERIFIED ? 'kick.active' : 'kick.standby');
+  refreshKickStatus();
 }
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
   if (!Store.load().kickAuto) return;
   (list || []).forEach(c => {
     const st = clientStatusOf(String(c.account || c.authAccount || '').trim(), mcCache && mcCache.vmap);
-    if (st === 'datalimit' || st === 'timeup') requestKick(c, { auto: true });
+    // v1.5.62: skip clients kicked within the cooldown (manual or auto) —
+    // prevents a kick → refresh → still-sticky → kick loop.
+    if ((st === 'datalimit' || st === 'timeup') && autoKickDue(c)) requestKick(c, { auto: true });
   });
 }
 
@@ -3280,7 +3476,17 @@ function autoKickScan(list) {
 let mcCache = null;
 async function moreClients() {
   S.moreFn = moreClients;
-  moreShell(`${ic('monitor', 'sm')} ${esc(t('mc.title'))}`, `<div id="mc-list"><p class="muted">${t('more.loading')}</p></div>`);
+  // v1.5.62: stale-while-revalidate — when a rendered list is already on
+  // screen, keep it visible during refresh (no white flash); show only a
+  // small spinner in the header. First visit still gets the loading text.
+  const staleEl = $('mc-list');
+  const keepStale = !!(staleEl && staleEl.querySelector('.mc-head'));
+  if (!keepStale) {
+    moreShell(`${ic('monitor', 'sm')} ${esc(t('mc.title'))}`, `<div id="mc-list"><p class="muted">${t('more.loading')}</p></div>`);
+  } else {
+    const head = staleEl.querySelector('.mc-head');
+    if (head && !head.querySelector('.mc-sync')) head.insertAdjacentHTML('beforeend', '<span class="mc-sync" aria-hidden="true"></span>');
+  }
   const pid = Number(S.projectId);
   // Prefer the portal client API (SSO): its records carry the full verified
   // field set (voucher account/authType, AP deviceName, rssi/band/channel,
@@ -3302,7 +3508,12 @@ async function moreClients() {
   }
   if (!viaPortal) {
     try { list = await Api.onlineClients(pid, 0, 200) || []; }
-    catch (e) { $('mc-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+    catch (e) {
+      // v1.5.62: on refresh failure keep the old list, just toast the error.
+      if (keepStale) { toast(String((e && e.message) || e || ''), true); const s2 = $('mc-list .mc-sync'); if (s2) s2.remove(); }
+      else $('mc-list').innerHTML = `<p class="err">${esc(e.message)}</p>`;
+      return;
+    }
   }
   let vmap = new Map();
   try { vmap = await apClientVoucherMap(pid, true); } catch (e) { /* voucher enrichment optional */ }
@@ -3354,7 +3565,10 @@ async function moreClients() {
     showNames: Store.load().clientShowNames !== false,
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
-  renderMcList();
+  renderMcList(); // rebuilds #mc-list innerHTML — the .mc-sync spinner goes with it
+  // v1.5.62: auto-kick was defined but never wired up — run the scan now that
+  // the list is on screen. Kicks mark rows locally (no refetch per kick).
+  try { autoKickScan(list); } catch (e) { /* best-effort */ }
 }
 
 /* ═══════════ v1.5.54: client auth history ═══════════
@@ -3432,6 +3646,10 @@ function renderMcList() {
       if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
     }
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
+    // v1.5.62: kicked mark — a manual or auto kick leaves a visible badge
+    // even while the portal list still shows the client online.
+    const kts = kickedAt(f.mac);
+    if (kts) flags.push('kicked');
     const title = (showNames && f.name) ? f.name : f.mac;
     const vLine = f.acct ? voucherInline(f.acct, vmap) : `<span class="muted">—</span>`;
     // v1.5.58: iOS-clean rows — title + voucher + one quiet IP·AP line only.
@@ -3442,9 +3660,11 @@ function renderMcList() {
     // Execution gated by KICK_VERIFIED — the button explains until then.
     const kickBtn = flags.includes('sticky')
       ? `<button type="button" class="mc-kick" data-kick="${esc(f.mac)}">${esc(t('kick.btn'))}</button>` : '';
+    const flagHtml = fl => fl === 'kicked'
+      ? `<span class="mc-flag flag-kicked">✓ ${esc(t('mc.flag.kicked'))} · ${esc(fmtTime(kts))}</span>`
+      : `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`;
     const foot = (flags.length || kickBtn)
-      ? `<div class="mc-foot"><span>${flags.map(fl =>
-        `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`).join('')}</span>${kickBtn}</div>` : '';
+      ? `<div class="mc-foot"><span>${flags.map(flagHtml).join('')}</span>${kickBtn}</div>` : '';
     cells += `<div class="set-row mc-row" data-mc="${i}" role="button" tabindex="0">` +
       `<span class="set-ico mc-ico cst-${st}">${ic(clientIcon(f), '')}</span>` +
       `<div class="t"><div class="mc-top"><span class="t-main">${esc(title)}</span>` +
@@ -3509,9 +3729,13 @@ function openMcDetail(idx) {
     if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
   }
   if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
+  // v1.5.62: kicked mark in the detail sheet too.
+  const kts2 = kickedAt(f.mac);
+  if (kts2) flags.push('kicked');
   let body = '';
-  if (flags.length) body += `<div class="mc-sheet-flags">${flags.map(fl =>
-    `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`).join('')}</div>`;
+  if (flags.length) body += `<div class="mc-sheet-flags">${flags.map(fl => fl === 'kicked'
+    ? `<span class="mc-flag flag-kicked">✓ ${esc(t('mc.flag.kicked'))} · ${esc(fmtTime(kts2))}</span>`
+    : `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`).join('')}</div>`;
   if (f.acct) {
     body += sec(t('mc.dVoucher')) + grp(
       kv(t('ac.voucher'), f.acct) +
@@ -4012,6 +4236,40 @@ function salesRangeBounds(range, nowMs) {
   if (range === 'day30') return [nowMs - 30 * dayMs, nowMs];
   return [0, Infinity];
 }
+/* v1.5.66: pure sales-report computation (extracted for testability).
+ * Per package: made (created in period), sold (used/expired whose first use
+ * falls in the period), price, revenue. Sold uses the EFFECTIVE status —
+ * spent/kicked vouchers count as sold (expired), never as "in use". */
+function salesReportData(vouchers, priceByPkg, rs, re) {
+  const byPkg = {};
+  const grp = v => {
+    const nm = voucherPkgName(v) || t('sl.unknownPkg');
+    if (!byPkg[nm]) byPkg[nm] = { made: 0, sold: 0 };
+    return byPkg[nm];
+  };
+  // Quantity: vouchers created in the period (any status)
+  (vouchers || []).forEach(v => {
+    const ct = v.createTime || 0;
+    if (ct >= rs && ct < re) grp(v).made++;
+  });
+  // Activated Accounts: used/expired vouchers whose FIRST USE falls in the period.
+  // Sale day = day the voucher was FIRST USED (activation), whether it is
+  // now used (2) or expired (3). Falls back to creation time when the
+  // activation cannot be derived (disclosed in the note below the table).
+  (vouchers || []).forEach(v => {
+    const st = vEffStatus(v);
+    if (st !== '2' && st !== '3') return;
+    const stime = voucherActivatedTime(v) || (v.createTime || 0);
+    if (stime >= rs && stime < re) grp(v).sold++;
+  });
+  let tm = 0, ts = 0, tr = 0;
+  const rows = Object.keys(byPkg).sort().map(nm => {
+    const g = byPkg[nm], price = (priceByPkg || {})[nm] || 0, rev = g.sold * price;
+    tm += g.made; ts += g.sold; tr += rev;
+    return { nm, made: g.made, sold: g.sold, price, rev };
+  });
+  return { rows, tm, ts, tr };
+}
 async function moreSales() {
   const todayStr = new Date().toISOString().slice(0, 10);
   S.moreFn = moreSales;
@@ -4047,46 +4305,21 @@ async function moreSales() {
     }
     return salesRangeBounds(range, Date.now());
   };
-  // Sale day = day the voucher was FIRST USED (activation), whether it is
-  // now used (2) or expired (3). Falls back to creation time when the
-  // activation cannot be derived (disclosed in the note below the table).
-  const saleTimeOf = v => voucherActivatedTime(v) || (v.createTime || 0);
-
   const render = () => {
     const [rs, re] = rangeBounds();
-    const byPkg = {};
-    const grp = v => {
-      const nm = voucherPkgName(v) || t('sl.unknownPkg');
-      if (!byPkg[nm]) byPkg[nm] = { made: 0, sold: 0 };
-      return byPkg[nm];
-    };
-    // Quantity: vouchers created in the period (any status)
-    S.vouchers.forEach(v => {
-      const ct = v.createTime || 0;
-      if (ct >= rs && ct < re) grp(v).made++;
-    });
-    // Activated Accounts: used/expired vouchers whose FIRST USE falls in the period
-    S.vouchers.forEach(v => {
-      const st = String(v.status);
-      if (st !== '2' && st !== '3') return;
-      const stime = saleTimeOf(v);
-      if (stime >= rs && stime < re) grp(v).sold++;
-    });
-    let tm = 0, ts = 0, tr = 0;
-    const rows = Object.keys(byPkg).sort().map((nm, i) => {
-      const g = byPkg[nm], price = priceByPkg[nm] || 0, rev = g.sold * price;
-      tm += g.made; ts += g.sold; tr += rev;
-      return `<tr><td>${i + 1}</td><td>${esc(nm)}</td>` +
-        `<td class="num">${price ? esc(fmtMoney(price)) : '—'}</td>` +
-        `<td class="num">${g.made.toLocaleString()}</td>` +
-        `<td class="num"><b>${g.sold.toLocaleString()}</b></td>` +
-        `<td class="num"><b>${price ? esc(fmtMoney(rev)) : '—'}</b></td></tr>`;
-    }).join('');
+    const { rows, tm, ts, tr } = salesReportData(S.vouchers, priceByPkg, rs, re);
+    const body = rows.map((r, i) =>
+      `<tr><td>${i + 1}</td><td>${esc(r.nm)}</td>` +
+      `<td class="num">${r.price ? esc(fmtMoney(r.price)) : '—'}</td>` +
+      `<td class="num">${r.made.toLocaleString()}</td>` +
+      `<td class="num"><b>${r.sold.toLocaleString()}</b></td>` +
+      `<td class="num"><b>${r.price ? esc(fmtMoney(r.rev)) : '—'}</b></td></tr>`
+    ).join('');
     $('sl-list').innerHTML =
       `<div class="wrap-scroll"><table class="data">` +
       `<tr><th>${t('sl.no')}</th><th>${t('sl.profile')}</th><th class="num">${t('sl.price')}</th>` +
       `<th class="num">${t('sl.made')}</th><th class="num">${t('sl.activated')}</th><th class="num">${t('sl.totalPrice')}</th></tr>` +
-      rows +
+      body +
       `<tr><td colspan="3"><b>${t('sl.total')}</b></td>` +
       `<td class="num"><b id="sl-tm"></b></td>` +
       `<td class="num"><b id="sl-ts"></b></td>` +
@@ -4123,6 +4356,7 @@ function fillSettings() {
   refreshSsoCard();
   refreshGwCard();
   refreshMonitorCard();
+  refreshKickStatus(); // v1.5.66
   refreshLiveCard();
 }
 
@@ -4546,13 +4780,28 @@ window._diagEvent = function (name) {
 };
 async function loadAccountInfo() {
   try {
-    const info = S.account || await Api.getAccountInfo();
+    let info = null;
+    try { info = S.account || await Api.getAccountInfo(); } catch (e) { /* open API may be empty on SSO-only login */ }
+    info = info || {};
     S.account = info;
-    const email = info.account || info.email || '';
+    let email = info.account || info.email || '';
     const name = info.userName || info.username || '';
-    $('topbar-account').textContent = name || email || 'Ruijie';
-    const av = $('topbar-avatar');
-    if (av) av.textContent = (name || email || 'R').trim().charAt(0).toUpperCase();
+    // v1.5.66 — No.5: fall back to the SSO saved email from the Android
+    // bridge — the open-API org/account/info call can come back empty while
+    // the portal session is active. Never leave the "Ruijie"/"မ" defaults
+    // when a real account exists: show the Account Name only.
+    if (!name && !email) {
+      try {
+        const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}');
+        if (bi && bi.has && bi.email) email = bi.email;
+      } catch (e) {}
+    }
+    const shown = name || email;
+    if (shown) {
+      $('topbar-account').textContent = shown;
+      const av = $('topbar-avatar');
+      if (av) av.textContent = shown.trim().charAt(0).toUpperCase();
+    }
     $('account-info').innerHTML = `<dl class="kv">
       <dt>${t('ai.name')}</dt><dd>${esc(name || '—')}</dd>
       <dt>Email</dt><dd>${esc(email || '—')}</dd>
@@ -4633,6 +4882,7 @@ function init() {
   if (init._done) return; // guard against double script evaluation
   init._done = true;
   initTheme();
+  initLayoutMode(); // v1.5.63: Auto/Phone/Tablet layout override
   initLang();
   initLiquidWobble();
   initPullToRefresh();
@@ -4731,6 +4981,10 @@ function init() {
   // theme picker (Settings → Appearance)
   document.querySelectorAll('#theme-grid .theme-opt').forEach(b =>
     b.addEventListener('click', () => applyTheme(b.dataset.themeOpt)));
+
+  // layout mode picker (Settings → Layout) — v1.5.63
+  document.querySelectorAll('#layout-seg [data-layout-opt]').forEach(b =>
+    b.addEventListener('click', () => applyLayoutMode(b.dataset.layoutOpt)));
 
   // language (မြန်မာ / English)
   document.querySelectorAll('#lang-seg button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
