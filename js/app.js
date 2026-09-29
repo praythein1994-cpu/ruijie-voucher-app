@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.53';
+const APP_VERSION = '1.5.54';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -46,6 +46,12 @@ const I18N = {
   'v.loadFail': { my: 'ဒေတာရမလာ', en: "Couldn't load data" },
   'v.found': { my: 'တွေ့ရှိချက် {n} / စုစုပေါင်း {total}', en: '{n} found / {total} total' },
   'v.total': { my: 'စုစုပေါင်း {n}', en: '{n} total' },
+  'v.updated': { my: 'နောက်ဆုံးရယူချိန်', en: 'Updated' },
+  'v.expiring': { my: 'မကြာမီသက်တမ်းကုန်မည့်ဗောက်ချာ', en: 'Expiring soon' },
+  'v.select': { my: 'ရွေးမယ်', en: 'Select' },
+  'v.bulkPrint': { my: 'ပရင့်ထုတ်မယ်', en: 'Print' },
+  'v.bulkDelete': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'v.selected': { my: '{n} ခုရွေးထားသည်', en: '{n} selected' },
   'v.noResult': { my: 'ရှာမတွေ့ပါ', en: 'No results' },
   'v.noResultSub': { my: 'ရှာဖွေမှုစာသား (သို့) စစ်ထုတ်မှုပြောင်းကြည့်ပါ', en: 'Try a different search or filter' },
   'v.empty': { my: 'ဗောက်ချာမရှိပါ', en: 'No vouchers' },
@@ -75,6 +81,7 @@ const I18N = {
   'a.queue': { my: 'Queue ထဲထည့်မယ်', en: 'Add to queue' },
   'a.close': { my: 'ပိတ်မယ်', en: 'Close' },
   'del.confirm': { my: '"{code}" ကို ဖျက်မှာသေချာပါသလား?', en: 'Delete "{code}"?' },
+  'del.confirmBulk': { my: 'ဗောက်ချာ {n} ခုကို ဖျက်မှာသေချာပါသလား?', en: 'Delete {n} vouchers?' },
   'del.done': { my: 'ဖျက်ပြီးပါပြီ', en: 'Deleted' },
   'del.unsupported': { my: 'ဖျက်မရပါ — Ruijie Open API မှာ voucher ဖျက်တဲ့လုပ်ဆောင်ချက်မပါဝင်ပါ', en: 'Cannot delete — the Ruijie Open API has no voucher-delete operation' },
   'del.needSso': { my: 'ဖျက်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Deleting needs Ruijie account login (Settings → Ruijie account)' },
@@ -294,6 +301,11 @@ const I18N = {
   'm.devices': { my: 'Devices', en: 'Devices' },
   'm.devicesSub': { my: 'စက်များ', en: 'Devices' },
   'm.clients': { my: 'Online Clients', en: 'Online Clients' },
+  'm.history': { my: 'History', en: 'History' },
+  'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
+  'mh.title': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Client History' },
+  'mh.empty': { my: 'မှတ်တမ်းမရှိပါ', en: 'No history' },
+  'mh.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
   'm.clientsSub': { my: 'ချိတ်ထားသူများ', en: 'Connected' },
   'm.networks': { my: 'Networks', en: 'Networks' },
   'm.networksSub': { my: 'ကွန်ရက်များ', en: 'Networks' },
@@ -491,6 +503,12 @@ function applyLang() {
 /* ── helpers ── */
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* v1.5.54: HH:MM for last-fetched timestamps */
+const fmtTime = ts => {
+  if (!ts) return '—';
+  const d = new Date(Number(ts));
+  return isNaN(d) ? String(ts) : d.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
 const fmtDate = ts => {
   if (!ts) return '—';
   const d = new Date(Number(ts));
@@ -940,6 +958,7 @@ async function loadVouchers() {
     });
     if (gen !== S._voucherGen) return; // superseded — discard
     S.vouchers = all;
+    S.vouchersFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
     // newest first
     S.vouchers.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
     renderVouchers();
@@ -969,22 +988,37 @@ function renderVouchers() {
   $('stat-used').textContent = n2.toLocaleString();
   $('stat-expired').textContent = n3.toLocaleString();
   $('stat-total').textContent = S.vouchers.length.toLocaleString();
+  // v1.5.54: last-fetched timestamp
+  const fe = $('voucher-fetched');
+  if (fe) fe.textContent = S.vouchersFetchedAt ? t('v.updated') + ' ' + fmtTime(S.vouchersFetchedAt) : '';
 
   const list = filteredVouchers();
   $('voucher-count').textContent = S.vFilter || S.vStatus
     ? tx('v.found', { n: list.length, total: S.vouchers.length })
     : tx('v.total', { n: S.vouchers.length });
   const el = $('voucher-list');
+  // v1.5.54: expiry alerts — vouchers expiring within 24h (in-use or unused)
+  const now = Date.now(), DAY = 86400000;
+  const expiring = S.vouchers.filter(v => {
+    const st = String(v.status);
+    if (st !== '1' && st !== '2') return false;
+    const exp = Number(v.expiryTime);
+    return exp > now && exp <= now + DAY;
+  });
+  const expBanner = expiring.length
+    ? `<div class="warn-banner" data-expiring><svg class="ic sm"><use href="#i-alert"/></svg><span>${esc(t('v.expiring'))}: <b>${expiring.length}</b></span></div>`
+    : '';
   if (!list.length) {
     el.innerHTML = (S.vFilter || S.vStatus)
       ? `<div class="empty"><div class="big">${ic('search', 'xl')}</div><p><b>${t('v.noResult')}</b></p><p class="small">${t('v.noResultSub')}</p></div>`
       : `<div class="empty"><div class="big">${ic('ticket', 'xl')}</div><p><b>${t('v.empty')}</b></p><p class="small">${t('v.emptySub')}</p></div>`;
     return;
   }
-  el.innerHTML = list.slice(0, 300).map(v => {
+  el.innerHTML = expBanner + list.slice(0, 300).map(v => {
     const ri = remainInfo(v); // v1.5.53: decreasing remaining-resource fill
     return `
     <div class="voucher-row${fillRowCls(v)}" data-uuid="${esc(v.uuid)}">
+      <input type="checkbox" class="bulk-check" data-bulk="${esc(v.uuid)}" aria-label="select">
       ${ri ? `<div class="remain-fill" style="width:${ri.pct.toFixed(1)}%"></div>` : ''}
       <span class="status-dot s${esc(v.status)}"></span>
       <div class="voucher-meta">
@@ -997,7 +1031,65 @@ function renderVouchers() {
     </div>`;
   }).join('');
   if (list.length > 300) el.innerHTML += `<div class="empty" style="padding:20px"><p class="small">${t('v.first300')}</p></div>`;
-  el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', () => openVoucherDetail(r.dataset.uuid)));
+  el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', e => {
+    if (S.bulkMode) {
+      // v1.5.54: in bulk mode, row tap toggles the checkbox
+      if (e.target.classList.contains('bulk-check')) return; // let checkbox handle itself
+      const cb = r.querySelector('.bulk-check');
+      if (cb) { cb.checked = !cb.checked; updateBulkCount(); }
+      return;
+    }
+    openVoucherDetail(r.dataset.uuid);
+  }));
+  el.querySelectorAll('.bulk-check').forEach(cb => cb.addEventListener('click', e => {
+    e.stopPropagation(); updateBulkCount();
+  }));
+}
+
+/* ═══════════ v1.5.54: bulk select ═══════════ */
+function toggleBulkMode() {
+  S.bulkMode = !S.bulkMode;
+  $('voucher-list').classList.toggle('bulk-mode', S.bulkMode);
+  $('bulk-bar').classList.toggle('hidden', !S.bulkMode);
+  $('btn-bulk-select').querySelector('span').textContent = S.bulkMode ? t('a.cancel') : t('v.select');
+  if (!S.bulkMode) {
+    document.querySelectorAll('.bulk-check').forEach(cb => cb.checked = false);
+  }
+  updateBulkCount();
+}
+function bulkSelectedUuids() {
+  return Array.from(document.querySelectorAll('.bulk-check:checked')).map(cb => cb.dataset.bulk);
+}
+function updateBulkCount() {
+  const n = bulkSelectedUuids().length;
+  $('bulk-count').textContent = tx('v.selected', { n });
+  $('btn-bulk-print').disabled = !n;
+  $('btn-bulk-delete').disabled = !n;
+}
+async function bulkPrint() {
+  const uuids = bulkSelectedUuids();
+  if (!uuids.length) return;
+  const vs = uuids.map(u => S.vouchers.find(v => v.uuid === u)).filter(Boolean);
+  // Add to print queue (existing path)
+  for (const v of vs) {
+    try { addToQueue(v); } catch (e) {}
+  }
+  toast(tx('v.selected', { n: vs.length }));
+}
+async function bulkDelete() {
+  const uuids = bulkSelectedUuids();
+  if (!uuids.length) return;
+  if (!confirm(tx('del.confirmBulk', { n: uuids.length }))) return;
+  let ok = 0, fail = 0;
+  for (const u of uuids) {
+    const v = S.vouchers.find(x => x.uuid === u);
+    if (!v) continue;
+    try { await Api.voucherDelete(S.projectId, v); ok++; }
+    catch (e) { fail++; }
+  }
+  toast(`${ok} ✓${fail ? ` · ${fail} ✗` : ''}`);
+  toggleBulkMode();
+  loadVouchers();
 }
 
 /* ═══════════ v1.5.47 — liquid-fill voucher ═══════════
@@ -2270,12 +2362,14 @@ async function moreDevices() {
         if (sn && !apNames.has(sn)) apNames.set(sn, d.aliasName || d.alias || d.deviceAliasName || d.name || sn);
       });
     }
+    S.devicesFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
     renderDeviceRows(list, errs, cliByAp, apNames);
   };
   const renderDeviceRows = (list, errs, cliByAp, apNames) => {
     if (!list.length) { $('md-list').innerHTML = `<p class="err">${esc(errs.join(' · ') || t('md.none'))}</p>`; return; }
     const warn = errs.length ? `<p class="warn small">${esc(t('md.partial'))}: ${esc(errs.join(' · '))}</p>` : '';
-    $('md-list').innerHTML = `${warn}<p class="muted small">${tx('md.total', { n: list.length })}</p>` +
+    const fts = S.devicesFetchedAt ? ` · ${esc(t('v.updated'))} ${esc(fmtTime(S.devicesFetchedAt))}` : ''; // v1.5.54
+    $('md-list').innerHTML = `${warn}<p class="muted small">${tx('md.total', { n: list.length })}${fts}</p>` +
       `<div class="wrap-scroll"><table class="data">
         <tr><th>${t('md.sn')}</th><th>${t('md.model')}</th><th>${t('md.status')}</th><th>${t('md.action')}</th></tr>
         ${list.map(d => {
@@ -2495,7 +2589,43 @@ async function moreClients() {
     filter: (mcCache && mcCache.filter) || 'all',
     showNames: Store.load().clientShowNames !== false,
   };
+  S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
   renderMcList();
+}
+
+/* ═══════════ v1.5.54: client auth history ═══════════
+   Uses the verified /samTransfer/userauthlogs/bypage endpoint (portal SSO).
+   Shows recent login/logout records: voucher account, MAC, login/logout time. */
+async function moreHistory() {
+  S.moreFn = moreHistory;
+  moreShell(`${ic('clock', 'sm')} ${esc(t('mh.title'))}`, `<div id="mh-list"><p class="muted">${t('more.loading')}</p></div>`);
+  if (!Api.ssoLoggedIn()) {
+    $('mh-list').innerHTML = `<p class="err">${esc(t('mh.needSso'))}</p>`;
+    return;
+  }
+  try {
+    const list = await Api.portalAuthLogs(Number(S.projectId)) || [];
+    if (!list.length) {
+      $('mh-list').innerHTML = `<p class="muted">${esc(t('mh.empty'))}</p>`;
+      return;
+    }
+    // Newest first by login time
+    list.sort((a, b) => Number(b.loginTimes || 0) - Number(a.loginTimes || 0));
+    $('mh-list').innerHTML =
+      `<p class="muted small">${list.length} records${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(Date.now())) : ''}</p>` +
+      `<div class="list">` + list.slice(0, 100).map(r => {
+        const acct = esc(r.account || '—');
+        const mac = esc(r.userMac || '');
+        const login = fmtDate(r.loginTimes);
+        const logout = r.logoutTimes ? fmtDate(r.logoutTimes) : '—';
+        const reason = r.logoutReason ? ` <small class="muted">· ${esc(r.logoutReason)}</small>` : '';
+        return `<div class="voucher-row"><span class="status-dot s2"></span>
+          <div class="voucher-meta"><div class="voucher-code">${acct}</div>
+          <div class="pkg">${mac} · ${esc(login)} → ${esc(logout)}${reason}</div></div></div>`;
+      }).join('') + `</div>`;
+  } catch (e) {
+    $('mh-list').innerHTML = `<p class="err">${esc(e.message || String(e))}</p>`;
+  }
 }
 
 function renderMcList() {
@@ -2505,7 +2635,7 @@ function renderMcList() {
   const counts = { all: list.length };
   CSTS.forEach(s => counts[s] = 0);
   sts.forEach(s => counts[s]++);
-  const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}</p>`;
+  const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(S.clientsFetchedAt)) : ''}</p>`; // v1.5.54: last-fetched
   const chip = (key, label, n, dotCls) =>
     `<button class="chip${filter === key ? ' active' : ''}" data-mcf="${key}">` +
     (dotCls ? `<span class="dot ${dotCls}"></span>` : '') + `${esc(label)} (${n})</button>`;
@@ -2892,7 +3022,7 @@ async function apClientsView(apSn, apName, apNames, isLocalAp) {
     if (viaPortal && !srcNote && !mine.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
       srcNote = t('ac.portalNoAcct');
     }
-    const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}</p>`;
+    const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(S.clientsFetchedAt)) : ''}</p>`; // v1.5.54: last-fetched
     const vCount = mine.filter(c => vmap.has(acctOf(c))).length;
     $('ac-list').innerHTML =
       `<p class="muted small">${esc(tx('ac.total', { n: mine.length }))} · ${esc(tx('ac.voucherN', { n: vCount }))}</p>` +
@@ -3567,6 +3697,50 @@ async function saveSettings() {
   } catch (e) { showErr('set-err', t('err.connectFail') + e.message); }
 }
 
+/* ═══════════ v1.5.54: pull-to-refresh ═══════════
+   Swipe down at the top of any view to refresh it. Pure JS so it works
+   on web + APK. Only triggers when #main is scrolled to the very top. */
+function ptrRefresh() {
+  const v = S.currentView || 'view-vouchers';
+  if (v === 'view-vouchers') { loadVouchers(); return; }
+  if (v === 'view-printer') { try { renderQueue(); } catch (e) {} try { btCacheState(); } catch (e) {} try { renderPrinterDots(); } catch (e) {} return; }
+  if (v === 'view-generate') { try { ensurePackages(); } catch (e) {} try { renderRecentGen(); } catch (e) {} try { btCacheState(); } catch (e) {} return; }
+  if (v === 'view-more') {
+    const top = S.moreStack[S.moreStack.length - 1];
+    if (top) { try { top(); } catch (e) {} }
+    return;
+  }
+  if (v === 'view-settings') { try { fillSettings(); } catch (e) {} return; }
+}
+function initPullToRefresh() {
+  const main = $('main'), ind = $('ptr-indicator');
+  if (!main || !ind) return;
+  let startY = null, pulling = false;
+  const THRESHOLD = 70;
+  main.addEventListener('touchstart', e => {
+    if (main.scrollTop <= 0 && e.touches.length === 1) {
+      startY = e.touches[0].clientY; pulling = false;
+    } else startY = null;
+  }, { passive: true });
+  main.addEventListener('touchmove', e => {
+    if (startY == null || main.scrollTop > 0) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 10) {
+      pulling = true;
+      ind.classList.add('show');
+      ind.querySelector('.ic').classList.remove('spin');
+    }
+  }, { passive: true });
+  main.addEventListener('touchend', () => {
+    if (!pulling) { ind.classList.remove('show'); startY = null; return; }
+    pulling = false; startY = null;
+    if (!ind.classList.contains('show')) return;
+    ind.querySelector('.ic').classList.add('spin');
+    try { ptrRefresh(); } catch (e) {}
+    setTimeout(() => ind.classList.remove('show'), 900);
+  }, { passive: true });
+}
+
 /* ═══════════ INIT ═══════════ */
 function init() {
   if (init._done) return; // guard against double script evaluation
@@ -3574,6 +3748,7 @@ function init() {
   initTheme();
   initLang();
   initLiquidWobble();
+  initPullToRefresh();
 
   // password peek toggles
   document.querySelectorAll('[data-peek]').forEach(b => b.addEventListener('click', () => {
@@ -3622,6 +3797,11 @@ function init() {
     this.classList.add('spinning');
     loadVouchers().finally(() => this.classList.remove('spinning'));
   });
+  // v1.5.54: bulk select
+  $('btn-bulk-select').addEventListener('click', toggleBulkMode);
+  $('btn-bulk-print').addEventListener('click', bulkPrint);
+  $('btn-bulk-delete').addEventListener('click', bulkDelete);
+  $('btn-bulk-cancel').addEventListener('click', toggleBulkMode);
 
   document.querySelectorAll('#voucher-status-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#voucher-status-chips .chip').forEach(x => x.classList.remove('active'));
@@ -3689,6 +3869,7 @@ function init() {
     else if (k === 'usergroups') moreUserGroups();
     else if (k === 'devices') moreDevices();
     else if (k === 'clients') moreClients();
+    else if (k === 'history') moreHistory(); // v1.5.54
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
   }));

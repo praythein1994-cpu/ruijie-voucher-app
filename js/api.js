@@ -722,6 +722,34 @@ const Api = {
     return out;
   },
 
+  /* v1.5.54: client auth history (verified 2026-09-28 — portal's own "Portal Auth
+     Clients" page, read-only). Same envelope as portalAuthUsers but hits
+     /samTransfer/userauthlogs/bypage. Record fields (camelCase): account,
+     userIp, userMac, authType ("15" = Voucher), logoutReason, loginTimes,
+     logoutTimes. 4,880 records seen live. Android-APK-only (needs SSO). */
+  async portalAuthLogs(groupId, { pageSize = 500, maxPages = 3 } = {}) {
+    const p = '/samTransfer/userauthlogs/bypage?cloudType=smb';
+    const out = [];
+    let total = Infinity, page = 1;
+    while (out.length < total && page <= maxPages) {
+      const env = {
+        api: p, method: 'POST', module: 'default',
+        params: { group_id: Number(groupId), page, size: pageSize },
+        querys: { lang: 'en' },
+      };
+      const j = await ssoCall('/samTransfer/userauthlogs/bypage?cloudType=smb', env);
+      if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
+      if (Number(j.code) !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + j.code)));
+      const res = (j.data && j.data.result) || {};
+      const list = Array.isArray(res.list) ? res.list : [];
+      out.push(...list);
+      total = Number(res.total) || out.length;
+      if (!list.length) break;
+      page++;
+    }
+    return out;
+  },
+
   // ── Clients (online) ──
   // Manual: staType is MANDATORY — "currentUser" = current online data.
   // NOTE: logbiz APIs live at /logbizagent/... directly (NO /service/api/ prefix).
