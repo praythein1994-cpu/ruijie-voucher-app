@@ -1653,7 +1653,10 @@ html.ph-compact .voucher-row { padding: 10px 14px; }
 /* v1.5.71 — phone: the Print Layout modal opens straight into the pinned
    live preview. The title bar (title + Reset Defaults + X) is hidden —
    Cancel in the footer closes without saving. */
-html.ph-compact #layout-modal .modal-head { display: none; }
+/* v1.5.73 — same treatment for the Typography modal (title + Reset Colors
+   + X hidden on phone; Cancel in the footer closes). */
+html.ph-compact #layout-modal .modal-head,
+html.ph-compact #typo-modal .modal-head { display: none; }
 
 /* pinned preview: solid background — same selectors as the v1.5.55 phone
    rules, later in the file so they win at equal specificity */
