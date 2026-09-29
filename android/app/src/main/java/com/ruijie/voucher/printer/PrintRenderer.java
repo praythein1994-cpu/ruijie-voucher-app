@@ -97,6 +97,13 @@ public final class PrintRenderer {
                 false, 0x88000000L, 0.5f, 3f, 2f, 2f, isThermalOutput);
     }
 
+    /** Custom label text, or the classic fallback when empty. */
+    private static String labelOrDefault(String custom, String fallback) {
+        if (custom == null) return fallback;
+        String s = custom.trim();
+        return s.isEmpty() ? fallback : s;
+    }
+
     public static Bitmap renderVoucher(
             String code,
             String profileName,
@@ -110,6 +117,8 @@ public final class PrintRenderer {
             boolean isThermalOutput) {
 
         int width = paperConfig.widthDots; // 384 for 58mm, 576 for 80mm
+        // v1.5.58: dots per mm for the free custom-line nudge (dxMm)
+        float dotsPerMm = paperConfig.paperWidthMm > 0 ? (float) width / paperConfig.paperWidthMm : 0f;
 
         // Dynamic site/brand name
         String rawSite = (siteName != null && !siteName.trim().isEmpty()) ? siteName : "WiFi";
@@ -161,17 +170,66 @@ public final class PrintRenderer {
         float currentY = 28f;
         Float line1Y = null, line2Y = null, line3Y = null, line4Y = null, line5Y = null, line6Y = null;
 
+        // Custom free-text lines: the FIRST visible line docks — its label shares the
+        // profile row (right side), its value shares the validity row (right side).
+        // Lines 2..n keep their own rows between profile and validity.
+        // The JS bridge already filters hidden lines; re-validate text presence here.
+        java.util.List<PrintDesignSettings.CustomLine> visCls = new java.util.ArrayList<>();
+        if (settings.customLines != null) {
+            for (PrintDesignSettings.CustomLine cl : settings.customLines) {
+                if (cl == null) continue;
+                boolean hasLabel = cl.label != null && !cl.label.trim().isEmpty();
+                boolean hasValue = cl.value != null && !cl.value.trim().isEmpty();
+                if (!hasLabel && !hasValue) continue;
+                visCls.add(cl);
+                if (visCls.size() >= 5) break;
+            }
+        }
+        PrintDesignSettings.CustomLine dockCl = visCls.isEmpty() ? null : visCls.get(0);
+        String dockLabel = (dockCl != null && dockCl.label != null) ? dockCl.label.trim() : "";
+        String dockValue = (dockCl != null && dockCl.value != null) ? dockCl.value.trim() : "";
+        boolean dockLabelOnProfile = !dockLabel.isEmpty() && hasLine2;
+        boolean dockValueOnPeriod = !dockValue.isEmpty() && hasLine3;
+
         if (hasLine1) {
             line1Y = currentY;
             currentY += Math.max(24f, Math.max(settings.headerFontSize, settings.codeFontSize) + 4f) + extraSpacing;
         }
         if (hasLine2) {
             line2Y = currentY;
-            currentY += Math.max(22f, settings.profileNameFontSize + 4f) + extraSpacing;
+            float rowH = Math.max(22f, settings.profileNameFontSize + 4f);
+            if (dockLabelOnProfile) rowH = Math.max(rowH, Math.max(18f, dockCl.fontSize + 4f));
+            currentY += rowH + extraSpacing;
         }
+
+        // Own-row custom lines: lines 2..n fully, plus the first line's undocked parts
+        java.util.List<PrintDesignSettings.CustomLine> ownCls = new java.util.ArrayList<>();
+        java.util.List<java.util.List<String>> ownParts = new java.util.ArrayList<>();
+        java.util.List<Float> clY = new java.util.ArrayList<>();
+        for (int ci = 0; ci < visCls.size(); ci++) {
+            PrintDesignSettings.CustomLine cl = visCls.get(ci);
+            String l = cl.label == null ? "" : cl.label.trim();
+            String v = cl.value == null ? "" : cl.value.trim();
+            java.util.List<String> parts = new java.util.ArrayList<>();
+            if (ci == 0) {
+                if (!dockLabelOnProfile && !l.isEmpty()) parts.add(l);
+                if (!dockValueOnPeriod && !v.isEmpty()) parts.add(v);
+            } else {
+                if (!l.isEmpty()) parts.add(l);
+                if (!v.isEmpty()) parts.add(v);
+            }
+            if (parts.isEmpty()) continue;
+            ownCls.add(cl);
+            ownParts.add(parts);
+            clY.add(currentY);
+            currentY += Math.max(18f, cl.fontSize + 4f) * parts.size() + extraSpacing;
+        }
+
         if (hasLine3) {
             line3Y = currentY;
-            currentY += Math.max(20f, settings.periodFontSize + 4f) + extraSpacing;
+            float rowH = Math.max(20f, settings.periodFontSize + 4f);
+            if (dockValueOnPeriod) rowH = Math.max(rowH, Math.max(18f, dockCl.fontSize + 4f));
+            currentY += rowH + extraSpacing;
         }
         if (hasLine4) {
             line4Y = currentY;
@@ -188,6 +246,7 @@ public final class PrintRenderer {
 
         // Default 58mm compact layout maintains 110 dots height if uncustomized
         boolean isDefaultLayout = hasLine1 && hasLine2 && hasLine3 && !hasLine4 && !hasLine5 && !hasLine6
+                && visCls.isEmpty()
                 && spacingLevel == 0 && settings.lineSpacingExtra == 0f
                 && settings.headerFontSize == 26f && settings.codeFontSize == 28f
                 && settings.profileNameFontSize == 24f && settings.periodFontSize == 24f;
@@ -199,6 +258,18 @@ public final class PrintRenderer {
         canvas.drawColor((int) 0xFFFFFFFFL); // Pure solid white background
 
         final float maxAvailableWidth = Math.max(100f, width - 32f);
+
+        // Custom label texts (fall back to the classic English labels)
+        final String codeLbl = labelOrDefault(settings.codeLabelText, "Voucher Code");
+        final String profileLbl = labelOrDefault(settings.profileNameLabelText, "Profile Name");
+        final String periodLbl = labelOrDefault(settings.periodLabelText, "Period");
+        final String quotaLbl = labelOrDefault(settings.quotaLabelText, "Quota");
+        final String dtLbl = labelOrDefault(settings.printDateTimeLabelText, "Print Date/Time");
+        // Shared label-column width keeps the ":" vertically aligned across profile/period/quota lines
+        Paint labelMeasurePaint = createPaint(22f, AppFontWeight.REGULAR, AppFontStyle.NORMAL,
+                settings.fontFamily, 0xFF000000L, isThermalOutput);
+        final float labelColumnWidth = Math.max(labelMeasurePaint.measureText(profileLbl),
+                Math.max(labelMeasurePaint.measureText(periodLbl), labelMeasurePaint.measureText(quotaLbl)));
 
         // 1. Line 1: Header / Voucher Code
         if (hasLine1) {
@@ -218,8 +289,9 @@ public final class PrintRenderer {
                         settings.shadowBlur, settings.shadowOffsetX, settings.shadowOffsetY, isThermalOutput);
 
                 String brandPrefix = dynamicSiteName + settings.headerSeparator;
+                String codeText = (settings.showCodeLabel ? codeLbl + " : " : "") + formattedCode;
                 float brandWidth = brandPaint.measureText(brandPrefix);
-                float codeWidth = codePaint.measureText(formattedCode);
+                float codeWidth = codePaint.measureText(codeText);
 
                 // Responsive auto-scale: guarantees text never overflows, wraps, or goes vertical
                 if ((brandWidth + codeWidth) > maxAvailableWidth && (brandWidth + codeWidth) > 0f) {
@@ -227,7 +299,7 @@ public final class PrintRenderer {
                     brandPaint.setTextSize(brandPaint.getTextSize() * scale);
                     codePaint.setTextSize(codePaint.getTextSize() * scale);
                     brandWidth = brandPaint.measureText(brandPrefix);
-                    codeWidth = codePaint.measureText(formattedCode);
+                    codeWidth = codePaint.measureText(codeText);
                 }
 
                 float totalWidth = brandWidth + codeWidth;
@@ -240,7 +312,7 @@ public final class PrintRenderer {
                 }
 
                 drawWithOutline(canvas, settings, brandPrefix, startX, line1Y, brandPaint, isThermalOutput);
-                drawWithOutline(canvas, settings, formattedCode, startX + brandWidth, line1Y, codePaint, isThermalOutput);
+                drawWithOutline(canvas, settings, codeText, startX + brandWidth, line1Y, codePaint, isThermalOutput);
             } else if (settings.showHeader) {
                 Paint brandPaint = createPaint(settings.headerFontSize, headerWeight, settings.headerFontStyle,
                         settings.fontFamily, settings.headerColor, settings.headerAlignment,
@@ -265,7 +337,8 @@ public final class PrintRenderer {
                         settings.letterSpacingMode, settings.customLetterSpacing,
                         settings.textShadowEnabled, settings.shadowColor, settings.shadowOpacity,
                         settings.shadowBlur, settings.shadowOffsetX, settings.shadowOffsetY, isThermalOutput);
-                float measured = codePaint.measureText(formattedCode);
+                String codeText = (settings.showCodeLabel ? codeLbl + " : " : "") + formattedCode;
+                float measured = codePaint.measureText(codeText);
                 if (measured > maxAvailableWidth && measured > 0f) {
                     codePaint.setTextSize(codePaint.getTextSize() * (maxAvailableWidth / measured));
                 }
@@ -276,11 +349,12 @@ public final class PrintRenderer {
                     case LEFT:
                     default: x = 16f; break;
                 }
-                drawWithOutline(canvas, settings, formattedCode, x, line1Y, codePaint, isThermalOutput);
+                drawWithOutline(canvas, settings, codeText, x, line1Y, codePaint, isThermalOutput);
             }
         }
 
         // 2. Line 2: Profile Name
+        float profileRowW = 0f;
         if (hasLine2) {
             AppFontWeight profileWeight = settings.profileNameBold ? AppFontWeight.BOLD : settings.profileNameFontWeight;
             Paint profileNamePaint = createPaint(settings.profileNameFontSize, profileWeight, settings.profileNameFontStyle,
@@ -293,8 +367,7 @@ public final class PrintRenderer {
                 if (settings.profileNameAlignment == PrintAlignment.LEFT) {
                     Paint labelPaint = createPaint(22f, AppFontWeight.REGULAR, AppFontStyle.NORMAL,
                             settings.fontFamily, settings.profileNameColor, isThermalOutput);
-                    float maxLabelWidth = labelPaint.measureText("Profile Name");
-                    float colonX = 16f + maxLabelWidth + 6f;
+                    float colonX = 16f + labelColumnWidth + 6f;
                     float valueX = colonX + labelPaint.measureText(": ");
                     profileNamePaint.setTextAlign(Paint.Align.LEFT);
 
@@ -304,11 +377,12 @@ public final class PrintRenderer {
                         profileNamePaint.setTextSize(profileNamePaint.getTextSize() * (availableForValue / valWidth));
                     }
 
-                    drawWithOutline(canvas, settings, "Profile Name", 16f, line2Y, labelPaint, isThermalOutput);
+                    drawWithOutline(canvas, settings, profileLbl, 16f, line2Y, labelPaint, isThermalOutput);
                     drawWithOutline(canvas, settings, ":", colonX, line2Y, labelPaint, isThermalOutput);
                     drawWithOutline(canvas, settings, actualProfileName, valueX, line2Y, profileNamePaint, isThermalOutput);
+                    profileRowW = valueX + Math.min(valWidth, availableForValue);
                 } else {
-                    String fullText = "Profile Name : " + actualProfileName;
+                    String fullText = profileLbl + " : " + actualProfileName;
                     float measured = profileNamePaint.measureText(fullText);
                     if (measured > maxAvailableWidth && measured > 0f) {
                         profileNamePaint.setTextSize(profileNamePaint.getTextSize() * (maxAvailableWidth / measured));
@@ -316,6 +390,7 @@ public final class PrintRenderer {
                     float x = settings.profileNameAlignment == PrintAlignment.CENTER ? width / 2f
                             : settings.profileNameAlignment == PrintAlignment.RIGHT ? width - 16f : 16f;
                     drawWithOutline(canvas, settings, fullText, x, line2Y, profileNamePaint, isThermalOutput);
+                    profileRowW = Math.min(measured, maxAvailableWidth);
                 }
             } else {
                 float measured = profileNamePaint.measureText(actualProfileName);
@@ -330,10 +405,54 @@ public final class PrintRenderer {
                     default: x = 16f; break;
                 }
                 drawWithOutline(canvas, settings, actualProfileName, x, line2Y, profileNamePaint, isThermalOutput);
+                profileRowW = Math.min(measured, maxAvailableWidth);
+            }
+        }
+
+        // 2b-dock: first custom line's label shares the profile row (right side)
+        if (dockLabelOnProfile) {
+            drawDockPart(canvas, settings, dockCl, dockLabel, line2Y, profileRowW, width, maxAvailableWidth, dotsPerMm, isThermalOutput);
+        }
+
+        // 2c. Custom free-text lines on their own rows (label stacked above value, own size/bold/align)
+        for (int k = 0; k < ownCls.size(); k++) {
+            PrintDesignSettings.CustomLine cl = ownCls.get(k);
+            float y = clY.get(k);
+            float lh = Math.max(18f, cl.fontSize + 4f);
+            AppFontWeight clW = cl.bold ? AppFontWeight.BOLD : AppFontWeight.REGULAR;
+            PrintAlignment pa = cl.alignment == null ? PrintAlignment.LEFT : cl.alignment;
+            for (String part : ownParts.get(k)) {
+                if (part.isEmpty()) continue;
+                Paint clPaint = createPaint(cl.fontSize, clW, AppFontStyle.NORMAL,
+                        settings.fontFamily, 0xFF000000L, pa,
+                        settings.letterSpacingMode, settings.customLetterSpacing,
+                        settings.textShadowEnabled, settings.shadowColor, settings.shadowOpacity,
+                        settings.shadowBlur, settings.shadowOffsetX, settings.shadowOffsetY, isThermalOutput);
+                float measured = clPaint.measureText(part);
+                if (measured > maxAvailableWidth && measured > 0f) {
+                    clPaint.setTextSize(clPaint.getTextSize() * (maxAvailableWidth / measured));
+                }
+                float drawnW = Math.min(measured, maxAvailableWidth);
+                // v1.5.58: free horizontal nudge (+mm right / -mm left), clamped on-paper
+                float dxDots = cl.dxMm * dotsPerMm;
+                float x;
+                if (pa == PrintAlignment.CENTER) {
+                    x = width / 2f + dxDots;
+                    x = Math.min(width - drawnW / 2f - 8f, Math.max(drawnW / 2f + 8f, x));
+                } else if (pa == PrintAlignment.RIGHT) {
+                    x = width - 16f + dxDots;
+                    x = Math.min(width - 8f, Math.max(drawnW + 8f, x));
+                } else {
+                    x = 16f + dxDots;
+                    x = Math.min(Math.max(8f, width - 8f - drawnW), Math.max(8f, x));
+                }
+                drawWithOutline(canvas, settings, part, x, y, clPaint, isThermalOutput);
+                y += lh;
             }
         }
 
         // 3. Line 3: Period
+        float periodRowW = 0f;
         if (hasLine3) {
             AppFontWeight periodWeight = settings.periodBold ? AppFontWeight.BOLD : settings.periodFontWeight;
             Paint periodPaint = createPaint(settings.periodFontSize, periodWeight, settings.periodFontStyle,
@@ -346,8 +465,7 @@ public final class PrintRenderer {
                 if (settings.periodAlignment == PrintAlignment.LEFT) {
                     Paint labelPaint = createPaint(22f, AppFontWeight.REGULAR, AppFontStyle.NORMAL,
                             settings.fontFamily, settings.periodColor, isThermalOutput);
-                    float maxLabelWidth = labelPaint.measureText("Profile Name");
-                    float colonX = 16f + maxLabelWidth + 6f;
+                    float colonX = 16f + labelColumnWidth + 6f;
                     float valueX = colonX + labelPaint.measureText(": ");
                     periodPaint.setTextAlign(Paint.Align.LEFT);
 
@@ -357,11 +475,12 @@ public final class PrintRenderer {
                         periodPaint.setTextSize(periodPaint.getTextSize() * (availableForValue / valWidth));
                     }
 
-                    drawWithOutline(canvas, settings, "Period", 16f, line3Y, labelPaint, isThermalOutput);
+                    drawWithOutline(canvas, settings, periodLbl, 16f, line3Y, labelPaint, isThermalOutput);
                     drawWithOutline(canvas, settings, ":", colonX, line3Y, labelPaint, isThermalOutput);
                     drawWithOutline(canvas, settings, actualValidPeriod, valueX, line3Y, periodPaint, isThermalOutput);
+                    periodRowW = valueX + Math.min(valWidth, availableForValue);
                 } else {
-                    String fullText = "Period : " + actualValidPeriod;
+                    String fullText = periodLbl + " : " + actualValidPeriod;
                     float measured = periodPaint.measureText(fullText);
                     if (measured > maxAvailableWidth && measured > 0f) {
                         periodPaint.setTextSize(periodPaint.getTextSize() * (maxAvailableWidth / measured));
@@ -369,6 +488,7 @@ public final class PrintRenderer {
                     float x = settings.periodAlignment == PrintAlignment.CENTER ? width / 2f
                             : settings.periodAlignment == PrintAlignment.RIGHT ? width - 16f : 16f;
                     drawWithOutline(canvas, settings, fullText, x, line3Y, periodPaint, isThermalOutput);
+                    periodRowW = Math.min(measured, maxAvailableWidth);
                 }
             } else {
                 float measured = periodPaint.measureText(actualValidPeriod);
@@ -383,7 +503,13 @@ public final class PrintRenderer {
                     default: x = 16f; break;
                 }
                 drawWithOutline(canvas, settings, actualValidPeriod, x, line3Y, periodPaint, isThermalOutput);
+                periodRowW = Math.min(measured, maxAvailableWidth);
             }
+        }
+
+        // 3b-dock: first custom line's value shares the validity row (right side)
+        if (dockValueOnPeriod) {
+            drawDockPart(canvas, settings, dockCl, dockValue, line3Y, periodRowW, width, maxAvailableWidth, dotsPerMm, isThermalOutput);
         }
 
         // 4. Line 4: Quota
@@ -399,8 +525,7 @@ public final class PrintRenderer {
                 if (settings.quotaAlignment == PrintAlignment.LEFT) {
                     Paint labelPaint = createPaint(22f, AppFontWeight.REGULAR, AppFontStyle.NORMAL,
                             settings.fontFamily, settings.quotaColor, isThermalOutput);
-                    float maxLabelWidth = labelPaint.measureText("Profile Name");
-                    float colonX = 16f + maxLabelWidth + 6f;
+                    float colonX = 16f + labelColumnWidth + 6f;
                     float valueX = colonX + labelPaint.measureText(": ");
                     quotaPaint.setTextAlign(Paint.Align.LEFT);
 
@@ -410,11 +535,11 @@ public final class PrintRenderer {
                         quotaPaint.setTextSize(quotaPaint.getTextSize() * (availableForValue / valWidth));
                     }
 
-                    drawWithOutline(canvas, settings, "Quota", 16f, line4Y, labelPaint, isThermalOutput);
+                    drawWithOutline(canvas, settings, quotaLbl, 16f, line4Y, labelPaint, isThermalOutput);
                     drawWithOutline(canvas, settings, ":", colonX, line4Y, labelPaint, isThermalOutput);
                     drawWithOutline(canvas, settings, actualQuota, valueX, line4Y, quotaPaint, isThermalOutput);
                 } else {
-                    String fullText = "Quota : " + actualQuota;
+                    String fullText = quotaLbl + " : " + actualQuota;
                     float measured = quotaPaint.measureText(fullText);
                     if (measured > maxAvailableWidth && measured > 0f) {
                         quotaPaint.setTextSize(quotaPaint.getTextSize() * (maxAvailableWidth / measured));
@@ -443,6 +568,7 @@ public final class PrintRenderer {
         if (hasLine5) {
             String actualDateTime = (printDateTime != null && !printDateTime.trim().isEmpty()) ? printDateTime
                     : new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new Date());
+            String dtText = settings.showPrintDateTimeLabel ? dtLbl + " : " + actualDateTime : actualDateTime;
             AppFontWeight dtWeight = settings.printDateTimeBold ? AppFontWeight.BOLD : settings.printDateTimeFontWeight;
 
             Paint dateTimePaint = createPaint(settings.printDateTimeFontSize, dtWeight, settings.printDateTimeFontStyle,
@@ -451,7 +577,7 @@ public final class PrintRenderer {
                     settings.textShadowEnabled, settings.shadowColor, settings.shadowOpacity,
                     settings.shadowBlur, settings.shadowOffsetX, settings.shadowOffsetY, isThermalOutput);
 
-            float measured = dateTimePaint.measureText(actualDateTime);
+            float measured = dateTimePaint.measureText(dtText);
             if (measured > maxAvailableWidth && measured > 0f) {
                 dateTimePaint.setTextSize(dateTimePaint.getTextSize() * (maxAvailableWidth / measured));
             }
@@ -463,7 +589,7 @@ public final class PrintRenderer {
                 case LEFT:
                 default: x = 16f; break;
             }
-            drawWithOutline(canvas, settings, actualDateTime, x, line5Y, dateTimePaint, isThermalOutput);
+            drawWithOutline(canvas, settings, dtText, x, line5Y, dateTimePaint, isThermalOutput);
         }
 
         // 6. Line 6: Status
@@ -502,6 +628,31 @@ public final class PrintRenderer {
     }
 
     /** Helper to draw text with optional outline (preview only; thermal never outlines). */
+    // Draws a docked custom-line part on the right side of a shared row
+    // (first custom line's label on the profile row, value on the validity row).
+    // Auto-scales to the width remaining beside the row's main content.
+    private static void drawDockPart(Canvas canvas, PrintDesignSettings settings,
+                                     PrintDesignSettings.CustomLine cl, String text, float y,
+                                     float rowContentW, int width, float maxAvailableWidth,
+                                     float dotsPerMm, boolean isThermalOutput) {
+        AppFontWeight clW = cl.bold ? AppFontWeight.BOLD : AppFontWeight.REGULAR;
+        Paint p = createPaint(cl.fontSize, clW, AppFontStyle.NORMAL,
+                settings.fontFamily, 0xFF000000L, PrintAlignment.RIGHT,
+                settings.letterSpacingMode, settings.customLetterSpacing,
+                settings.textShadowEnabled, settings.shadowColor, settings.shadowOpacity,
+                settings.shadowBlur, settings.shadowOffsetX, settings.shadowOffsetY, isThermalOutput);
+        float avail = Math.max(24f, maxAvailableWidth - rowContentW - 12f);
+        float w = p.measureText(text);
+        if (w > avail && w > 0f) {
+            p.setTextSize(p.getTextSize() * (avail / w));
+        }
+        float drawnW = Math.min(w, avail);
+        // v1.5.58: free horizontal nudge (+mm right / -mm left), clamped on-paper
+        float edgeX = width - 16f + cl.dxMm * dotsPerMm;
+        edgeX = Math.min(width - 8f, Math.max(drawnW + 8f, edgeX));
+        drawWithOutline(canvas, settings, text, edgeX, y, p, isThermalOutput);
+    }
+
     private static void drawWithOutline(Canvas canvas, PrintDesignSettings settings,
                                         String text, float x, float y, Paint fillPaint,
                                         boolean isThermalOutput) {
