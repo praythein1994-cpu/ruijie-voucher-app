@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.55';
+const APP_VERSION = '1.5.56';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -303,6 +303,16 @@ const I18N = {
   'p.btScanning': { my: 'ရှာနေတယ်…', en: 'Scanning…' },
   'p.btDisconnect': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
   'p.btPrint': { my: 'ဘလူးတုသ်နဲ့ထုတ်မယ်', en: 'Print via Bluetooth' },
+  'pp.title': { my: 'ပရင့်ထုတ်နေသည်', en: 'Printing' },
+  'pp.close': { my: 'ပိတ်မယ်', en: 'Close' },
+  'pp.printing': { my: 'ထုတ်နေသည် {c} / {t}', en: 'Printing {c} / {t}' },
+  'pp.done': { my: '✓ {n} ခု ထုတ်ပြီးပြီ', en: '✓ Printed {n}' },
+  'pp.stopped': { my: '⚠ ပရင့်တာ ရပ်သွားသည် — ထုတ်ပြီးသား {c} / {t}', en: '⚠ Print stopped — printed {c} / {t}' },
+  'pp.stoppedAt': { my: 'ရပ်သွားတဲ့ voucher: {code}', en: 'Stopped at voucher: {code}' },
+  'pp.sPrinted': { my: 'ထုတ်ပြီးပြီ', en: 'Printed' },
+  'pp.sPrinting': { my: 'ထုတ်နေသည်…', en: 'Printing…' },
+  'pp.sQueued': { my: 'စောင့်နေသည်', en: 'Queued' },
+  'pp.sStopped': { my: 'ဒီမှာ ရပ်သွားသည်', en: 'Stopped here' },
   'p.btTest': { my: 'စမ်းထုတ်မယ်', en: 'Test print' },
   'p.btNoDevices': { my: 'စက်မတွေ့သေးပါ — Scan နှိပ်ပါ', en: 'No devices yet — tap Scan' },
   'p.btNeedApk': { my: 'ဘလူးတုသ်ပရင့်က Android app သီးသန့်ပါ', en: 'Bluetooth printing is Android-app only' },
@@ -396,6 +406,7 @@ const I18N = {
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
   'mc.none': { my: 'Online client မရှိပါ', en: 'No online clients' },
   'mc.total': { my: 'စုစုပေါင်း {n}', en: '{n} total' },
+  'mc.gwMerged': { my: 'gateway မှ {n} ခု ထပ်ဖြည့်', en: '{n} merged from gateway' },
   'mc.mac': { my: 'MAC / IP', en: 'MAC / IP' },
   'mc.ssid': { my: 'SSID', en: 'SSID' },
   'mc.ap': { my: 'AP', en: 'AP' },
@@ -879,12 +890,28 @@ function initTabbarDrag() {
   const bar = $('tabbar');
   if (!bar || bar._dragInit) return;
   bar._dragInit = true;
-  let downTab = null, downX = 0, downY = 0, curTab = null, dragging = false, previewEl = null;
+  let downTab = null, downX = 0, downY = 0, curTab = null, dragging = false, previewEl = null, tabCache = null;
   const tabs = () => Array.from(bar.querySelectorAll('.tab'));
-  const tabFromX = x => tabs().find(tb => {
-    const r = tb.getBoundingClientRect();
-    return r.width && x >= r.left && x <= r.right;
-  }) || null;
+  // Cache blob targets once per press: no getBoundingClientRect() on every
+  // pointermove (layout thrash), so the blob can track the finger 1:1.
+  const cacheTabs = () => {
+    const blob = $('liq-blob');
+    const br = bar.getBoundingClientRect();
+    const bw = (blob && blob.offsetWidth) || 56, bh = (blob && blob.offsetHeight) || 56;
+    tabCache = tabs().map(tb => {
+      const r = tb.getBoundingClientRect();
+      const ir = (tb.querySelector('.ic') || tb).getBoundingClientRect();
+      return {
+        tab: tb, left: r.left, right: r.right,
+        bx: ir.left - br.left + ir.width / 2 - bw / 2,
+        by: ir.top - br.top + ir.height / 2 - bh / 2,
+      };
+    });
+  };
+  const tabFromX = x => {
+    const c = (tabCache || []).find(c => x >= c.left && x <= c.right);
+    return c ? c.tab : null;
+  };
   const wobbleTab = el => {
     if (!el || !el.classList) return;
     el.classList.remove('liq-wobble');
@@ -894,25 +921,32 @@ function initTabbarDrag() {
   const blobTo = tab => {
     const blob = $('liq-blob');
     if (!blob || !tab) return;
-    const br = bar.getBoundingClientRect(), ir = (tab.querySelector('.ic') || tab).getBoundingClientRect();
-    if (!br.width || !ir.width) return;
-    const bw = blob.offsetWidth || 56, bh = blob.offsetHeight || 56;
+    const c = (tabCache || []).find(c => c.tab === tab);
+    if (!c) return;
+    // Kill the .5s spring while dragging: the blob must sit exactly under
+    // the finger, not chase half a second behind it.
+    blob.classList.add('dragging');
     blob.style.setProperty('--liq', tab.dataset.liq || '#3b82f6');
-    blob.style.transform = 'translate(' + (ir.left - br.left + ir.width / 2 - bw / 2) + 'px,' + (ir.top - br.top + ir.height / 2 - bh / 2) + 'px)';
+    blob.style.transform = 'translate(' + c.bx + 'px,' + c.by + 'px)';
     blob.style.opacity = '1';
   };
   const hidePreview = () => { if (previewEl) { previewEl.remove(); previewEl = null; } };
   const showPreview = tab => {
-    hidePreview();
-    previewEl = document.createElement('div');
-    previewEl.className = 'tab-preview';
+    // Reuse one element across tab changes: no repeated pop animation, so
+    // the preview follows the finger instead of restarting every time.
+    if (!previewEl) {
+      previewEl = document.createElement('div');
+      previewEl.className = 'tab-preview';
+      document.body.appendChild(previewEl);
+    } else {
+      previewEl.innerHTML = '';
+    }
     const svg = tab.querySelector('svg');
     if (svg) previewEl.appendChild(svg.cloneNode(true));
     const spans = tab.querySelectorAll('span');
     const lbl = document.createElement('span');
     lbl.textContent = spans.length ? spans[spans.length - 1].textContent.trim() : '';
     previewEl.appendChild(lbl);
-    document.body.appendChild(previewEl);
   };
   const movePreview = x => {
     if (!previewEl) return;
@@ -931,6 +965,7 @@ function initTabbarDrag() {
     if (!tab) return;
     downTab = tab; downX = e.clientX || 0; downY = e.clientY || 0;
     curTab = tab; dragging = false;
+    cacheTabs();
   });
   window.addEventListener('pointermove', e => {
     if (!downTab || e.clientX == null) return;
@@ -941,8 +976,10 @@ function initTabbarDrag() {
   const end = () => {
     if (!downTab) return;
     const wasDrag = dragging, target = curTab, start = downTab;
-    dragging = false; downTab = null; curTab = null;
+    dragging = false; downTab = null; curTab = null; tabCache = null;
     hidePreview();
+    const blob = $('liq-blob');
+    if (blob) blob.classList.remove('dragging'); // restore the spring for the snap-back
     try { moveLiqBlob(); } catch (err) {}
     // Dragged to a different tab: switch now. The browser dispatches the
     // click to the common ancestor (nav), not to a tab button, so the
@@ -953,8 +990,10 @@ function initTabbarDrag() {
   };
   window.addEventListener('pointerup', end, { passive: true });
   window.addEventListener('pointercancel', () => {
-    dragging = false; downTab = null; curTab = null;
+    dragging = false; downTab = null; curTab = null; tabCache = null;
     hidePreview();
+    const blob = $('liq-blob');
+    if (blob) blob.classList.remove('dragging');
     try { moveLiqBlob(); } catch (err) {}
   }, { passive: true });
 }
@@ -1086,15 +1125,44 @@ function filteredVouchers() {
   });
 }
 
+/* ═══════════ v1.5.56: iOS-style animated numbers ═══════════
+   Tweens a stat number from its currently displayed value to the new one
+   (ease-out, ~650ms) with a spring scale pop. First set is instant (no
+   previous value). Reduced-motion: sets instantly, no pop. */
+const reducedMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+const nowMs = () => (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+function animNum(el, to, fmt, fromOverride) {
+  if (!el) return;
+  fmt = fmt || (n => Math.round(n).toLocaleString());
+  to = Number(to) || 0;
+  const from = (typeof fromOverride === 'number') ? fromOverride
+    : (typeof el._animVal === 'number' ? el._animVal : to);
+  try { if (el._animRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(el._animRaf); } catch (e) {}
+  el._animRaf = null;
+  el._animVal = to;
+  if (from === to || reducedMotion()) { el.textContent = fmt(to); return; }
+  const t0 = nowMs(), DUR = 650;
+  el.classList.remove('num-pop'); void el.offsetWidth; el.classList.add('num-pop');
+  const raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (f => setTimeout(f, 16));
+  const step = () => {
+    const p = Math.min(1, (nowMs() - t0) / DUR);
+    const e = 1 - Math.pow(1 - p, 3); /* easeOutCubic — iOS-like */
+    el.textContent = fmt(from + (to - from) * e);
+    if (p < 1) el._animRaf = raf(step);
+    else { el.textContent = fmt(to); el._animRaf = null; }
+  };
+  el._animRaf = raf(step);
+}
+
 function renderVouchers() {
-  // dashboard stats (all vouchers, not just filtered)
+  // dashboard stats (all vouchers, not just filtered) — animated on change
   const n1 = S.vouchers.filter(v => String(v.status) === '1').length;
   const n2 = S.vouchers.filter(v => String(v.status) === '2').length;
   const n3 = S.vouchers.filter(v => String(v.status) === '3').length;
-  $('stat-active').textContent = n1.toLocaleString();
-  $('stat-used').textContent = n2.toLocaleString();
-  $('stat-expired').textContent = n3.toLocaleString();
-  $('stat-total').textContent = S.vouchers.length.toLocaleString();
+  animNum($('stat-active'), n1);
+  animNum($('stat-used'), n2);
+  animNum($('stat-expired'), n3);
+  animNum($('stat-total'), S.vouchers.length);
   // v1.5.54: last-fetched timestamp
   const fe = $('voucher-fetched');
   if (fe) fe.textContent = S.vouchersFetchedAt ? t('v.updated') + ' ' + fmtTime(S.vouchersFetchedAt) : '';
@@ -1124,7 +1192,7 @@ function renderVouchers() {
   el.innerHTML = expBanner + list.slice(0, 300).map(v => {
     const ri = remainInfo(v); // v1.5.53: decreasing remaining-resource fill
     return `
-    <div class="voucher-row${fillRowCls(v)}" data-uuid="${esc(v.uuid)}">
+    <div class="voucher-row" data-uuid="${esc(v.uuid)}">
       <input type="checkbox" class="bulk-check" data-bulk="${esc(v.uuid)}" aria-label="select">
       ${ri ? `<div class="remain-fill" style="width:${ri.pct.toFixed(1)}%"></div>` : ''}
       <span class="status-dot s${esc(v.status)}"></span>
@@ -1206,120 +1274,6 @@ async function bulkDelete() {
   loadVouchers();
 }
 
-/* ═══════════ v1.5.47 — liquid-fill voucher ═══════════
-   Fill fraction = clamp(usedTime / timePeriod, 0, 1). Pure-CSS visuals are
-   driven by the --fill custom property; a tiny canvas paints rising bubble
-   particles inside the modal paper block only. No per-frame JS layout work. */
-function fillFrac(usedMin, periodMin) {
-  const u = Number(usedMin) || 0, p = Number(periodMin) || 0;
-  if (p <= 0) return 0;
-  return Math.min(1, Math.max(0, u / p));
-}
-/* v1.5.47 — fill follows DATA for quota vouchers (usedQuota/quota in MB),
-   TIME for pure time vouchers (usedTime/timePeriod in minutes).
-   usedTimeMinOverride lets the live ticker interpolate time smoothly. */
-function voucherFillFrac(v, usedTimeMinOverride) {
-  const q = Number(v && v.quota) || 0;
-  if (q > 0) {
-    const u = Number(v.usedQuota) || 0;
-    return Math.min(1, Math.max(0, u / q));
-  }
-  const u = usedTimeMinOverride != null ? usedTimeMinOverride : (Number(v.usedTime) || 0);
-  return fillFrac(u, Number(v.timePeriod) || 0);
-}
-/* v1.5.47: voucher rows carry no fire/liquid treatment (was dead CSS) */
-function fillRowCls(v) {
-  return '';
-}
-let liquidRAF = null, liquidGone = false, liquidFrontFrac = 0;
-function stopLiquidBubbles() {
-  if (liquidRAF) { cancelAnimationFrame(liquidRAF); liquidRAF = null; }
-}
-function startLiquidBubbles(mode) {
-  stopLiquidBubbles();
-  const cv = $('liquid-canvas');
-  if (!cv || !cv.parentElement) return;
-  const box = cv.parentElement.getBoundingClientRect();
-  if (box.width < 4 || box.height < 4) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  cv.width = Math.round(box.width * dpr);
-  cv.height = Math.round(box.height * dpr);
-  const ctx = cv.getContext('2d');
-  ctx.scale(dpr, dpr);
-  const W = box.width, H = box.height;
-  // bubbles rise from the liquid front (frontY) with a little spread
-  const frontY = H * (1 - Math.min(1, Math.max(0, liquidFrontFrac)));
-  const mk = () => ({
-    x: Math.random() * W, y: Math.min(H - 2, Math.max(2, frontY + (Math.random() - 0.35) * H * 0.3)),
-    r: 1 + Math.random() * 3.4, vy: 0.4 + Math.random() * 1.1,
-    vx: (Math.random() - 0.5) * 0.5, life: 1, decay: 0.004 + Math.random() * 0.009,
-    wob: Math.random() * 6.28,
-  });
-  const P = [];
-  const N = mode === 'burst' ? 42 : 14;
-  for (let i = 0; i < N; i++) { const p = mk(); p.y = Math.random() * H; P.push(p); }
-  const loop = () => {
-    liquidRAF = requestAnimationFrame(loop);
-    if (document.hidden) return;
-    ctx.clearRect(0, 0, W, H);
-    let alive = 0;
-    for (const p of P) {
-      p.wob += 0.05;
-      p.x += p.vx + Math.sin(p.wob) * 0.4;
-      p.y -= p.vy;
-      p.life -= p.decay;
-      if (p.life > 0 && p.y > -8) {
-        alive++;
-        const a = Math.max(0, Math.min(1, p.life));
-        ctx.strokeStyle = 'rgba(147,197,253,' + (0.75 * a).toFixed(2) + ')';
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, 6.2832);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.5 * a).toFixed(2) + ')';
-        ctx.beginPath();
-        ctx.arc(p.x - p.r * 0.3, p.y - p.r * 0.3, Math.max(0.4, p.r * 0.28), 0, 6.2832);
-        ctx.fill();
-      } else if (mode === 'live') {
-        Object.assign(p, mk());
-        alive++;
-      }
-    }
-    if (mode === 'burst' && alive === 0) stopLiquidBubbles();
-  };
-  loop();
-}
-/* set up the paper header block in the voucher detail modal */
-function setupLiquidPaper(v) {
-  stopLiquidBubbles();
-  liquidGone = false;
-  const paper = $('liquid-paper');
-  if (!paper) return;
-  const st = String(v.status);
-  const f = st === '3' ? 1 : voucherFillFrac(v);
-  liquidFrontFrac = f;
-  paper.style.setProperty('--fill', f.toFixed(3));
-  paper.classList.toggle('filling', st === '2' && f < 1);
-  if (st === '3' || (st === '2' && f >= 1)) {
-    paper.classList.add('liquid-full');
-    liquidGone = true;
-    startLiquidBubbles('burst');
-  } else {
-    paper.classList.remove('liquid-full');
-    if (st === '2') startLiquidBubbles('live');
-  }
-}
-/* one-time fill-up: liquid reaches the top, bubble burst, then rests full */
-function triggerLiquidFull() {
-  if (liquidGone) return;
-  liquidGone = true;
-  const paper = $('liquid-paper');
-  if (!paper) return;
-  paper.classList.remove('filling');
-  paper.style.setProperty('--fill', '1');
-  paper.classList.add('liquid-full');
-  startLiquidBubbles('burst');
-}
 
 let modalVoucher = null;
 function openVoucherDetail(uuid) {
@@ -1350,19 +1304,14 @@ function openVoucherDetail(uuid) {
   ];
   const vst = String(v.status);
   $('modal-body').innerHTML = `
-  <div class="liquid-paper" id="liquid-paper" data-st="${vst}">
-    <div class="liquid-fill" aria-hidden="true"></div>
-    <div class="liquid-wave" aria-hidden="true"></div>
-    <canvas class="liquid-bubbles" id="liquid-canvas" aria-hidden="true"></canvas>
-    <span class="liquid-label">${esc(statusTxt(v.status))}</span>
-    <div class="liquid-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
-    <div class="liquid-perf"></div>
+  <div class="detail-head">
+    <span class="badge s${vst}">${esc(statusTxt(v.status))}</span>
+    <div class="detail-sub">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
   </div>
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   $('modal').classList.remove('hidden');
   startVoucherLive(v);
-  setupLiquidPaper(v);
 }
 
 /* Live voucher detail: remaining time ticks every second from the local clock
@@ -1378,22 +1327,6 @@ function startVoucherLive(v) {
     const elapsedMin = (Date.now() - liveBase.at) / 60000;
     const el = $('live-remtime');
     if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
-    /* v1.5.47: drive the liquid fill from the live clock for time vouchers;
-       data vouchers fill from cloud data (refreshed by the poller) —
-       never interpolated. The liquid surface visibly rises as the
-       voucher is consumed. */
-    const paper = $('liquid-paper');
-    if (paper) {
-      const pst = String(modalVoucher.status);
-      if (pst === '2') {
-        const bf = voucherFillFrac(modalVoucher, liveBase.usedTimeMin + elapsedMin);
-        liquidFrontFrac = bf;
-        paper.style.setProperty('--fill', bf.toFixed(3));
-        if (bf >= 1) triggerLiquidFull();
-      } else if (pst === '3') {
-        triggerLiquidFull();
-      }
-    }
     const age = $('live-age');
     if (age) age.textContent = liveBase.dataAt ? ' · ' + Math.max(0, Math.round((Date.now() - liveBase.dataAt) / 1000)) + t('fmt.sec') + ' ago' : '';
   };
@@ -1427,7 +1360,6 @@ function stopVoucherLive() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
   if (livePoller) { clearInterval(livePoller); livePoller = null; }
   liveBase = null;
-  stopLiquidBubbles();
 }
 
 async function deleteVoucher() {
@@ -2008,10 +1940,88 @@ function initBtPrinter() {
   $('btn-bt-print').addEventListener('click', () => {
     if (!S.queue.length) return toast(t('p.btNoQueue'), true);
     const st = printSettings();
-    const r = btCall(B => B.btPrint(JSON.stringify(btVoucherPayload(S.queue)), nativePrintSettings(),
-      st.header || '', st.paper, st.copies));
-    if (r) btRefreshSoon();
+    if (btPrintWithProgress(S.queue, st)) btRefreshSoon();
   });
+}
+
+/* ── v1.5.56: print progress sheet (iOS style) ──
+   BT thermal prints run async on the native side. We poll btProgress()
+   ({"printing","current","total"}) so the sheet shows exactly which
+   vouchers printed and the live count. If the printer errors mid-batch,
+   the sheet shows the voucher it stopped at + how many printed. */
+let ppTimer = null, ppItems = [], ppCopies = 1, ppStart = 0;
+function ppStopPoll() { if (ppTimer) { clearInterval(ppTimer); ppTimer = null; } }
+function ppClose() { ppStopPoll(); closeModal('print-progress-modal'); }
+function ppRender(doneCount, printing, failedAt, errMsg) {
+  const n = ppItems.length;
+  $('pp-body').innerHTML =
+    `<p class="pp-status" id="pp-status"></p><div class="pp-list">` +
+    ppItems.map((it, i) => {
+      let cls = '', ic = '○', st = t('pp.sQueued');
+      if (i < doneCount) { cls = 'done'; ic = '✓'; st = t('pp.sPrinted'); }
+      else if (i === failedAt) { cls = 'failed'; ic = '⚠'; st = t('pp.sStopped'); }
+      else if (i === doneCount && printing) { cls = 'active'; ic = '<span class="pp-spin">◌</span>'; st = t('pp.sPrinting'); }
+      return `<div class="pp-row ${cls}"><span class="pp-ic">${ic}</span>` +
+        `<span class="pp-code">${esc(it.code)}</span><span class="pp-state muted">${esc(st)}</span></div>`;
+    }).join('') + `</div>`;
+  const s = $('pp-status');
+  if (failedAt >= 0) {
+    s.className = 'pp-status err';
+    s.innerHTML = esc(tx('pp.stopped', { c: doneCount, t: n })) +
+      `<div class="pp-stop">${esc(tx('pp.stoppedAt', { code: ppItems[failedAt] ? ppItems[failedAt].code : '—' }))}</div>` +
+      (errMsg ? `<div class="pp-stop small muted">${esc(errMsg)}</div>` : '');
+  } else if (!printing && doneCount >= n) {
+    s.className = 'pp-status ok';
+    s.textContent = tx('pp.done', { n });
+  } else {
+    s.className = 'pp-status';
+    s.textContent = tx('pp.printing', { c: doneCount, t: n });
+  }
+}
+function ppPoll() {
+  let prog = null;
+  try {
+    const B = btBridge();
+    const s = B && B.btProgress ? B.btProgress() : null;
+    prog = s ? JSON.parse(s) : null;
+  } catch (e) { prog = null; }
+  if (!prog) { ppStopPoll(); ppRender(0, false, 0, ''); return; }
+  const cur = Math.max(0, Number(prog.current) || 0);
+  const doneCount = Math.min(ppItems.length, Math.floor(cur / ppCopies));
+  if (prog.printing) { ppRender(doneCount, true, -1); return; }
+  // Native thread sets printing=true async — don't mistake the startup race
+  // for a finished job: no result within 2s of start means "still starting".
+  let res = null;
+  try {
+    const B = btBridge();
+    const s = B && B.btLastResult ? B.btLastResult() : null;
+    res = (s && s !== 'null') ? JSON.parse(s) : null;
+  } catch (e) { res = null; }
+  if (!res && Date.now() - ppStart < 2000) { ppRender(doneCount, true, -1); return; }
+  ppStopPoll();
+  if (res && res.ok) ppRender(ppItems.length, false, -1);
+  else ppRender(doneCount, false, Math.min(doneCount, ppItems.length - 1), (res && res.message) || prog.message || '');
+}
+function openPrintProgress(items, copies) {
+  ppStopPoll();
+  ppItems = items.slice();
+  ppCopies = Math.max(1, Number(copies) || 1);
+  ppStart = Date.now();
+  ppRender(0, true, -1);
+  $('print-progress-modal').classList.remove('hidden');
+  ppTimer = setInterval(ppPoll, 400);
+}
+/** Start a BT batch print with the progress sheet. Returns true when the
+ *  native side accepted the job (sheet open, polling); false → caller falls
+ *  through to system print, as before. */
+function btPrintWithProgress(items, st) {
+  const r = btCall(B => B.btPrint(JSON.stringify(btVoucherPayload(items)), nativePrintSettings(),
+    st.header || '', st.paper, st.copies));
+  let ok = false;
+  try { const o = JSON.parse(r); ok = !!(o && o.ok); } catch (e) { ok = false; }
+  if (!ok) return false;
+  openPrintProgress(items, st.copies);
+  return true;
 }
 
 function doPrint(items) {
@@ -2021,9 +2031,7 @@ function doPrint(items) {
   // thermal printer (same path as the queue print button).
   const bt = btCacheState();
   if (bt && bt.state === 'CONNECTED') {
-    const r = btCall(B => B.btPrint(JSON.stringify(btVoucherPayload(items)), nativePrintSettings(),
-      st.header || '', st.paper, st.copies));
-    if (r) { btRefreshSoon(); return; }
+    if (btPrintWithProgress(items, st)) { btRefreshSoon(); return; }
     // fall through to system print if the BT call failed
   }
   const blanks = PS.betweenBlanks > 0 ? `<div style="height:${PS.betweenBlanks * 14}px"></div>` : '';
@@ -2886,6 +2894,45 @@ async function moreClients() {
   }
   let vmap = new Map();
   try { vmap = await apClientVoucherMap(pid, true); } catch (e) { /* voucher enrichment optional */ }
+  // v1.5.56: merge China/local-AP clients from the gateway's own STA list.
+  // The portal snapshot only covers Cloud-managed APs, so STAs on
+  // China/local APs never appear in it. The gateway sees them on the LAN —
+  // append the ones whose MAC is absent from the portal list as extra rows
+  // (AP name shown; columns the gateway doesn't report render as —).
+  // Portal rows are never modified or duplicated. Voucher attribution for
+  // merged rows comes only from the local MAC/IP cache of genuinely
+  // observed portal vouchers; unknown stays honest —.
+  let gwMerged = 0;
+  try {
+    if (typeof GwApi !== 'undefined' && GwApi.loggedIn()) {
+      const stas = await GwApi.staList();
+      if (stas && stas.length) {
+        const seen = new Set((list || []).map(c => normMac(c.mac || c.userMac || c.staMac)));
+        let apNames = {};
+        try {
+          const devs = await GwApi.deviceList();
+          (devs || []).forEach(d => { if (d.serialNumber) apNames[String(d.serialNumber)] = d.name || d.deviceName || String(d.serialNumber); });
+        } catch (e) { /* AP names best-effort */ }
+        const vc = getVoucherCache();
+        (stas || []).forEach(s => {
+          const mac = normMac(s.mac);
+          if (!mac || seen.has(mac)) return;
+          seen.add(mac);
+          const row = {
+            mac: s.mac, ip: s.ip || '', userName: s.host || '',
+            ssid: s.ssid || '',
+            deviceName: (s.apSn && apNames[String(s.apSn)]) || s.apSn || '',
+            rssi: (s.rssi != null && s.rssi !== '') ? s.rssi : null,
+            __gw: true,
+          };
+          const cv = vc.byMac.get(mac) || (row.ip ? vc.byIp.get(String(row.ip).trim()) : null);
+          if (cv) row.account = cv;
+          list.push(row); gwMerged++;
+        });
+      }
+    }
+  } catch (e) { /* best-effort: the portal list stands alone */ }
+  if (gwMerged) srcNote = (srcNote ? srcNote + ' · ' : '') + tx('mc.gwMerged', { n: gwMerged });
   if (viaPortal && !srcNote && !list.some(c => String(c.account || c.authAccount || c.authName || '').trim())) {
     srcNote = t('ac.portalNoAcct');
   }
@@ -3492,6 +3539,7 @@ async function moreSales() {
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
 
   let range = 'today';
+  let prevTotals = null; /* v1.5.56: animate sales totals on change */
   const dayMs = 864e5;
   const rangeBounds = () => {
     if (range === 'custom') {
@@ -3544,10 +3592,16 @@ async function moreSales() {
       `<th class="num">${t('sl.made')}</th><th class="num">${t('sl.activated')}</th><th class="num">${t('sl.totalPrice')}</th></tr>` +
       rows +
       `<tr><td colspan="3"><b>${t('sl.total')}</b></td>` +
-      `<td class="num"><b>${tm.toLocaleString()}</b></td>` +
-      `<td class="num"><b>${ts.toLocaleString()}</b></td>` +
-      `<td class="num"><b>${esc(fmtMoney(tr))}</b></td></tr>` +
+      `<td class="num"><b id="sl-tm"></b></td>` +
+      `<td class="num"><b id="sl-ts"></b></td>` +
+      `<td class="num"><b id="sl-tr"></b></td></tr>` +
       `</table></div>`;
+    // v1.5.56: iOS-style animated totals (tween from the previously shown values)
+    const pt = prevTotals || { tm, ts, tr };
+    animNum($('sl-tm'), tm, null, pt.tm);
+    animNum($('sl-ts'), ts, null, pt.ts);
+    animNum($('sl-tr'), tr, n => fmtMoney(Math.round(n)), pt.tr);
+    prevTotals = { tm, ts, tr };
   };
 
   document.querySelectorAll('#sl-chips .chip').forEach(c => c.addEventListener('click', () => {
@@ -4029,30 +4083,34 @@ function ptrRefresh() {
 function initPullToRefresh() {
   const main = $('main'), ind = $('ptr-indicator');
   if (!main || !ind) return;
-  let startY = null, pulling = false;
-  const THRESHOLD = 70;
+  let startY = null;
+  const THRESHOLD = 70, ARM = 10; /* must still be past THRESHOLD on release */
   main.addEventListener('touchstart', e => {
     if (main.scrollTop <= 0 && e.touches.length === 1) {
-      startY = e.touches[0].clientY; pulling = false;
+      startY = e.touches[0].clientY;
+      ind.classList.remove('show', 'ready');
+      ind.querySelector('.ic').classList.remove('spin');
     } else startY = null;
   }, { passive: true });
   main.addEventListener('touchmove', e => {
     if (startY == null || main.scrollTop > 0) return;
     const dy = e.touches[0].clientY - startY;
-    if (dy > 10) {
-      pulling = true;
-      ind.classList.add('show');
-      ind.querySelector('.ic').classList.remove('spin');
-    }
+    if (dy > ARM) ind.classList.add('show');
+    else ind.classList.remove('show'); /* pushed back up: cancel the hint live */
+    ind.classList.toggle('ready', dy >= THRESHOLD);
   }, { passive: true });
-  main.addEventListener('touchend', () => {
-    if (!pulling) { ind.classList.remove('show'); startY = null; return; }
-    pulling = false; startY = null;
-    if (!ind.classList.contains('show')) return;
+  const cancel = () => { startY = null; ind.classList.remove('show', 'ready'); };
+  main.addEventListener('touchend', e => {
+    const dy = startY == null ? 0 : (e.changedTouches[0].clientY - startY);
+    const go = dy >= THRESHOLD && ind.classList.contains('show');
+    cancel();
+    if (!go) return; /* pulled then pushed back up: no refresh */
+    ind.classList.add('show');
     ind.querySelector('.ic').classList.add('spin');
-    try { ptrRefresh(); } catch (e) {}
+    try { ptrRefresh(); } catch (err) {}
     setTimeout(() => ind.classList.remove('show'), 900);
   }, { passive: true });
+  main.addEventListener('touchcancel', cancel, { passive: true });
 }
 
 /* ═══════════ INIT ═══════════ */
@@ -4129,6 +4187,11 @@ function init() {
   $('modal-print').addEventListener('click', () => { if (modalVoucher) doPrint([{ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }]); });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
   $('modal-delete').addEventListener('click', deleteVoucher);
+
+  // print progress sheet (v1.5.56)
+  $('pp-close').addEventListener('click', ppClose);
+  $('pp-done').addEventListener('click', ppClose);
+  $('print-progress-modal').addEventListener('click', e => { if (e.target === $('print-progress-modal')) ppClose(); });
 
   // print preview sheet
   $('preview-close').addEventListener('click', () => closeModal('preview-modal'));
