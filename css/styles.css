@@ -468,6 +468,28 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 [data-theme="dark"] .mc-badge.cst-datalimit { color: #f87171; background: rgba(239,68,68,.20); }
 [data-theme="dark"] .mc-badge.cst-noauth { color: #9ca3af; background: rgba(156,163,175,.22); }
 [data-theme="dark"] .mc-badge.cst-unknown { color: #c4b5fd; background: rgba(167,139,250,.22); }
+
+/* ── v1.5.58 · Online Clients — iOS-clean rows + tap-for-detail sheet ──
+   Rows show only title + voucher + a quiet IP·AP line; the old 10-field
+   mega-line moves into the detail sheet. */
+.mc-row { cursor: pointer; }
+.mc-row .sub.mc-net { color: var(--gray); font-size: 13px; }
+.set-group.mc-list { padding-bottom: 12px; }
+.ios-sheet-title { text-align: center; font-size: 17px; font-weight: 700; color: var(--label); padding: 4px 16px 10px; overflow-wrap: anywhere; }
+.ios-sheet-body { overflow-y: auto; padding: 0 4px; }
+.kv-sec { font-size: 12.5px; color: var(--gray); text-transform: uppercase; letter-spacing: .04em; margin: 14px 16px 6px; }
+.kv-group { background: var(--card); border-radius: 14px; overflow: hidden; }
+.kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 11px 16px; font-size: 15px; color: var(--label); }
+.kv + .kv { border-top: .5px solid var(--hairline); }
+.kv .k { color: var(--gray); flex: none; }
+.kv .v { text-align: right; overflow-wrap: anywhere; }
+.mc-sheet-flags { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 16px 0; }
+.ios-sheet-danger {
+  margin: 14px 4px 0; width: calc(100% - 8px); padding: 14px; border: none; border-radius: 16px;
+  background: rgba(255,59,48,.12); color: var(--red); font-size: 17px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.ios-sheet-danger:active { opacity: .6; }
+[data-theme="dark"] .ios-sheet-danger { background: rgba(255,69,58,.20); }
 [data-theme="dark"] .mc-flag.flag-suspicious { color: #fbbf24; background: rgba(245,158,11,.20); }
 [data-theme="dark"] .mc-flag.flag-sticky { color: #f87171; background: rgba(239,68,68,.20); }
 .chip.active { background: var(--blue); color: #fff; font-weight: 600; }
@@ -894,14 +916,7 @@ input[type="range"] { flex: 1; accent-color: var(--blue, #0a84ff); height: 28px;
 }
 
 
-/* Voucher detail header — clean status card, no liquid fill */
-.detail-head {
-  margin: 2px 0 14px; padding: 20px 16px 16px; text-align: center;
-  border-radius: 16px;
-  background: var(--card); color: var(--label);
-  border: 1px solid rgba(120, 120, 128, .18);
-}
-.detail-sub { margin-top: 8px; font-size: 13px; color: var(--gray); }
+/* Voucher detail header card removed per user request (white layout gone) */
 
 /* ═══════════════════════════════════════════════════════════════
    UI 3.1 — Selectable themes · Liquid Glass / Neumorphism / Claymorphism
