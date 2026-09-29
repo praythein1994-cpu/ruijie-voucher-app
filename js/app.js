@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.58';
+const APP_VERSION = '1.5.59';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -1667,16 +1667,24 @@ function ticketInnerHtml(item, st, style, preview) {
   const dockCl = visCls[0] || null;
   const dockLabel = dockCl ? String(dockCl.label || '').trim() : '';
   const dockValue = dockCl ? String(dockCl.value || '').trim() : '';
-  const clPartCss = (cl, align) => {
+  const clPartCss = (cl, align, docked) => {
     const size = Math.min(48, Math.max(8, Number(cl.size) || 20));
     const fs = preview ? (size * PV_PX_PER_DOT).toFixed(1) + 'px' : size + 'pt';
     const al = align || (['left', 'center', 'right'].includes(cl.align) ? cl.align : 'left');
     // v1.5.58: free horizontal nudge (+mm right / -mm left), beyond left/center/right
     const dx = Number(cl.dx) || 0;
-    return `font-size:${fs};text-align:${al};${cl.bold ? 'font-weight:bold;' : ''}margin:2mm 0;${dx ? `transform:translateX(${dx}mm);` : ''}`;
+    // Docked parts share the row's own vertical rhythm (the user's Inside Spacing),
+    // so docking/undocking a value never changes the gap between rows.
+    // Standalone custom-line rows keep their own 2mm breathing room.
+    const vm = docked
+      ? (preview
+          ? `${(Math.min(Math.max(Number(style.insideSpacing) || 0, 0), 4) * 8 * PV_PX_PER_DOT).toFixed(2)}px`
+          : `${Number(style.insideSpacing) || 0}px`)
+      : '2mm';
+    return `font-size:${fs};text-align:${al};${cl.bold ? 'font-weight:bold;' : ''}margin:${vm} 0;${dx ? `transform:translateX(${dx}mm);` : ''}`;
   };
   const dockRow = (leftHtml, text, cl) =>
-    `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4mm">${leftHtml}<div class="lv" style="${clPartCss(cl, 'right')}">${esc(text)}</div></div>`;
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:4mm">${leftHtml}<div class="lv" style="${clPartCss(cl, 'right', true)}">${esc(text)}</div></div>`;
   const showProfile = F.profile.show && item.pkg;
   if (showProfile) {
     const left = `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(labelPrefix(F.profile, 'tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
@@ -2230,16 +2238,22 @@ function previewBasics() {
     paper: $('print-paper').value, copies: 1,
   };
 }
-function previewSampleItem() {
-  const v = (S.vouchers && S.vouchers.length) ? S.vouchers[0] : null;
-  return {
-    code: v ? vCode(v) : 'XXXX-XXXX',
-    pkg: v ? (v.packageName || v.userGroupName || t('pv.sample')) : t('pv.sample'),
-    period: v ? v.timePeriod : 60,
-    quota: v ? v.quota : 1024,
-    real: !!v,
-  };
+function previewSampleItems() {
+  const vs = (S.vouchers && S.vouchers.length) ? S.vouchers.slice(0, 3) : [];
+  const items = [];
+  for (let i = 0; i < 3; i++) {
+    const v = vs[i];
+    items.push(v ? {
+      code: vCode(v),
+      pkg: v.packageName || v.userGroupName || t('pv.sample'),
+      period: v.timePeriod, quota: v.quota, real: true,
+    } : {
+      code: 'XXXX-XXXX', pkg: t('pv.sample'), period: 60, quota: 1024, real: false,
+    });
+  }
+  return items;
 }
+function previewSampleItem() { return previewSampleItems()[0]; }
 function openLayoutModal() {
   layoutDraft = cloneStyle(PS);
   layoutDraft.headerText = $('print-header') ? $('print-header').value : '';
@@ -2429,7 +2443,12 @@ function updateLivePreviews() {
   if (ll) ll.textContent = tx('pl.liveFmt', { paper: st.paper || '58', dots });
   const tl = $('typo-live-label');
   if (tl) tl.textContent = tx('ty.liveFmt', { paper: st.paper || '58' });
-  if (layoutDraft) $('layout-preview').innerHTML = ticketInnerHtml(item, st, layoutDraft, true);
+  if (layoutDraft) {
+    // 3 sample tickets so the Between-Voucher gap is visible and testable live
+    // (same gap formula as the real system-print path in doPrint, from the live draft)
+    const gap = layoutDraft.betweenBlanks > 0 ? `<div style="height:${layoutDraft.betweenBlanks * 14}px"></div>` : '';
+    $('layout-preview').innerHTML = previewSampleItems().map(it => ticketInnerHtml(it, st, layoutDraft, true)).join(gap);
+  }
   if (typoDraft) {
     $('typo-preview').innerHTML = ticketInnerHtml(item, st, typoDraft, true);
     $('typo-real-badge').classList.toggle('hidden', !item.real);
@@ -2439,6 +2458,7 @@ function wireLayoutModal() {
   $('layout-between').addEventListener('input', e => {
     layoutDraft.betweenBlanks = Number(e.target.value);
     $('layout-between-val').textContent = `${layoutDraft.betweenBlanks} ${t('pl.lines')}`;
+    updateLivePreviews();
   });
   $('layout-inside').addEventListener('input', e => {
     layoutDraft.insideSpacing = Number(e.target.value);
