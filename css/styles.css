@@ -1626,3 +1626,18 @@ html.ph-compact #tabbar { padding: 7px 6px; left: 10px; right: 10px; }
 html.ph-compact .tab { padding: 4px 2px; gap: 2px; }
 html.ph-compact .tab .ic { width: 22px; height: 22px; }
 html.ph-compact .voucher-row { padding: 10px 14px; }
+
+/* ═══════════ v1.5.67 · Online Clients search bar ═══════════
+   iOS-style search field under the header: icon + text input, compact. */
+.mc-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--hairline);
+  border-radius: 12px; padding: 8px 12px; margin: 0 0 10px;
+  color: var(--gray);
+}
+.mc-search .ic { flex: none; width: 18px; height: 18px; }
+.mc-search input {
+  flex: 1; min-width: 0; border: none; outline: none; background: none;
+  font: inherit; font-size: 15px; color: var(--label); padding: 0;
+}
+.mc-search input::placeholder { color: var(--gray); opacity: .8; }
