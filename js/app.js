@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.56';
+const APP_VERSION = '1.5.57';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -106,6 +106,11 @@ const I18N = {
   'sso.autologinSub': { my: 'နောက်တစ်ခါ နှိပ်စရာမလို', en: 'Sign in without tapping anything' },
   'sso.switch': { my: 'အကောင့်ပြောင်းမယ်', en: 'Switch account' },
   'sso.forgotten': { my: 'သိမ်းထားတဲ့ အကောင့်ဖျက်ပြီးပါပြီ', en: 'Saved account forgotten' },
+  // v1.5.57: live voucher stats (auto-refresh of the 4 stat cards)
+  'live.title': { my: 'ဗောက်ချာ တိုက်ရိုက်စာရင်း', en: 'Live voucher stats' },
+  'live.enable': { my: 'စာရင်း အလိုအလျောက် ပြန်ဆွဲမယ်', en: 'Auto-refresh stats' },
+  'live.enableSub': { my: 'တစ်ယောက်ယောက် voucher စသုံးလိုက်ရင် အရေအတွက် ချက်ချင်းပြောင်းမယ်', en: 'Counts update live when someone redeems a voucher' },
+  'live.interval': { my: 'ပြန်ဆွဲမယ့် ကြားချိန်', en: 'Refresh interval' },
   'mon.title': { my: 'စက်ပစ္စည်း သတိပေးချက်', en: 'Device offline alerts' },
   'mon.sub': { my: 'AP / Gateway offline ဖြစ်ရင် အဝိုင်းပေါ့ပ်အပ် + အသံနဲ့ သတိပေးမယ်', en: 'Circle popup + sound when an AP or Gateway goes offline' },
   'mon.enable': { my: 'နောက်ခံ စောင့်ကြည့်မယ်', en: 'Monitor in background' },
@@ -165,6 +170,8 @@ const I18N = {
   'err.print': { my: 'Print error: ', en: 'Print error: ' },
   'tkt.validity': { my: 'သက်တမ်း: ', en: 'Validity: ' },
   'tkt.quota': { my: 'ဒေတာ: ', en: 'Data: ' },
+  'tkt.code': { my: 'ဗောက်ချာကုဒ်', en: 'Voucher Code' },
+  'tkt.datetime': { my: 'ပရင့်ထုတ်ချိန်', en: 'Print Date/Time' },
   'tkt.test': { my: 'စမ်းသပ်စာရွက်', en: 'Test ticket' },
   'pv.sample': { my: 'နမူနာစာရွက်', en: 'Sample ticket' },
   'pv.meta': { my: 'စာရွက် {paper}mm · မိတ္တူ {copies} စောင်', en: '{paper}mm paper · {copies} copies' },
@@ -222,6 +229,13 @@ const I18N = {
   'pl.bold': { my: 'စာလုံးထူ (Bold)', en: 'Bold' },
   'pl.spaced': { my: 'အကွာအဝေးပါ စာလုံး (Spaced)', en: 'Spaced' },
   'pl.label': { my: 'အညွှန်းပါမယ် (Label)', en: 'Label' },
+  'pl.labelText': { my: 'အညွှန်းစာသား', en: 'Label text' },
+  'pl.headerText': { my: 'ခေါင်းစဉ်စာသား', en: 'Header text' },
+  'pl.customLines': { my: 'ကိုယ်ပိုင်စာကြောင်းများ', en: 'Custom Lines' },
+  'pl.addLine': { my: 'စာကြောင်းအသစ်ထည့်မယ်', en: 'Add Custom Line' },
+  'pl.lineLabel': { my: 'အညွှန်း', en: 'Label' },
+  'pl.lineValue': { my: 'တန်ဖိုး', en: 'Value' },
+  'pl.removeLine': { my: 'ဖြုတ်မယ်', en: 'Remove' },
   'pl.align': { my: 'တန်းညှိခြင်း', en: 'Alignment' },
   'pl.fHeader': { my: 'ခေါင်းစဉ် / Brand', en: 'Header / Brand' },
   'pl.fCode': { my: 'ဗောက်ချာကုဒ်', en: 'Voucher Code' },
@@ -303,6 +317,8 @@ const I18N = {
   'p.btScanning': { my: 'ရှာနေတယ်…', en: 'Scanning…' },
   'p.btDisconnect': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
   'p.btPrint': { my: 'ဘလူးတုသ်နဲ့ထုတ်မယ်', en: 'Print via Bluetooth' },
+  'p.layoutBtn': { my: 'Print Layout', en: 'Print Layout' },
+  'p.typoBtn': { my: 'Typography', en: 'Typography' },
   'pp.title': { my: 'ပရင့်ထုတ်နေသည်', en: 'Printing' },
   'pp.close': { my: 'ပိတ်မယ်', en: 'Close' },
   'pp.printing': { my: 'ထုတ်နေသည် {c} / {t}', en: 'Printing {c} / {t}' },
@@ -815,7 +831,12 @@ function switchView(id, push) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   $(id).classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(tb => tb.classList.toggle('active', tb.dataset.view === id));
-  if (id === 'view-vouchers' && S.vouchers.length === 0 && !S._vouchersLoading) loadVouchers();
+  if (id === 'view-vouchers' && !S._vouchersLoading) {
+    const stale = !S.vouchersFetchedAt || Date.now() - S.vouchersFetchedAt > 30000;
+    if (S.vouchers.length === 0) loadVouchers();
+    // v1.5.57: coming back with live stats on and data older than 30s → silent refresh
+    else if (stale && getLiveStats().enabled) loadVouchers({ silent: true });
+  }
   if (id === 'view-generate') { ensurePackages(); renderRecentGen(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-printer') { renderQueue(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-settings') fillSettings();
@@ -1087,20 +1108,23 @@ function onProjectChange() {
 }
 
 /* ═══════════ VOUCHERS ═══════════ */
-async function loadVouchers() {
+async function loadVouchers(opts) {
+  opts = opts || {};
   if (!S.projectId) return;
   // Generation guard: a newer load (e.g. project switch mid-flight)
   // supersedes this one — stale results are discarded, never rendered.
   const gen = (S._voucherGen = (S._voucherGen || 0) + 1);
   S._vouchersLoading = true;
   const listEl = $('voucher-list');
-  $('voucher-count').textContent = '';
-  // iOS-style skeleton shimmer
-  listEl.innerHTML = Array.from({ length: 6 }, () =>
-    '<div class="skel"><div class="bar" style="width:52%"></div><div class="bar" style="width:34%"></div></div>').join('');
+  if (!opts.silent) {
+    $('voucher-count').textContent = '';
+    // iOS-style skeleton shimmer
+    listEl.innerHTML = Array.from({ length: 6 }, () =>
+      '<div class="skel"><div class="bar" style="width:52%"></div><div class="bar" style="width:34%"></div></div>').join('');
+  }
   try {
     const all = await Api.voucherListAll(S.projectId, (done, total) => {
-      if (gen === S._voucherGen) $('voucher-count').textContent = `${t('v.loading')} ${done}/${total}`;
+      if (!opts.silent && gen === S._voucherGen) $('voucher-count').textContent = `${t('v.loading')} ${done}/${total}`;
     });
     if (gen !== S._voucherGen) return; // superseded — discard
     S.vouchers = all;
@@ -1110,10 +1134,54 @@ async function loadVouchers() {
     renderVouchers();
   } catch (e) {
     if (gen !== S._voucherGen) return; // superseded — discard
-    listEl.innerHTML = `<div class="empty"><div class="big">${ic('alert', 'xl')}</div><p><b>${t('v.loadFail')}</b></p><p class="small">${esc(e.message)}</p></div>`;
+    // v1.5.57: silent (live-stats) failures keep the old list — never wipe it
+    if (!opts.silent) listEl.innerHTML = `<div class="empty"><div class="big">${ic('alert', 'xl')}</div><p><b>${t('v.loadFail')}</b></p><p class="small">${esc(e.message)}</p></div>`;
   } finally {
     if (gen === S._voucherGen) S._vouchersLoading = false;
   }
+}
+
+/* ═══════════ v1.5.57: live voucher stats ═══════════
+   The four stat cards (Unused / In use / Expired / Total) stay fresh without
+   a manual pull: while the Vouchers page is open, the voucher list is
+   re-fetched on a timer (default 60s) in silent mode — no skeleton flash,
+   the old list is never wiped on failure — and the animated numbers tween
+   to the new values. Pauses when the tab/app is hidden; never overlaps an
+   in-flight load. */
+const LIVE_SECS_OPTIONS = [30, 60, 120, 300];
+function getLiveStats() {
+  let cfg = {};
+  try { cfg = Store.load().liveStats || {}; } catch (e) {}
+  const secs = LIVE_SECS_OPTIONS.includes(+cfg.secs) ? +cfg.secs : 60;
+  return { enabled: cfg.enabled !== false, secs };
+}
+function setLiveStats(patch) {
+  const cur = getLiveStats();
+  const next = {
+    enabled: patch.enabled !== undefined ? !!patch.enabled : cur.enabled,
+    secs: LIVE_SECS_OPTIONS.includes(+patch.secs) ? +patch.secs : cur.secs,
+  };
+  try { Store.save({ liveStats: next }); } catch (e) {}
+  return next;
+}
+let _liveTimer = null;
+function stopLiveStats() { if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; } }
+function restartLiveStats(force) {
+  stopLiveStats();
+  const cfg = getLiveStats();
+  if (!cfg.enabled) return;
+  _liveTimer = setInterval(() => liveStatsTick(false), cfg.secs * 1000);
+  if (force) liveStatsTick(true);
+}
+async function liveStatsTick(force) {
+  try {
+    if (!force && document.hidden) return;                 // app in background — pause
+    if (S._vouchersLoading) return;                        // never overlap a load
+    if (!S.projectId) return;
+    if (S.currentView && S.currentView !== 'view-vouchers') return; // stats page only
+    if (!force && S.vouchersFetchedAt && Date.now() - S.vouchersFetchedAt < 15000) return; // recently fetched
+    await loadVouchers({ silent: true });
+  } catch (e) { /* a silent tick never breaks the UI */ }
 }
 
 function filteredVouchers() {
@@ -1444,18 +1512,38 @@ const TYPO_FIELD_DEFS = [
   { id: 'quota',    labelKey: 'pl.fQuota' },
   { id: 'datetime', labelKey: 'pl.fDatetime' },
 ];
+/** Strip a trailing colon so custom label texts stay clean ("Profile Name:" -> "Profile Name"). */
+function stripColon(s) { return String(s == null ? '' : s).trim().replace(/:\s*$/, ''); }
+/** Render "Label: value" prefix from a field's custom label text (falls back to the given default). */
+function labelPrefix(f, fallbackKey) {
+  let s = stripColon(f.labelText) || stripColon(t(fallbackKey));
+  if (s && !s.endsWith(':')) s += ':';
+  return s ? s + ' ' : '';
+}
 function defaultField(id) {
-  const base = { show: true, size: 20, align: 'left', color: null, weight: 'regular', style: 'normal', ls: 'normal', lsCustom: 2, label: false, spaced: false };
+  const base = { show: true, size: 20, align: 'left', color: null, weight: 'regular', style: 'normal', ls: 'normal', lsCustom: 2, label: false, labelText: '', spaced: false };
   switch (id) {
     case 'header':   return Object.assign(base, { size: 14, align: 'center', weight: 'bold' });
-    case 'code':     return Object.assign(base, { size: 30, align: 'center', weight: 'bold', spaced: true, ls: 'wide', lsCustom: 3 });
-    case 'profile':  return Object.assign(base, { size: 22, label: true });
-    case 'period':   return Object.assign(base, { size: 22, label: true });
-    case 'quota':    return Object.assign(base, { show: false, size: 22, label: true });
-    case 'datetime': return Object.assign(base, { show: false, size: 18, align: 'center' });
+    case 'code':     return Object.assign(base, { size: 30, align: 'center', weight: 'bold', spaced: true, ls: 'wide', lsCustom: 3, labelText: stripColon(t('tkt.code')) });
+    case 'profile':  return Object.assign(base, { size: 22, label: true, labelText: stripColon(t('tkt.profileName')) });
+    case 'period':   return Object.assign(base, { size: 22, label: true, labelText: stripColon(t('tkt.validity')) });
+    case 'quota':    return Object.assign(base, { show: false, size: 22, label: true, labelText: stripColon(t('tkt.quota')) });
+    case 'datetime': return Object.assign(base, { show: false, size: 18, align: 'center', labelText: stripColon(t('tkt.datetime')) });
   }
   return base;
 }
+function defaultCustomLine() {
+  return {
+    id: 'cl' + Math.random().toString(36).slice(2, 10),
+    show: true,
+    label: '',
+    value: '',
+    size: 20,
+    align: 'left',
+    bold: false,
+  };
+}
+
 function defaultPrintStyle() {
   const fields = {};
   TYPO_FIELD_DEFS.forEach(f => { fields[f.id] = defaultField(f.id); });
@@ -1466,6 +1554,7 @@ function defaultPrintStyle() {
     lineSpacing: 0, shadow: false, outline: false,
     betweenBlanks: 1, insideSpacing: 0,
     fields,
+    customLines: [],
   };
 }
 function cloneStyle(s) { return JSON.parse(JSON.stringify(s)); }
@@ -1477,6 +1566,11 @@ function mergePrintStyle(saved) {
   TYPO_FIELD_DEFS.forEach(f => {
     out.fields[f.id] = Object.assign(defaultField(f.id), (saved.fields && saved.fields[f.id]) || {});
   });
+  /* custom free-text lines: sanitize, cap at 5 */
+  out.customLines = Array.isArray(saved.customLines)
+    ? saved.customLines.filter(x => x && typeof x === 'object').slice(0, 5)
+        .map(x => Object.assign(defaultCustomLine(), x))
+    : [];
   return out;
 }
 let PS = null; // active saved print style
@@ -1548,16 +1642,27 @@ function ticketInnerHtml(item, st, style, preview) {
     h += `<div class="lv" style="${fieldCss(F.header, style, preview)}">${esc(st.header)}</div>`;
   if (F.code.show) {
     const code = F.code.spaced ? esc(item.code).split('').join(' ') : esc(item.code);
-    h += `<div class="lv" style="${fieldCss(F.code, style, preview)};border:2px dashed ${preview ? (F.code.color || style.color || '#111') : '#000'};padding:2mm;border-radius:2mm;">${code}</div>`;
+    const codeLbl = F.code.label ? esc(labelPrefix(F.code, 'tkt.code')) : '';
+    h += `<div class="lv" style="${fieldCss(F.code, style, preview)};border:2px dashed ${preview ? (F.code.color || style.color || '#111') : '#000'};padding:2mm;border-radius:2mm;">${codeLbl}${code}</div>`;
   }
   if (F.profile.show && item.pkg)
-    h += `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(t('tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
+    h += `<div class="lv" style="${fieldCss(F.profile, style, preview)}">${F.profile.label ? esc(labelPrefix(F.profile, 'tkt.profileName')) : ''}${esc(item.pkg)}</div>`;
+  // custom free-text lines (after profile, before period — the user's "WIFI Name / Nang Oo" slot)
+  (style.customLines || []).forEach(cl => {
+    if (!cl || !cl.show) return;
+    const lines = [cl.label, cl.value].map(s => String(s == null ? '' : s).trim()).filter(Boolean);
+    if (!lines.length) return;
+    const size = Math.min(48, Math.max(8, Number(cl.size) || 20));
+    const fs = preview ? (size * PV_PX_PER_DOT).toFixed(1) + 'px' : size + 'pt';
+    const al = ['left', 'center', 'right'].includes(cl.align) ? cl.align : 'left';
+    h += `<div class="lv" style="font-size:${fs};text-align:${al};${cl.bold ? 'font-weight:bold;' : ''}margin:2mm 0;">${lines.map(esc).join('<br>')}</div>`;
+  });
   if (F.period.show && item.period)
-    h += `<div class="lv" style="${fieldCss(F.period, style, preview)}">${F.period.label ? esc(t('tkt.validity')) : ''}${esc(fmtPeriod(item.period))}</div>`;
+    h += `<div class="lv" style="${fieldCss(F.period, style, preview)}">${F.period.label ? esc(labelPrefix(F.period, 'tkt.validity')) : ''}${esc(fmtPeriod(item.period))}</div>`;
   if (F.quota.show && item.quota != null)
-    h += `<div class="lv" style="${fieldCss(F.quota, style, preview)}">${F.quota.label ? esc(t('tkt.quota')) : ''}${esc(fmtQuota(item.quota))}</div>`;
+    h += `<div class="lv" style="${fieldCss(F.quota, style, preview)}">${F.quota.label ? esc(labelPrefix(F.quota, 'tkt.quota')) : ''}${esc(fmtQuota(item.quota))}</div>`;
   if (F.datetime.show)
-    h += `<div class="lv" style="${fieldCss(F.datetime, style, preview)}">${esc(now)}</div>`;
+    h += `<div class="lv" style="${fieldCss(F.datetime, style, preview)}">${F.datetime.label ? esc(labelPrefix(F.datetime, 'tkt.datetime')) : ''}${esc(now)}</div>`;
   if (st.footer)
     h += `<hr><div class="lv" style="font-size:${preview ? (9 * PV_PX_PER_DOT).toFixed(1) + 'px' : '9pt'};text-align:center;margin:2mm 0;">${esc(st.footer)}</div>`;
   h += `</div>`;
@@ -1758,18 +1863,19 @@ function nativePrintSettings() {
     showVoucherCode: !!F.code.show, codeFontSize: +F.code.size || 28,
     codeBold: F.code.weight === 'bold', codeFontWeight: W(F.code), codeFontStyle: ST(F.code),
     codeAlignment: A(F.code), codeSpaced: !!F.code.spaced, codeColor: BLACK,
+    showCodeLabel: !!F.code.label, codeLabelText: stripColon(F.code.labelText) || 'Voucher Code',
     showProfileName: !!F.profile.show, profileNameFontSize: +F.profile.size || 24,
     profileNameBold: F.profile.weight === 'bold', profileNameFontWeight: W(F.profile),
     profileNameFontStyle: ST(F.profile), profileNameAlignment: A(F.profile),
-    showProfileNameLabel: !!F.profile.label, profileNameColor: BLACK,
+    showProfileNameLabel: !!F.profile.label, profileNameLabelText: stripColon(F.profile.labelText) || 'Profile Name', profileNameColor: BLACK,
     showPeriod: !!F.period.show, periodFontSize: +F.period.size || 24,
     periodBold: F.period.weight === 'bold', periodFontWeight: W(F.period),
     periodFontStyle: ST(F.period), periodAlignment: A(F.period),
-    showPeriodLabel: !!F.period.label, periodColor: BLACK,
+    showPeriodLabel: !!F.period.label, periodLabelText: stripColon(F.period.labelText) || 'Period', periodColor: BLACK,
     showQuota: !!F.quota.show, quotaFontSize: +F.quota.size || 24,
     quotaBold: F.quota.weight === 'bold', quotaFontWeight: W(F.quota),
     quotaFontStyle: ST(F.quota), quotaAlignment: A(F.quota),
-    showQuotaLabel: !!F.quota.label, quotaColor: BLACK,
+    showQuotaLabel: !!F.quota.label, quotaLabelText: stripColon(F.quota.labelText) || 'Quota', quotaColor: BLACK,
     showHeader: !!F.header.show, headerFontSize: +F.header.size || 26,
     headerBold: F.header.weight === 'bold', headerFontWeight: W(F.header),
     headerFontStyle: ST(F.header), headerAlignment: A(F.header),
@@ -1781,6 +1887,7 @@ function nativePrintSettings() {
     printDateTimeBold: F.datetime.weight === 'bold', printDateTimeFontWeight: W(F.datetime),
     printDateTimeFontStyle: ST(F.datetime), printDateTimeAlignment: A(F.datetime),
     printDateTimeColor: BLACK,
+    showPrintDateTimeLabel: !!F.datetime.label, printDateTimeLabelText: stripColon(F.datetime.labelText) || 'Print Date/Time',
     showStatus: false, statusFontSize: 20, statusBold: false,
     statusFontWeight: 'REGULAR', statusFontStyle: 'NORMAL', statusAlignment: 'LEFT', statusColor: BLACK,
     fontFamily: fontFamily, letterSpacingMode: lsMode, customLetterSpacing: +PS.lsCustom || 0,
@@ -1788,7 +1895,14 @@ function nativePrintSettings() {
     textShadowEnabled: false, shadowColor: 0x88000000, shadowOpacity: 0.5,
     shadowBlur: 3, shadowOffsetX: 2, shadowOffsetY: 2,
     textOutlineEnabled: false, outlineColor: BLACK, outlineWidth: 1,
-    activePreset: 'CUSTOM'
+    activePreset: 'CUSTOM',
+    customLines: (PS.customLines || []).filter(cl => cl && cl.show).slice(0, 5).map(cl => ({
+      label: String(cl.label || ''), value: String(cl.value || ''),
+      fontSize: Math.min(48, Math.max(8, +cl.size || 20)),
+      bold: !!cl.bold,
+      alignment: ['LEFT', 'CENTER', 'RIGHT'].includes(String(cl.align || '').toUpperCase())
+        ? String(cl.align).toUpperCase() : 'LEFT',
+    })),
   });
 }
 
@@ -2091,29 +2205,37 @@ function previewSampleItem() {
 }
 function openLayoutModal() {
   layoutDraft = cloneStyle(PS);
+  layoutDraft.headerText = $('print-header') ? $('print-header').value : '';
   renderLayoutModal();
   $('layout-modal').classList.remove('hidden');
   refreshReveals($('layout-modal'));
 }
+const LABEL_TOGGLE_FIELDS = ['code', 'profile', 'period', 'quota', 'datetime'];
 function layoutFieldCard(fd) {
   const f = layoutDraft.fields[fd.id];
   const boldChecked = (f.weight === 'bold' || f.weight === 'semibold') ? 'checked' : '';
-  const extra = fd.id === 'code'
-    ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="spaced" ${f.spaced ? 'checked' : ''}> ${t('pl.spaced')}</label>`
-    : (['profile', 'period', 'quota'].includes(fd.id)
-      ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="label" ${f.label ? 'checked' : ''}> ${t('pl.label')}</label>` : '');
+  const headerRow = fd.id === 'header'
+    ? `<div class="fld" style="margin:0 0 10px"><span class="fld-label">${t('pl.headerText')}</span>
+         <input type="text" id="layout-header-text" class="fld-input" placeholder="${esc(t('pl.headerText'))}" value="${esc(layoutDraft.headerText || '')}"></div>` : '';
+  const labelBlock = LABEL_TOGGLE_FIELDS.includes(fd.id)
+    ? `<div class="fld" style="margin:8px 0 0"><label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="label" ${f.label ? 'checked' : ''}> ${t('pl.label')}</label>
+       ${f.label ? `<input type="text" class="fld-input" style="margin-top:6px" data-lft="${fd.id}" placeholder="${esc(t('pl.labelText'))}" value="${esc(f.labelText || '')}">` : ''}</div>` : '';
+  const spacedRow = fd.id === 'code'
+    ? `<label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="spaced" ${f.spaced ? 'checked' : ''}> ${t('pl.spaced')}</label>` : '';
   return `<div class="field-card rv">
     <div class="fc-head"><span>${t(fd.labelKey)}</span>
       <label class="switch"><input type="checkbox" data-lf="${fd.id}" data-k="show" ${f.show ? 'checked' : ''}><span class="track"></span></label>
     </div>
     <div class="fc-body"${f.show ? '' : ' style="display:none"'}>
+      ${headerRow}
       <div class="fld" style="margin:0"><span class="fld-label">${t('pl.fontSize')}</span>
         <div class="slider-row"><input type="range" min="8" max="48" step="1" value="${f.size}" data-lfr="${fd.id}"><b data-lfv="${fd.id}">${f.size} pt</b></div>
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
         <label class="check-row"><input type="checkbox" data-lf="${fd.id}" data-k="bold" ${boldChecked}> ${t('pl.bold')}</label>
-        ${extra}
+        ${spacedRow}
       </div>
+      ${labelBlock}
       <div class="fld" style="margin:0"><span class="fld-label">${t('pl.align')}</span>
         <div class="mini-seg">${['left', 'center', 'right'].map(a =>
           `<button type="button" data-lfa="${fd.id}" data-a="${a}" class="${f.align === a ? 'active' : ''}">${t('ty.' + a)}</button>`).join('')}
@@ -2122,6 +2244,79 @@ function layoutFieldCard(fd) {
     </div>
   </div>`;
 }
+function findCl(id) { return (layoutDraft.customLines || []).find(x => x.id === id); }
+
+function customLineCard(cl, idx) {
+  return `<div class="field-card rv" data-cl="${cl.id}">
+    <div class="fc-head"><span>${t('pl.customLines')} ${idx + 1}</span>
+      <div class="row" style="margin:0;gap:8px">
+        <button type="button" class="icon-btn" data-cl-del="${cl.id}" aria-label="${esc(t('pl.removeLine'))}"><svg class="ic"><use href="#i-x"/></svg></button>
+        <label class="switch"><input type="checkbox" data-cl-show="${cl.id}"${cl.show ? ' checked' : ''}><span class="track"></span></label>
+      </div>
+    </div>
+    <div class="fc-body"${cl.show ? '' : ' style="display:none"'}>
+      <div class="fld" style="margin:0"><span class="fld-label">${t('pl.lineLabel')}</span>
+        <input type="text" class="fld-input" data-cl-label="${cl.id}" placeholder="WIFI Name" value="${esc(cl.label || '')}">
+      </div>
+      <div class="fld" style="margin:8px 0 0"><span class="fld-label">${t('pl.lineValue')}</span>
+        <input type="text" class="fld-input" data-cl-value="${cl.id}" placeholder="Nang Oo" value="${esc(cl.value || '')}">
+      </div>
+      <div class="fld" style="margin:8px 0 0"><span class="fld-label">${t('pl.fontSize')}</span>
+        <div class="slider-row"><input type="range" min="8" max="48" step="1" value="${cl.size || 20}" data-cl-size="${cl.id}"><b data-cl-sizeval="${cl.id}">${cl.size || 20} pt</b></div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        <label class="check-row"><input type="checkbox" data-cl-bold="${cl.id}"${cl.bold ? ' checked' : ''}> ${t('pl.bold')}</label>
+        <div class="mini-seg">${['left', 'center', 'right'].map(a =>
+          `<button type="button" data-cl-align="${cl.id}" data-a="${a}" class="${(cl.align || 'left') === a ? 'active' : ''}">${t('ty.' + a)}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCustomLines() {
+  const wrap = $('layout-custom-lines');
+  if (!wrap) return;
+  layoutDraft.customLines = layoutDraft.customLines || [];
+  wrap.innerHTML = layoutDraft.customLines.map(customLineCard).join('');
+  // show toggle + remove (full re-render)
+  wrap.querySelectorAll('input[data-cl-show]').forEach(inp => {
+    inp.addEventListener('change', () => { findCl(inp.dataset.clShow).show = inp.checked; renderLayoutModal(); });
+  });
+  wrap.querySelectorAll('button[data-cl-del]').forEach(b => {
+    b.addEventListener('click', () => {
+      layoutDraft.customLines = layoutDraft.customLines.filter(x => x.id !== b.dataset.clDel);
+      renderLayoutModal();
+    });
+  });
+  // label/value/size/bold/align (live, no re-render)
+  wrap.querySelectorAll('input[data-cl-label]').forEach(inp => {
+    inp.addEventListener('input', () => { findCl(inp.dataset.clLabel).label = inp.value; updateLivePreviews(); });
+  });
+  wrap.querySelectorAll('input[data-cl-value]').forEach(inp => {
+    inp.addEventListener('input', () => { findCl(inp.dataset.clValue).value = inp.value; updateLivePreviews(); });
+  });
+  wrap.querySelectorAll('input[data-cl-size]').forEach(r => {
+    r.addEventListener('input', () => {
+      findCl(r.dataset.clSize).size = Number(r.value);
+      wrap.querySelector(`[data-cl-sizeval="${r.dataset.clSize}"]`).textContent = `${r.value} pt`;
+      updateLivePreviews();
+    });
+  });
+  wrap.querySelectorAll('input[data-cl-bold]').forEach(inp => {
+    inp.addEventListener('change', () => { findCl(inp.dataset.clBold).bold = inp.checked; updateLivePreviews(); });
+  });
+  wrap.querySelectorAll('button[data-cl-align]').forEach(b => {
+    b.addEventListener('click', () => {
+      findCl(b.dataset.clAlign).align = b.dataset.a;
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+      updateLivePreviews();
+    });
+  });
+  const addB = $('layout-add-line');
+  if (addB) addB.disabled = layoutDraft.customLines.length >= 5;
+}
+
 function renderLayoutModal() {
   const d = layoutDraft;
   $('layout-between').value = d.betweenBlanks;
@@ -2148,6 +2343,16 @@ function renderLayoutModal() {
       updateLivePreviews();
     });
   });
+  // label text inputs (live, no re-render)
+  $('layout-fields').querySelectorAll('input[data-lft]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      d.fields[inp.dataset.lft].labelText = inp.value;
+      updateLivePreviews();
+    });
+  });
+  // header text input (live, no re-render; applied to the Printer page on Save)
+  const hi = $('layout-header-text');
+  if (hi) hi.addEventListener('input', () => { layoutDraft.headerText = hi.value; updateLivePreviews(); });
   // alignment
   $('layout-fields').querySelectorAll('button[data-lfa]').forEach(b => {
     b.addEventListener('click', () => {
@@ -2157,12 +2362,15 @@ function renderLayoutModal() {
       updateLivePreviews();
     });
   });
+  renderCustomLines();
   updateLivePreviews();
   refreshReveals($('layout-modal'));
 }
 function updateLivePreviews() {
   const item = previewSampleItem();
   const st = previewBasics();
+  // layout modal edits the header text in a draft — preview the draft while it is open
+  if (layoutDraft && layoutDraft.headerText != null && !$('layout-modal').classList.contains('hidden')) st.header = layoutDraft.headerText;
   const dots = pvDots(st.paper);
   const ll = $('layout-live-label');
   if (ll) ll.textContent = tx('pl.liveFmt', { paper: st.paper || '58', dots });
@@ -2184,14 +2392,31 @@ function wireLayoutModal() {
     $('layout-inside-val').textContent = layoutDraft.insideSpacing === 0 ? `0 (${t('pl.compact')})` : String(layoutDraft.insideSpacing);
     updateLivePreviews();
   });
-  $('layout-reset').addEventListener('click', () => { layoutDraft = defaultPrintStyle(); renderLayoutModal(); });
+  $('layout-reset').addEventListener('click', () => {
+    layoutDraft = defaultPrintStyle();
+    layoutDraft.headerText = $('print-header') ? $('print-header').value : '';
+    renderLayoutModal();
+  });
   $('layout-save').addEventListener('click', () => {
-    PS = cloneStyle(layoutDraft); savePrintStyle(); closeModal('layout-modal'); toast(t('toast.styleSaved'));
+    const headerText = layoutDraft.headerText != null ? layoutDraft.headerText : '';
+    delete layoutDraft.headerText;
+    PS = cloneStyle(layoutDraft); savePrintStyle();
+    if ($('print-header')) { $('print-header').value = headerText; Store.save({ printHeader: headerText.trim() }); }
+    closeModal('layout-modal'); toast(t('toast.styleSaved'));
   });
   $('layout-cancel').addEventListener('click', () => closeModal('layout-modal'));
   $('layout-close').addEventListener('click', () => closeModal('layout-modal'));
   $('layout-modal').addEventListener('click', e => { if (e.target === $('layout-modal')) closeModal('layout-modal'); });
   $('layout-open-typo').addEventListener('click', () => { closeModal('layout-modal'); setTimeout(openTypoModal, 220); });
+  // custom free-text lines: add (max 5)
+  $('layout-add-line').addEventListener('click', () => {
+    layoutDraft.customLines = layoutDraft.customLines || [];
+    if (layoutDraft.customLines.length >= 5) return;
+    layoutDraft.customLines.push(defaultCustomLine());
+    renderCustomLines();
+    updateLivePreviews();
+    refreshReveals($('layout-modal'));
+  });
 }
 
 /* ═══════════ TYPOGRAPHY / FONT SETTINGS MODAL ═══════════ */
@@ -2987,15 +3212,22 @@ function renderMcList() {
   const counts = { all: list.length };
   CSTS.forEach(s => counts[s] = 0);
   sts.forEach(s => counts[s]++);
-  const srcLine = `<p class="muted small">📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(S.clientsFetchedAt)) : ''}</p>`; // v1.5.54: last-fetched
-  const chip = (key, label, n, dotCls) =>
-    `<button class="chip${filter === key ? ' active' : ''}" data-mcf="${key}">` +
-    (dotCls ? `<span class="dot ${dotCls}"></span>` : '') + `${esc(label)} (${n})</button>`;
-  const chipsHtml = `<div class="chips">` +
-    chip('all', t('mc.fAll'), counts.all, '') +
-    CSTS.map(s => chip(s, t(CST_META[s].key), counts[s], 'cst-' + s)).join('') +
-    `<button class="chip${showNames ? ' active' : ''}" id="mc-names">👤 ${esc(t('ac.names'))}</button></div>`;
-  let rows = '';
+  const srcLine = `📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(S.clientsFetchedAt)) : ''}`; // v1.5.54: last-fetched
+  const seg = (key, label, n) =>
+    `<button type="button" class="${filter === key ? 'active' : ''}" data-mcf="${key}">${esc(label)} (${n})</button>`;
+  const segHtml = `<div class="segmented seg-scroll" role="tablist">` +
+    seg('all', t('mc.fAll'), counts.all) +
+    CSTS.map(s => seg(s, t(CST_META[s].key), counts[s])).join('') + `</div>`;
+  /* v1.5.57: iOS client cells — status-tinted device icon tile, headline +
+     sub-lines, status badge; replaces the 8-column desktop table. */
+  const clientIcon = f => {
+    const d = ((f.dev || '') + ' ' + (f.name || '')).toLowerCase();
+    if (/ipc|camera|ezviz/.test(d)) return 'eye';
+    if (/laptop|notebook|macbook|desktop|\bpc\b/.test(d)) return 'monitor';
+    return 'wifi';
+  };
+  const voucherInline = (vcode, vm) => voucherCellHtml(vcode, vm).replace(/<br>/g, ' · ');
+  let cells = '';
   list.forEach((c, i) => {
     if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
@@ -3013,39 +3245,39 @@ function renderMcList() {
       if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
     }
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
-    const flagHtml = flags.map(fl =>
-      `<br><small class="flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</small>`).join('');
-    // v1.5.40: shared voucher cell — plan · period · price + status color
-    // on every view (raw authType hidden since v1.5.53).
-    const macSub = [f.ip !== '—' ? f.ip : '', (showNames && f.name) ? f.name : ''].filter(Boolean).map(esc).join('<br>');
-    const vCell = voucherCellHtml(f.acct, vmap); // v1.5.53: raw authType ("15") hidden
+    const title = (showNames && f.name) ? f.name : f.mac;
+    const sub1 = [(title !== f.mac ? f.mac : ''), (f.ip !== '—' ? f.ip : '')].filter(Boolean).join(' · ');
+    const vLine = f.acct ? voucherInline(f.acct, vmap) : `<span class="muted">—</span>`;
+    // device line: drop the model token when it duplicates the shown name
+    let devTxt = f.dev;
+    if (showNames && f.name && devTxt && devTxt !== '—') {
+      const parts = devTxt.split(' · ').filter(p => p.trim().toLowerCase() !== f.name.trim().toLowerCase());
+      devTxt = parts.join(' · ') || '—';
+    }
+    const info = [f.ssid, f.conn, f.ap, f.since, f.dur, f.sig,
+      (f.total !== '—' ? f.total : ''), (f.live !== '—' ? '⇅ ' + f.live : ''),
+      (devTxt !== '—' ? devTxt : '')].filter(x => x && x !== '—').join(' · ');
     // v1.5.55: per-client disconnect on sticky rows (quota spent, still online).
     // Execution gated by KICK_VERIFIED — the button explains until then.
     const kickBtn = flags.includes('sticky')
-      ? `<br><button type="button" class="kick-btn" data-kick="${esc(f.mac)}">${esc(t('kick.btn'))}</button>` : '';
-    const ssidSub = f.conn !== '—' ? `<br><small class="muted">${esc(f.conn)}</small>` : '';
-    const trSub = f.live !== '—' ? `<br><small class="muted">⇅ ${esc(f.live)}</small>` : '';
-    rows += `<tr class="cst cst-${st}"><td><span class="cst-dot cst-${st}"></span>${esc(f.mac)}` +
-      `${macSub ? `<br><small class="muted">${macSub}</small>` : ''}` +
-      `${flagHtml}` +
-      `<br><small class="cst-lbl cst-${st}">${esc(t(CST_META[st].key))}</small></td>` +
-      `<td>${vCell}${kickBtn}</td>` +
-      `<td><small>${esc(f.ssid)}${ssidSub}</small></td>` +
-      `<td><small>${esc(f.ap)}</small></td>` +
-      `<td><small>${esc(f.since)}<br>${esc(f.dur)}</small></td>` +
-      `<td><small>${esc(f.sig)}</small></td>` +
-      `<td><small>${esc(f.total)}${trSub}</small></td>` +
-      `<td><small>${esc(f.dev)}</small></td></tr>`;
+      ? `<button type="button" class="mc-kick" data-kick="${esc(f.mac)}">${esc(t('kick.btn'))}</button>` : '';
+    const foot = (flags.length || kickBtn)
+      ? `<div class="mc-foot"><span>${flags.map(fl =>
+        `<span class="mc-flag flag-${fl}">⚑ ${esc(t('mc.flag.' + fl))}</span>`).join('')}</span>${kickBtn}</div>` : '';
+    cells += `<div class="set-row mc-row">` +
+      `<span class="set-ico mc-ico cst-${st}">${ic(clientIcon(f), '')}</span>` +
+      `<div class="t"><div class="mc-top"><span class="t-main">${esc(title)}</span>` +
+      `<span class="mc-badge cst-${st}">${esc(t(CST_META[st].key))}</span></div>` +
+      (sub1 ? `<div class="sub">${esc(sub1)}</div>` : '') +
+      `<div class="sub">${vLine}</div>` +
+      (info ? `<div class="sub">${esc(info)}</div>` : '') +
+      foot + `</div></div>`;
   });
   $('mc-list').innerHTML =
-    `<p class="muted small">${esc(tx('mc.total', { n: list.length }))}</p>` +
-    srcLine + chipsHtml +
-    (rows
-      ? `<div class="wrap-scroll"><table class="data">` +
-        `<tr><th>${t('mc.mac')}</th><th>${t('ac.voucher')}</th><th>${t('mc.ssid')}</th><th>${t('mc.ap')}</th>` +
-        `<th>${t('ac.since')} / ${t('ac.duration')}</th><th>${t('ac.signal')}</th><th>${t('mc.traffic')}</th><th>${t('mc.device')}</th></tr>` +
-        rows + `</table></div>`
-      : `<p class="muted">${esc(t('mc.none'))}</p>`);
+    `<div class="mc-head"><p class="mc-sub">${esc(tx('mc.total', { n: list.length }))} · ${srcLine}</p>` +
+    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button></div>` +
+    segHtml +
+    (cells ? `<div class="set-group mc-list">${cells}</div>` : `<p class="muted">${esc(t('mc.none'))}</p>`);
   document.querySelectorAll('#mc-list [data-kick]').forEach(b => b.addEventListener('click', () => {
     const list = (mcCache && mcCache.list) || [];
     const c = list.find(x => normMac(x.mac || x.userMac) === normMac(b.dataset.kick));
@@ -3627,6 +3859,25 @@ function fillSettings() {
   refreshSsoCard();
   refreshGwCard();
   refreshMonitorCard();
+  refreshLiveCard();
+}
+
+/* ── v1.5.57: live voucher stats card in Settings ── */
+function refreshLiveCard() {
+  const tg = $('live-enable');
+  if (!tg) return;
+  const cfg = getLiveStats();
+  tg.checked = cfg.enabled;
+  document.querySelectorAll('#live-int-seg [data-live-int]').forEach(b =>
+    b.classList.toggle('active', +b.dataset.liveInt === cfg.secs));
+  const row = $('live-int-row');
+  if (row) row.classList.toggle('hidden', !cfg.enabled);
+}
+function onLiveToggle() {
+  const on = $('live-enable').checked;
+  setLiveStats({ enabled: on });
+  refreshLiveCard();
+  restartLiveStats(on); // enabling refreshes once immediately
 }
 
 /* ── SSO session (Ruijie account login, Android APK only) ───────
@@ -4261,6 +4512,15 @@ function init() {
   const _al = $('sso-autologin'); if (_al) _al.addEventListener('change', onSsoAutoLogin);
   const _me = $('mon-enable'); if (_me) _me.addEventListener('change', onMonitorToggle);
   const _mc = $('btn-mon-check'); if (_mc) _mc.addEventListener('click', onMonitorCheckNow);
+  // v1.5.57: live voucher stats — auto-refresh of the 4 stat cards
+  const _le = $('live-enable'); if (_le) _le.addEventListener('change', onLiveToggle);
+  document.querySelectorAll('#live-int-seg [data-live-int]').forEach(b => b.addEventListener('click', () => {
+    setLiveStats({ secs: +b.dataset.liveInt });
+    refreshLiveCard();
+    restartLiveStats(false);
+  }));
+  restartLiveStats(false);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) liveStatsTick(false); });
   $('btn-gw').addEventListener('click', onGwButton);
   $('btn-diag-run').addEventListener('click', runDiagnostics);
   $('btn-diag-save').addEventListener('click', saveDiagReport);
