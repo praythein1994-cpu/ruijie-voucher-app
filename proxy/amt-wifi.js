@@ -171,8 +171,9 @@ async function portalLogin() {
       if (/captcha/i.test(t) && /<img[^>]*captcha|<input[^>]*captcha/i.test(t)) signals.push('captcha challenge shown');
       if (/googleTotpCode/i.test(t) && /totp[^<]{0,80}(display:\s*block|show)/i.test(t)) signals.push('2FA totp challenge shown');
       if (/locked|frozen/i.test(t)) signals.push('account locked/frozen mentioned');
-      const title = (t.match(/<title>([^<]{2,80})/i) || [])[1];
-      if (title) signals.push('page title: ' + title.trim());
+      const visible = t.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 400);
+      if (visible) signals.push('page says: "' + visible + '"');
       signals.push('http ' + res.status + ', body ' + t.length + ' chars');
       if (/<title>[^<]*(attention required|just a moment)/i.test(t)) signals.push('bot-protection challenge page');
       if (/too many|rate.?limit|try again later/i.test(t)) signals.push('rate-limit suspected');
