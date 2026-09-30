@@ -9,26 +9,39 @@
  *  GET  /health
  *  POST /telemetry   { events: [{ ts, app, type, msg, data }] } — app event inbox
  *  GET  /telemetry?since=<ms>[&key=...] — read recent events (monitoring)
+ *  GET  /api/profiles/:name — named login profile (tier 2: render disk, tier 3: github)
+ *  PUT  /api/profiles/:name { profile, key } — save profile (disk + github write-through)
  *
  * - Tokens are cached in memory per (cloud, appid) and auto-refreshed.
  * - App secrets are NEVER written to disk or logs; tokens live only in RAM.
-+ * - Telemetry is an in-memory ring buffer (last 300 events); the app must
-+ *   NEVER send secrets (appid/secret/password/token) — only event types,
-+ *   voucher codes and error messages. Keys that look like credentials are
-+ *   stripped server-side as a second layer of defense.
+ *   (Exception, v1.5.79: named login profiles ARE persisted to disk and
+ *   optionally GitHub by explicit user request — treat that store as secret
+ *   material: private repo, limited server access, never log its contents.)
+ * - Telemetry is an in-memory ring buffer (last 300 events); the app must
+ *   NEVER send secrets (appid/secret/password/token) — only event types,
+ *   voucher codes and error messages. Keys that look like credentials are
+ *   stripped server-side as a second layer of defense.
  * - Zero npm dependencies: runs with plain `node server.js`.
  *
  * Env:
  *   PORT            default 3001
  *   ALLOWED_ORIGINS comma-separated list, default "*"
  *   RATE_PER_MIN    simple per-IP rate limit, default 120
-+ *   TELEMETRY_KEY   if set, GET /telemetry requires ?key=TELEMETRY_KEY
+ *   TELEMETRY_KEY   if set, GET /telemetry requires ?key=TELEMETRY_KEY
+ *   PROFILES_KEY    if set, PUT /api/profiles/:name requires matching {key} in body
+ *   GITHUB_TOKEN    optional: token with contents:read/write on the profiles repo
+ *   GITHUB_PROFILES_REPO   optional: "owner/repo" holding the profiles file
+ *   GITHUB_PROFILES_PATH   default "profiles.json"
+ *   GITHUB_PROFILES_BRANCH default "main"
  */
 
 'use strict';
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const { URL } = require('url');
+const Profiles = require('./profiles');
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim());
@@ -91,8 +104,133 @@ function handleTelemetryGet(req, res, u) {
   return send(res, req, 200, { ok: true, count: list.length, events: list });
 }
 
-function corsHeaders(req) {
-  const origin = req.headers.origin || '';
+/* ── Named login profiles (v1.5.79) ─────────────────────────────
+ * Tier 2 (render disk) + tier 3 (github) of the 3-tier profile lookup.
+ * Tier 1 (phone localStorage) is handled client-side and never hits this server.
+ * Secrets in profiles are NEVER logged. */
+const PROFILES_KEY = process.env.PROFILES_KEY || '';
+const GH_TOKEN = process.env.GITHUB_TOKEN || '';
+const GH_REPO = process.env.GITHUB_PROFILES_REPO || '';
+const GH_PATH = process.env.GITHUB_PROFILES_PATH || 'profiles.json';
+const GH_BRANCH = process.env.GITHUB_PROFILES_BRANCH || 'main';
+const PROFILES_FILE = path.join(__dirname, 'profiles.json');
+
+function profilesReadDisk() {
+  try {
+    const raw = fs.readFileSync(PROFILES_FILE, 'utf8');
+    return Profiles.normalizeStore(JSON.parse(raw));
+  } catch (e) { return { profiles: {} }; }
+}
+function profilesWriteDisk(store) {
+  const tmp = PROFILES_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
+  fs.renameSync(tmp, PROFILES_FILE);
+}
+
+/** GitHub Contents API helper. method GET returns {sha, store} | null; PUT returns sha | null. */
+async function githubFile(method, storeObj) {
+  if (!GH_TOKEN || !GH_REPO) return null;
+  const apiPath = `/repos/${GH_REPO}/contents/${encodeURIComponent(GH_PATH)}`;
+  const headers = {
+    'User-Agent': 'ruijie-proxy',
+    'Accept': 'application/vnd.github+json',
+    'Authorization': `Bearer ${GH_TOKEN}`,
+  };
+  const res = await new Promise((resolve, reject) => {
+    // __sha is transport-only (needed for the update call); never stored in the file.
+    const { __sha: _drop, ...cleanStore } = storeObj || {};
+    const body = method === 'PUT' && storeObj
+      ? JSON.stringify({
+          message: `profiles: upsert ${new Date().toISOString()}`,
+          content: Buffer.from(JSON.stringify(cleanStore, null, 2), 'utf8').toString('base64'),
+          sha: storeObj.__sha || undefined,
+          branch: GH_BRANCH,
+        })
+      : null;
+    const req = https.request({
+      hostname: 'api.github.com', port: 443, path: apiPath + (method === 'GET' ? `?ref=${encodeURIComponent(GH_BRANCH)}` : ''),
+      method, headers: { ...headers, ...(body ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } : {}) },
+      timeout: 20000,
+    }, resp => {
+      const chunks = [];
+      resp.on('data', c => chunks.push(c));
+      resp.on('end', () => resolve({ status: resp.statusCode, text: Buffer.concat(chunks).toString('utf8') }));
+    });
+    req.on('timeout', () => { req.destroy(); reject(new Error('github timeout')); });
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+  if (method === 'GET') {
+    if (res.status !== 200) return null;
+    try {
+      const j = JSON.parse(res.text);
+      const content = Buffer.from(j.content || '', 'base64').toString('utf8');
+      return { sha: j.sha, store: Profiles.normalizeStore(JSON.parse(content)) };
+    } catch (e) { return null; }
+  }
+  if (res.status === 200 || res.status === 201) {
+    try { return JSON.parse(res.text).content.sha; } catch (e) { return null; }
+  }
+  return null;
+}
+
+async function handleProfileGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  const segs = u.pathname.split('/');
+  const name = Profiles.normName(decodeURIComponent(segs[segs.length - 1] || ''));
+  if (!name) return send(res, req, 400, { code: -1, msg: 'Invalid profile name' });
+  const disk = profilesReadDisk();
+  if (disk.profiles[name]) {
+    return send(res, req, 200, { ok: true, source: 'render', profile: Profiles.sanitizeProfile(disk.profiles[name]) });
+  }
+  // tier 3: github read-through (cached to disk on hit)
+  try {
+    const gh = await githubFile('GET');
+    if (gh && gh.store.profiles[name]) {
+      const merged = Profiles.mergeStores(disk, gh.store);
+      try { profilesWriteDisk(merged); } catch (e) { /* cache best-effort */ }
+      return send(res, req, 200, { ok: true, source: 'github', profile: Profiles.sanitizeProfile(merged.profiles[name]) });
+    }
+  } catch (e) { /* github failure -> 404 below, never leak details */ }
+  return send(res, req, 404, { ok: false, code: -7, msg: 'Profile not found' });
+}
+
+async function handleProfilePut(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (PROFILES_KEY && payload.key !== PROFILES_KEY) {
+    return send(res, req, 403, { code: -6, msg: 'Forbidden: bad sync key' });
+  }
+  const segs = u.pathname.split('/');
+  const urlName = Profiles.normName(decodeURIComponent(segs[segs.length - 1] || ''));
+  const errField = Profiles.validateProfile(payload.profile);
+  if (errField || !urlName) {
+    return send(res, req, 400, { code: -1, msg: 'Invalid profile (' + (errField || 'name') + ')' });
+  }
+  const profile = Profiles.buildProfile({ ...payload.profile, name: urlName });
+  const disk = profilesReadDisk();
+  disk.profiles[urlName] = profile;
+  try { profilesWriteDisk(disk); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save profile on server' }); }
+  // tier 3: github write-through (best-effort; disk already saved)
+  let github = 'skipped';
+  if (GH_TOKEN && GH_REPO) {
+    try {
+      const cur = await githubFile('GET');
+      const storeObj = Profiles.mergeStores({ profiles: {} }, cur ? cur.store : { profiles: {} });
+      storeObj.profiles[urlName] = profile;
+      if (cur && cur.sha) storeObj.__sha = cur.sha;
+      const sha = await githubFile('PUT', storeObj);
+      github = sha ? 'ok' : 'error';
+    } catch (e) { github = 'error'; }
+  }
+  return send(res, req, 200, { ok: true, source: 'render', github, profile: Profiles.sanitizeProfile(profile) });
+}
+
+function corsHeaders(req) {  const origin = req.headers.origin || '';
   const allow = ALLOWED_ORIGINS.includes('*') ? '*' : (ALLOWED_ORIGINS.includes(origin) ? origin : '');
   const h = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
   if (allow) h['Access-Control-Allow-Origin'] = allow;
@@ -240,6 +378,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (u.pathname === '/telemetry' && req.method === 'POST') return handleTelemetryPost(req, res);
     if (u.pathname === '/telemetry' && req.method === 'GET') return handleTelemetryGet(req, res, u);
+    if (u.pathname.startsWith('/api/profiles/') && req.method === 'GET') return handleProfileGet(req, res, u);
+    if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
     return send(res, req, 404, { code: -5, msg: 'Not found' });
   } catch (e) {
     return send(res, req, 500, { code: -9, msg: 'Proxy error: ' + String(e.message || e) });
