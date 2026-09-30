@@ -71,6 +71,9 @@
     <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7z"/>
     </symbol>
+    <symbol id="i-unlink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 15l6-6"/><path d="M11 6.5l1.8-1.8a4 4 0 0 1 5.6 5.6l-2.5 2.5"/><path d="M13 17.5l-1.8 1.8a4 4 0 0 1-5.6-5.6l2.5-2.5"/>
+    </symbol>
     <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 4.5L21 19.5H3L12 4.5z"/><path d="M12 10v4.2M12 17.4h.01"/>
     </symbol>
@@ -120,6 +123,74 @@
     <button id="btn-connect" class="btn primary big"><span id="btn-connect-label" data-i18n="connect.btn">ချိတ်ဆက်မယ်</span></button>
     <p id="connect-err" class="err hidden"></p>
     <p class="muted small connect-secure"><svg class="ic sm"><use href="#i-lock"/></svg><span data-i18n="connect.secure">အချက်အလက်များသည် သင့်စက်ပေါ်မှာသာ သိမ်းထားပါသည်</span></p>
+    <p class="muted small" style="text-align:center"><a href="#" id="btn-connect-back" data-i18n="pf.backToLogin">Login ပြန်သွားမယ်</a></p>
+  </div>
+</div>
+
+<!-- ══════════ NAMED PROFILE LOGIN (v1.5.79) ══════════ -->
+<div id="view-profile" class="screen hidden">
+  <div class="connect-card">
+    <div class="connect-logo"><img src="icon.svg" alt="Ruijie Voucher"></div>
+    <h1 data-i18n="appTitle">Pray Manager</h1>
+    <p class="muted" data-i18n="pf.sub">နာမည်တစ်လုံးတည်းရိုက်ပါ</p>
+    <label><span data-i18n="pf.name">နာမည်</span>
+      <input id="pf-name" type="text" data-i18n-ph="pf.namePh" placeholder="နာမည် (ဥပမာ praythein)" autocomplete="username" autocapitalize="none">
+    </label>
+    <button id="btn-profile-login" class="btn primary big"><span id="btn-profile-login-label" data-i18n="pf.login">ဝင်မယ်</span></button>
+    <button id="btn-profile-create" class="btn big"><span data-i18n="pf.create">Create acc</span></button>
+    <p id="profile-err" class="err hidden"></p>
+    <p class="muted small" style="text-align:center"><a href="#" id="btn-profile-update" data-i18n="pf.update">Profile ပြင်မယ်</a></p>
+    <p class="muted small" style="text-align:center"><a href="#" id="btn-profile-manual" data-i18n="pf.manual">ရိုးရိုး ချိတ်ဆက်မယ်</a></p>
+  </div>
+</div>
+
+<div id="view-profile-new" class="screen hidden">
+  <div class="connect-card">
+    <div class="connect-logo"><img src="icon.svg" alt="Ruijie Voucher"></div>
+    <div id="profile-new-form">
+    <h1 id="pfn-title-create" data-i18n="pf.newTitle">အကောင့်အသစ်ဖွင့်မယ်</h1>
+    <h1 id="pfn-title-update" class="hidden" data-i18n="pf.updateTitle">Profile ပြင်မယ်</h1>
+    <label><span data-i18n="pf.name">နာမည်</span>
+      <input id="pfn-name" type="text" placeholder="praythein" autocomplete="off" autocapitalize="none">
+    </label>
+    <label><span data-i18n="connect.cloud">Cloud URL</span>
+      <input id="pfn-cloud" type="url" autocomplete="off">
+    </label>
+    <label><span data-i18n="connect.appid">App ID</span>
+      <input id="pfn-appid" type="text" autocomplete="off" autocapitalize="none">
+    </label>
+    <label><span data-i18n="connect.secret">App Secret</span>
+      <div class="input-wrap">
+        <input id="pfn-secret" type="password" autocomplete="off">
+        <button type="button" class="peek" data-peek="pfn-secret" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
+      </div>
+    </label>
+    <label><span data-i18n="connect.proxy">Proxy URL</span>
+      <input id="pfn-proxy" type="url" autocomplete="off">
+    </label>
+    <label><span data-i18n="pf.email">Ruijie mail</span>
+      <input id="pfn-email" type="email" autocomplete="email" autocapitalize="none">
+    </label>
+    <label><span data-i18n="pf.password">Ruijie password</span>
+      <div class="input-wrap">
+        <input id="pfn-pass" type="password" autocomplete="new-password">
+        <button type="button" class="peek" data-peek="pfn-pass" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button>
+      </div>
+    </label>
+    <label id="pfn-key-wrap" class="hidden"><span data-i18n="pf.writeKey">Sync key (မရှိရင် ချန်ထားပါ)</span>
+      <input id="pfn-key" type="password" autocomplete="off">
+    </label>
+    <div id="profile-new-tiers" class="hidden" style="margin:8px 0"></div>
+    <button id="btn-profile-new-save" class="btn primary big"><span id="btn-profile-new-save-label" data-i18n="pf.createBtn">Create</span></button>
+    <button id="btn-profile-new-back" class="btn big"><span data-i18n="pf.back">နောက်သို့</span></button>
+    <p id="profile-new-err" class="err hidden"></p>
+    </div>
+    <div id="profile-new-done" class="hidden">
+      <h1 data-i18n="pf.complete">Complete ✓</h1>
+      <p class="muted" data-i18n="pf.allSaved">၃ ခုလုံး (ဖုန်း + GitHub + Render) ရောက်ပြီ</p>
+      <div id="profile-done-tiers" style="margin:8px 0"></div>
+      <button id="btn-profile-done-back" class="btn primary big"><span data-i18n="pf.backToLogin">Login ပြန်သွားမယ်</span></button>
+    </div>
   </div>
 </div>
 
@@ -139,6 +210,12 @@
     <!-- VOUCHERS -->
     <section id="view-vouchers" class="view">
       <div class="large-title hidden" data-i18n="v.title">ဗောက်ချာများ</div>
+      <div class="toolbar-row" id="voucher-search-row">
+        <div class="search-wrap" id="search-wrap">
+          <input id="voucher-search" type="search" data-i18n-ph="search.ph" placeholder="ကုဒ်နံပါတ်ရှာမယ်…" autocomplete="off">
+          <button class="clear" id="search-clear" data-i18n-aria="search.clear" aria-label="ရှင်းမယ်"><svg class="ic sm"><use href="#i-x"/></svg></button>
+        </div>
+      </div>
       <div class="stat-grid">
         <div class="stat g"><div class="n" id="stat-active">–</div><div class="l" data-i18n="stat.active">မသုံးရသေး</div></div>
         <div class="stat a"><div class="n" id="stat-used">–</div><div class="l" data-i18n="stat.used">သုံးနေဆဲ</div></div>
@@ -146,12 +223,6 @@
         <div class="stat t"><div class="n" id="stat-total">–</div><div class="l" data-i18n="stat.total">စုစုပေါင်း</div></div>
       </div>
       <div class="toolbar">
-        <div class="toolbar-row">
-          <div class="search-wrap" id="search-wrap">
-            <input id="voucher-search" type="search" data-i18n-ph="search.ph" placeholder="ကုဒ်နံပါတ်ရှာမယ်…" autocomplete="off">
-            <button class="clear" id="search-clear" data-i18n-aria="search.clear" aria-label="ရှင်းမယ်"><svg class="ic sm"><use href="#i-x"/></svg></button>
-          </div>
-        </div>
         <div class="chips" id="voucher-status-chips">
           <button class="chip active" data-s=""><span data-i18n="chip.all">အားလုံး</span></button>
           <button class="chip" data-s="1"><span class="dot" style="background:var(--green)"></span><span data-i18n="chip.s1">မသုံးရသေး</span></button>
@@ -283,6 +354,8 @@
         <button class="menu-item" data-more="accounts"><svg class="ic lg"><use href="#i-user"/></svg><span data-i18n="m.accounts">Auth Accounts</span><small data-i18n="m.accountsSub">အသုံးပြုသူများ</small></button>
         <button class="menu-item" data-more="usergroups"><svg class="ic lg"><use href="#i-box"/></svg><span data-i18n="m.usergroups">User Groups</span><small data-i18n="m.usergroupsSub">အုပ်စုများ</small></button>
         <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
+        <button class="menu-item" data-more="traffic"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.traffic">Traffic</span><small data-i18n="m.trafficSub">ဒေတာစီးဆင်းမှု</small></button>
+        <button class="menu-item" data-more="wifi"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.wifi">WiFi</span><small data-i18n="m.wifiSub">SSID များ</small></button>
         <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
         <button class="menu-item" data-more="history"><svg class="ic lg"><use href="#i-clock"/></svg><span data-i18n="m.history">History</span><small data-i18n="m.historySub">ဝင်ထွက်မှတ်တမ်း</small></button>
         <button class="menu-item" data-more="networks"><svg class="ic lg"><use href="#i-globe"/></svg><span data-i18n="m.networks">Networks</span><small data-i18n="m.networksSub">ကွန်ရက်များ</small></button>
@@ -303,6 +376,10 @@
         <div class="set-pad" id="account-info"></div>
       </div>
 
+      <div class="set-group">
+        <button type="button" class="set-row set-action" id="btn-my-profile"><span class="set-ico" style="--tile:#5E5CE6"><svg class="ic"><use href="#i-user"/></svg></span><span data-i18n="s.myProfile">My Profile (နာမည် login)</span></button>
+      </div>
+
       <div class="section-title" data-i18n="live.title">ဗောက်ချာ တိုက်ရိုက်စာရင်း</div>
       <div class="set-group" id="live-card">
         <div class="set-row"><div class="t"><div class="t-main" data-i18n="live.enable">စာရင်း အလိုအလျောက် ပြန်ဆွဲမယ်</div><div class="sub" data-i18n="live.enableSub">တစ်ယောက်ယောက် voucher စသုံးလိုက်ရင် အရေအတွက် ချက်ချင်းပြောင်းမယ်</div></div>
@@ -316,8 +393,8 @@
           </div></div>
       </div>
 
-      <div class="section-title" data-i18n="sso.title">Ruijie အကောင့်</div>
-      <div class="set-group" id="sso-card">
+      <div class="section-title" data-i18n="sso.title" hidden>Ruijie အကောင့်</div>
+      <div class="set-group" id="sso-card" hidden>
         <div class="set-row">
           <span class="set-ico" style="--tile:#5E5CE6"><svg class="ic"><use href="#i-lock"/></svg></span>
           <div class="t"><div class="t-main" data-i18n="sso.title">Ruijie အကောင့်</div><div class="sub" data-i18n="sso.sub">ဝင်ထားမှ voucher ဖျက်လို့ရမယ်</div></div>
@@ -345,6 +422,20 @@
         <label class="set-row set-field"><span class="fld-label" data-i18n="gw.ip">Gateway IP</span><input id="gw-ip" class="fld-input" type="text" inputmode="decimal" placeholder="100.88.200.103"></label>
         <label class="set-row set-field"><span class="fld-label" data-i18n="gw.pass">စကားဝှက်</span><span class="input-wrap fld-wrap"><input id="gw-pass" type="password" autocomplete="current-password"><button type="button" class="peek" data-peek="gw-pass" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button></span></label>
         <button type="button" class="set-row set-action" id="btn-gw"><span>ချိတ်မယ်</span></button>
+      </div>
+
+      <div class="section-title" data-i18n="dns.title">AdBlock DNS</div>
+      <div class="set-group" id="dns-card">
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#5E5CE6"><svg class="ic"><use href="#i-globe"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="dns.toggle">AdBlock DNS (VLAN 20)</div><div class="sub" data-i18n="dns.sub">DNS အဆင့်မှာ ad/tracker domain တွေ စစ်ထုတ်မယ်</div></div>
+          <label class="switch"><input type="checkbox" id="dns-adblock"><span class="track"></span></label>
+        </div>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="dns.vlan">VLAN</span><input id="dns-vlan" class="fld-input" type="text" inputmode="numeric" placeholder="20"></label>
+        <div class="set-row">
+          <div class="t"><div class="t-main" data-i18n="dns.current">လက်ရှိ DNS (VLAN 20)</div><div class="sub" data-i18n="dns.note">DNS အဆင့်မှာပဲ စစ်တာမို့ app/video ad အားလုံး မတားနိုင်ပါ</div></div>
+          <span class="set-val" id="dns-current">…</span>
+        </div>
       </div>
 
       <div class="section-title" data-i18n="mon.title">စက်ပစ္စည်း သတိပေးချက်</div>
@@ -385,25 +476,24 @@
           <div class="t"><div class="t-main" data-i18n="diag.voucher">Voucher စစ်မယ်</div><div class="sub" data-i18n="diag.voucherSub">စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)</div></div>
           <label class="switch"><input type="checkbox" id="diag-voucher" checked><span class="track"></span></label>
         </div>
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#34C759"><svg class="ic"><use href="#i-monitor"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="tele.title">App စောင့်ကြည့်မှု</div><div class="sub" data-i18n="tele.sub">ပြဿနာဖြစ်ရင် proxy ကနေတဆင့် အလိုအလျောက် သတိပေးမယ်</div></div>
+          <label class="switch"><input type="checkbox" id="tele-on" checked><span class="track"></span></label>
+        </div>
         <button type="button" class="set-row set-action" id="btn-diag-run"><span data-i18n="diag.run">စစ်မယ်</span></button>
         <button type="button" class="set-row set-action hidden" id="btn-diag-save"><span data-i18n="diag.save">Report သိမ်းမယ်</span></button>
         <div class="set-pad hidden" id="diag-results-pad"><div id="diag-results"></div></div>
       </div>
 
       <div class="section-title" data-i18n="s.appearance">အသွင်အပြင်</div>
-      <div class="set-group" id="theme-grid" role="group" aria-label="Theme">
-        <button type="button" class="set-row theme-opt" data-theme-opt="light"><span class="theme-dot t-light"></span><span class="t"><span class="t-main" data-i18n="s.themeLight">Premium</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
-        <button type="button" class="set-row theme-opt" data-theme-opt="dark"><span class="theme-dot t-dark"></span><span class="t"><span class="t-main" data-i18n="s.themeDark">Dark</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
-        <button type="button" class="set-row theme-opt" data-theme-opt="glass"><span class="theme-dot t-glass"></span><span class="t"><span class="t-main" data-i18n="s.themeGlass">Liquid Glass</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
-        <button type="button" class="set-row theme-opt" data-theme-opt="neo"><span class="theme-dot t-neo"></span><span class="t"><span class="t-main" data-i18n="s.themeNeo">Neumorphism</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
-        <button type="button" class="set-row theme-opt" data-theme-opt="clay"><span class="theme-dot t-clay"></span><span class="t"><span class="t-main" data-i18n="s.themeClay">Claymorphism</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+      <div class="set-group">
+        <label class="set-row set-field"><span class="fld-label" data-i18n="s.appearance">အသွင်အပြင်</span><select id="set-theme" class="fld-input" data-i18n-aria="s.appearance" aria-label="အသွင်အပြင်"></select></label>
       </div>
 
       <div class="section-title" data-i18n="s.layout">အပြင်အဆင်</div>
-      <div class="set-group" id="layout-seg" role="group" aria-label="Layout">
-        <button type="button" class="set-row" data-layout-opt="auto"><span class="t"><span class="t-main" data-i18n="s.layoutAuto">အလိုအလျောက်</span><span class="sub" data-i18n="s.layoutAutoSub">စခရင်အရွယ်အစားအလိုက် ရွေးမယ်</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
-        <button type="button" class="set-row" data-layout-opt="phone"><span class="t"><span class="t-main" data-i18n="s.layoutPhone">ဖုန်း</span><span class="sub" data-i18n="s.layoutPhoneSub">ဖုန်း view အမြဲသုံးမယ်</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
-        <button type="button" class="set-row" data-layout-opt="tablet"><span class="t"><span class="t-main" data-i18n="s.layoutTablet">တက်ဘလက်</span><span class="sub" data-i18n="s.layoutTabletSub">တက်ဘလက် view အမြဲသုံးမယ်</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+      <div class="set-group">
+        <label class="set-row set-field"><span class="fld-label" data-i18n="s.layout">အပြင်အဆင်</span><select id="set-layout" class="fld-input" data-i18n-aria="s.layout" aria-label="အပြင်အဆင်"></select></label>
       </div>
 
       <div class="section-title" data-i18n="s.language">ဘာသာစကား</div>
@@ -412,8 +502,8 @@
         <button type="button" class="set-row" data-lang="en"><span class="t"><span class="t-main">English</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
       </div>
 
-      <div class="section-title" data-i18n="s.conn">ချိတ်ဆက်မှုပြင်ဆင်မယ်</div>
-      <div class="set-group">
+      <div class="section-title" data-i18n="s.conn" hidden>ချိတ်ဆက်မှုပြင်ဆင်မယ်</div>
+      <div class="set-group" hidden>
         <label class="set-row set-field"><span class="fld-label" data-i18n="s.cloud">Cloud URL</span><input id="set-cloud" class="fld-input" type="url"></label>
         <label class="set-row set-field"><span class="fld-label" data-i18n="s.appid">App ID</span><input id="set-appid" class="fld-input" type="text"></label>
         <label class="set-row set-field"><span class="fld-label" data-i18n="s.secret">App Secret</span><span class="input-wrap fld-wrap"><input id="set-secret" type="password" data-i18n-ph="s.secretPh" placeholder="(မပြောင်းလျှင် ချန်ထားပါ)"><button type="button" class="peek" data-peek="set-secret" data-i18n-aria="peek" aria-label="ပြမယ်/ဖုံးမယ်"><svg class="ic"><use href="#i-eye"/></svg></button></span></label>
@@ -451,6 +541,7 @@
     <div id="modal-body"></div>
     <div class="row modal-actions">
       <button id="modal-disconnect" class="btn danger hidden"><svg class="ic"><use href="#i-x"/></svg><span data-i18n="kick.btn">ဖြုတ်မယ်</span></button>
+      <button id="modal-unbind" class="btn hidden"><svg class="ic"><use href="#i-unlink"/></svg><span data-i18n="unbind.btn">MAC ဖြုတ်မယ်</span></button>
       <button id="modal-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="modal.print">ပရင့်ထုတ်မယ်</span></button>
       <button id="modal-queue" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span>Queue</span></button>
       <button id="modal-delete" class="btn danger"><svg class="ic"><use href="#i-trash"/></svg><span data-i18n="modal.del">ဖျက်မယ်</span></button>
