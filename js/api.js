@@ -244,6 +244,84 @@ const GwApi = {
   },
 
   /**
+   * v1.5.78: gateway-local device reboot. Wire format VERIFIED from a real
+   * eWeb Reboot click (2026-09-30, RAP6202-G): a DIRECT devSta.set
+   * (NOT cmdArr-wrapped), module "devReboot", data {sn:[...], reboot:"true"}.
+   * Success = outer code 0 AND inner data.code 0.
+   */
+  deviceRebootBody(sn) {
+    return {
+      method: 'devSta.set',
+      params: {
+        module: 'devReboot',
+        noParse: false,
+        async: null,
+        remoteIp: false,
+        device: 'pc',
+        data: { sn: [String(sn)], reboot: 'true' },
+      },
+    };
+  },
+
+  /** Reboot one gateway-local device by serial number. Throws on failure. */
+  async deviceReboot(sn) {
+    return this._withAutoRelogin(async () => {
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(this.deviceRebootBody(sn)));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const outer = j && typeof j.code !== 'undefined' ? Number(j.code) : -1;
+      const inner = j && j.data && typeof j.data.code !== 'undefined' ? Number(j.data.code) : -1;
+      if (outer !== 0 || inner !== 0) {
+        throw new Error('ပြန်ဖွင့်မရပါ (code ' + outer + '/' + inner + ')');
+      }
+      return j;
+    });
+  },
+
+  /**
+   * v1.5.78: Flow Table / conntrack read (Diagnostics → Flow Statistics).
+   * Wire format VERIFIED 2026-09-30: a DIRECT devSta.get (NOT cmdArr-wrapped),
+   * module "content_audit", data {func:"ca_get_nf_conntrace"}.
+   * Response ~166 kB — call on manual refresh only, never fast polling.
+   */
+  flowTableBody() {
+    return {
+      method: 'devSta.get',
+      params: {
+        module: 'content_audit',
+        noParse: false,
+        async: null,
+        remoteIp: false,
+        device: 'pc',
+        data: { func: 'ca_get_nf_conntrace' },
+      },
+    };
+  },
+
+  /** Fetch the raw flow table. Returns {count, flows}. */
+  async flowTable() {
+    return this._withAutoRelogin(async () => {
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(this.flowTableBody()));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return this.parseFlowTable(j);
+    });
+  },
+
+  /**
+   * Pull the flow array out of a ca_get_nf_conntrace response.
+   * Verified shape: {code:0, data:{count:"499", array:[...]}}.
+   * Per-flow verified field names: protocol, src, dst, sport, dport,
+   * src_down, dst_down, sport_down, dport_down, bytes, bytes_down,
+   * packets, packets_down, state1, state2, aging_time, mark, use.
+   * bytes = src→dst direction, bytes_down = return direction.
+   */
+  parseFlowTable(j) {
+    const d = (j && j.data) || {};
+    const arr = Array.isArray(d.array) ? d.array : [];
+    const count = d.count != null ? Number(d.count) : arr.length;
+    return { count: Number.isFinite(count) ? count : arr.length, flows: arr };
+  },
+
+  /**
    * Gateway-local wireless client (STA) list, v1.5.29.
    * The eWeb shows per-AP connected devices (IP/MAC), so the data exists —
    * but the exact module name isn't captured. We probe several likely
@@ -308,6 +386,138 @@ const GwApi = {
     });
   },
 
+  /* ── AdBlock DNS toggle (v1.5.77) ─────────────────────────────
+   * Gateway eWeb DHCP Option write path, captured from REAL saves
+   * (user DevTools, 2026-09-30 — set 8.8.8.8, then cleared back).
+   * READ: cmdArr batch {devConfig.get module dhcp_option} +
+   *   {devConfig.get module network}, POST /cgi-bin/luci/api/cmd?auth=<sid>.
+   * WRITE: a DIRECT devConfig.update (NOT wrapped in cmdArr) with
+   *   data.single=[{vlan:"lan_<id>", custom_option:[],
+   *   option:[{id:"6",value:"<dns>"},{id:"43",...},{id:"138",...},
+   *   {id:"150",...},{id:"3",...}], vlan:"lan_<id>", device:"pc",
+   *   module:"dhcp_option", noParse:false, remoteIp:false}].
+   * Option id "6" = DNS servers (space-separated, up to 5 IPv4).
+   * Scope: VLAN 20 (vlan tag "lan_20") — the voucher VLAN (user-confirmed).
+   * Clearing option 6 to "" reverts the VLAN to inherited DNS. */
+  AD_DNS: '94.140.14.14', // AdGuard DNS — user-specified; no invented secondary
+  AD_VLAN: 'lan_20', // voucher VLAN 20
+
+  /** Exact read envelope (verified from the wire). Pure. */
+  dhcpOptionReadBody() {
+    const sub = (method, params) => ({ method, params });
+    const base = { noParse: false, async: null, remoteIp: false };
+    return {
+      method: 'cmdArr',
+      params: {
+        device: 'pc',
+        params: [
+          sub('devConfig.get', Object.assign({ module: 'dhcp_option' }, base)),
+          sub('devConfig.get', Object.assign({ module: 'network' }, base)),
+        ],
+      },
+    };
+  },
+
+  /**
+   * Recursively find the dhcp_option entry for a vlan tag like "lan_20"
+   * (an object carrying vlan/vlanid + an option[] array). Returns the
+   * entry object or null. Pure — unit-tested.
+   */
+  findDhcpVlanEntry(node, vlanTag) {
+    let found = null;
+    const want = String(vlanTag).toLowerCase();
+    const walk = (o) => {
+      if (found || !o || typeof o !== 'object') return;
+      if (Array.isArray(o)) { for (const x of o) walk(x); return; }
+      const v = o.vlan != null ? o.vlan : (o.vlanid != null ? o.vlanid : o.vlanId);
+      if (typeof v !== 'undefined' && String(v).toLowerCase() === want && Array.isArray(o.option)) {
+        found = o; return;
+      }
+      const keys = Object.keys(o);
+      for (const k of keys) { if (k !== 'parent') walk(o[k]); }
+    };
+    walk(node);
+    return found;
+  },
+
+  /** option id "6" (DNS) value of a dhcp_option entry; "" when absent. Pure. */
+  dhcpOption6Of(entry) {
+    if (!entry || !Array.isArray(entry.option)) return '';
+    const o = entry.option.find(x => x && String(x.id) === '6');
+    return (o && o.value != null) ? String(o.value) : '';
+  },
+
+  /**
+   * Exact write envelope (verified from a real eWeb save). `entry` is the
+   * existing vlan entry from findDhcpVlanEntry (may be null); its other
+   * options (43/138/150/3) and custom_option are preserved — only id "6"
+   * is replaced. Pure — unit-tested against the captured payload.
+   */
+  dhcpOptionWriteBody(vlanTag, dnsValue, entry) {
+    const base = { noParse: false, async: null, remoteIp: false };
+    const dns = String(dnsValue);
+    let opts;
+    if (entry && Array.isArray(entry.option) && entry.option.length) {
+      opts = entry.option.map(o => ({
+        id: String(o.id),
+        value: String(o.id) === '6' ? dns : String(o.value != null ? o.value : ''),
+      }));
+      if (!opts.some(o => o.id === '6')) opts.unshift({ id: '6', value: dns });
+    } else {
+      opts = ['6', '43', '138', '150', '3'].map(id => ({ id, value: id === '6' ? dns : '' }));
+    }
+    const singleEntry = Object.assign(
+      { vlan: vlanTag },
+      { custom_option: (entry && Array.isArray(entry.custom_option)) ? entry.custom_option : [] },
+      { option: opts },
+      // NOTE: the verified capture's single entry carries noParse/remoteIp
+      // but NO async key (params does have async:null).
+      { vlan: vlanTag, device: 'pc', module: 'dhcp_option', noParse: false, remoteIp: false }
+    );
+    return {
+      method: 'devConfig.update',
+      params: Object.assign({ module: 'dhcp_option', data: { single: [singleEntry] } }, base),
+    };
+  },
+
+  /** Read the raw dhcp_option config (response data array). */
+  async dhcpOptionRead() {
+    return this._withAutoRelogin(async () => {
+      const j = await gwCall('cmd', this.session.ip, this.session.sid,
+        JSON.stringify(this.dhcpOptionReadBody()));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      if (!j || Number(j.code) !== 0) throw new Error((j && (j.msg || j.error)) || 'DHCP option ဖတ်မရပါ');
+      return j.data;
+    });
+  },
+
+  /**
+   * Set option-6 DNS for one vlan tag. The gateway's own reply (code 0)
+   * is the acceptance signal — same as the eWeb UI. Returns
+   * {ok, before, readback}: `before` is the previous option-6 value,
+   * `readback` is a best-effort re-read afterwards (the gateway does not
+   * always echo per-VLAN entries, so a missing readback is reported, not
+   * treated as failure). Throws with a Burmese message when the write
+   * itself is rejected.
+   */
+  async dhcpOptionSetDns(vlanTag, dnsValue) {
+    const data = await this.dhcpOptionRead();
+    const entry = this.findDhcpVlanEntry(data, vlanTag);
+    const before = this.dhcpOption6Of(entry);
+    const body = this.dhcpOptionWriteBody(vlanTag, dnsValue, entry);
+    await this._withAutoRelogin(async () => {
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      if (!j || Number(j.code) !== 0) throw new Error((j && (j.msg || j.error)) || 'DNS ပြောင်းမရပါ');
+    });
+    let readback = '';
+    try {
+      const data2 = await this.dhcpOptionRead();
+      readback = this.dhcpOption6Of(this.findDhcpVlanEntry(data2, vlanTag));
+    } catch (_) { /* best-effort only */ }
+    return { ok: true, before, readback };
+  },
+
   /** Pull every {serialNumber,...} object out of a cmdArr response. */
   parseDevices(j) {
     const blocks = [];
@@ -332,7 +542,7 @@ const GwApi = {
           deviceType: o.deviceType || '',
           product: o.product || '',
           ip: o.ip || o.localIp || '',
-          mac: o.mac || '',
+          mac: o.mac || o.devMac || '', // v1.5.78: switch rows key it as devMac (verified)
           // v1.5.22: neighbor[] entries carry no status field — a missing
           // status means UNKNOWN (''), never fabricated OFF.
           onlineStatus: (o.status == null || o.status === '') ? '' : (String(o.status).toUpperCase() === 'ON' ? 'ON' : 'OFF'),
@@ -348,6 +558,98 @@ const GwApi = {
     return out;
   },
 };
+
+/* ═══════════ Flow Table aggregation (v1.5.78) — pure + unit-testable ═══
+   Verified semantics (2026-09-30): bytes counts the src→dst direction
+   (client upload side), bytes_down the return direction (download side).
+   Only internet-bound client flows are aggregated: gateway-originated,
+   LAN-local (dst private), multicast, loopback and malformed rows are
+   filtered out. Cumulative counters of currently-tracked flows — NOT
+   billing totals; flows expire, so one snapshot is not history. */
+const _fNum = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const _fStr = v => String(v == null ? '' : v).trim();
+const _isPrivateIp = ip => {
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(_fStr(ip));
+  if (!m) return false;
+  const a = +m[1], b = +m[2];
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+};
+const _isSpecialIp = ip => {
+  const s = _fStr(ip);
+  if (!s || s === '0.0.0.0') return true;
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s);
+  if (!m) return true;
+  const a = +m[1];
+  return a === 127 || a >= 224; // loopback + multicast/reserved
+};
+
+/**
+ * Aggregate flows per client (src IP).
+ * Returns [{ip, upBytes, downBytes, upPkts, downPkts, flows, dns:[]}],
+ * sorted by total bytes desc. dns[] = distinct DNS-server IPs this client
+ * contacted (UDP/TCP dport 53, TCP 853 DoT) — for the AdBlock DNS check.
+ */
+function aggFlowsByClient(flows) {
+  const map = new Map();
+  (Array.isArray(flows) ? flows : []).forEach(f => {
+    if (!f || typeof f !== 'object') return;
+    const src = _fStr(f.src), dst = _fStr(f.dst);
+    if (!_isPrivateIp(src) || _isSpecialIp(src) || _isSpecialIp(dst)) return;
+    if (src === dst) return;
+    const lanLocal = _isPrivateIp(dst); // client→AP, mDNS, inter-VLAN…
+    const dport = _fStr(f.dport);
+    const isDns = dport === '53' || dport === '853';
+    let e = map.get(src);
+    if (!e) { e = { ip: src, upBytes: 0, downBytes: 0, upPkts: 0, downPkts: 0, flows: 0, dns: [] }; map.set(src, e); }
+    if (isDns) {
+      if (dst && e.dns.indexOf(dst) < 0) e.dns.push(dst);
+    }
+    if (lanLocal) return; // DNS noted above; LAN-local bytes don't count as internet use
+    e.upBytes += _fNum(f.bytes);
+    e.downBytes += _fNum(f.bytes_down);
+    e.upPkts += _fNum(f.packets);
+    e.downPkts += _fNum(f.packets_down);
+    e.flows += 1;
+  });
+  return Array.from(map.values()).sort((a, b) => (b.upBytes + b.downBytes) - (a.upBytes + a.downBytes));
+}
+
+/** Identity of one conntrack flow for two-snapshot matching. */
+function flowKey(f) {
+  return [_fStr(f.protocol), _fStr(f.src), _fStr(f.dst), _fStr(f.sport), _fStr(f.dport)].join('|');
+}
+
+/**
+ * Per-client up/down rates (bytes/sec) between two snapshots.
+ * Only flows present in BOTH snapshots contribute (tuple-matched deltas);
+ * new or vanished flows are ignored, so this is an ESTIMATE — the UI must
+ * label it as such. Returns a Map ip → {upRate, downRate}.
+ */
+function flowRates(prevFlows, curFlows, dtMs) {
+  const out = new Map();
+  const dt = _fNum(dtMs) / 1000;
+  if (!(dt > 0)) return out;
+  const prev = new Map();
+  (Array.isArray(prevFlows) ? prevFlows : []).forEach(f => {
+    if (f && typeof f === 'object') prev.set(flowKey(f), f);
+  });
+  (Array.isArray(curFlows) ? curFlows : []).forEach(f => {
+    if (!f || typeof f !== 'object') return;
+    const p = prev.get(flowKey(f));
+    if (!p) return;
+    const du = _fNum(f.bytes) - _fNum(p.bytes);
+    const dd = _fNum(f.bytes_down) - _fNum(p.bytes_down);
+    if (du < 0 || dd < 0) return; // counter reset / replaced flow
+    if (du === 0 && dd === 0) return;
+    const src = _fStr(f.src);
+    if (!_isPrivateIp(src) || _isSpecialIp(src)) return;
+    let e = out.get(src);
+    if (!e) { e = { upRate: 0, downRate: 0 }; out.set(src, e); }
+    e.upRate += du / dt;
+    e.downRate += dd / dt;
+  });
+  return out;
+}
 
 const Api = {
   cfg: null,
@@ -527,6 +829,256 @@ const Api = {
     const c = j && typeof j.code !== 'undefined' ? j.code : 0;
     if (c !== 0 && c !== 200) {
       throw new Error(j.msg || j.message || ('ဖျက်မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /**
+   * Portal webproxy envelope for voucher MAC unbind (internal API, undocumented).
+   * EXACT shape from the live Ruijie portal JS (2026-09-30, user-authorized):
+   * vue2Compat bundle: USER_MANAGE_VOUCHER_UNBIND_MAC = "/intlSamVoucher/unbindMac/{uuid}"
+   * voucher modal unbindMac(): POST {api, method:"POST", replaces:{uuid},
+   *   params:{recordList:[recordUuid], tenantId, macList:[mac], name:voucherCode},
+   *   querys:{group_id}}
+   * webproxy: POST https://cloud-as.ruijienetworks.com/webproxy/common/api?/intlSamVoucher/unbindMac/{uuid}?group_id=...
+   */
+  ssoUnbindMacEnvelope(uuid, groupId, recordList, macList, voucherCode, tenantId) {
+    const api = '/intlSamVoucher/unbindMac/' + uuid;
+    const gid = Number(groupId);
+    const params = {
+      recordList: recordList || [],
+      macList: macList || [],
+      name: voucherCode || '',
+    };
+    if (tenantId) params.tenantId = tenantId;
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params,
+      querys: { group_id: Number.isFinite(gid) ? gid : groupId, lang: 'en' },
+    };
+  },
+
+  /**
+   * Portal webproxy envelope for listing bound MACs (internal API, undocumented).
+   * vue2Compat bundle: USER_MANAGE_VOUCHER_GET_BIND_MAC_LIST = "/intlSamVoucher/getBindedMac/{tenantName}/{groupId}/{uuid}"
+   * queryData(): GET {api, method:"GET", querys:{tenantId, ishttps:false}, replaces:{uuid, groupId, tenantName}}
+   * Response list at voucherData.list, items {mac, bindTime, recordUuid}.
+   */
+  ssoGetBindMacListEnvelope(tenantName, groupId, uuid, tenantId) {
+    const api = '/intlSamVoucher/getBindedMac/' + encodeURIComponent(tenantName || '') + '/' + groupId + '/' + uuid;
+    const querys = { ishttps: false, lang: 'en' };
+    if (tenantId) querys.tenantId = tenantId;
+    return {
+      api,
+      authParams: { api, method: 'GET' },
+      method: 'GET',
+      module: 'default',
+      params: {},
+      querys,
+    };
+  },
+
+  /** List MACs bound to a voucher through the SSO session. Returns array of {mac, bindTime, recordUuid}. */
+  async voucherBindMacListSso(groupId, voucher, tenantName, tenantId) {
+    const uuid = voucher.uuid || voucher.id || '';
+    if (!uuid) throw new Error('Voucher UUID မရှိပါ (keys: ' + Object.keys(voucher || {}).slice(0, 8).join(',') + ')');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    const env = this.ssoGetBindMacListEnvelope(tenantName, groupId, uuid, tenantId);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('MAC စာရင်း ရမရပါ (code ' + c + ')'));
+    }
+    const vd = (j && j.voucherData) || {};
+    return vd.list || [];
+  },
+
+  /** Unbind MAC(s) from a voucher through the SSO session. Throws on portal error. */
+  async voucherUnbindMacSso(groupId, voucher, recordList, macList, tenantId) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const code = voucher.voucherCode || voucher.codeNo || voucher.code || '';
+    const uuid = voucher.uuid || voucher.id || '';
+    if (!uuid) throw new Error('Voucher UUID မရှိပါ');
+    const env = this.ssoUnbindMacEnvelope(uuid, groupId, recordList, macList, code, tenantId);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('Unbind မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /* ── SSID management (Cloud webproxy, SSO session) ──
+   * Source: portal's own JS (SeniorIndex-D70dfrR8.js, presetConf-CFOiaIt9.js),
+   * read-only inspection 2026-09-30. Nothing was created/modified in the portal.
+   * - GET /conf/group/{group_id}/templates → tempList[0].id = template id
+   * - GET /conf/wifi_grp/wifi?group_id=X&conf_template_id=Y → data.ssidList[]
+   * - POST /conf/template/{id}/ssid, params {wirelessConfEntity: {...}}
+   *   (classic modal; WiFi7 drawer wraps differently but same object shape)
+   * - PUT /conf/template/{id}/ssid/{ssid_id}, params {wirelessConfEntity: {...FULL object}}
+   * Default new-SSID object (literal from SeniorIndex-D70dfrR8.js):
+   * {ishidden:false, ssidEncode:"utf-8", fowardType:"bridge", vlanType:"1", vlanId:"1",
+   *  encryptionMode:"wpa_wpa2-psk", wirelessMode:"compatibilityMode", relatedRadio:"1,2",
+   *  bandSelectEnable:false, authEnable:false, authEntity:{}, enable:"true", ...}
+   * Required: ssidName (unique), password (wpa types, charset
+   * /^[a-zA-Z0-9@<=>\[\]!#$*().]+$/), encryptionMode, relatedRadio non-empty.
+   * Encryption values: "open", "wpa-psk", "wpa_wpa2-psk" (default), "wpa2-psk". */
+
+  /** Default object for a new SSID (portal's mtfDefaultForm + General preset). */
+  ssoNewSsidDefaults() {
+    return {
+      wlanId: undefined,
+      ishidden: false,
+      ssidEncode: 'utf-8',
+      fowardType: 'bridge',
+      vlanType: '1',
+      vlanId: '1',
+      encryptionMode: 'wpa_wpa2-psk',
+      wirelessMode: 'compatibilityMode',
+      relatedRadio: '1,2',
+      isApartment: false,
+      bandSelectEnable: false,
+      beMode: false,
+      axMode: false,
+      qosEnable: false,
+      wlanQosEnable: false,
+      authEnable: false,
+      ppskEnable: false,
+      ftEnable: 0,
+      preset: '0',
+      mlo: 0,
+      l2iso: false,
+      enable: 'true',
+      authEntity: {},
+    };
+  },
+
+  ssoSsidCreateEnvelope(tempId, ssidObj) {
+    const api = '/conf/template/' + tempId + '/ssid';
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: { wirelessConfEntity: ssidObj },
+      querys: { lang: 'en' },
+    };
+  },
+
+  ssoSsidUpdateEnvelope(tempId, ssidId, ssidObj) {
+    const api = '/conf/template/' + tempId + '/ssid/' + ssidId;
+    return {
+      api,
+      authParams: { api, method: 'PUT' },
+      method: 'PUT',
+      module: 'default',
+      params: { wirelessConfEntity: ssidObj },
+      querys: { lang: 'en' },
+    };
+  },
+
+  ssoSsidDeleteEnvelope(tempId, ssidId) {
+    const api = '/conf/template/' + tempId + '/ssid/' + ssidId;
+    return {
+      api,
+      authParams: { api, method: 'DELETE' },
+      method: 'DELETE',
+      module: 'default',
+      params: {},
+      querys: { lang: 'en' },
+    };
+  },
+
+  /** Load template id, then the SSID list. Returns {tempId, list}. */
+  async ssidListSso(groupId) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const tApi = '/conf/group/' + groupId + '/templates';
+    const tj = await ssoCall(tApi, {
+      api: tApi, authParams: { api: tApi, method: 'GET' },
+      method: 'GET', module: 'default', params: {}, querys: { lang: 'en' },
+    });
+    const tempList = tj.tempList || tj.data || [];
+    const tempId = tempList.length ? (tempList[0].id || tempList[0].templateId) : null;
+    if (!tempId) throw new Error('Template မရှိပါ');
+    const wApi = '/conf/wifi_grp/wifi';
+    const wj = await ssoCall(wApi, {
+      api: wApi, authParams: { api: wApi, method: 'GET' },
+      method: 'GET', module: 'default', params: {},
+      querys: { group_id: groupId, conf_template_id: tempId, lang: 'en' },
+    });
+    const list = (wj.data && wj.data.ssidList) || wj.ssidList || [];
+    return { tempId, list };
+  },
+
+  /** Create a new SSID. opts: {ssidName, password, encryptionMode}. */
+  async ssidCreateSso(groupId, opts) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const name = String(opts.ssidName || '').trim();
+    const pwd = String(opts.password || '');
+    if (!name) throw new Error('SSID နာမည် ထည့်ပါ');
+    if (!/^[a-zA-Z0-9@<=>\[\]!#$*().]+$/.test(pwd) || pwd.length < 8) {
+      throw new Error('Password 8 လုံးအထက်၊ ခွင့်ပြုတဲ့ စာလုံးတွေပဲ သုံးပါ');
+    }
+    const { tempId, list } = await this.ssidListSso(groupId);
+    if (list.some(s => String(s.ssidName || '').toLowerCase() === name.toLowerCase())) {
+      throw new Error('ဒီ SSID နာမည် ရှိနေပြီးသား');
+    }
+    const obj = Object.assign(this.ssoNewSsidDefaults(), {
+      ssidName: name,
+      password: pwd,
+      encryptionMode: opts.encryptionMode || 'wpa_wpa2-psk',
+    });
+    const env = this.ssoSsidCreateEnvelope(tempId, obj);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('SSID ဆောက်မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /** Delete an SSID by name. Double-confirm in UI before calling. */
+  async ssidDeleteSso(groupId, ssidName) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const { tempId, list } = await this.ssidListSso(groupId);
+    const ssid = list.find(s => String(s.ssidName || '').toLowerCase() === String(ssidName).toLowerCase());
+    if (!ssid) throw new Error('SSID မတွေ့ပါ: ' + ssidName);
+    const ssidId = ssid.id || ssid.ssidId;
+    if (!ssidId) throw new Error('SSID ID မရှိပါ');
+    const env = this.ssoSsidDeleteEnvelope(tempId, ssidId);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('SSID ဖျက်မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /** Change an SSID's password: GET full object, set new password, PUT full object back. */
+  async ssidSetPasswordSso(groupId, ssidName, newPassword) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const pwd = String(newPassword || '');
+    if (!/^[a-zA-Z0-9@<=>\[\]!#$*().]+$/.test(pwd) || pwd.length < 8) {
+      throw new Error('Password 8 လုံးအထက်၊ ခွင့်ပြုတဲ့ စာလုံးတွေပဲ သုံးပါ');
+    }
+    const { tempId, list } = await this.ssidListSso(groupId);
+    const ssid = list.find(s => String(s.ssidName || '').toLowerCase() === String(ssidName).toLowerCase());
+    if (!ssid) throw new Error('SSID မတွေ့ပါ: ' + ssidName);
+    const ssidId = ssid.id || ssid.ssidId;
+    if (!ssidId) throw new Error('SSID ID မရှိပါ');
+    // PUT the FULL object back, only the password changed (portal sends full config).
+    const obj = Object.assign({}, ssid);
+    obj.password = pwd;
+    if (Array.isArray(obj.relatedRadio)) obj.relatedRadio = obj.relatedRadio.join(',');
+    if (!obj.authEntity) obj.authEntity = {};
+    const env = this.ssoSsidUpdateEnvelope(tempId, ssidId, obj);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('Password ချိန်းမရပါ (code ' + c + ')'));
     }
     return j;
   },
@@ -838,4 +1390,200 @@ const Store = {
     localStorage.setItem(STATE_KEY, JSON.stringify(s));
     return s;
   },
+};
+
+/* ═══════════ NAMED LOGIN PROFILES (v1.5.79) ═══════════
+ * Tier 1 (phone) of the 3-tier lookup: phone → render → github.
+ * Tiers 2/3 live on the proxy (/api/profiles/:name); this object only
+ * handles the on-device store. Name matching is case- AND space-insensitive:
+ * "PrayThein", "praythein", "Pray Thein" and "pray Thein" all resolve to the
+ * same profile. */
+const PROFILES_KEY = 'rv_profiles_v1';
+/**
+ * Profile sync key for proxy writes. The APK build (android/build-apk.sh)
+ * rewrites this line in the COPIED assets from .secrets/profiles_key, so the
+ * real key never lands in the public repo / GitHub Pages. Web builds keep ''.
+ */
+const BUILTIN_SYNC_KEY = '';
+const Profiles = {
+  /** Normalize a typed name to its lookup key; '' when invalid. */
+  normName(raw) {
+    if (raw === null || raw === undefined) return '';
+    const s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
+    if (s.length < 2 || s.length > 32) return '';
+    if (!/^[a-z0-9._-]+$/.test(s)) return '';
+    if (/^[.\-]|[.\-]$/.test(s)) return '';
+    return s;
+  },
+  _all() {
+    try { return JSON.parse(localStorage.getItem(PROFILES_KEY) || '{}'); }
+    catch (e) { return {}; }
+  },
+  _write(all) {
+    try { localStorage.setItem(PROFILES_KEY, JSON.stringify(all)); } catch (e) {}
+  },
+  /** Get a profile by typed name (case-insensitive). Returns null when absent. */
+  get(rawName) {
+    const name = this.normName(rawName);
+    if (!name) return null;
+    const p = this._all()[name];
+    return p && typeof p === 'object' ? p : null;
+  },
+  /** Save/overwrite a profile. Returns the normalized key. */
+  put(profile) {
+    const all = this._all();
+    const key = this.normName(profile.name);
+    all[key] = { ...profile, name: key, updatedAt: Date.now() };
+    this._write(all);
+    return key;
+  },
+  /** Forget one profile by typed name. */
+  forget(rawName) {
+    const name = this.normName(rawName);
+    if (!name) return;
+    const all = this._all();
+    delete all[name];
+    this._write(all);
+  },
+  /** Validate profile fields. Returns null when OK, else the bad field name. */
+  validate(p) {
+    if (!p || typeof p !== 'object') return 'profile';
+    if (!this.normName(p.name)) return 'name';
+    if (!p.appid || String(p.appid).trim().length < 2) return 'appid';
+    if (!p.secret || String(p.secret).trim().length < 2) return 'secret';
+    if (!p.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email).trim())) return 'email';
+    if (!p.password || String(p.password).length < 1) return 'password';
+    return null;
+  },
+};
+
+/* ═══════════ DIRECT GITHUB FALLBACK (v1.5.79) ═══════════
+ * Tier 2 of the 3-tier lookup: phone -> github -> render.
+ * Read-only token embedded by the owner (fine-grained PAT, contents:read
+ * on the profiles repo only). The file holds {profiles: {name: profile}}.
+ * Writes always go through the proxy — this token cannot write. */
+const GITHUB_PROFILES = {
+  repo: 'praythein1994-cpu/ruijie-profiles',
+  branch: 'main',
+  path: 'profiles.json',
+  token: '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',
+};
+
+/**
+ * Direct GitHub read (tier 2). No proxy involved.
+ * Returns {status:'found'|'notfound'|'error', profile?}.
+ */
+Profiles.fetchGithub = async function (rawName) {
+  const name = this.normName(rawName);
+  if (!name) return { status: 'notfound' };
+  if (!GITHUB_PROFILES.token || !GITHUB_PROFILES.repo) return { status: 'error' };
+  const url = 'https://api.github.com/repos/' + GITHUB_PROFILES.repo +
+    '/contents/' + GITHUB_PROFILES.path + '?ref=' + encodeURIComponent(GITHUB_PROFILES.branch);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(url, {
+      headers: {
+        'Authorization': 'Bearer ' + GITHUB_PROFILES.token,
+        'Accept': 'application/vnd.github+json',
+      },
+      signal: ctrl.signal,
+    });
+    if (r.status === 404) return { status: 'notfound' };
+    if (!r.ok) return { status: 'error' };
+    const j = await r.json();
+    const b64 = String(j.content || '').replace(/\s+/g, '');
+    if (!b64) return { status: 'error' };
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const store = JSON.parse(new TextDecoder().decode(bytes));
+    const p = store && store.profiles && store.profiles[name];
+    if (p && typeof p === 'object') return { status: 'found', profile: p };
+    return { status: 'notfound' };
+  } catch (e) {
+    return { status: 'error' };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Proxy read (tier 3: render disk, then the proxy's own github read-through).
+ * Returns {status:'found'|'notfound'|'error', profile?}.
+ */
+Profiles.fetchProxy = async function (rawName, proxyUrl) {
+  const name = this.normName(rawName);
+  if (!name) return { status: 'notfound' };
+  const base = String(proxyUrl || '').replace(/\/+$/, '');
+  if (!base) return { status: 'error' };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(base + '/api/profiles/' + encodeURIComponent(name), { signal: ctrl.signal });
+    if (r.status === 404) return { status: 'notfound' };
+    if (!r.ok) return { status: 'error' };
+    const j = await r.json();
+    if (j && j.ok && j.profile) return { status: 'found', profile: j.profile };
+    return { status: 'notfound' };
+  } catch (e) {
+    return { status: 'error' };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Full 3-tier lookup: phone (instant) -> github direct (15s) -> proxy (15s).
+ * A remote hit is cached to the phone so the next login is instant.
+ * Returns {status:'found'|'notfound'|'error'|'badname', source?, profile?}.
+ * 'error' means at least one remote tier failed (slow/offline) — the caller
+ * should show "try again", not "not found".
+ */
+Profiles.lookup = async function (rawName, proxyUrl) {
+  const name = this.normName(rawName);
+  if (!name) return { status: 'badname' };
+  const local = this.get(name);
+  if (local) return { status: 'found', source: 'phone', profile: local };
+  const gh = await this.fetchGithub(name);
+  if (gh.status === 'found') {
+    try { this.put(gh.profile); } catch (e) {}
+    return { status: 'found', source: 'github', profile: gh.profile };
+  }
+  const px = await this.fetchProxy(name, proxyUrl);
+  if (px.status === 'found') {
+    try { this.put(px.profile); } catch (e) {}
+    return { status: 'found', source: 'render', profile: px.profile };
+  }
+  if (gh.status === 'error' || px.status === 'error') return { status: 'error' };
+  return { status: 'notfound' };
+};
+
+/**
+ * Push a profile to the proxy (tiers 2+3: render disk + github write-through).
+ * Returns {proxy:'ok'|'error'|'key', github:'ok'|'error'|'skipped'}.
+ * 'key' means the proxy demands a sync key (HTTP 403, code -6).
+ */
+Profiles.pushRemote = async function (name, profile, key, proxyUrl) {
+  const out = { proxy: 'error', github: 'skipped' };
+  const base = String(proxyUrl || '').replace(/\/+$/, '');
+  if (!base) return out;
+  // Built-in APK key first, then typed/remembered key override.
+  const sendKey = key || BUILTIN_SYNC_KEY || '';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const r = await fetch(base + '/api/profiles/' + encodeURIComponent(name), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile, key: sendKey }),
+      signal: ctrl.signal,
+    });
+    const j = await r.json().catch(() => null);
+    if (r.status === 403 && j && j.code === -6) { out.proxy = 'key'; return out; }
+    if (r.ok && j && j.ok) {
+      out.proxy = 'ok';
+      out.github = (j.github === 'ok') ? 'ok' : (j.github === 'error' ? 'error' : 'skipped');
+    }
+  } catch (e) { /* out.proxy stays 'error' */ }
+  finally { clearTimeout(timer); }
+  return out;
 };

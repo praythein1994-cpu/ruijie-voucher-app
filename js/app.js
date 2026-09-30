@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.73';
+const APP_VERSION = '1.5.88';
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -18,6 +18,41 @@ const I18N = {
   'connect.proxyHelp': { my: 'CORS proxy server လိပ်စာ (ဥပမာ Render/Railway မှာ deploy ထားတာ)', en: 'CORS proxy server address (e.g. deployed on Render/Railway)' },
   'connect.btn': { my: 'ချိတ်ဆက်မယ်', en: 'Connect' },
   'connect.secure': { my: 'အချက်အလက်များသည် သင့်စက်ပေါ်မှာသာ သိမ်းထားပါသည်', en: 'Your credentials stay only on this device' },
+  'pf.title': { my: 'အကောင့်ဝင်မယ်', en: 'Sign in' },
+  'pf.sub': { my: 'နာမည်တစ်လုံးတည်းရိုက်ပါ', en: 'Just type your name' },
+  'pf.namePh': { my: 'နာမည် (ဥပမာ praythein)', en: 'Name (e.g. praythein)' },
+  'pf.login': { my: 'ဝင်မယ်', en: 'Sign in' },
+  'pf.create': { my: 'Create acc', en: 'Create acc' },
+  'pf.manual': { my: 'ရိုးရိုး ချိတ်ဆက်မယ်', en: 'Manual connect' },
+  'pf.notFound': { my: 'ဒီနာမည်နဲ့ profile မတွေ့ပါ', en: 'No profile found for this name' },
+  'pf.badName': { my: 'နာမည် မှားနေပါတယ်', en: 'Invalid name' },
+  'pf.looking': { my: 'ရှာနေသည်…', en: 'Looking up…' },
+  'pf.newTitle': { my: 'အကောင့်အသစ်ဖွင့်မယ်', en: 'Create account' },
+  'pf.name': { my: 'နာမည်', en: 'Name' },
+  'pf.email': { my: 'Ruijie mail', en: 'Ruijie mail' },
+  'pf.password': { my: 'Ruijie password', en: 'Ruijie password' },
+  'pf.writeKey': { my: 'Sync key (မရှိရင် ချန်ထားပါ)', en: 'Sync key (optional)' },
+  'pf.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'pf.back': { my: 'နောက်သို့', en: 'Back' },
+  'pf.saved': { my: 'သိမ်းပြီးပါပြီ', en: 'Saved' },
+  'pf.needFields': { my: 'အကုန်ဖြည့်ပါ', en: 'Fill in all fields' },
+  'pf.syncOff': { my: 'ဖုန်းထဲပဲ သိမ်းထားသည် (server မရောက်)', en: 'Saved on this phone only (server unreachable)' },
+  'pf.createBtn': { my: 'Create', en: 'Create' },
+  'pf.complete': { my: 'Complete ✓', en: 'Complete ✓' },
+  'pf.allSaved': { my: '၃ ခုလုံး (ဖုန်း + GitHub + Render) ရောက်ပြီ', en: 'Reached all 3 (phone + GitHub + Render)' },
+  'pf.tierPhone': { my: 'ဖုန်း', en: 'Phone' },
+  'pf.tierGithub': { my: 'GitHub', en: 'GitHub' },
+  'pf.tierRender': { my: 'Render', en: 'Render' },
+  'pf.tierFail': { my: 'တစ်ချို့မရောက်သေးပါ — ထပ်နှိပ်ပါ', en: 'Some tiers failed — tap again to retry' },
+  'pf.slowConn': { my: 'လိုင်းနှေးနေတယ်၊ ခဏနေထပ်စမ်းပါ', en: 'Connection is slow, try again shortly' },
+  'pf.backToLogin': { my: 'Login ပြန်သွားမယ်', en: 'Back to login' },
+  'pf.update': { my: 'Profile ပြင်မယ်', en: 'Update profile' },
+  'pf.updateTitle': { my: 'Profile ပြင်မယ်', en: 'Update profile' },
+  'pf.updateBtn': { my: 'Update', en: 'Update' },
+  'pf.keyNeeded': { my: 'Sync key လိုနေပါတယ် — ဖြည့်ပြီးထပ်နှိပ်ပါ', en: 'Sync key required — fill it in and retry' },
+  'pf.typeNameFirst': { my: 'နာမည်အရင်ရိုက်ပါ', en: 'Type your name first' },
+  'pf.verifyFail': { my: 'App ID/Secret စမ်းတာ မအောင်မြင်ပါ', en: 'App ID/Secret verification failed' },
+  's.myProfile': { my: 'My Profile (နာမည် login)', en: 'My Profile (name login)' },
   'btn.connecting': { my: 'ချိတ်ဆက်နေသည်…', en: 'Connecting…' },
   'err.needCreds': { my: 'App ID နဲ့ App Secret ထည့်ပါ', en: 'Enter your App ID and App Secret' },
   'err.needProxy': { my: 'Proxy URL ထည့်ပါ', en: 'Enter the Proxy URL' },
@@ -133,6 +168,20 @@ const I18N = {
   'gw.onlyAndroid': { my: 'Gateway ချိတ်တာကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Gateway connection is only available in the Android app' },
   'gw.needInfo': { my: 'IP၊ အသုံးပြုသူအမည်နဲ့ စကားဝှက် ဖြည့်ပါ', en: 'Enter IP, username and password' },
   'gw.ok': { my: 'Gateway ချိတ်ပြီးပါပြီ', en: 'Gateway connected' },
+  // v1.5.77: AdBlock DNS toggle (gateway DHCP option 6, voucher VLAN 20)
+  'dns.title': { my: 'AdBlock DNS', en: 'AdBlock DNS' },
+  'dns.toggle': { my: 'AdBlock DNS (VLAN {v})', en: 'AdBlock DNS (VLAN {v})' },
+  'dns.sub': { my: 'DNS အဆင့်မှာ ad/tracker domain တွေ စစ်ထုတ်မယ်', en: 'Filters ad/tracker domains at DNS level' },
+  'dns.vlan': { my: 'VLAN', en: 'VLAN' },
+  'dns.current': { my: 'လက်ရှိ DNS (VLAN {v})', en: 'Current DNS (VLAN {v})' },
+  'dns.note': { my: 'DNS အဆင့်မှာပဲ စစ်တာမို့ app/video ad အားလုံး မတားနိုင်ပါ', en: 'DNS-level only — cannot block all in-app/video ads' },
+  'dns.inherit': { my: '(အလိုအလျောက်)', en: '(inherited)' },
+  'dns.onlyAndroid': { my: 'ဒါကို Android app မှာပဲ သုံးလို့ရပါတယ်', en: 'Only available in the Android app' },
+  'dns.needGw': { my: 'အရင် Gateway ချိတ်ပါ', en: 'Connect the gateway first' },
+  'dns.on': { my: 'AdBlock DNS ဖွင့်ပြီးပါပြီ', en: 'AdBlock DNS enabled' },
+  'dns.off': { my: 'AdBlock DNS ပိတ်ပြီး DNS အဟောင်းပြန်ထားပြီးပါပြီ', en: 'AdBlock DNS disabled, original DNS restored' },
+  'dns.badVlan': { my: 'VLAN နံပါတ် မှားနေပါတယ် (ဥပမာ 20)', en: 'Invalid VLAN number (e.g. 20)' },
+  'dns.vlanChanged': { my: 'VLAN ပြောင်းပြီးပါပြီ — AdBlock ပြန်ဖွင့်ပါ', en: 'VLAN changed — please enable AdBlock again' },
   'gw.bye': { my: 'Gateway ဖြုတ်ပြီးပါပြီ', en: 'Gateway disconnected' },
   'gw.encPending': { my: 'စကားဝှက် encrypt နည်းလမ်း မရသေးပါ — gateway login JS လိုနေပါတယ်', en: 'Password encryption method not captured yet — need the gateway login JS' },
   'md.local': { my: '🏠 Local', en: '🏠 Local' },
@@ -207,7 +256,44 @@ const I18N = {
   'kick.status': { my: 'အခြေအနေ', en: 'Status' },
   'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
   'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
+  'unbind.btn': { my: 'MAC ဖြုတ်မယ်', en: 'Unbind MAC' },
+  'unbind.loading': { my: 'MAC စာရင်း ဖတ်နေပါတယ်…', en: 'Loading bound MACs…' },
+  'unbind.none': { my: 'Bind ထားတဲ့ MAC မရှိပါ', en: 'No bound MAC' },
+  'unbind.confirm': { my: 'ဒီ MAC ကို unbind လုပ်မှာလား?', en: 'Unbind this MAC?' },
+  'unbind.done': { my: 'MAC unbind ပြီးပါပြီ', en: 'MAC unbound' },
+  'unbind.fail': { my: 'Unbind မရပါ: ', en: 'Unbind failed: ' },
+  'm.wifi': { my: 'WiFi', en: 'WiFi' },
+  'm.wifiSub': { my: 'SSID များ', en: 'SSIDs' },
+  'wifi.title': { my: 'WiFi (SSID)', en: 'WiFi (SSID)' },
+  'wifi.refresh': { my: 'ပြန်ဖတ်', en: 'Refresh' },
+  'wifi.add': { my: 'SSID အသစ်ဆောက်', en: 'Add SSID' },
+  'wifi.name': { my: 'SSID နာမည်', en: 'SSID name' },
+  'wifi.password': { my: 'Password', en: 'Password' },
+  'wifi.newPassword': { my: 'Password အသစ်', en: 'New password' },
+  'wifi.encryption': { my: 'Encryption', en: 'Encryption' },
+  'wifi.changePw': { my: 'Password ချိန်းမယ်', en: 'Change password' },
+  'wifi.create': { my: 'ဆောက်မယ်', en: 'Create' },
+  'wifi.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'wifi.cancel': { my: 'မလုပ်တော့ဘူး', en: 'Cancel' },
+  'wifi.created': { my: 'SSID ဆောက်ပြီးပြီ', en: 'SSID created' },
+  'wifi.pwChanged': { my: 'Password ချိန်းပြီးပြီ', en: 'Password changed' },
+  'wifi.confirmPw': { my: 'Password ချိန်းမှာလား?', en: 'Change the password?' },
+  'wifi.oldPassword': { my: 'Password အဟောင်း', en: 'Current password' },
+  'wifi.show': { my: 'ပြ', en: 'Show' },
+  'wifi.hide': { my: 'ဖျောက်', en: 'Hide' },
+  'wifi.delete': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'wifi.confirmDel': { my: 'ဒီ SSID ကို ဖျက်မှာလား? ချိတ်ထားသူတွေ ပြတ်သွားမယ်။', en: 'Delete this SSID? Connected clients will drop.' },
+  'wifi.deleted': { my: 'SSID ဖျက်ပြီးပြီ', en: 'SSID deleted' },
+  'wifi.noPw': { my: '(မရှိ)', en: '(none)' },
+  'wifi.needSso': { my: 'Portal login လိုပါတယ်', en: 'Portal login required' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
+  'kick.warnQuota': { my: 'quota ကျန်သေးတယ်', en: 'quota remains' },
+  'kick.warnTime': { my: 'အချိန်ကျန်သေးတယ်', en: 'time remains' },
+  'kick.warnRemain': { my: 'သတိ — ဒီ voucher မှာ {parts}။ ဖြုတ်လိုက်ရင် ကျန်တာတွေ သုံးမရတော့ဘူး။\n\nဆက်ဖြုတ်မလား?', en: 'Warning — this voucher still has {parts}. Disconnecting will waste them.\n\nDisconnect anyway?' },
+  'tele.title': { my: 'App စောင့်ကြည့်မှု', en: 'App monitoring' },
+  'tele.sub': { my: 'ပြဿနာဖြစ်ရင် proxy ကနေတဆင့် အလိုအလျောက် သတိပေးမယ်', en: 'Auto-report problems via the proxy for alerts' },
+  'learn.avg': { my: 'ပျမ်းမျှ သုံးစွဲမှု', en: 'Typical usage' },
+  'learn.fast': { my: 'ပုံမှန်ထက် မြန်မြန်ကုန်နေတယ်', en: 'Burning faster than usual' },
   'kick.pending': { my: 'Kick မရသေးဘူး — cloud ကောင်းမှ verify လုပ်မယ်', en: 'Kick not available yet — will verify when the cloud is healthy' },
   'kick.done': { my: 'ဖြုတ်ပြီးပြီ', en: 'Disconnected' },
   'kick.norecord': { my: 'Client အချက်အလက် ရှာမတွေ့ပါ', en: 'Client auth record not found' },
@@ -354,6 +440,8 @@ const I18N = {
   'm.usergroupsSub': { my: 'အုပ်စုများ', en: 'Groups' },
   'm.devices': { my: 'Devices', en: 'Devices' },
   'm.devicesSub': { my: 'စက်များ', en: 'Devices' },
+  'm.traffic': { my: 'Traffic', en: 'Traffic' },
+  'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
   'm.clients': { my: 'Online Clients', en: 'Online Clients' },
   'm.history': { my: 'History', en: 'History' },
   'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
@@ -429,6 +517,22 @@ const I18N = {
   'md.total': { my: 'စုစုပေါင်း {n} လုံး', en: 'Total {n} devices' },
   'md.partial': { my: 'အချို့စက်များ မရသေးပါ', en: 'Some device types failed to load' },
   'md.needSsoHint': { my: 'Switch/Gateway အပြည့်အစုံမြင်ရရန် Settings မှာ Ruijie အကောင့်ဝင်ပါ', en: 'Log in to your Ruijie account in Settings to see Switch/Gateway' },
+  'mt.title': { my: 'Traffic (Flow Table)', en: 'Traffic (Flow Table)' },
+  'mt.refresh': { my: 'ပြန်ဖတ်', en: 'Refresh' },
+  'mt.hint': { my: 'Gateway ချိတ်ထားမှ မြင်ရမည်။ Refresh တစ်ခါနှိပ်တိုင်း ~166 kB ဆွဲမည်။', en: 'Needs a gateway connection. Each refresh pulls ~166 kB.' },
+  'mt.flows': { my: 'Flow {n} · {time} က ရထားတာ', en: '{n} flows · updated {time}' },
+  'mt.topTalker': { my: 'အများဆုံးသုံးသူ', en: 'Top talker' },
+  'mt.ip': { my: 'IP', en: 'IP' },
+  'mt.conns': { my: 'ချိတ်ဆက်မှု', en: 'Conns' },
+  'mt.up': { my: 'အတက်', en: 'Up' },
+  'mt.down': { my: 'အဆင်း', en: 'Down' },
+  'mt.upRate': { my: 'အတက်နှုန်း', en: 'Up rate' },
+  'mt.downRate': { my: 'အဆင်းနှုန်း', en: 'Down rate' },
+  'mt.est': { my: '(ခန့်မှန်း)', en: '(est.)' },
+  'mt.noData': { my: 'client traffic မရှိပါ', en: 'No client traffic' },
+  'mt.cumNote': { my: 'စုစုပေါင်းတွေက လက်ရှိ flow table ထဲက counter တွေပါ — billing total မဟုတ်ပါ။ နှုန်းတွေက snapshot နှစ်ခုကြား ခန့်မှန်းချက်ပါ။', en: 'Totals are cumulative counters of currently-tracked flows — not billing totals. Rates are estimates between two snapshots.' },
+  'mt.dnsTitle': { my: 'DNS စစ်ဆေးမှု', en: 'DNS check' },
+  'mt.dnsNote': { my: 'AdGuard (94.140.14.14) မသုံးတဲ့ client တွေက DHCP DNS ကို ကျော်သုံးနေတာ (hardcoded DNS / DoT) ဖြစ်နိုင်တယ်။', en: 'Clients not using AdGuard (94.140.14.14) may bypass DHCP DNS with hardcoded DNS / DoT.' },
   'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
   'mc.search': { my: 'Voucher / IP / MAC နဲ့ရှာမယ်', en: 'Search voucher / IP / MAC' },
@@ -451,6 +555,14 @@ const I18N = {
   'mc.flag.suspicious': { my: 'သံသယရှိ — စစ်ဆေးရန်', en: 'Unattributed, active — review' },
   'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
   'mc.flag.kicked': { my: 'ဖြုတ်ပြီး', en: 'Kicked' },
+  'mc.flag.weaksig': { my: 'ဆစ်ဂနယ်အားနည်း', en: 'Weak signal' },
+  'mc.flag.toptalker': { my: 'လိုင်းအသုံးအများဆုံး', en: 'Top talker' },
+  'mc.flag.highloss': { my: 'ပက်ကက်ပျက်များနေ', en: 'High packet loss' },
+  'mc.dQuality': { my: 'လိုင်းအရည်အသွေး', en: 'Line quality' },
+  'mc.qSig': { my: 'ဆစ်ဂနယ်', en: 'Signal' },
+  'mc.qRate': { my: 'လက်ရှိအမြန်နှုန်း', en: 'Current rate' },
+  'mc.qTotal': { my: 'စုစုပေါင်းသုံးစွဲမှု', en: 'Total transferred' },
+  'mc.qLoss': { my: 'ပက်ကက်ပျက်နှုန်း', en: 'Packet loss' },
   'mc.dVoucher': { my: 'ဗောက်ချာ', en: 'Voucher' },
   'mc.dNetwork': { my: 'ကွန်ရက်', en: 'Network' },
   'mc.dSession': { my: 'ဆက်ရှင်', en: 'Session' },
@@ -580,6 +692,8 @@ function applyLang() {
   if (!$('typo-modal').classList.contains('hidden')) renderTypoModal();
   if (S.account) loadAccountInfo();
   if (S.moreFn) S.moreFn();
+  updateDnsLabels(); // v1.5.84: VLAN-specific AdBlock labels survive language switch
+  fillThemeLayoutSelects(); // v1.5.84: theme/layout picker labels follow language
 }
 
 /* ── helpers ── */
@@ -724,14 +838,44 @@ async function copyText(text) {
 /* ── theme (light/dark/glass/neo/clay) ── */
 const THEMES = ['light', 'dark', 'glass', 'neo', 'clay'];
 const THEME_META = { light: '#EDF1F8', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5' };
+const THEME_I18N = { light: 's.themeLight', dark: 's.themeDark', glass: 's.themeGlass', neo: 's.themeNeo', clay: 's.themeClay' };
+const LAYOUT_I18N = { auto: 's.layoutAuto', phone: 's.layoutPhone', tablet: 's.layoutTablet' };
+/** v1.5.84: theme/layout are iOS bottom-sheet pickers (like Profile/Package) — fill select options in the current language. */
+function fillThemeLayoutSelects() {
+  const ts = $('set-theme');
+  if (ts) {
+    ts.innerHTML = '';
+    THEMES.forEach(th => {
+      const o = document.createElement('option');
+      o.value = th; o.textContent = t(THEME_I18N[th]);
+      ts.appendChild(o);
+    });
+    ts.value = document.documentElement.dataset.theme || 'light';
+    syncIosPickerBtn(ts);
+  }
+  const ls = $('set-layout');
+  if (ls) {
+    ls.innerHTML = '';
+    LAYOUTS.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = t(LAYOUT_I18N[m]);
+      ls.appendChild(o);
+    });
+    let cur = 'auto';
+    try { cur = localStorage.getItem('rv-layout') || 'auto'; } catch (e) {}
+    if (!LAYOUTS.includes(cur)) cur = 'auto';
+    ls.value = cur;
+    syncIosPickerBtn(ls);
+  }
+}
 function applyTheme(theme) {
   if (!THEMES.includes(theme)) theme = 'light';
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem('rv-theme', theme); } catch (e) {}
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = THEME_META[theme] || '#EDF1F8';
-  document.querySelectorAll('#theme-grid .theme-opt').forEach(b =>
-    b.classList.toggle('active', b.dataset.themeOpt === theme));
+  const ts = $('set-theme');
+  if (ts && ts.value !== theme) { ts.value = theme; syncIosPickerBtn(ts); }
 }
 function initTheme() {
   let theme = null;
@@ -755,8 +899,8 @@ function applyLayoutMode(mode) {
   if (mode === 'auto') root.removeAttribute('data-layout');
   else root.setAttribute('data-layout', mode);
   try { localStorage.setItem('rv-layout', mode); } catch (e) {}
-  document.querySelectorAll('#layout-seg [data-layout-opt]').forEach(b =>
-    b.classList.toggle('active', b.dataset.layoutOpt === mode));
+  const ls = $('set-layout');
+  if (ls && ls.value !== mode) { ls.value = mode; syncIosPickerBtn(ls); }
   syncCompactClass(mode); // v1.5.65: dedicated iOS-compact phone system
 }
 /* v1.5.65 — dedicated compact phone view. One class drives the whole
@@ -855,10 +999,271 @@ async function doConnect() {
 }
 function showErr(id, msg) {
   const e = $(id);
+  if (!e) return;
   e.textContent = msg;
   e.classList.remove('hidden');
   const pad = $(id + '-pad');
   if (pad) pad.classList.remove('hidden');
+}
+
+/* ═══════════ NAMED PROFILE LOGIN (v1.5.79) ═══════════
+ * Type one name -> the app fills App ID/Secret + Ruijie account and signs in.
+ * Lookup order: phone (instant) -> github direct (15s) -> render proxy (15s).
+ * Name matching is case- and space-insensitive ("Pray Thein" == "praythein").
+ * Create pushes to all 3 tiers; "Complete" shows only when all 3 confirm. */
+const DEFAULT_PROXY = 'https://ruijie-voucher-proxy.onrender.com';
+
+/* 'create' | 'update' — which mode the profile form is in. */
+let profileFormMode = 'create';
+/* Where the form's back/done button returns: 'gate' | 'app'. */
+let profileFormReturn = 'gate';
+
+function showProfileGate() {
+  profileFormReturn = 'gate';
+  $('view-connect').classList.add('hidden');
+  $('view-profile-new').classList.add('hidden');
+  $('view-profile').classList.remove('hidden');
+  setTimeout(() => { try { $('pf-name').focus(); } catch (e) {} }, 50);
+}
+
+async function doProfileLogin() {
+  const errId = 'profile-err';
+  const errEl = $(errId);
+  if (errEl) errEl.classList.add('hidden');
+  const name = Profiles.normName($('pf-name').value);
+  if (!name) return showErr(errId, t('pf.badName'));
+  const btn = $('btn-profile-login');
+  const lbl = $('btn-profile-login-label');
+  btn.disabled = true;
+  if (lbl) lbl.textContent = t('pf.looking');
+  try {
+    const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+    const res = await Profiles.lookup(name, proxy);
+    if (res.status === 'found') { await applyProfile(res.profile); return; }
+    if (res.status === 'error') return showErr(errId, t('pf.slowConn'));
+    return showErr(errId, t('pf.notFound'));
+  } catch (e) {
+    showErr(errId, t('err.connectFail') + (e && e.message ? e.message : e));
+  } finally {
+    btn.disabled = false;
+    if (lbl) lbl.textContent = t('pf.login');
+  }
+}
+
+/** Apply a profile: save Open-API cfg, stash SSO creds natively, connect, enter. */
+/* SSO (APK only): stash the profile's portal creds natively, enable
+ * auto-login, then open the login dialog — the injected cover auto-submits
+ * the saved creds, so a profile login never makes the user tap Sign In
+ * manually. Best-effort: never throws, never blocks the login flow. */
+function ssoLoginWithProfile(profile) {
+  if (!hasBridge() || !profile || !profile.email) return false;
+  try {
+    if (window.RuijieBridge.ssoSaveCreds) window.RuijieBridge.ssoSaveCreds(profile.email, profile.password || '');
+    if (window.RuijieBridge.ssoSetAutoLogin) window.RuijieBridge.ssoSetAutoLogin(true);
+    window.RuijieBridge.ssoLogin();
+    return true;
+  } catch (e) { return false; }
+}
+async function applyProfile(profile) {
+  const cfg = {
+    cloud: (profile.cloud || 'https://cloud-as.ruijienetworks.com').replace(/\/+$/, ''),
+    appid: String(profile.appid || '').trim(),
+    secret: String(profile.secret || ''),
+    proxy: String(profile.proxy || '').replace(/\/+$/, ''),
+  };
+  if (!cfg.appid || !cfg.secret) throw new Error(t('err.needCreds'));
+  if (!hasBridge() && !cfg.proxy) throw new Error(t('err.needProxy'));
+  Api.saveCfg(cfg);
+  try { localStorage.setItem('rv_profile_name', String(profile.name || '')); } catch (e) {}
+  syncMonitorConfig(); // v1.5.52: push cloud creds to the bg offline monitor
+  syncAutoKickConfig(); // v1.5.66: same creds for the bg auto-kick
+  ssoLoginWithProfile(profile); // SSO (APK only): stash creds + auto-submit; best-effort
+  const info = await Api.testConnection();
+  S.account = info;
+  enterApp();
+  toast(t('toast.connected'));
+}
+
+/* ── Profile form (create + update) ─────────────────────────────
+ * Create: APP ID, SECRET, MAIL, PASSWORD (+name) -> push to all 3 tiers ->
+ *   "Complete" only when phone + render + github all confirm.
+ * Update: same form pre-filled; the new App ID/Secret are verified with a
+ *   live testConnection before anything is pushed. */
+function openProfileForm(mode, presetName) {
+  profileFormMode = mode;
+  $('view-profile').classList.add('hidden');
+  $('view-connect').classList.add('hidden');
+  $('app').classList.add('hidden');
+  $('view-profile-new').classList.remove('hidden');
+  // reset to the form state (not the done state)
+  $('profile-new-form').classList.remove('hidden');
+  $('profile-new-done').classList.add('hidden');
+  const tiersBox = $('profile-new-tiers');
+  tiersBox.classList.add('hidden');
+  tiersBox.innerHTML = '';
+  const errEl = $('profile-new-err');
+  if (errEl) errEl.classList.add('hidden');
+  // title + button per mode
+  $('pfn-title-create').classList.toggle('hidden', mode !== 'create');
+  $('pfn-title-update').classList.toggle('hidden', mode !== 'update');
+  $('btn-profile-new-save-label').textContent = t(mode === 'update' ? 'pf.updateBtn' : 'pf.createBtn');
+  // the sync-key field stays hidden unless the proxy demands a key
+  $('pfn-key-wrap').classList.add('hidden');
+  $('pfn-key').value = '';
+  if (!$('pfn-cloud').value) $('pfn-cloud').value = 'https://cloud-as.ruijienetworks.com';
+  if (!$('pfn-proxy').value) $('pfn-proxy').value = (Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY;
+  const nm = $('pfn-name');
+  if (mode === 'update') {
+    nm.value = presetName || '';
+    nm.disabled = true;
+    fillProfileForm(presetName);
+  } else {
+    nm.disabled = false;
+  }
+}
+
+/** Look the profile up (3-tier) and pre-fill the form for update mode. */
+async function fillProfileForm(name) {
+  const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+  const res = await Profiles.lookup(name, proxy);
+  if (res.status !== 'found') {
+    showErr('profile-new-err', res.status === 'error' ? t('pf.slowConn') : t('pf.notFound'));
+    return;
+  }
+  const p = res.profile;
+  $('pfn-cloud').value = p.cloud || 'https://cloud-as.ruijienetworks.com';
+  $('pfn-appid').value = p.appid || '';
+  $('pfn-secret').value = p.secret || '';
+  $('pfn-proxy').value = p.proxy || ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY);
+  $('pfn-email').value = p.email || '';
+  $('pfn-pass').value = p.password || '';
+}
+
+function showProfileNew() {
+  profileFormReturn = 'gate';
+  openProfileForm('create');
+}
+
+/** Gate "Update profile" link: the name comes from the gate input. */
+function showProfileUpdate() {
+  const name = Profiles.normName($('pf-name').value);
+  if (!name) { showErr('profile-err', t('pf.typeNameFirst')); return; }
+  profileFormReturn = 'gate';
+  openProfileForm('update', name);
+}
+
+/** Settings → My Profile: the name comes from the last applied profile. */
+function showProfileUpdateFromSettings() {
+  let name = '';
+  try { name = localStorage.getItem('rv_profile_name') || ''; } catch (e) {}
+  if (!name) { toast(t('pf.typeNameFirst')); return; }
+  profileFormReturn = 'app';
+  openProfileForm('update', name);
+}
+
+/** Back button on the form (and the done panel): return where we came from. */
+function profileFormBack() {
+  if (profileFormReturn === 'app') {
+    $('view-profile-new').classList.add('hidden');
+    $('app').classList.remove('hidden');
+  } else {
+    showProfileGate();
+  }
+}
+
+async function doProfileCreate() {
+  const errId = 'profile-new-err';
+  const errEl = $(errId);
+  if (errEl) errEl.classList.add('hidden');
+  const tiersBox = $('profile-new-tiers');
+  tiersBox.classList.add('hidden');
+  tiersBox.innerHTML = '';
+  const isUpdate = profileFormMode === 'update';
+  const p = {
+    name: $('pfn-name').value,
+    display: $('pfn-name').value.trim(),
+    cloud: $('pfn-cloud').value.trim(),
+    appid: $('pfn-appid').value.trim(),
+    secret: $('pfn-secret').value,
+    proxy: $('pfn-proxy').value.trim(),
+    email: $('pfn-email').value.trim(),
+    password: $('pfn-pass').value,
+  };
+  const bad = Profiles.validate(p);
+  if (bad) return showErr(errId, t('pf.needFields'));
+  const btn = $('btn-profile-new-save');
+  btn.disabled = true;
+  try {
+    const normKey = Profiles.normName(p.name);
+    const proxy = (p.proxy || DEFAULT_PROXY).replace(/\/+$/, '');
+    if (isUpdate) {
+      // verify the new App ID/Secret with a live call before pushing anything
+      const cfg = {
+        cloud: (p.cloud || 'https://cloud-as.ruijienetworks.com').replace(/\/+$/, ''),
+        appid: p.appid,
+        secret: p.secret,
+        proxy,
+      };
+      const prevCfg = Api.cfg ? { ...Api.cfg } : null;
+      Api.saveCfg(cfg);
+      try {
+        await Api.testConnection();
+      } catch (e) {
+        if (prevCfg) Api.saveCfg(prevCfg); else Api.clearCfg();
+        return showErr(errId, t('pf.verifyFail'));
+      }
+    }
+    // tier 1: this phone
+    let phoneOk = false;
+    try { Profiles.put({ ...p, name: normKey }); phoneOk = true; } catch (e) {}
+    // tiers 2+3: proxy (render disk + github write-through)
+    let key = '';
+    try { key = localStorage.getItem('rv_profile_key') || ''; } catch (e) {}
+    const keyTyped = $('pfn-key').value;
+    if (keyTyped) { key = keyTyped; try { localStorage.setItem('rv_profile_key', keyTyped); } catch (e) {} }
+    const res = await Profiles.pushRemote(normKey, { ...p, name: normKey }, key, proxy);
+    if (res.proxy === 'key') {
+      // the proxy demands a sync key: reveal the field and let the user retry
+      $('pfn-key-wrap').classList.remove('hidden');
+      return showErr(errId, t('pf.keyNeeded'));
+    }
+    const tiers = { phone: phoneOk, render: res.proxy === 'ok', github: res.github === 'ok' };
+    renderProfileTiers(tiers);
+    if (tiers.phone && tiers.render && tiers.github) {
+      showProfileDone();
+    } else {
+      showErr(errId, t('pf.tierFail'));
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/** Per-tier checkmarks under the form. tiers: {phone, render, github} | null. */
+function renderProfileTiers(tiers) {
+  const box = $('profile-new-tiers');
+  if (!tiers) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  const row = (ok, label) =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
+    '<span style="font-weight:700;color:' + (ok ? '#34C759' : '#FF3B30') + '">' + (ok ? '✓' : '✗') + '</span>' +
+    '<span>' + label + '</span></div>';
+  box.innerHTML =
+    row(tiers.phone, t('pf.tierPhone')) +
+    row(tiers.github, t('pf.tierGithub')) +
+    row(tiers.render, t('pf.tierRender'));
+  box.classList.remove('hidden');
+}
+
+/** "Complete" state: all 3 tiers confirmed. */
+function showProfileDone() {
+  $('profile-new-form').classList.add('hidden');
+  const box = $('profile-done-tiers');
+  const row = (label) =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
+    '<span style="font-weight:700;color:#34C759">✓</span><span>' + label + '</span></div>';
+  box.innerHTML =
+    row(t('pf.tierPhone')) + row(t('pf.tierGithub')) + row(t('pf.tierRender'));
+  $('profile-new-done').classList.remove('hidden');
 }
 
 /* v1.5.40: startup sync — refresh the voucher map from Cloud (fresh
@@ -894,6 +1299,8 @@ function enterApp() {
    * switch still works for the session; the next startup is English again. */
   try { setLang('en'); } catch (e) {}
   $('view-connect').classList.add('hidden');
+  $('view-profile').classList.add('hidden');
+  $('view-profile-new').classList.add('hidden');
   $('app').classList.remove('hidden');
   const st = Store.load();
   if (st.printHeader) $('print-header').value = st.printHeader;
@@ -1220,9 +1627,13 @@ async function loadVouchers(opts) {
     S.vouchersFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
     // newest first
     S.vouchers.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
+    try { for (const v of S.vouchers) Learn.record(v); } catch (e) { /* learning is best-effort */ }
+    Tele.flush(); // v1.5.75: flush queued telemetry (best-effort)
     renderVouchers();
   } catch (e) {
     if (gen !== S._voucherGen) return; // superseded — discard
+    // v1.5.75: report sync failures for monitoring
+    Tele.log('sync.failed', String((e && e.message) || e || '').slice(0, 200)); Tele.flush();
     // v1.5.57: silent (live-stats) failures keep the old list — never wipe it
     if (!opts.silent) listEl.innerHTML = `<div class="empty"><div class="big">${ic('alert', 'xl')}</div><p><b>${t('v.loadFail')}</b></p><p class="small">${esc(e.message)}</p></div>`;
   } finally {
@@ -1362,6 +1773,7 @@ function renderVouchers() {
         <div class="pkg">${esc(v.packageName || v.userGroupName || '')} · ${esc(fmtPeriod(v.timePeriod))}</div>
       </div>
       ${ri ? `<span class="remain-txt">${esc(ri.txt)}</span>` : ''}
+      ${Learn.fastBurn(v) ? `<span class="flag-fast" title="${esc(t('learn.fast'))}">⚑</span>` : ''}
       <span class="badge s${esc(es)}">${esc(statusTxt(es))}</span>
       <span class="chev">${ic('chev')}</span>
     </div>`;
@@ -1455,6 +1867,7 @@ function openVoucherDetail(uuid) {
     [t('d.quota'), esc(fmtQuota(v.quota))],
     [t('d.usedQuota'), `<span id="live-usedquota">${esc(fmtUsedQuota(v.usedQuota))}</span>`],
     [t('d.remQuota'), `<span id="live-remquota">${esc(remQuotaTxt(v))}</span><span id="live-age" class="muted small"></span>`],
+    [t('learn.avg'), esc(learnAvgTxt(v))], // v1.5.75: per-package usage average
     [t('d.maxClients'), esc(v.maxClients || '—')],
     [t('d.curClients'), esc(v.currentClients || 0)],
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
@@ -1471,7 +1884,15 @@ function openVoucherDetail(uuid) {
   // paths remain for printing.)
   $('modal-print').classList.add('hidden');
   $('modal-disconnect').classList.remove('hidden');
+  // v1.5.86: MAC unbind button on voucher preview (user request)
+  $('modal-unbind').classList.remove('hidden');
+  const wasOpen = !$('modal').classList.contains('hidden');
   $('modal').classList.remove('hidden');
+  // v1.5.74: push a history entry so a browser Back press closes the
+  // detail via the popstate handler (native APK back already closes open
+  // modals through MainActivity). Skipped on re-render while already open
+  // so a single Back press is always enough to exit.
+  if (!wasOpen) { try { history.pushState({ view: S.currentView || 'view-vouchers', modal: 'voucher' }, ''); } catch (e) {} }
   startVoucherLive(v);
 }
 
@@ -2993,8 +3414,9 @@ async function moreDevices() {
           const nm = d.aliasName || d.alias || d.deviceAliasName || d.name || sn;
           const st = devStatus(d);
           const localTag = d.local ? ` <small class="muted">· ${esc(t('md.localTag'))}</small>` : '';
-          // Local reboot wire format not captured yet — no reboot button on local rows (v1.5.16).
-          const rb = (!d.local && sn) ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
+          // v1.5.78: local reboot wire format verified (devSta.set devReboot) —
+          // local rows get the reboot button too (gateway bridge, APK).
+          const rb = sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}" data-local="${d.local ? '1' : ''}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
           // v1.5.22: per-AP client count badge → tap opens that AP's client list.
           // v1.5.24: WR (home router, e.g. EW3200GX-PRO in AP mode) counts too.
           // v1.5.29: gateway-local APs (incl. China-version APs invisible to
@@ -3021,7 +3443,7 @@ async function moreDevices() {
           <td>${rb}${cb}</td></tr>`;
         }).join('')}
         </table></div>`;
-    document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name)));
+    document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name, b.dataset.local === '1')));
     document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames, b.dataset.aplocal === '1')));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
@@ -3031,18 +3453,208 @@ async function moreDevices() {
   load('');
 }
 
-/* ── Device reboot (Cloud portal via SSO) · v1.5.13 ──
-   Button-only: no web portal, no CLI. Android-APK-only (SSO bridge);
-   the portal reboots by device serial number (snList). */
-async function rebootDevice(sn, name) {
-  if (!Api.ssoLoggedIn()) { toast(t('md.needSso'), true); return; }
+/* ── Device reboot (v1.5.13 SSO portal · v1.5.78 gateway-local) ──
+   Button-only: no web portal, no CLI. Local rows use the verified
+   devSta.set devReboot envelope (APK gateway bridge); cloud rows use
+   the SSO portal bridge as before. */
+async function rebootDevice(sn, name, isLocal) {
   if (!confirm(tx('md.rebootConfirm', { name: name || sn }))) return;
   toast(t('md.rebooting'));
   try {
-    await Api.deviceReboot(sn);
+    if (isLocal) {
+      if (!GwApi.loggedIn()) { toast(t('md.needGw'), true); return; }
+      await GwApi.deviceReboot(sn);
+    } else {
+      if (!Api.ssoLoggedIn()) { toast(t('md.needSso'), true); return; }
+      await Api.deviceReboot(sn);
+    }
     toast(t('md.rebootOk'));
   } catch (e) { toast(e.message || t('md.rebootFail'), true); }
   if (S.moreFn === moreDevices) moreDevices();
+}
+
+/* ── Flow Table traffic view (More → Traffic) · v1.5.78 ──
+   Read-only, gateway-local (APK only). Manual refresh ONLY — one poll is
+   ~166 kB on the EG105G-V3. Combined view: per-client up/down totals,
+   estimated live speed (needs two snapshots), top talker, per-client DNS
+   servers (AdBlock DNS verification). */
+/* ── v1.5.87: WiFi SSID management (More → WiFi) ── */
+async function moreWifi() {
+  S.moreFn = moreWifi;
+  moreShell(`${ic('signal', 'sm')} ${esc(t('wifi.title'))}`, `
+    <div><button class="btn" id="wifi-refresh">${ic('refresh', 'sm')}<span>${t('wifi.refresh')}</span></button>
+    <button class="btn primary" id="wifi-add">${ic('plus', 'sm')}<span>${t('wifi.add')}</span></button>
+    <span class="muted small" id="wifi-meta"></span></div>
+    <div id="wifi-body" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>`);
+  $('wifi-refresh').addEventListener('click', loadSsids);
+  $('wifi-add').addEventListener('click', openSsidAdd);
+  loadSsids();
+}
+
+async function loadSsids() {
+  const body = $('wifi-body'), meta = $('wifi-meta');
+  if (!body) return;
+  if (!Api.ssoLoggedIn()) { body.innerHTML = `<p class="muted">${t('wifi.needSso')}</p>`; return; }
+  body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
+  try {
+    const { list } = await Api.ssidListSso(S.projectId);
+    S.ssidList = list;
+    if (meta) meta.textContent = list.length + ' SSID';
+    if (!list.length) { body.innerHTML = `<p class="muted">—</p>`; return; }
+    body.innerHTML = list.map(s => {
+      const nm = esc(s.ssidName || '—');
+      const enc = esc(s.encryptionMode || '');
+      const hid = s.ishidden ? ' (hidden)' : '';
+      return `<div class="voucher-row" style="align-items:center">
+        <div style="flex:1;min-width:0"><div style="font-weight:600">${nm}${hid}</div>
+        <div class="muted small">${enc}</div></div>
+        <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}">${t('wifi.changePw')}</button>
+        <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}">${t('wifi.delete')}</button>
+      </div>`;
+    }).join('');
+    body.querySelectorAll('[data-ssidpw]').forEach(b => b.addEventListener('click', () => openSsidPassword(b.dataset.ssidpw)));
+    body.querySelectorAll('[data-ssiddel]').forEach(b => b.addEventListener('click', () => deleteSsid(b.dataset.ssiddel)));
+  } catch (e) {
+    body.innerHTML = `<p class="muted">Error: ${esc(e.message || e)}</p>`;
+  }
+}
+
+async function deleteSsid(ssidName) {
+  if (!confirm(t('wifi.confirmDel') + '\n' + ssidName)) return;
+  if (!confirm(ssidName + '\n' + t('wifi.confirmDel'))) return;
+  try {
+    await Api.ssidDeleteSso(S.projectId, ssidName);
+    toast(t('wifi.deleted')); loadSsids();
+  } catch (e) { toast(e.message || e, true); }
+}
+
+function openSsidAdd() {
+  if (!Api.ssoLoggedIn()) { toast(t('wifi.needSso')); return; }
+  const body = $('wifi-body');
+  body.innerHTML = `
+    <div class="card" style="padding:14px;max-width:420px">
+    <h3 style="margin:0 0 10px">${esc(t('wifi.add'))}</h3>
+    <label class="fld"><span>${t('wifi.name')}</span><input id="sa-name" maxlength="32" autocomplete="off"></label>
+    <label class="fld"><span>${t('wifi.password')}</span><input id="sa-pw" type="password" autocomplete="new-password"></label>
+    <label class="fld"><span>${t('wifi.encryption')}</span><select id="sa-enc">
+      <option value="wpa_wpa2-psk">WPA/WPA2-PSK</option>
+      <option value="wpa2-psk">WPA2-PSK</option>
+      <option value="wpa-psk">WPA-PSK</option>
+      <option value="open">Open (no password)</option>
+    </select></label>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="sa-ok">${t('wifi.create')}</button>
+      <button class="btn" id="sa-cancel">${t('wifi.cancel')}</button>
+    </div></div>`;
+  $('sa-cancel').addEventListener('click', loadSsids);
+  $('sa-ok').addEventListener('click', async () => {
+    const name = $('sa-name').value.trim(), pw = $('sa-pw').value, enc = $('sa-enc').value;
+    try {
+      if (enc === 'open') {
+        await Api.ssidCreateSso(S.projectId, { ssidName: name, password: '12345678', encryptionMode: 'open' });
+      } else {
+        await Api.ssidCreateSso(S.projectId, { ssidName: name, password: pw, encryptionMode: enc });
+      }
+      toast(t('wifi.created')); loadSsids();
+    } catch (e) { toast(e.message || e, true); }
+  });
+}
+
+function openSsidPassword(ssidName) {
+  if (!Api.ssoLoggedIn()) { toast(t('wifi.needSso')); return; }
+  const cur = (S.ssidList || []).find(s => String(s.ssidName || '') === String(ssidName));
+  const oldPw = cur ? String(cur.password || '') : '';
+  const body = $('wifi-body');
+  body.innerHTML = `
+    <div class="card" style="padding:14px;max-width:420px">
+    <h3 style="margin:0 0 10px">${esc(ssidName)}</h3>
+    <div class="fld"><span>${t('wifi.oldPassword')}</span>
+      <div class="row" style="align-items:center">
+        <input id="sp-old" type="password" readonly value="${esc(oldPw)}" placeholder="${t('wifi.noPw')}" style="flex:1">
+        <button class="btn sm" id="sp-toggle">${t('wifi.show')}</button>
+      </div></div>
+    <label class="fld"><span>${t('wifi.newPassword')}</span><input id="sp-pw" type="password" autocomplete="new-password"></label>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="sp-ok">${t('wifi.save')}</button>
+      <button class="btn" id="sp-cancel">${t('wifi.cancel')}</button>
+    </div></div>`;
+  $('sp-toggle').addEventListener('click', () => {
+    const inp = $('sp-old');
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    $('sp-toggle').textContent = t(show ? 'wifi.hide' : 'wifi.show');
+  });
+  $('sp-cancel').addEventListener('click', loadSsids);
+  $('sp-ok').addEventListener('click', async () => {
+    const pw = $('sp-pw').value;
+    if (!confirm(t('wifi.confirmPw'))) return;
+    try {
+      await Api.ssidSetPasswordSso(S.projectId, ssidName, pw);
+      toast(t('wifi.pwChanged')); loadSsids();
+    } catch (e) { toast(e.message || e, true); }
+  });
+}
+
+async function moreTraffic() {
+  S.moreFn = moreTraffic;
+  moreShell(`${ic('chart', 'sm')} ${esc(t('mt.title'))}`, `
+    ${GwApi.loggedIn() ? '' : `<p class="muted small">${t('md.needGw')}</p>`}
+    <div><button class="btn" id="mt-refresh">${ic('refresh', 'sm')}<span>${t('mt.refresh')}</span></button>
+    <span class="muted small" id="mt-meta"></span></div>
+    <div id="mt-body" style="margin-top:10px"><p class="muted">${t('mt.hint')}</p></div>`);
+  $('mt-refresh').addEventListener('click', loadTraffic);
+  if (GwApi.loggedIn()) loadTraffic();
+}
+
+async function loadTraffic() {
+  const body = $('mt-body'), meta = $('mt-meta');
+  if (!body) return;
+  body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
+  try {
+    const { count, flows } = await GwApi.flowTable();
+    const now = Date.now();
+    let rates = null;
+    if (S.trafficPrev && Array.isArray(S.trafficPrev.flows) && now > S.trafficPrev.t) {
+      rates = flowRates(S.trafficPrev.flows, flows, now - S.trafficPrev.t);
+    }
+    S.trafficPrev = { t: now, flows };
+    renderTraffic(body, meta, aggFlowsByClient(flows), rates, count, now);
+  } catch (e) {
+    const m = String((e && e.message) || e);
+    body.innerHTML = `<p class="err">${esc(m === 'GW_NOT_LOGGED_IN' ? t('md.needGw') : m === 'GW_PWD_ENC_PENDING' ? t('gw.encPending') : m)}</p>`;
+  }
+}
+
+function renderTraffic(body, meta, agg, rates, count, now) {
+  meta.textContent = tx('mt.flows', { n: count, time: fmtTime(now) });
+  if (!agg.length) { body.innerHTML = `<p class="muted">${esc(t('mt.noData'))}</p>`; return; }
+  const top = agg[0];
+  const topTotal = top.upBytes + top.downBytes;
+  const ADGUARD = '94.140.14.14';
+  const rateCell = r => r == null ? '—' : esc(fmtRate(r * 8));
+  body.innerHTML = `
+    <div class="stat-grid"><div class="stat a"><div class="n">${esc(top.ip)}</div>
+    <div class="l">${esc(t('mt.topTalker'))} · ${esc(fmtBytes(topTotal))}</div></div></div>
+    <p class="muted small">${esc(t('mt.cumNote'))}</p>
+    <div class="wrap-scroll"><table class="data">
+      <tr><th>${t('mt.ip')}</th><th>${t('mt.conns')}</th><th>${t('mt.up')}</th><th>${t('mt.down')}</th>
+      <th>${t('mt.upRate')} ${t('mt.est')}</th><th>${t('mt.downRate')} ${t('mt.est')}</th></tr>
+      ${agg.map(c => {
+        const r = rates ? rates.get(c.ip) : null;
+        return `<tr><td>${esc(c.ip)}</td><td>${c.flows}</td><td>${esc(fmtBytes(c.upBytes))}</td>` +
+          `<td>${esc(fmtBytes(c.downBytes))}</td><td>${rateCell(r && r.upRate)}</td><td>${rateCell(r && r.downRate)}</td></tr>`;
+      }).join('')}
+    </table></div>
+    <div class="section-title">${esc(t('mt.dnsTitle'))}</div>
+    <p class="muted small">${esc(t('mt.dnsNote'))}</p>
+    <div class="wrap-scroll"><table class="data">
+      <tr><th>${t('mt.ip')}</th><th>DNS</th></tr>
+      ${agg.filter(c => c.dns.length).map(c =>
+        `<tr><td>${esc(c.ip)}</td><td>${c.dns.map(d =>
+          d === ADGUARD
+            ? `<span class="chip ok">✓ ${esc(d)}</span>`
+            : `<span class="chip">${esc(d)}</span>`).join(' ')}</td></tr>`).join('') || `<tr><td colspan="2" class="muted">${esc(t('mt.noData'))}</td></tr>`}
+    </table></div>`;
 }
 
 /* Extract display values for one Online-Clients record. Pure and
@@ -3078,10 +3690,6 @@ const mcFields = (c, viaPortal, vmap) => {
       : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : NaN));
   const sig = [c.rssi != null && c.rssi !== '' ? String(c.rssi) + ' dBm' : '',
                c.band || '', c.channel ? 'ch ' + c.channel : ''].filter(Boolean).join(' · ') || '—';
-  const total = viaPortal ? fmtBytes(c.flowUpDown) : '—';
-  const live = !viaPortal ? '—'
-    : ((c.downRate == null || c.downRate === '') && (c.upRate == null || c.upRate === '')
-      ? '—' : [fmtRate(c.downRate), fmtRate(c.upRate)].join(' / '));
   const dev = viaPortal
     ? (() => {
         const maker = String(c.manufacturer || '').trim();
@@ -3092,7 +3700,61 @@ const mcFields = (c, viaPortal, vmap) => {
       })()
     : '—';
   const conn = viaPortal ? (c.connectType || '—') : '—';
+  // v1.5.76: open-API fallback rows carry real traffic fields (flowUp/
+  // flowDown, upRate/downRate) — surface them instead of '—'. Portal rows
+  // keep their combined flowUpDown; gateway-merged rows stay '—'.
+  const total = viaPortal ? fmtBytes(c.flowUpDown)
+    : (() => {
+        const parts = [];
+        const d = fmtBytes(c.flowDown), u = fmtBytes(c.flowUp);
+        if (d !== '—') parts.push('↓ ' + d);
+        if (u !== '—') parts.push('↑ ' + u);
+        return parts.length ? parts.join(' · ') : '—';
+      })();
+  const live = ((c.downRate == null || c.downRate === '') && (c.upRate == null || c.upRate === ''))
+    ? '—' : [fmtRate(c.downRate), fmtRate(c.upRate)].join(' / ');
   return { mac, ip, name, acct, authType, ssid, ap, since, dur: fmtDur(durMs), sig, total, live, dev, conn };
+};
+
+/* v1.5.76: normalized line-quality signals for one Online-Clients record.
+ * Pure and unit-testable. Field names verified against the open-API doc
+ * (sta_users carries rssi, pktLoseRate, upRate, downRate, flowUp, flowDown)
+ * and the portal GLOBAL_USERS capture (rssi, flowUpDown, upRate, downRate).
+ * pktLoseRate is an integer with no documented unit — surfaced raw and
+ * flagged only when unambiguously high. Missing → null, never fabricated. */
+const mcQuality = (c, viaPortal) => {
+  c = c || {};
+  const num = v => (v === '' || v == null || !Number.isFinite(Number(v))) ? null : Number(v);
+  const rssi = num(c.rssi);
+  const down = num(c.downRate), up = num(c.upRate);
+  let tDown = null, tUp = null, tComb = null;
+  if (viaPortal) tComb = num(c.flowUpDown);
+  else { tDown = num(c.flowDown); tUp = num(c.flowUp); }
+  const loss = num(c.pktLoseRate); // open-API only; unit undocumented
+  return { rssi, down, up, tDown, tUp, tComb, loss };
+};
+/* v1.5.76: per-row quality flags from normalized signals. Pure. A weak
+ * (-80 dBm or worse) client drags its whole radio cell down to low PHY
+ * rates, so it is worth a review/kick; packet loss is flagged only at
+ * levels that are bad under any unit interpretation. */
+const mcQualityFlags = q => {
+  const fl = [];
+  if (q.rssi != null && q.rssi <= -80) fl.push('weaksig');
+  if (q.loss != null && q.loss >= 10) fl.push('highloss');
+  return fl;
+};
+/* v1.5.76: indices of the heaviest transferrers in the list — rows carrying
+ * at least half of the single heaviest total. Pure and unit-testable. */
+const topTalkerIdx = (list, viaPortal) => {
+  const bytes = (list || []).map(c => {
+    const q = mcQuality(c, viaPortal);
+    return (q.tDown || 0) + (q.tUp || 0) + (q.tComb || 0);
+  });
+  const mx = Math.max(0, ...bytes);
+  if (mx <= 0) return new Set();
+  const s = new Set();
+  bytes.forEach((b, i) => { if (b >= mx * 0.5) s.add(i); });
+  return s;
 };
 
 /* Client connection status for the Online-Clients view. Pure and
@@ -3340,6 +4002,133 @@ function markKickedVoucher(code) {
   m[code] = Date.now();
   try { Store.save({ kickedVouchers: m }); } catch (e) {}
 }
+/* v1.5.74: warn before Disconnect when the voucher still has quota or time
+ * left. Only claims what is known: quota>0 and not fully spent, or
+ * timePeriod>0 and not fully used. Unlimited/missing fields → no claim. */
+function kickRemainWarning(v) {
+  if (!v) return '';
+  const parts = [];
+  if ((Number(v.quota) || 0) > 0 && !voucherQuotaGone(v)) parts.push(t('kick.warnQuota'));
+  if ((Number(v.timePeriod) || 0) > 0 && !voucherHoursGone(v)) parts.push(t('kick.warnTime'));
+  if (!parts.length) return '';
+  return tx('kick.warnRemain', { parts: parts.join('၊ ') });
+}
+
+/* ═══════════ v1.5.75 · Telemetry: app → proxy event inbox ═══════════
+ * The app reports lifecycle/error events to the proxy's /telemetry endpoint
+ * so a monitoring agent can poll them and alert the owner. Best-effort:
+ * events queue in localStorage (max 120) and flush when the proxy is
+ * reachable. NEVER log secrets — only event types, voucher codes, counts
+ * and error messages. Toggle in Settings → စစ်ဆေးမှုများ (default ON). */
+const Tele = {
+  q: [],
+  lastErrAt: 0,
+  load() {
+    try { this.q = JSON.parse(localStorage.getItem('rv-tele') || '[]'); }
+    catch (e) { this.q = []; }
+    if (!Array.isArray(this.q)) this.q = [];
+  },
+  save() { try { localStorage.setItem('rv-tele', JSON.stringify(this.q.slice(-120))); } catch (e) {} },
+  on() { try { return Store.load().teleOn !== false; } catch (e) { return true; } },
+  log(type, msg, data) {
+    if (!this.on()) return;
+    this.q.push({
+      ts: Date.now(), app: APP_VERSION,
+      type: String(type).slice(0, 48), msg: String(msg || '').slice(0, 300),
+      data: data || undefined,
+    });
+    if (this.q.length > 120) this.q.splice(0, this.q.length - 120);
+    this.save();
+  },
+  err(msg) { // js.error is rate-limited: max 1 per minute (no spam loops)
+    const now = Date.now();
+    if (now - this.lastErrAt < 60000) return;
+    this.lastErrAt = now;
+    this.log('js.error', msg);
+  },
+  proxyBase() {
+    try { return (Store.load().proxy || '').replace(/\/+$/, '') || null; }
+    catch (e) { return null; }
+  },
+  async flush() {
+    if (!this.on() || !this.q.length) return;
+    const base = this.proxyBase();
+    if (!base || !window.fetch) return;
+    const batch = this.q.slice(0, 40);
+    try {
+      const r = await fetch(base + '/telemetry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events: batch }),
+      });
+      if (!r.ok) return;
+      this.q.splice(0, batch.length);
+      this.save();
+    } catch (e) { /* offline — keep queued for next time */ }
+  },
+};
+
+/* ═══════════ v1.5.75 · Learn: per-package usage averages (fee-free) ═══════════
+ * The app remembers how long each package type actually lasts (running
+ * averages in localStorage — no network, no AI service, no fee) and flags
+ * vouchers burning far faster than their package average. A "completed"
+ * voucher = quota fully spent OR time fully used; anything else (date
+ * expiry, manual kick) teaches nothing and is skipped. */
+const Learn = {
+  data: null,
+  load() {
+    try { this.data = JSON.parse(localStorage.getItem('rv-learn') || '{"pkg":{},"done":{}}'); }
+    catch (e) { this.data = { pkg: {}, done: {} }; }
+    if (!this.data || !this.data.pkg) this.data = { pkg: {}, done: {} };
+    if (!this.data.done) this.data.done = {};
+  },
+  save() { try { localStorage.setItem('rv-learn', JSON.stringify(this.data)); } catch (e) {} },
+  key(v) {
+    const q = Number(v && v.quota) || 0, p = Number(v && v.timePeriod) || 0;
+    return (q || p) ? q + 'MB/' + p + 'm' : '';
+  },
+  record(v) {
+    if (!this.data) this.load();
+    const code = vCode(v);
+    if (!code || this.data.done[code]) return;
+    if (!voucherQuotaGone(v) && !voucherHoursGone(v)) return; // not consumed — nothing to learn
+    const k = this.key(v);
+    if (!k) return;
+    const hours = (Number(v.usedTime) || 0) / 60;
+    const mb = Number(v.usedQuota) || 0;
+    if (hours <= 0 && mb <= 0) return;
+    this.data.done[code] = 1;
+    const s = this.data.pkg[k] || (this.data.pkg[k] = { n: 0, hours: 0, mb: 0 });
+    s.n++; s.hours += hours; s.mb += mb;
+    const dk = Object.keys(this.data.done);
+    if (dk.length > 500) for (const x of dk.slice(0, dk.length - 500)) delete this.data.done[x];
+    this.save();
+  },
+  avg(v) {
+    if (!this.data) this.load();
+    const s = this.data.pkg[this.key(v)];
+    if (!s || s.n < 2) return null;
+    return { n: s.n, hours: s.hours / s.n, mb: s.mb / s.n };
+  },
+  fastBurn(v) {
+    const a = this.avg(v);
+    if (!a || a.hours <= 0) return false;
+    const at = voucherActivatedTime(v);
+    if (!at) return false;
+    const elapsedH = (Date.now() - at) / 3600000;
+    if (elapsedH < 0.5) return false; // too early to judge
+    const mb = Number(v.usedQuota) || 0, q = Number(v.quota) || 0;
+    if (q > 0 && mb < q * 0.1) return false; // under 10% used — not alarming
+    if (elapsedH <= 0 || mb <= 0) return false;
+    const avgRate = a.mb / a.hours; // MB per hour, typical
+    return avgRate > 0 && (mb / elapsedH) > 2 * avgRate;
+  },
+};
+function learnAvgTxt(v) {
+  const a = Learn.avg(v);
+  if (!a) return '—';
+  const h = a.hours >= 1 ? (Math.round(a.hours * 10) / 10) + ' h' : Math.max(1, Math.round(a.hours * 60)) + ' min';
+  return `${h} · ${fmtQuota(Math.round(a.mb))} (${a.n})`;
+}
 /* v1.5.66: effective status for filters, dashboard stats and row badges.
  * Cloud status lags reality: a voucher whose data quota is fully spent or
  * whose hours are used up can still report status 2 ("in use"), and a
@@ -3393,6 +4182,9 @@ async function requestKick(c, opts) {
     });
   } catch (e) {
     if (!opts.auto) toast(String((e && e.message) || e || ''), true);
+    // v1.5.75: report kick failures for monitoring
+    Tele.log('kick.failed', String((e && e.message) || e || '').slice(0, 200), { code: rec.account, auto: !!opts.auto });
+    Tele.flush();
     return false;
   }
   if (!opts.auto) toast(t('kick.done'));
@@ -3404,13 +4196,18 @@ async function requestKick(c, opts) {
   // rec.account is the voucher code for voucher-auth clients; for other
   // auth types the mark simply never matches a voucher — harmless.
   markKickedVoucher(rec.account);
+  // v1.5.75: report kicks for monitoring
+  Tele.log('kick.done', '', { code: rec.account, auto: !!opts.auto });
+  Tele.flush();
   try { if (mcCache) renderMcList(); } catch (e) { /* best-effort */ }
   return true;
 }
 function kickStickyClient(c) {
   const mac = c && (c.mac || c.userMac);
   if (!mac) return;
-  if (!confirm(t('kick.confirm'))) return;
+  const v = (S.vouchers || []).find(x => vCode(x) === String((c && c.account) || '').trim());
+  const w = kickRemainWarning(v);
+  if (!confirm(w || t('kick.confirm'))) return;
   requestKick(c, { auto: false });
 }
 /* ── Background auto-kick (Android APK only, v1.5.66) ─────────
@@ -3470,6 +4267,17 @@ function initKickSettings() {
     tg.addEventListener('change', onKickToggle);
   }
   refreshKickStatus();
+}
+// v1.5.75: monitoring toggle (Settings → စစ်ဆေးမှုများ)
+function initTeleSettings() {
+  const tg = $('tele-on');
+  if (tg) {
+    tg.checked = Store.load().teleOn !== false;
+    tg.addEventListener('change', () => {
+      Store.save({ teleOn: tg.checked });
+      if (tg.checked) { Tele.log('monitor.on', 'monitoring enabled'); Tele.flush(); }
+    });
+  }
 }
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
@@ -3679,6 +4487,8 @@ function renderMcCells() {
   };
   const voucherInline = (vcode, vm) => voucherCellHtml(vcode, vm).replace(/<br>/g, ' · ');
   let cells = '';
+  // v1.5.76: heaviest transferrers get a top-talker flag (read-only signal).
+  const topSet = topTalkerIdx(list, viaPortal);
   list.forEach((c, i) => {
     if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
@@ -3697,6 +4507,10 @@ function renderMcCells() {
       if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
     }
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
+    // v1.5.76: line-quality flags — weak signal / heavy talker / packet
+    // loss. Read-only signals from verified fields; never accusatory.
+    flags.push(...mcQualityFlags(mcQuality(c, viaPortal)));
+    if (topSet.has(i)) flags.push('toptalker');
     // v1.5.62: kicked mark — a manual or auto kick leaves a visible badge
     // even while the portal list still shows the client online.
     const kts = kickedAt(f.mac);
@@ -3708,8 +4522,11 @@ function renderMcCells() {
     // tap-to-open detail sheet (openMcDetail).
     const net = [(f.ip !== '—' ? f.ip : ''), (f.ap !== '—' ? f.ap : '')].filter(Boolean).join(' · ');
     // v1.5.55: per-client disconnect on sticky rows (quota spent, still online).
+    // v1.5.76: also on weak-signal rows — a client at -80 dBm or worse
+    // drags its whole radio cell to low PHY rates; one tap reuses the
+    // verified kick (confirm dialog, voucher never deleted).
     // Execution gated by KICK_VERIFIED — the button explains until then.
-    const kickBtn = flags.includes('sticky')
+    const kickBtn = (flags.includes('sticky') || flags.includes('weaksig'))
       ? `<button type="button" class="mc-kick" data-kick="${esc(f.mac)}">${esc(t('kick.btn'))}</button>` : '';
     const flagHtml = fl => fl === 'kicked'
       ? `<span class="mc-flag flag-kicked">✓ ${esc(t('mc.flag.kicked'))} · ${esc(fmtTime(kts))}</span>`
@@ -3770,6 +4587,10 @@ function openMcDetail(idx) {
   // v1.5.62: kicked mark in the detail sheet too.
   const kts2 = kickedAt(f.mac);
   if (kts2) flags.push('kicked');
+  // v1.5.76: line-quality flags in the detail sheet (read-only signals).
+  const mq = mcQuality(c, viaPortal);
+  flags.push(...mcQualityFlags(mq));
+  if (topTalkerIdx(list, viaPortal).has(idx)) flags.push('toptalker');
   let body = '';
   if (flags.length) body += `<div class="mc-sheet-flags">${flags.map(fl => fl === 'kicked'
     ? `<span class="mc-flag flag-kicked">✓ ${esc(t('mc.flag.kicked'))} · ${esc(fmtTime(kts2))}</span>`
@@ -3790,8 +4611,19 @@ function openMcDetail(idx) {
     kv(t('mc.dSince'), f.since) + kv(t('mc.dDur'), f.dur) +
     kv(t('mc.dSig'), f.sig) + kv(t('mc.dTraffic'), f.total) +
     kv(t('mc.dLive'), f.live === '—' ? '' : '⇅ ' + f.live));
+  // v1.5.76: dedicated line-quality section — normalized signals, raw
+  // packet-loss value (unit undocumented in the Ruijie doc; shown as-is).
+  const qTotal = viaPortal
+    ? (mq.tComb != null ? fmtBytes(mq.tComb) : '')
+    : (() => { const p = []; if (mq.tDown != null) p.push('↓ ' + fmtBytes(mq.tDown)); if (mq.tUp != null) p.push('↑ ' + fmtBytes(mq.tUp)); return p.join(' · '); })();
+  const qRate = (mq.down != null || mq.up != null) ? '⇅ ' + [fmtRate(mq.down), fmtRate(mq.up)].join(' / ') : '';
+  const qBody = grp(
+    kv(t('mc.qSig'), mq.rssi != null ? mq.rssi + ' dBm' : '') +
+    kv(t('mc.qRate'), qRate) + kv(t('mc.qTotal'), qTotal) +
+    kv(t('mc.qLoss'), mq.loss != null ? String(mq.loss) : ''));
+  if (qBody) body += sec(t('mc.dQuality')) + qBody;
   if (f.dev && f.dev !== '—') body += sec(t('mc.dDevice')) + grp(kv(t('mc.device'), f.dev));
-  if (flags.includes('sticky')) {
+  if (flags.includes('sticky') || flags.includes('weaksig')) {
     body += `<button type="button" class="ios-sheet-danger" id="mc-sheet-kick">${esc(t('kick.btn'))}</button>`;
   }
   closeIosPicker();
@@ -4393,6 +5225,7 @@ function fillSettings() {
   $('set-secret').value = '';
   refreshSsoCard();
   refreshGwCard();
+  refreshDnsCard(); // v1.5.77: AdBlock DNS toggle
   refreshMonitorCard();
   refreshKickStatus(); // v1.5.66
   refreshLiveCard();
@@ -4624,6 +5457,140 @@ async function onGwButton() {
     btn.disabled = false;
     refreshGwCard();
   }
+}
+
+/* ═══════════ AdBlock DNS toggle (v1.5.77; VLAN configurable v1.5.84) ═══════════
+ * Toggles the gateway's DHCP option-6 DNS for the user-chosen VLAN
+ * (default 20) between AdGuard DNS (ON) and the exact previous value (OFF).
+ * Write path verified from real eWeb saves (user DevTools 2026-09-30).
+ * Android-APK only (needs the gateway bridge). OFF restores the backed-up
+ * value — never an invented DNS. DNS filtering is DNS-level only; it is
+ * not described as complete in-app/video ad blocking. */
+const AD_DNS_KEYS = { on: 'adDnsOn', backups: 'adDnsBackups', vlan: 'adDnsVlan', legacyBackup: 'adDnsBackup' };
+const AD_DNS_DEFAULT_VLAN = '20';
+/** v1.5.84: user-configurable VLAN (was hardcoded 20). Digits only. */
+function getAdDnsVlan() {
+  let s = null;
+  try { s = Store.load(); } catch (_) { s = null; }
+  const v = s && s[AD_DNS_KEYS.vlan] != null ? String(s[AD_DNS_KEYS.vlan]).trim() : '';
+  return /^\d+$/.test(v) ? v : AD_DNS_DEFAULT_VLAN;
+}
+/** Gateway vlan tag format, e.g. "lan_20". Pure. */
+function adDnsVlanTag(vlan) { return 'lan_' + String(vlan || '').trim(); }
+/** Per-VLAN backups: { "lan_20": "<dns>", ... }. Migrates the legacy single backup (always VLAN 20). */
+function getAdDnsBackups() {
+  let s = null;
+  try { s = Store.load(); } catch (_) { s = null; }
+  let b = s && s[AD_DNS_KEYS.backups];
+  if (!b || typeof b !== 'object' || Array.isArray(b)) b = {};
+  if (s && s[AD_DNS_KEYS.legacyBackup] != null && b['lan_20'] == null) {
+    b = Object.assign({}, b, { 'lan_20': String(s[AD_DNS_KEYS.legacyBackup]) });
+  }
+  return b;
+}
+/** Pure: back up the current DNS before enabling, unless it is already the AdGuard DNS. */
+function adDnsNeedsBackup(cur, adDns) { return String(cur || '').trim() !== String(adDns); }
+function getAdDns() {
+  let s = null;
+  try { s = Store.load(); } catch (_) { s = null; }
+  const vlan = getAdDnsVlan();
+  const tag = adDnsVlanTag(vlan);
+  const backups = getAdDnsBackups();
+  return {
+    on: !!(s && s[AD_DNS_KEYS.on]),
+    backup: backups[tag] != null ? String(backups[tag]) : '',
+    vlan,
+    tag,
+  };
+}
+/** Keep the card labels in sync with the chosen VLAN (i18n placeholders don't auto-fill). */
+function updateDnsLabels() {
+  const vlan = getAdDnsVlan();
+  document.querySelectorAll('[data-i18n="dns.toggle"]').forEach(el => { el.textContent = tx('dns.toggle', { v: vlan }); });
+  document.querySelectorAll('[data-i18n="dns.current"]').forEach(el => { el.textContent = tx('dns.current', { v: vlan }); });
+  const inp = $('dns-vlan');
+  if (inp && document.activeElement !== inp) inp.value = vlan;
+}
+async function refreshDnsCard() {
+  const tg = $('dns-adblock');
+  if (!tg) return;
+  const st = getAdDns();
+  tg.checked = st.on;
+  updateDnsLabels();
+  const curEl = $('dns-current');
+  if (!curEl) return;
+  if (!hasGw()) { curEl.textContent = t('dns.onlyAndroid'); return; }
+  if (!GwApi.loggedIn()) { curEl.textContent = t('dns.needGw'); return; }
+  curEl.textContent = '…';
+  try {
+    const data = await GwApi.dhcpOptionRead();
+    const v = GwApi.dhcpOption6Of(GwApi.findDhcpVlanEntry(data, st.tag));
+    curEl.textContent = v || t('dns.inherit');
+  } catch (e) { curEl.textContent = '—'; }
+}
+async function onAdDnsToggle() {
+  const tg = $('dns-adblock');
+  const wantOn = !!(tg && tg.checked);
+  if (!hasGw()) { toast(t('dns.onlyAndroid'), true); if (tg) tg.checked = !wantOn; return; }
+  if (tg) tg.disabled = true;
+  const st = getAdDns();
+  try {
+    if (!(await GwApi.ensureLogin())) throw new Error(t('dns.needGw'));
+    if (wantOn) {
+      // Backup the exact current value first (unless already on AdGuard —
+      // then the true original is already backed up).
+      const data = await GwApi.dhcpOptionRead();
+      const cur = GwApi.dhcpOption6Of(GwApi.findDhcpVlanEntry(data, st.tag));
+      if (adDnsNeedsBackup(cur, GwApi.AD_DNS)) {
+        const backups = getAdDnsBackups();
+        backups[st.tag] = cur;
+        Store.save({ [AD_DNS_KEYS.backups]: backups });
+      }
+      await GwApi.dhcpOptionSetDns(st.tag, GwApi.AD_DNS);
+      Store.save({ [AD_DNS_KEYS.on]: true });
+      toast(t('dns.on'));
+    } else {
+      await GwApi.dhcpOptionSetDns(st.tag, st.backup);
+      Store.save({ [AD_DNS_KEYS.on]: false });
+      toast(t('dns.off'));
+    }
+  } catch (e) {
+    if (tg) tg.checked = !wantOn; // revert the switch on failure
+    toast(String((e && e.message) || e), true);
+  } finally {
+    if (tg) tg.disabled = false;
+    refreshDnsCard();
+  }
+}
+/** v1.5.84: VLAN changed. If AdBlock is ON, restore the old VLAN first so no VLAN is left stuck on AdGuard. */
+async function onAdDnsVlanChange() {
+  const inp = $('dns-vlan');
+  const raw = inp ? String(inp.value).trim() : '';
+  if (!/^\d+$/.test(raw)) {
+    toast(t('dns.badVlan'), true);
+    if (inp) inp.value = getAdDnsVlan();
+    return;
+  }
+  const st = getAdDns();
+  if (raw === st.vlan) return;
+  if (st.on) {
+    if (!hasGw()) { toast(t('dns.onlyAndroid'), true); if (inp) inp.value = st.vlan; return; }
+    inp.disabled = true;
+    try {
+      if (!(await GwApi.ensureLogin())) throw new Error(t('dns.needGw'));
+      await GwApi.dhcpOptionSetDns(st.tag, st.backup);
+      Store.save({ [AD_DNS_KEYS.on]: false });
+      toast(t('dns.vlanChanged'));
+    } catch (e) {
+      if (inp) inp.value = st.vlan;
+      toast(String((e && e.message) || e), true);
+      return;
+    } finally {
+      inp.disabled = false;
+    }
+  }
+  Store.save({ [AD_DNS_KEYS.vlan]: raw });
+  refreshDnsCard();
 }
 
 /* ═══════════ DIAGNOSTICS (Settings → စစ်ဆေးမှုများ) ═══════════
@@ -4919,6 +5886,11 @@ function initPullToRefresh() {
 function init() {
   if (init._done) return; // guard against double script evaluation
   init._done = true;
+  Tele.load(); Learn.load(); // v1.5.75: monitoring queue + usage learning
+  // v1.5.75: report JS errors for monitoring (rate-limited inside Tele.err)
+  window.addEventListener('error', e => {
+    try { Tele.err(String((e && e.message) || 'unknown error').slice(0, 200)); Tele.flush(); } catch (x) {}
+  });
   initTheme();
   initLayoutMode(); // v1.5.63: Auto/Phone/Tablet layout override
   initLang();
@@ -4926,6 +5898,7 @@ function init() {
   initPullToRefresh();
   initIosPickers();   // v1.5.55: bottom-sheet pickers for project/usergroup/package
   initKickSettings(); // v1.5.55: kick toggle + status
+  initTeleSettings(); // v1.5.75: monitoring toggle
   initTabbarDrag();   // v1.5.55: press-drag along the tabbar to switch pages
 
   // password peek toggles
@@ -4935,6 +5908,22 @@ function init() {
   }));
 
   $('btn-connect').addEventListener('click', doConnect);
+  // v1.5.79: named profile login
+  $('btn-profile-login').addEventListener('click', doProfileLogin);
+  $('pf-name').addEventListener('keydown', e => { if (e.key === 'Enter') doProfileLogin(); });
+  $('btn-profile-create').addEventListener('click', showProfileNew);
+  $('btn-profile-update').addEventListener('click', e => { e.preventDefault(); showProfileUpdate(); });
+  $('btn-profile-manual').addEventListener('click', () => {
+    $('view-profile').classList.add('hidden');
+    $('view-connect').classList.remove('hidden');
+  });
+  // v1.5.79: manual connect screen → back to the profile login gate
+  $('btn-connect-back').addEventListener('click', e => { e.preventDefault(); showProfileGate(); });
+  $('btn-profile-new-save').addEventListener('click', doProfileCreate);
+  $('btn-profile-new-back').addEventListener('click', profileFormBack);
+  $('btn-profile-done-back').addEventListener('click', profileFormBack);
+  const bmp = $('btn-my-profile');
+  if (bmp) bmp.addEventListener('click', showProfileUpdateFromSettings);
   document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view)));
   $('project-select').addEventListener('change', onProjectChange);
 
@@ -4994,9 +5983,37 @@ function init() {
   // no auth record (client offline) → honest "not found" toast, no-op.
   $('modal-disconnect').addEventListener('click', async () => {
     if (!modalVoucher) return;
-    if (!confirm(t('kick.confirm'))) return;
+    const w = kickRemainWarning(modalVoucher);
+    if (!confirm(w || t('kick.confirm'))) return;
     const ok = await requestKick({ account: vCode(modalVoucher) }, { auto: false });
     if (ok) { modalVoucher = null; closeModal('modal'); loadVouchers(); }
+  });
+  // v1.5.86: MAC unbind from voucher preview (user request)
+  $('modal-unbind').addEventListener('click', async () => {
+    if (!modalVoucher) return;
+    const v = modalVoucher;
+    const code = v.voucherCode || v.codeNo || v.code || '';
+    try {
+      toast(t('unbind.loading') || 'MAC စာရင်း ဖတ်နေပါတယ်…');
+      // tenantName = Ruijie account email (portal URL path segment, e.g. cupidleo8387@gmail.com)
+      let tenantName = (S.account && (S.account.account || S.account.email)) || '';
+      if (!tenantName) {
+        try {
+          const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}');
+          if (bi && bi.email) tenantName = bi.email;
+        } catch (e) {}
+      }
+      const list = await Api.voucherBindMacListSso(S.projectId, v, tenantName, '');
+      if (!list || !list.length) { toast(t('unbind.none') || 'Bind ထားတဲ့ MAC မရှိပါ'); return; }
+      const macs = list.map(x => x.mac).filter(Boolean).join(', ');
+      if (!confirm((t('unbind.confirm') || 'MAC unbind လုပ်မှာလား?') + '\n' + macs)) return;
+      const recordList = list.map(x => x.recordUuid).filter(Boolean);
+      const macList = list.map(x => x.mac).filter(Boolean);
+      await Api.voucherUnbindMacSso(S.projectId, v, recordList, macList, '');
+      toast(t('unbind.done') || 'MAC unbind ပြီးပါပြီ');
+    } catch (e) {
+      toast((t('unbind.fail') || 'Unbind မရပါ: ') + (e.message || e));
+    }
   });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
   $('modal-delete').addEventListener('click', deleteVoucher);
@@ -5026,13 +6043,13 @@ function init() {
     Store.save({ printPaper: b.dataset.paper });
   }));
 
-  // theme picker (Settings → Appearance)
-  document.querySelectorAll('#theme-grid .theme-opt').forEach(b =>
-    b.addEventListener('click', () => applyTheme(b.dataset.themeOpt)));
-
-  // layout mode picker (Settings → Layout) — v1.5.63
-  document.querySelectorAll('#layout-seg [data-layout-opt]').forEach(b =>
-    b.addEventListener('click', () => applyLayoutMode(b.dataset.layoutOpt)));
+  // v1.5.84: theme/layout pickers (Settings → Appearance/Layout) — iOS
+  // bottom-sheet style like Profile (Package)
+  fillThemeLayoutSelects();
+  const _st = $('set-theme');
+  if (_st) { enhanceIosPicker(_st); _st.addEventListener('change', () => applyTheme(_st.value)); }
+  const _sl = $('set-layout');
+  if (_sl) { enhanceIosPicker(_sl); _sl.addEventListener('change', () => applyLayoutMode(_sl.value)); }
 
   // language (မြန်မာ / English)
   document.querySelectorAll('#lang-seg button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
@@ -5065,6 +6082,8 @@ function init() {
     if (k === 'accounts') moreAccounts();
     else if (k === 'usergroups') moreUserGroups();
     else if (k === 'devices') moreDevices();
+    else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
+    else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
     else if (k === 'history') moreHistory(); // v1.5.54
     else if (k === 'networks') moreNetworks();
@@ -5088,6 +6107,8 @@ function init() {
   restartLiveStats(false);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) liveStatsTick(false); });
   $('btn-gw').addEventListener('click', onGwButton);
+  const _ad = $('dns-adblock'); if (_ad) _ad.addEventListener('change', onAdDnsToggle); // v1.5.77
+  const _adv = $('dns-vlan'); if (_adv) _adv.addEventListener('change', onAdDnsVlanChange); // v1.5.84
   $('btn-diag-run').addEventListener('click', runDiagnostics);
   $('btn-diag-save').addEventListener('click', saveDiagReport);
   // SSO login/logout events from the native dialog
@@ -5152,7 +6173,7 @@ function ssoSilentReauth() {
   const needProxyField = !hasBridge() && !(Api.cfg && Api.cfg.proxy);
   if (pf && pf.closest('label')) pf.closest('label').style.display = needProxyField ? '' : 'none';
   if (Api.cfg && Api.cfg.appid) enterApp();
-  else $('view-connect').classList.remove('hidden');
+  else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
 }
 
 document.addEventListener('DOMContentLoaded', init);
