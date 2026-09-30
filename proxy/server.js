@@ -11,6 +11,9 @@
  *  GET  /telemetry?since=<ms>[&key=...] — read recent events (monitoring)
  *  GET  /api/profiles/:name — named login profile (tier 2: render disk, tier 3: github)
  *  PUT  /api/profiles/:name { profile, key } — save profile (disk + github write-through)
+ *  GET  /amt-wifi/<token> — AMH customer self-service page (capability URL, no login form)
+ *  GET  /amt-wifi/<token>/info — the VLAN-30 SSID name
+ *  POST /amt-wifi/<token>/set-password { newPassword } — change ONLY that SSID's password
  *
  * - Tokens are cached in memory per (cloud, appid) and auto-refreshed.
  * - App secrets are NEVER written to disk or logs; tokens live only in RAM.
@@ -42,6 +45,7 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 const Profiles = require('./profiles');
+const AmtWifi = require('./amt-wifi');
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim());
@@ -380,6 +384,9 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/telemetry' && req.method === 'GET') return handleTelemetryGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'GET') return handleProfileGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
+    // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
+    // server-side portal CAS login, only the VLAN-30 SSID can be changed.
+    if (u.pathname.startsWith('/amt-wifi/')) return AmtWifi.handle(req, res, u);
     return send(res, req, 404, { code: -5, msg: 'Not found' });
   } catch (e) {
     return send(res, req, 500, { code: -9, msg: 'Proxy error: ' + String(e.message || e) });
