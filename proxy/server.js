@@ -232,7 +232,7 @@ async function handleProfilePut(req, res, u) {
 
 function corsHeaders(req) {  const origin = req.headers.origin || '';
   const allow = ALLOWED_ORIGINS.includes('*') ? '*' : (ALLOWED_ORIGINS.includes(origin) ? origin : '');
-  const h = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+  const h = { 'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
   if (allow) h['Access-Control-Allow-Origin'] = allow;
   return h;
 }
