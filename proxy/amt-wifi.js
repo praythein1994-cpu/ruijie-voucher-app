@@ -173,6 +173,9 @@ async function portalLogin() {
       if (/locked|frozen/i.test(t)) signals.push('account locked/frozen mentioned');
       const title = (t.match(/<title>([^<]{2,80})/i) || [])[1];
       if (title) signals.push('page title: ' + title.trim());
+      signals.push('http ' + res.status + ', body ' + t.length + ' chars');
+      if (/<title>[^<]*(attention required|just a moment)/i.test(t)) signals.push('bot-protection challenge page');
+      if (/too many|rate.?limit|try again later/i.test(t)) signals.push('rate-limit suspected');
       throw new Error('Portal login rejected' + (signals.length ? ' (' + signals.join('; ') + ')' : ' (no detail extracted)') +
         ' — check AMT_PORTAL_USER/AMT_PORTAL_PASS (2FA accounts are not supported)');
     }
