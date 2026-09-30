@@ -162,11 +162,18 @@ async function portalLogin() {
       body: params.toString(),
     });
     if (!res.url.includes('/webproxy/') && !res.text.includes('sso/back')) {
-      // stayed on the login page -> credentials rejected (or 2FA/captcha).
-      // Extract the portal's own error text when present so the cause is clear.
-      const m = res.text.match(/id="credential\.errors"[^>]*>([^<]{2,200})/);
-      const detail = m ? m[1].trim().replace(/\s+/g, ' ') : '';
-      throw new Error('Portal login rejected' + (detail ? ' (' + detail + ')' : '') +
+      // stayed on the login page -> diagnose WHY so the cause is actionable.
+      const t = res.text;
+      const m = t.match(/id="credential\.errors"[^>]*>([^<]{2,200})/);
+      const credErr = m ? m[1].trim().replace(/\s+/g, ' ') : '';
+      const signals = [];
+      if (credErr) signals.push('portal says: ' + credErr);
+      if (/captcha/i.test(t) && /<img[^>]*captcha|<input[^>]*captcha/i.test(t)) signals.push('captcha challenge shown');
+      if (/googleTotpCode/i.test(t) && /totp[^<]{0,80}(display:\s*block|show)/i.test(t)) signals.push('2FA totp challenge shown');
+      if (/locked|frozen/i.test(t)) signals.push('account locked/frozen mentioned');
+      const title = (t.match(/<title>([^<]{2,80})/i) || [])[1];
+      if (title) signals.push('page title: ' + title.trim());
+      throw new Error('Portal login rejected' + (signals.length ? ' (' + signals.join('; ') + ')' : ' (no detail extracted)') +
         ' — check AMT_PORTAL_USER/AMT_PORTAL_PASS (2FA accounts are not supported)');
     }
     // 3. verify the session with a cheap webproxy call
