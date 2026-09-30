@@ -171,8 +171,8 @@ async function portalLogin() {
       if (/captcha/i.test(t) && /<img[^>]*captcha|<input[^>]*captcha/i.test(t)) signals.push('captcha challenge shown');
       if (/googleTotpCode/i.test(t) && /totp[^<]{0,80}(display:\s*block|show)/i.test(t)) signals.push('2FA totp challenge shown');
       if (/locked|frozen/i.test(t)) signals.push('account locked/frozen mentioned');
-      const scripts = [...t.matchAll(/<script[^>]*src="([^"]{1,120})"/gi)].map(x => x[1]).slice(0, 5);
-      if (scripts.length) signals.push('scripts: ' + scripts.join(','));
+      const scripts = [...t.matchAll(/<script[^>]*src="([^"]{1,160})"/gi)].map(x => x[1]).slice(0, 15);
+      if (scripts.length) signals.push('scripts: ' + scripts.join(' | '));
       const inl = [...t.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]{1,600})<\/script>/gi)]
         .map(x => x[1].replace(/\s+/g, ' ').trim().slice(0, 300)).filter(Boolean).slice(0, 2);
       for (const s of inl) signals.push('inline js: ' + s);
