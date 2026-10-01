@@ -479,6 +479,26 @@ public class RuijieBridge {
                 }));
     }
 
+    /** fix1: silent SSO login for app entry — the dialog is hidden (window
+     * alpha 0) while the login runs; the app shows an iOS-style loading
+     * overlay instead. The dialog is revealed automatically if the login
+     * needs the user (captcha / 2FA / error). Result events go to
+     * window._ssoEvent(name). */
+    @JavascriptInterface
+    public void ssoLoginSilent() {
+        activity.runOnUiThread(() -> SsoSession.getInstance().showLoginDialog(activity, true,
+                new SsoSession.LoginCallback() {
+                    @Override public void onSuccess() {
+                        webView.post(() -> webView.evaluateJavascript(
+                                "window._ssoEvent&&window._ssoEvent('login')", null));
+                    }
+                    @Override public void onCancel() {
+                        webView.post(() -> webView.evaluateJavascript(
+                                "window._ssoEvent&&window._ssoEvent('cancel')", null));
+                    }
+                }));
+    }
+
     /** Synchronous status JSON: {"loggedIn":true/false}. */
     @JavascriptInterface
     public String ssoStatus() {
@@ -572,6 +592,21 @@ public class RuijieBridge {
     public void ssoForgetAccount() {
         try { new SecureCredentialStore(activity).clear(); }
         catch (Exception ignored) {}
+    }
+
+    /**
+     * Save portal account credentials from a named profile (v1.5.79).
+     * Keystore-encrypted via SecureCredentialStore; never logged.
+     * Marks remember-wanted so the SSO cover auto-submits on next login.
+     */
+    @JavascriptInterface
+    public void ssoSaveCreds(String email, String password) {
+        try {
+            if (email == null || email.trim().isEmpty()) return;
+            SecureCredentialStore store = new SecureCredentialStore(activity);
+            store.save(email.trim(), password == null ? "" : password);
+            store.setRememberWanted(true);
+        } catch (Exception ignored) {}
     }
 
     // ── DIAGNOSTICS ──────────────────────────────────────────────

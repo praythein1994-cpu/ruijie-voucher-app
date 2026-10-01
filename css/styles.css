@@ -507,6 +507,12 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 }
 .ios-sheet-danger:active { opacity: .6; }
 [data-theme="dark"] .ios-sheet-danger { background: rgba(255,69,58,.20); }
+/* v1.5.95: neutral action button (Unblock) — same geometry as danger */
+.ios-sheet-btn {
+  margin: 14px 4px 0; width: calc(100% - 8px); padding: 14px; border: none; border-radius: 16px;
+  background: var(--fill-bg); color: var(--blue); font-size: 17px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.ios-sheet-btn:active { opacity: .6; }
 [data-theme="dark"] .mc-flag.flag-suspicious { color: #fbbf24; background: rgba(245,158,11,.20); }
 [data-theme="dark"] .mc-flag.flag-sticky { color: #f87171; background: rgba(239,68,68,.20); }
 [data-theme="dark"] .mc-flag.flag-kicked { color: #4ade80; background: rgba(34,197,94,.20); }
@@ -596,7 +602,7 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .code-pill button:active { opacity: .6; }
 .code-pill button.danger { color: var(--red); }
 
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; font-size: 16px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; font-size: 16px; margin: 0; /* fix5: kill default dl margins — no empty gaps in the Account info card */ }
 .kv dt { color: var(--gray); font-weight: 400; }
 .kv dd { margin: 0; word-break: break-all; text-align: right; font-weight: 500; }
 
@@ -1327,6 +1333,36 @@ button.set-row { cursor: pointer; }
 #view-printer .btn.big, #view-generate .btn.big { padding: 12px 14px; }
 #view-printer .set-note, #view-generate .set-note { padding: 8px 14px; font-size: 12px; }
 
+/* v1.5.96: user group add form — iOS clean, official-app style (single column) */
+.ug-card { padding: 6px 14px 18px; display: flex; flex-direction: column; }
+.ug-field { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+.ug-lab { font-size: 15px; color: var(--label); }
+.ug-input {
+  width: 100%; box-sizing: border-box; font-size: 16px; font-family: inherit;
+  padding: 10px 12px; border-radius: 10px; color: var(--label);
+  border: 1px solid var(--hairline, rgba(120,120,128,.25)); background: var(--fill-bg);
+}
+.ug-input::placeholder { color: var(--gray); opacity: .7; }
+.ug-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--hairline, rgba(120,120,128,.18)); }
+.ug-row .ios-picker-btn { flex: none; }
+.ug-q { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--gray); color: var(--gray); font-size: 11px; margin-left: 4px; vertical-align: 1px; cursor: help; }
+.ug-sect { font-size: 15px; font-weight: 600; color: var(--label); padding: 14px 0 2px; }
+.ug-seg { margin: 8px 0 2px; }
+.ug-inline { display: flex; align-items: center; gap: 10px; }
+.ug-inline .ug-input { flex: 1; }
+.ug-unit { font-size: 15px; color: var(--gray); white-space: nowrap; }
+.mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 14px; letter-spacing: .2px; }
+.ug-custom { padding: 6px 0 8px; }
+.ug-custom input {
+  width: 100%; box-sizing: border-box; font-size: 16px; font-family: inherit;
+  padding: 10px 12px; border-radius: 10px; color: var(--label);
+  border: 1px solid var(--blue); background: var(--fill-bg);
+}
+.ug-save { margin-top: 18px; border: none; border-radius: 14px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600; font-family: inherit; padding: 14px; cursor: pointer; }
+.ug-save:active { opacity: .7; }
+.ug-save:disabled { opacity: .5; }
+.ug-cancel { margin-top: 6px; border: none; background: none; color: var(--gray); font-size: 15px; font-family: inherit; padding: 10px; cursor: pointer; }
+
 /* v1.5.54: pull-to-refresh indicator */
 .ptr-indicator {
   display: flex; align-items: center; justify-content: center;
@@ -1483,6 +1519,14 @@ html[data-layout="phone"][data-theme="dark"] .pv-pane { background: rgba(30,30,3
   transform: translateY(103%); transition: transform .5s var(--spring);
 }
 .ios-sheet-ov.open .ios-sheet { transform: none; }
+/* Fix9: client detail sheet is fullscreen (other pickers keep bottom-sheet style) */
+.ios-sheet.ios-sheet-full {
+  max-width: none; max-height: none; height: 100dvh;
+  border-radius: 0; border: none;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.ios-sheet-full .sheet-handle { display: none; }
+.ios-sheet-full .ios-sheet-body { flex: 1; }
 .ios-sheet .sheet-handle { width: 40px; height: 5px; border-radius: 3px; background: rgba(120,120,128,.4); margin: 8px auto 4px; flex: none; }
 .ios-sheet-opts { overflow-y: auto; }
 .ios-sheet-opt {
@@ -1745,3 +1789,107 @@ html[data-layout="tablet"] .voucher-meta .pkg { font-size: 11px; }
 html[data-layout="tablet"] .remain-txt { font-size: 11px; }
 html[data-layout="tablet"] .voucher-row .badge { font-size: 11px; padding: 3px 9px; }
 html[data-layout="tablet"] .voucher-row .chev { font-size: 15px; }
+
+/* v1.5.89: SSID list row — wraps SSID name to 2 lines on narrow phones
+   instead of clipping/overlapping the action buttons. */
+.ssid-row { flex-wrap: wrap; row-gap: 8px; }
+.ssid-row .ssid-info { flex: 1 1 55%; min-width: 140px; }
+.ssid-row .ssid-name {
+  font-weight: 600;
+  overflow-wrap: break-word; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ssid-row .ssid-actions { display: flex; gap: 8px; flex: none; margin-left: auto; align-items: center; }
+/* 2026-10-01: 3 action buttons (password/speed/delete) — wrap to a new line
+   on narrow phones instead of squeezing; button text never clips. */
+.ssid-row .ssid-actions { flex-wrap: wrap; justify-content: flex-end; }
+.ssid-row .ssid-actions .btn { white-space: nowrap; flex: none; }
+
+/* v1.5.90: SSID password form — old-password input shrinks instead of truncating. */
+#sp-old { min-width: 0; }
+
+/* v1.5.93: Printer page — compact text & icons (user request). */
+#view-printer .fld-label { font-size: 13px; }
+#view-printer .section-title { font-size: 13px; }
+#view-printer .btn { font-size: 13px; }
+#view-printer .btn .ic { width: 16px; height: 16px; }
+#view-printer .fld-input { font-size: 13px; }
+#view-printer .muted.small, #view-printer .small { font-size: 11px; }
+#view-printer .printer-dot .ic { width: 16px; height: 16px; }
+#view-printer .segmented button { font-size: 12px; }
+#view-printer .segmented button .ic { width: 14px; height: 14px; }
+#view-printer .stepper button { font-size: 14px; }
+#view-printer .stepper input { font-size: 13px; }
+/* Bluetooth device names — the main complaint */
+#view-printer .bt-dev { padding: 8px 12px; }
+#view-printer .bt-dev-name { font-size: 13px; }
+#view-printer .bt-dev-mac { font-size: 11px; }
+/* Print queue entries */
+#view-printer #print-queue { font-size: 12px; }
+
+/* ── fix1: iOS-style loading overlay — replaces the SSO dialog wait at app entry ── */
+.ios-loading {
+  position: fixed; inset: 0; z-index: 20000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.ios-loading.hidden { display: none; }
+.ios-spinner { position: relative; width: 52px; height: 52px; }
+.ios-spinner span {
+  position: absolute; left: 50%; top: 50%;
+  width: 5px; height: 14px; margin: -7px 0 0 -2.5px;
+  border-radius: 2.5px; background: #8e8e93;
+  animation: ios-spin 1.2s linear infinite;
+}
+.ios-spinner span:nth-child(1)  { transform: rotate(0deg)   translateY(-19px); animation-delay: 0s; }
+.ios-spinner span:nth-child(2)  { transform: rotate(30deg)  translateY(-19px); animation-delay: -.1s; }
+.ios-spinner span:nth-child(3)  { transform: rotate(60deg)  translateY(-19px); animation-delay: -.2s; }
+.ios-spinner span:nth-child(4)  { transform: rotate(90deg)  translateY(-19px); animation-delay: -.3s; }
+.ios-spinner span:nth-child(5)  { transform: rotate(120deg) translateY(-19px); animation-delay: -.4s; }
+.ios-spinner span:nth-child(6)  { transform: rotate(150deg) translateY(-19px); animation-delay: -.5s; }
+.ios-spinner span:nth-child(7)  { transform: rotate(180deg) translateY(-19px); animation-delay: -.6s; }
+.ios-spinner span:nth-child(8)  { transform: rotate(210deg) translateY(-19px); animation-delay: -.7s; }
+.ios-spinner span:nth-child(9)  { transform: rotate(240deg) translateY(-19px); animation-delay: -.8s; }
+.ios-spinner span:nth-child(10) { transform: rotate(270deg) translateY(-19px); animation-delay: -.9s; }
+.ios-spinner span:nth-child(11) { transform: rotate(300deg) translateY(-19px); animation-delay: -1s; }
+.ios-spinner span:nth-child(12) { transform: rotate(330deg) translateY(-19px); animation-delay: -1.1s; }
+@keyframes ios-spin { 0% { opacity: 1; } 100% { opacity: .15; } }
+[data-theme="dark"] .ios-loading { background: rgba(0,0,0,.5); }
+[data-theme="dark"] .ios-spinner span { background: #98989d; }
+
+/* ── fix2: Generate page — compact text & icons (user request, same as printer page) ── */
+#view-generate .fld-label { font-size: 13px; }
+#view-generate .section-title { font-size: 13px; }
+#view-generate .sec-title { font-size: 13px; }
+#view-generate .btn { font-size: 13px; }
+#view-generate .btn .ic { width: 16px; height: 16px; }
+#view-generate .btn.big .ic { width: 16px; height: 16px; }
+#view-generate .fld-input { font-size: 13px; }
+#view-generate .segmented button { font-size: 12px; }
+#view-generate .segmented button .ic { width: 14px; height: 14px; }
+#view-generate .codetype { padding: 8px 6px; }
+#view-generate .codetype b { font-size: 12px; }
+#view-generate .codetype small { font-size: 10px; }
+#view-generate .codetype .ic { width: 16px; height: 16px; }
+#view-generate .qty-grid button { font-size: 13px; padding: 8px 4px; }
+#view-generate .code-list { font-size: 12px; }
+#view-generate .muted.small, #view-generate .small { font-size: 11px; }
+#view-generate .api-note { font-size: 11px; }
+#view-generate .api-note .ic { width: 14px; height: 14px; }
+#view-generate .printer-line .ic { width: 16px; height: 16px; }
+#view-generate .printer-dot { font-size: 12px; }
+
+/* ── fix4: Vouchers page — Select button smaller (user request) ── */
+#btn-bulk-select { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+
+/* ── v1.5.99: Web Auth Wi-Fi list — stacked rows ──
+   VLAN name + delete on the top line, IP range full-width below.
+   The old single-line row squeezed the IP into "192.168.2…" on phones. */
+.wa-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 0;
+  border-bottom: 1px solid var(--hairline, rgba(120,120,128,.18)); }
+.wa-row-top { display: flex; align-items: center; gap: 8px; }
+.wa-row-top .wa-vlan { flex: 1; min-width: 0; }
+.wa-row-top .wa-del { flex: none; }
+.wa-row .wa-ipr { width: 100%; }

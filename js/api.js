@@ -55,7 +55,24 @@ window._ssoResolve = (id, b64) => {
     p.resolve(JSON.parse(new TextDecoder().decode(bytes)));
   } catch (e) { p.reject(e); }
 };
+/* fix1: iOS-style loading overlay — shown during silent SSO login at app
+ * entry while the native dialog stays hidden. Hidden again when the SSO
+ * result arrives (success or cancel), and by applyTheme-timeout safety.
+ * Defensive: never throws (node test harness has no document). */
+function showIosLoading() {
+  try {
+    const el = document.getElementById('ios-loading');
+    if (el) { el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); }
+  } catch (e) {}
+}
+function hideIosLoading() {
+  try {
+    const el = document.getElementById('ios-loading');
+    if (el) { el.classList.add('hidden'); el.setAttribute('aria-hidden', 'true'); }
+  } catch (e) {}
+}
 window._ssoEvent = (name) => {
+  hideIosLoading(); // fix1: SSO settled (login or cancel) — drop the loading overlay
   document.dispatchEvent(new CustomEvent('ruijie-sso', { detail: name }));
 };
 const hasSso = () => !!(window.RuijieBridge && window.RuijieBridge.ssoRequest);
@@ -117,6 +134,64 @@ function gwCall(kind, ...args) {
     setTimeout(() => { if (_gwPending[id]) { delete _gwPending[id]; reject(new Error('Gateway timeout')); } }, 45000);
   });
 }
+
+/* ── Gateway STA record normalizer · v1.5.96 ──
+ * Pure, self-contained (safe to eval in tests). Normalizes ONE raw object
+ * from any gateway client module into {mac, ip, apSn, apMac, apName, ssid,
+ * rssi, host}. Returns null when the object is not a STA record.
+ * Verified 2026-10-01 from the user's DevTools capture of the gateway's
+ * own Online Clients page (/admin/home_online):
+ *   devSta.get {module:"user_list", data:{devType:"all", dataType:"timely"}}
+ * whose records carry: mac, userIp, ssid, deviceAliasName (AP name),
+ * hostName, rssi, sn (AP serial). Older firmware guesses (sta_list etc.)
+ * are kept as fallbacks. */
+const normGwStaRecord = o => {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  const cleanNull = s => { s = String(s == null ? '' : s).trim(); return (/^null$/i.test(s) ? '' : s); };
+  const mac = o.mac || o.staMac || o.clientMac || o.stamac || '';
+  if (!mac || !/^[0-9a-fA-F:]{11,}/.test(String(mac))) return null;
+  return {
+    mac: String(mac).toUpperCase(),
+    // v1.5.96: userIp is the verified field (user_list); the rest are
+    // older firmware guesses kept as fallbacks.
+    ip: cleanNull(o.userIp || o.ip || o.staIp || o.clientIp || o.staip || ''),
+    apSn: o.sn || o.devSN || o.apSn || o.apsn || o.linkedSn || o.ap_sn || '',
+    apMac: o.apMac || o.apmac || o.bssid || '',
+    apName: cleanNull(o.deviceAliasName || o.deviceAlias || o.apName || ''),
+    ssid: o.ssid || '',
+    rssi: (o.rssi != null ? o.rssi : (o.signal != null ? o.signal : '')),
+    host: cleanNull(o.hostName || o.hostname || o.deviceName || o.staName || ''),
+  };
+};
+
+/* ── Fix12b: gateway Authentication -> Online Clients (app_auth) ──
+ * Pure normalizer for the records returned by
+ *   devSta.get {module:"app_auth", data:{func:"app_auth_get_user_online"}}
+ * Verified 2026-10-01 from the user's DevTools capture of
+ * /admin/alone/authentication/web_online (Response saved as 2-5.txt):
+ *   {code:0, data:{user:[{mac:"fa17.5101.04e3", ip:"192.168.20.141",
+ *    userName:"33637503", auth_type:"wifidog", time:"2026-10-1 6:49:46",
+ *    timeUsed:"10930", timeLimit:"0", status:"On"}, ...]}}
+ * userName IS the voucher code the client authenticated with. MAC arrives
+ * in dotted form ("fa17.5101.04e3") — normMac strips the separators.
+ * Returns {mac, ip, voucher, authType, loginTime, timeUsedSec, status},
+ * or null when the record carries no usable MAC or no userName. */
+const normGwAuthUser = o => {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  const mac = normMac(o.mac || '');
+  if (!mac) return null;
+  const userName = String(o.userName || o.username || o.account || '').trim();
+  if (!userName) return null;
+  return {
+    mac,
+    ip: String(o.ip || o.userIp || '').trim(),
+    voucher: userName,
+    authType: String(o.auth_type || o.authType || '').trim(),
+    loginTime: String(o.time || o.loginTime || '').trim(),
+    timeUsedSec: parseInt(o.timeUsed, 10) || 0,
+    status: String(o.status || '').trim(),
+  };
+};
 
 /**
  * Gateway-local API (captured read-only from the gateway eWeb, 2026-09-28).
@@ -323,10 +398,15 @@ const GwApi = {
 
   /**
    * Gateway-local wireless client (STA) list, v1.5.29.
-   * The eWeb shows per-AP connected devices (IP/MAC), so the data exists —
-   * but the exact module name isn't captured. We probe several likely
-   * modules in ONE cmdArr batch and keep whichever blocks contain
-   * MAC-bearing records. Returns [{mac, ip, apSn, apMac, ssid, rssi, host}];
+   * v1.5.96: the gateway's OWN Online Clients page (/admin/home_online)
+   * uses devSta.get {module:"user_list", data:{devType:"all",
+   * dataType:"timely"}} — verified 2026-10-01 from the user's DevTools
+   * capture. devType "all" = every user on every AP (wired + wireless,
+   * Cloud + China APs), each record carrying userIp, ssid and
+   * deviceAliasName (AP name). It is probed FIRST; the older guesses
+   * (sta_list, sta_info, client_list, wireless_sta) stay as fallbacks.
+   * Records are normalized with normGwStaRecord and deduped by MAC.
+   * Returns [{mac, ip, apSn, apMac, apName, ssid, rssi, host}];
    * empty array = not available (caller falls through honestly).
    */
   async staList() {
@@ -338,6 +418,7 @@ const GwApi = {
       params: {
         device: 'pc',
         params: [
+          sub('devSta.get', Object.assign({ module: 'user_list', data: { devType: 'all', dataType: 'timely' } }, base)),
           sub('devSta.get', Object.assign({ module: 'sta_list' }, base)),
           sub('devSta.get', Object.assign({ module: 'sta_info' }, base)),
           sub('devSta.get', Object.assign({ module: 'client_list' }, base)),
@@ -359,30 +440,321 @@ const GwApi = {
       if (!o || typeof o !== 'object') return;
       if (Array.isArray(o)) { o.forEach(grab); return; }
       // A STA record has a MAC and usually an AP serial/MAC + ssid.
-      const mac = o.mac || o.staMac || o.clientMac || o.stamac || '';
-      if (mac && /^[0-9a-fA-F:]{11,}/.test(String(mac))) {
-        // v1.5.34: the gateway's IP field name varies by firmware — probe
-        // every plausible key. Also scrub literal "NULL" strings the
-        // gateway uses for unknown hostnames.
-        const cleanNull = s => { s = String(s == null ? '' : s).trim(); return (/^null$/i.test(s) ? '' : s); };
-        const ip = cleanNull(o.ip || o.staIp || o.clientIp || o.staip || '');
-        out.push({
-          mac: String(mac).toUpperCase(),
-          ip,
-          apSn: o.sn || o.devSN || o.apSn || o.apsn || o.linkedSn || o.ap_sn || '',
-          apMac: o.apMac || o.apmac || o.bssid || '',
-          ssid: o.ssid || '',
-          rssi: (o.rssi != null ? o.rssi : (o.signal != null ? o.signal : '')),
-          host: cleanNull(o.hostName || o.hostname || o.deviceName || o.staName || ''),
-        });
-        return;
-      }
+      // v1.5.96: normalization lives in normGwStaRecord (top-level, pure,
+      // unit-tested) — verified against the user_list capture.
+      const rec = normGwStaRecord(o);
+      if (rec) { out.push(rec); return; }
       Object.keys(o).forEach(k => { if (k !== 'parent') grab(o[k]); });
     };
     grab(j && j.data ? j.data : j);
     // Dedupe by MAC (multiple modules may return the same STAs).
     const seen = new Set();
     return out.filter(r => (seen.has(r.mac) ? false : (seen.add(r.mac), true)));
+    });
+  },
+
+  /**
+   * Gateway Authentication -> Online Clients (v1.5.96, Fix12b).
+   * The gateway's OWN authenticated-user list, verified 2026-10-01 from the
+   * user's DevTools capture of /admin/alone/authentication/web_online:
+   *   POST /cgi-bin/luci/api/cmd?auth=<sid>
+   *   {method:"devSta.get", params:{module:"app_auth", noParse:false,
+   *    async:null, remoteIp:false, data:{func:"app_auth_get_user_online"},
+   *    device:"pc"}}
+   * -> {code:0, data:{user:[{mac, ip, userName, auth_type, time,
+   *      timeUsed, timeLimit, status}]}} — userName IS the voucher code.
+   * NOTE: this list holds only the authenticated (voucher) users — it is a
+   * voucher-attribution source, NOT the full client enumeration (that stays
+   * staList()/user_list). Callers join by MAC: app_auth wins for the
+   * Voucher column, everything else keeps working as before.
+   * Returns {list:[{mac, ip, voucher, ...}], byMac:Map}; empty = unavailable.
+   */
+  async authOnlineUsers() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: {
+          module: 'app_auth', noParse: false, async: null, remoteIp: false,
+          data: { func: 'app_auth_get_user_online' }, device: 'pc',
+        },
+      };
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        return { list: [], byMac: new Map() };
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const users = j && j.data && Array.isArray(j.data.user) ? j.data.user : [];
+      const list = [];
+      const byMac = new Map();
+      for (const r of users) {
+        const u = normGwAuthUser(r);
+        if (!u || byMac.has(u.mac)) continue;
+        byMac.set(u.mac, u);
+        list.push(u);
+      }
+      return { list, byMac };
+    });
+  },
+
+  /**
+   * Gateway Web Authentication config — READ (v1.5.96, Fix13).
+   * Verified 2026-10-01 from the user's DevTools capture of
+   * /admin/alone/authentication/web_authentication (response 2-6.txt):
+   *   POST /cgi-bin/luci/api/cmd?auth=<sid>
+   *   {method:"cmdArr", params:{device:"pc", params:[
+   *     {method:"devSta.get", params:{module:"app_auth", noParse:false,
+   *       async:null, remoteIp:false, data:{func:"app_auth_get_macc"},
+   *       device:"pc"}},
+   *     {method:"acConfig.get", params:{module:"apPortalMacc",
+   *       noParse:false, async:null, remoteIp:false}},
+   *     {method:"devConfig.get", params:{module:"appAuthParamFmt",
+   *       noParse:false, async:null, remoteIp:false}}]}}
+   * Returns the element-[0] config object (the editable web-auth config):
+   *   {enable, ad_url, authType, proxy_https, flowDetectEn, flowDetectTime,
+   *    setSsidIpList:[{ssidName, ip:[ranges]}], authIpList, macByPass,
+   *    cfgIdOpt, authenMlist, acctMlist, authorMlist, paramFmt, ...}
+   * or null when the gateway does not answer.
+   */
+  async webAuthGet() {
+    return this._withAutoRelogin(async () => {
+      const sub = (method, params) => ({ method, params });
+      const base = { noParse: false, async: null, remoteIp: false };
+      const body = {
+        method: 'cmdArr',
+        params: {
+          device: 'pc',
+          params: [
+            sub('devSta.get', Object.assign({ module: 'app_auth', data: { func: 'app_auth_get_macc' }, device: 'pc' }, base)),
+            sub('acConfig.get', Object.assign({ module: 'apPortalMacc' }, base)),
+            sub('devConfig.get', Object.assign({ module: 'appAuthParamFmt' }, base)),
+          ],
+        },
+      };
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        return null;
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      if (!j || Number(j.code) !== 0) return null;
+      const el = j.data && Array.isArray(j.data) ? j.data[0] : null;
+      return (el && typeof el === 'object' && !Array.isArray(el)) ? el : null;
+    });
+  },
+
+  /**
+   * Pure builder for the web-auth WRITE body (v1.5.96, Fix13).
+   * Verified 2026-10-01 from the user's DevTools Save capture
+   * (request 2-7.txt, response "success_set"):
+   *   POST /cgi-bin/luci/api/cmd?auth=<sid>
+   *   {method:"devConfig.set", params:{module:"app_auth_macc",
+   *    noParse:false, async:true, remoteIp:false, device:"pc",
+   *    data:{<FULL config object as read>}}}
+   * NOTE: the write module is "app_auth_macc" (read func is
+   * app_auth_get_macc under module "app_auth"). The FULL object read by
+   * webAuthGet must be sent back — pass the object the app read, mutated
+   * in place; never construct it from scratch (fields like paramFmt and
+   * wxRedirect would be lost).
+   */
+  webAuthWriteBody(cfg) {
+    return {
+      method: 'devConfig.set',
+      params: {
+        module: 'app_auth_macc', noParse: false, async: true,
+        remoteIp: false, device: 'pc', data: cfg,
+      },
+    };
+  },
+
+  /**
+   * Gateway Web Authentication config — WRITE (v1.5.96, Fix13).
+   * Success reply: {code:0, data:{rcode:"00000000", message:"success_set"}}
+   */
+  async webAuthSet(cfg) {
+    return this._withAutoRelogin(async () => {
+      const body = this.webAuthWriteBody(cfg);
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        throw new Error('Gateway သို့ ချိတ်ဆက်၍မရပါ');
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const ok = j && Number(j.code) === 0 && j.data &&
+        (String(j.data.rcode) === '00000000' || /success/i.test(String(j.data.message || '')));
+      if (!ok) throw new Error((j && j.data && j.data.message) || 'Gateway က save လက်မခံပါ');
+      return true;
+    });
+  },
+
+  /**
+   * Gateway Web Authentication — Allowlist READ (v1.5.96, Fix15).
+   * Verified 2026-10-01 from the user's DevTools capture of
+   * /admin/alone/authentication/web_authentication?tab=4 (page load):
+   *   {method:"devSta.get", params:{module:"app_auth", noParse:false,
+   *    async:null, remoteIp:false, device:"pc",
+   *    data:{func:"app_auth_get_whitelist"}}}
+   *   -> {code:0, data:{deny_mac:[], mac:["C4:B2:5B:26:45:26", …11],
+   *        srcip:[], url:["portal-as.ruijienetwork.com",
+   *        "ruijiecloud.com", "ruijienetwork.com"], dstip:[]}}
+   * Direct devSta.get (NOT cmdArr-wrapped). Returns the data object or null.
+   */
+  async allowlistGet() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: {
+          module: 'app_auth', noParse: false, async: null,
+          remoteIp: false, device: 'pc',
+          data: { func: 'app_auth_get_whitelist' },
+        },
+      };
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        return null;
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      if (!j || Number(j.code) !== 0) return null;
+      const d = j.data;
+      return (d && typeof d === 'object' && !Array.isArray(d)) ? d : null;
+    });
+  },
+
+  /**
+   * Pure builder for the MAC Allowlist WRITE body (v1.5.96, Fix15).
+   * Verified 2026-10-01 from the user's DevTools Save capture on ?tab=4
+   * (after adding a MAC ending 45:2B and pressing OK):
+   *   {method:"devConfig.set", params:{module:"app_auth_direct_mac",
+   *    noParse:false, async:null, remoteIp:false, device:"pc",
+   *    data:{type:"mac", data:["C4:B2:5B:26:45:26", …11]}}}
+   *   -> {code:0, data:{code:0, id:null, data:"", error:null}}
+   * MACs are colon-UPPERCASE. The write sends the FULL list — callers
+   * must read first and mutate the read list, never send a partial one.
+   */
+  allowlistMacWriteBody(macs) {
+    const norm = macs.map(m => String(m).trim().toUpperCase());
+    return {
+      method: 'devConfig.set',
+      params: {
+        module: 'app_auth_direct_mac', noParse: false, async: null,
+        remoteIp: false, device: 'pc',
+        data: { type: 'mac', data: norm },
+      },
+    };
+  },
+
+  /**
+   * Gateway Web Authentication — MAC Allowlist WRITE (v1.5.96, Fix15).
+   * Success reply: {code:0, data:{code:0, …}} (outer AND inner code 0).
+   */
+  async allowlistMacSet(macs) {
+    return this._withAutoRelogin(async () => {
+      const body = this.allowlistMacWriteBody(macs);
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        throw new Error('Gateway သို့ ချိတ်ဆက်၍မရပါ');
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const ok = j && Number(j.code) === 0 && j.data && Number(j.data.code) === 0;
+      if (!ok) throw new Error((j && j.data && (j.data.msg || j.data.message)) || 'Gateway က save လက်မခံပါ');
+      return true;
+    });
+  },
+  /**
+   * Gateway Web Authentication — Global Config READ (v1.5.96, Fix14).
+   * Verified 2026-10-01 from the user's DevTools capture of
+   * /admin/alone/authentication/web_authentication?tab=7:
+   *   {method:"cmdArr", params:{device:"pc", params:[
+   *     {method:"devConfig.get", params:{module:"globalAuthConf",
+   *       noParse:false, async:null, remoteIp:false}},
+   *     {method:"devConfig.get", params:{module:"authCertUpload",
+   *       noParse:false, async:null, remoteIp:false}}]}}
+   * -> {code:0, data:[ {proto:"http", remind_days:"1",
+   *      remind_interval:"1", remind_content:"", user_state_url:
+   *      "lan.auth.reyee.com", charge_url:"", remind_url:"",
+   *      flow_detect_time:"15", http_host_check:"1", version:"1.0.0",
+   *      configTime, currentTime, configId}, {cert list} ]}
+   * Returns element [0] (the editable global config) or null.
+   */
+  async globalAuthGet() {
+    return this._withAutoRelogin(async () => {
+      const sub = (method, params) => ({ method, params });
+      const base = { noParse: false, async: null, remoteIp: false };
+      const body = {
+        method: 'cmdArr',
+        params: {
+          device: 'pc',
+          params: [
+            sub('devConfig.get', Object.assign({ module: 'globalAuthConf' }, base)),
+            sub('devConfig.get', Object.assign({ module: 'authCertUpload' }, base)),
+          ],
+        },
+      };
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        return null;
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      if (!j || Number(j.code) !== 0) return null;
+      const el = j.data && Array.isArray(j.data) ? j.data[0] : null;
+      return (el && typeof el === 'object' && !Array.isArray(el)) ? el : null;
+    });
+  },
+
+  /**
+   * Pure builder for the Global Config WRITE body (v1.5.96, Fix14).
+   * Verified 2026-10-01 from the user's DevTools Save capture on ?tab=7:
+   *   {method:"devConfig.set", params:{module:"globalAuthConf",
+   *    noParse:false, async:null, remoteIp:false, device:"pc",
+   *    data:{proto:"http", remind_days:"1", remind_interval:"1",
+   *      remind_content:"", charge_url:"", flow_detect_time:"15",
+   *      http_host_check:"1", remind_url:"",
+   *      user_state_url:"lan.auth.reyee.com", version:"1.0.0"}}}
+   * -> {code:0, data:{rcode:"00000000", msg:"success"}}
+   * NOTE: the write carries exactly these 10 verified keys — the read's
+   * metadata keys (configTime/currentTime/configId) are NOT sent.
+   */
+  globalAuthWriteBody(cfg) {
+    const pick = (o, ks) => { const d = {}; for (const k of ks) d[k] = o[k]; return d; };
+    return {
+      method: 'devConfig.set',
+      params: {
+        module: 'globalAuthConf', noParse: false, async: null,
+        remoteIp: false, device: 'pc',
+        data: pick(cfg, ['proto', 'remind_days', 'remind_interval',
+          'remind_content', 'charge_url', 'flow_detect_time',
+          'http_host_check', 'remind_url', 'user_state_url', 'version']),
+      },
+    };
+  },
+
+  /**
+   * Gateway Web Authentication — Global Config WRITE (v1.5.96, Fix14).
+   * Success reply: {code:0, data:{rcode:"00000000", msg:"success"}}
+   */
+  async globalAuthSet(cfg) {
+    return this._withAutoRelogin(async () => {
+      const body = this.globalAuthWriteBody(cfg);
+      let j = null;
+      try { j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body)); }
+      catch (e) {
+        if (gwAuthLike(e)) throw e;
+        throw new Error('Gateway သို့ ချိတ်ဆက်၍မရပါ');
+      }
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const ok = j && Number(j.code) === 0 && j.data &&
+        (String(j.data.rcode) === '00000000' || /success/i.test(String(j.data.msg || j.data.message || '')));
+      if (!ok) throw new Error((j && j.data && (j.data.msg || j.data.message)) || 'Gateway က save လက်မခံပါ');
+      return true;
     });
   },
 
@@ -1083,6 +1455,47 @@ const Api = {
     return j;
   },
 
+  /* ── Per-client speed limit on an SSID (Cloud webproxy, SSO session) ──
+   * Wire format VERIFIED from the portal's own JS (docs/wifi-ratelimit-spec.md,
+   * 2026-09-30): PUT /conf/template/{id}/ssid/{ssid_id} with the FULL
+   * wirelessConfEntity — only upRate/downRate changed.
+   * upRate/downRate = per-client caps on that SSID (NOT the whole-SSID totals
+   * wlanUpRate/wlanDownRate).
+   * UNIT: Kbps per Ruijie cloud convention — VERIFYING via live portal UI
+   * (browser task 2026-10-01); the UI converts Mbps <-> Kbps at the edges so
+   * only this constant changes if the portal shows a different unit.
+   * User-approved 2026-10-01 ("speed limit ထည့်"). */
+  ssidRateUnit() { return 'Kbps'; },
+  ssidMbpsToUnit(mbps) { return Math.round(Number(mbps) * 1000); },
+  ssidUnitToMbps(unit) { return Number(unit) / 1000; },
+
+  /** Set per-client up/down rate caps on an SSID. Rates in Mbps (UI unit). */
+  async ssidSetRatesSso(groupId, ssidName, upMbps, downMbps) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const up = Number(upMbps), down = Number(downMbps);
+    if (!(up >= 0 && down >= 0) || !isFinite(up) || !isFinite(down)) {
+      throw new Error('Speed 0 သို့မဟုတ် အပေါင်းကိန်း ထည့်ပါ');
+    }
+    const { tempId, list } = await this.ssidListSso(groupId);
+    const ssid = list.find(s => String(s.ssidName || '').toLowerCase() === String(ssidName).toLowerCase());
+    if (!ssid) throw new Error('SSID မတွေ့ပါ: ' + ssidName);
+    const ssidId = ssid.id || ssid.ssidId;
+    if (!ssidId) throw new Error('SSID ID မရှိပါ');
+    // PUT the FULL object back, only the rate fields changed (portal sends full config).
+    const obj = Object.assign({}, ssid);
+    obj.upRate = this.ssidMbpsToUnit(up);
+    obj.downRate = this.ssidMbpsToUnit(down);
+    if (Array.isArray(obj.relatedRadio)) obj.relatedRadio = obj.relatedRadio.join(',');
+    if (!obj.authEntity) obj.authEntity = {};
+    const env = this.ssoSsidUpdateEnvelope(tempId, ssidId, obj);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('Speed limit ချိန်မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
   /* ── Client kick / disconnect (Cloud webproxy, SSO session) ──
    * EXACT shape captured from the live Ruijie portal (Chrome DevTools,
    * 2026-09-29, user's authorized test client): the portal's own Disconnect
@@ -1127,6 +1540,246 @@ const Api = {
       throw new Error((j && (j.msg || j.message)) || ('ဖြုတ်မရပါ (code ' + c + ')'));
     }
     return j;
+  },
+
+  /* ── Portal MAC block / unblock (Cloud webproxy, SSO session) · v1.5.95 ──
+   * Verified 2026-10-01 from the user's DevTools captures on the portal's
+   * own client list (block + unblock clicks, both HTTP 200):
+   * Block:   outer POST .../webproxy/common/api?/enet/conf/group/{gid}/mac_filter
+   *          inner {"api":"/enet/conf/group/{gid}/mac_filter","method":"POST",
+   *                 "authParams":{"api":...,"method":"POST"},
+   *                 "params":{"type":"deny","macList":[{"mac":"62:22:3f:a9:9f:14"}]},
+   *                 "module":"default","querys":{"lang":"en","cloudType":"smb"}}
+   *          MAC is colon-separated lowercase.
+   * Unblock: outer POST .../webproxy/common/api?/enet/conf/group/{gid}/mac_filter
+   *          inner {"api":"/enet/conf/group/{gid}/mac_filter","method":"DELETE",
+   *                 "authParams":{"api":...,"method":"DELETE"},
+   *                 "module":"default",
+   *                 "querys":{"group_id":6752877,"mac":"6222.3fa9.9f14",
+   *                          "type":"global","lang":"en","cloudType":"smb"}}
+   *          MAC is dotted-lowercase.
+   * Android-APK-only (needs the SSO portal session, like kick). Throws on
+   * portal error; returns the raw response on success. */
+  ssoBlockEnvelope(groupId, macColon) {
+    const api = '/enet/conf/group/' + Number(groupId) + '/mac_filter';
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: {
+        type: 'deny',
+        macList: [{ mac: String(macColon || '').toLowerCase() }],
+      },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Block one client MAC through the SSO session. Throws on portal error. */
+  async clientBlockSso(groupId, macColon) {
+    const env = this.ssoBlockEnvelope(groupId, macColon);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Block မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  ssoUnblockEnvelope(groupId, macDotted) {
+    const api = '/enet/conf/group/' + Number(groupId) + '/mac_filter';
+    return {
+      api,
+      authParams: { api, method: 'DELETE' },
+      method: 'DELETE',
+      module: 'default',
+      querys: {
+        group_id: Number(groupId),
+        mac: String(macDotted || '').toLowerCase(),
+        type: 'global',
+        lang: 'en',
+        cloudType: 'smb',
+      },
+    };
+  },
+
+  /** Unblock one client MAC through the SSO session. Throws on portal error. */
+  async clientUnblockSso(groupId, macDotted) {
+    const env = this.ssoUnblockEnvelope(groupId, macDotted);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Unblock မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /* ── User group add (portal, SSO) · v1.5.95 ──
+   * Verified 2026-10-01 from the user's DevTools capture on
+   * #/config_group_userManagement_menu — 2-step flow:
+   * 1. POST /intlSamProfile/create/{email}/{email}/{groupId}
+   *    inner {"api":"/intlSamProfile/create/{email}/{email}/{groupId}","method":"POST",
+   *           "authParams":{"api":...,"method":"POST"},"module":"default",
+   *           "params":{...profile fields...},
+   *           "querys":{"tenantId":341634,"lang":"en","cloudType":"smb"}}
+   *    → response carries the new authProfileId
+   * 2. POST /intl/usergroup/group/{groupId}
+   *    inner {"api":"/intl/usergroup/group/{groupId}","method":"POST",
+   *           "authParams":{"api":...,"method":"POST"},"module":"default",
+   *           "params":{"list":[{...same fields..., "authProfileId":"<from step 1>"}]},
+   *           "querys":{"lang":"en","cloudType":"smb"}}
+   */
+  ssoUserGroupProfileEnvelope(email, groupId, p, tenantId) {
+    const e = encodeURIComponent(email || '');
+    const api = '/intlSamProfile/create/' + e + '/' + e + '/' + Number(groupId);
+    const querys = { lang: 'en', cloudType: 'smb' };
+    if (tenantId) querys.tenantId = tenantId;
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: p,
+      querys,
+    };
+  },
+
+  ssoUserGroupEnvelope(groupId, g) {
+    const api = '/intl/usergroup/group/' + Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: { list: [g] },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Build the shared profile/group params object from form fields. */
+  buildUserGroupParams(f, groupId) {
+    const ipRange = String(f.ip || '').trim();
+    return {
+      name: String(f.name || '').trim(),
+      userGroupName: String(f.name || '').trim(),
+      price: String(f.price == null ? '' : f.price),
+      quota: Number(f.quota) || 0,
+      timePeriod: Number(f.timePeriod) || 0,
+      timePeriodDaily: Number(f.timePeriodDaily) || 0,
+      timePeriodDailyCustom: Number(f.timePeriodDailyCustom) || 0,
+      timePeriodTotal: Number(f.timePeriodTotal) || 0,
+      uploadRateLimit: Number(f.uploadRateLimit) || 0,
+      downloadRateLimit: Number(f.downloadRateLimit) || 0,
+      noOfDevice: String(f.noOfDevice == null ? '' : f.noOfDevice),
+      packageType: String(f.packageType || 'COMMON'),
+      bindSsid: String(f.bindSsid || ''),
+      isBindSsid: f.isBindSsid ? 1 : 0,
+      bindMac: f.bindMac ? 1 : 0,
+      ip: ipRange,
+      bindIpList: ipRange ? [ipRange] : [],
+      kickOffType: Number(f.kickOffType) || 0,
+      durationCtrlType: Number(f.durationCtrlType) || 0,
+      limitedTimes: Number(f.limitedTimes) || 0,
+      lowQuota: Number(f.lowQuota) || 0,
+      lowUploadRateLimit: Number(f.lowUploadRateLimit) || 0,
+      lowDownloadRateLimit: Number(f.lowDownloadRateLimit) || 0,
+      lowProfileStatus: Number(f.lowProfileStatus) || 0,
+      groupId: Number(groupId),
+    };
+  },
+
+  /** Pull the new authProfileId out of the step-1 response (tries common spots). */
+  extractAuthProfileId(j) {
+    if (!j || typeof j !== 'object') return '';
+    const d = j.data && typeof j.data === 'object' ? j.data : null;
+    const r = j.result && typeof j.result === 'object' ? j.result : null;
+    const cand = [
+      j.authProfileId, j.profileId, j.id,
+      d && (d.authProfileId || d.profileId || d.id),
+      r && (r.authProfileId || r.profileId || r.id),
+    ];
+    for (const c of cand) {
+      if (c !== undefined && c !== null && String(c)) return String(c);
+    }
+    return '';
+  },
+
+  /** Create a user group through the SSO session (2-step). Throws on portal error. */
+  async userGroupAddSso(groupId, email, tenantId, fields) {
+    const profile = this.buildUserGroupParams(fields, groupId);
+    const env1 = this.ssoUserGroupProfileEnvelope(email, groupId, profile, tenantId);
+    const j1 = await ssoCall(env1.api, env1);
+    const c1 = j1 && typeof j1.code !== 'undefined' ? Number(j1.code) : 0;
+    if (c1 !== 0) {
+      throw new Error((j1 && (j1.msg || j1.message)) || ('Profile create မရပါ (code ' + c1 + ')'));
+    }
+    const authProfileId = this.extractAuthProfileId(j1);
+    if (!authProfileId) throw new Error('authProfileId မရပါ');
+    const group = Object.assign({}, profile, { authProfileId });
+    const env2 = this.ssoUserGroupEnvelope(groupId, group);
+    const j2 = await ssoCall(env2.api, env2);
+    const c2 = j2 && typeof j2.code !== 'undefined' ? Number(j2.code) : 0;
+    if (c2 !== 0) {
+      throw new Error((j2 && (j2.msg || j2.message)) || ('Group create မရပါ (code ' + c2 + ')'));
+    }
+    return j2;
+  },
+
+  /* ── Portal user group DELETE (Cloud webproxy, SSO session) · v1.5.96 ──
+   * Verified 2026-10-01 from the user's DevTools capture of a real portal
+   * group delete (Delete button -> portal confirm OK):
+   * Step 1 — delete the group record:
+   *   outer  POST .../webproxy/common/api?/intl/usergroup/group/6752877
+   *   inner  {"api":"/intl/usergroup/group/6752877","method":"DELETE",
+   *           "authParams":{"api":"/intl/usergroup/group/6752877","method":"DELETE"},
+   *           "params":{"list":[699225]},"module":"default",
+   *           "querys":{"lang":"en","cloudType":"smb"}}
+   * Step 2 — delete the auth profile:
+   *   outer  POST .../webproxy/common/api?/intlSamProfile/delete/16384157693025024909983414791988
+   *   inner  {"api":"/intlSamProfile/delete/16384157693025024909983414791988","method":"DELETE",
+   *           "authParams":{"api":"/intlSamProfile/delete/16384157693025024909983414791988","method":"DELETE"},
+   *           "module":"default",
+   *           "querys":{"tenantId":341634,"group_id":6752877,"lang":"en","cloudType":"smb"}}
+   * (step 2 carries NO params field). Android-APK-only (needs SSO session).
+   */
+  ssoUserGroupDeleteStep1Envelope(groupId, userGroupId) {
+    const api = '/intl/usergroup/group/' + Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'DELETE' },
+      method: 'DELETE',
+      module: 'default',
+      params: { list: [Number(userGroupId)] },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+  ssoUserGroupDeleteStep2Envelope(groupId, tenantId, authProfileId) {
+    const api = '/intlSamProfile/delete/' + String(authProfileId);
+    const querys = { group_id: Number(groupId), lang: 'en', cloudType: 'smb' };
+    if (tenantId) querys.tenantId = Number(tenantId);
+    return {
+      api,
+      authParams: { api, method: 'DELETE' },
+      method: 'DELETE',
+      module: 'default',
+      querys,
+    };
+  },
+  /** Delete a user group through the SSO session (2-step: group record, then auth profile). Throws on portal error. */
+  async userGroupDeleteSso(groupId, tenantId, userGroupId, authProfileId) {
+    const env1 = this.ssoUserGroupDeleteStep1Envelope(groupId, userGroupId);
+    const j1 = await ssoCall(env1.api, env1);
+    const c1 = j1 && typeof j1.code !== 'undefined' ? Number(j1.code) : -1;
+    if (c1 !== 0) {
+      throw new Error((j1 && (j1.msg || j1.message)) || ('Group ဖျက်မရပါ (code ' + c1 + ')'));
+    }
+    const env2 = this.ssoUserGroupDeleteStep2Envelope(groupId, tenantId, authProfileId);
+    const j2 = await ssoCall(env2.api, env2);
+    const c2 = j2 && typeof j2.code !== 'undefined' ? Number(j2.code) : -1;
+    if (c2 !== 0) {
+      throw new Error((j2 && (j2.msg || j2.message)) || ('Profile ဖျက်မရပါ (code ' + c2 + ')'));
+    }
+    return j2;
   },
 
   /* ── Portal device reboot (Cloud webproxy, SSO session) · v1.5.13 ──

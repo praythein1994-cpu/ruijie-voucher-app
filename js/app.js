@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.88';
+const APP_VERSION = '1.5.96'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -125,6 +125,8 @@ const I18N = {
   'del.unsupported': { my: 'ဖျက်မရပါ — Ruijie Open API မှာ voucher ဖျက်တဲ့လုပ်ဆောင်ချက်မပါဝင်ပါ', en: 'Cannot delete — the Ruijie Open API has no voucher-delete operation' },
   'del.needSso': { my: 'ဖျက်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Deleting needs Ruijie account login (Settings → Ruijie account)' },
   'del.rejected': { my: 'Ruijie က ဖျက်ခြင်းကို ငြင်းဆိုလိုက်ပါတယ် (403) — အကောင့်တော့ ဝင်ထားဆဲပါ', en: 'Ruijie rejected the delete (403) — you are still logged in' },
+  // 2026-10-01 (user): manual delete is expired-vouchers-only
+  'del.onlyExpired': { my: 'ကုန်ဆုံးသွားတဲ့ ဗောက်ချာပဲ ဖျက်လို့ရပါတယ်', en: 'Only expired vouchers can be deleted' },
   'sso.title': { my: 'Ruijie အကောင့်', en: 'Ruijie account' },
   'sso.sub': { my: 'ဝင်ထားမှ voucher ဖျက်လို့ရမယ်', en: 'Log in to enable voucher delete' },
   'sso.login': { my: 'အကောင့်ဝင်မယ်', en: 'Log in' },
@@ -255,7 +257,16 @@ const I18N = {
   'kick.autoSub': { my: 'Voucher limit ပြည့်ပြီး ဆက်ချိတ်နေတဲ့ client ကို ဖြုတ်ခိုင်းမယ်', en: 'Disconnect clients still online after their voucher quota is spent' },
   'kick.status': { my: 'အခြေအနေ', en: 'Status' },
   'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
+  'kick.ssid': { my: 'Voucher SSID', en: 'Voucher SSID' },
+  'kick.ssidPh': { my: 'ဥပမာ ShopWiFi', en: 'e.g. ShopWiFi' },
+  'kick.ssidSub': { my: 'သံသယရှိ flag က ဒီ SSID ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် (မထည့်ရင် အားလုံးပြ)', en: 'Suspicious flag only shows for clients on this SSID (empty = all)' },
   'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
+  'block.btn': { my: 'Block မယ်', en: 'Block' },
+  'block.confirm': { my: 'ဒီ MAC ကို Block မလား? (ပြန်ချိတ်လို့မရတော့ပါ)', en: 'Block this MAC? (It will not be able to reconnect)' },
+  'block.done': { my: 'Block ပြီးပါပြီ', en: 'Blocked' },
+  'unblock.btn': { my: 'Unblock မယ်', en: 'Unblock' },
+  'unblock.confirm': { my: 'ဒီ MAC ကို Unblock မလား?', en: 'Unblock this MAC?' },
+  'unblock.done': { my: 'Unblock ပြီးပါပြီ', en: 'Unblocked' },
   'unbind.btn': { my: 'MAC ဖြုတ်မယ်', en: 'Unbind MAC' },
   'unbind.loading': { my: 'MAC စာရင်း ဖတ်နေပါတယ်…', en: 'Loading bound MACs…' },
   'unbind.none': { my: 'Bind ထားတဲ့ MAC မရှိပါ', en: 'No bound MAC' },
@@ -286,6 +297,14 @@ const I18N = {
   'wifi.deleted': { my: 'SSID ဖျက်ပြီးပြီ', en: 'SSID deleted' },
   'wifi.noPw': { my: '(မရှိ)', en: '(none)' },
   'wifi.needSso': { my: 'Portal login လိုပါတယ်', en: 'Portal login required' },
+  // 2026-10-01 (user): per-client speed limit on SSID
+  'wifi.speed': { my: 'Speed', en: 'Speed' },
+  'wifi.curSpeed': { my: 'လက်ရှိ — တင် {up} Mbps / ချ {down} Mbps', en: 'Current — {up} Mbps up / {down} Mbps down' },
+  'wifi.upRate': { my: 'တင် (Upload) — Mbps', en: 'Upload cap — Mbps' },
+  'wifi.downRate': { my: 'ချ (Download) — Mbps', en: 'Download cap — Mbps' },
+  'wifi.confirmSpeed': { my: '{ssid} အတွက် client တစ်ယောက်ချင်းစီ speed ကန့်သတ်ချက် — တင် {up} Mbps / ချ {down} Mbps သိမ်းမှာလား?', en: 'Set per-client caps for {ssid} — {up} Mbps up / {down} Mbps down?' },
+  'wifi.speedSaved': { my: 'Speed limit သိမ်းပြီးပြီ', en: 'Speed limit saved' },
+  'wifi.badSpeed': { my: 'Speed 0 သို့မဟုတ် အပေါင်းကိန်း ထည့်ပါ', en: 'Enter 0 or a positive number' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
   'kick.warnQuota': { my: 'quota ကျန်သေးတယ်', en: 'quota remains' },
   'kick.warnTime': { my: 'အချိန်ကျန်သေးတယ်', en: 'time remains' },
@@ -442,6 +461,45 @@ const I18N = {
   'm.devicesSub': { my: 'စက်များ', en: 'Devices' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
+  'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
+  'm.webauthSub': { my: 'ဝင်ရောက်ခွင့်စီမံခန့်ခွဲမှု', en: 'Portal config' },
+  'wa.title': { my: 'Web Authentication', en: 'Web Authentication' },
+  'wa.needGw': { my: 'Gateway login လိုအပ်သည်', en: 'Gateway login required' },
+  'wa.enable': { my: 'Authentication', en: 'Authentication' },
+  'wa.adUrl': { my: 'Auth Server URL', en: 'Auth Server URL' },
+  'wa.https': { my: 'HTTPS Redirection', en: 'HTTPS Redirection' },
+  'wa.idle': { my: 'Idle Client Timeout', en: 'Idle Client Timeout' },
+  'wa.min': { my: 'မိနစ်', en: 'min' },
+  'wa.wifiList': { my: 'Wi-Fi List', en: 'Wi-Fi List' },
+  'wa.vlan': { my: 'VLAN', en: 'VLAN' },
+  'wa.ipRange': { my: 'IP Range', en: 'IP Range' },
+  'wa.add': { my: 'ထည့်မယ်', en: 'Add' },
+  'wa.del': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'wa.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'wa.saved': { my: 'သိမ်းဆည်းပြီးပါပြီ', en: 'Saved' },
+  'wa.confirm': { my: 'Web Authentication setting တွေ gateway မှာ ပြောင်းမှာသေချာပါသလား?', en: 'Save Web Authentication settings to the gateway?' },
+  'wa.loading': { my: 'ဖတ်နေသည်…', en: 'Loading…' },
+  'wa.loadFail': { my: 'Gateway မှ ဖတ်မရပါ', en: 'Could not read from gateway' },
+  'wg.title': { my: 'Global Config', en: 'Global Config' },
+  'wg.proto': { my: 'Protocol', en: 'Protocol' },
+  'wg.stateUrl': { my: 'Personal Status Page', en: 'Personal Status Page' },
+  'wg.remindDays': { my: 'သက်တမ်းကုန်ခါနီး ကြိုသတိပေးရန်', en: 'Remind before expiration' },
+  'wg.days': { my: 'ရက်', en: 'days' },
+  'wg.remindInterval': { my: 'ထပ်သတိပေးရန်', en: 'Remind every' },
+  'wg.hours': { my: 'နာရီ', en: 'hours' },
+  'wg.idle': { my: 'Idle Client Timeout', en: 'Idle Client Timeout' },
+  'wg.httpCheck': { my: 'HTTP Injection Prevention', en: 'HTTP Injection Prevention' },
+  'wg.confirm': { my: 'Global Config တွေ gateway မှာ ပြောင်းမှာသေချာပါသလား?', en: 'Save Global Config to the gateway?' },
+  'al.title': { my: 'Allowlist', en: 'Allowlist' },
+  'al.mac': { my: 'MAC Allowlist', en: 'MAC Allowlist' },
+  'al.domain': { my: 'Domain Allowlist', en: 'Domain Allowlist' },
+  'al.add': { my: 'Add', en: 'Add' },
+  'al.macPh': { my: 'MAC လိပ်စာ (ဥပမာ C4:B2:5B:26:45:26)', en: 'MAC address (e.g. C4:B2:5B:26:45:26)' },
+  'al.badMac': { my: 'MAC လိပ်စာ မမှန်ပါ', en: 'Invalid MAC address' },
+  'al.dupMac': { my: 'ဒီ MAC ရှိပြီးသား', en: 'This MAC is already listed' },
+  'al.empty': { my: 'မရှိသေးပါ', en: 'No entries' },
+  'al.readonly': { my: 'ကြည့်ရန်သာ', en: 'View only' },
+  'al.confirm': { my: 'MAC Allowlist ကို gateway မှာ သိမ်းမှာသေချာပါသလား?', en: 'Save the MAC allowlist to the gateway?' },
   'm.clients': { my: 'Online Clients', en: 'Online Clients' },
   'm.history': { my: 'History', en: 'History' },
   'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
@@ -502,6 +560,60 @@ const I18N = {
   'mg.data': { my: 'ဒေတာ', en: 'Data' },
   'mg.price': { my: 'ဈေး', en: 'Price' },
   'mg.none': { my: 'မရှိပါ', en: 'None' },
+  'mg.add': { my: 'အသစ်ထည့်မယ်', en: 'Add' },
+  'mg.del': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'mg.confirmDel': { my: '"{name}" group ကို ဖျက်မှာသေချာပါသလား? (ပြန်ယူလို့မရပါ)', en: 'Delete the "{name}" group? This cannot be undone.' },
+  'mg.deleted': { my: 'Group ဖျက်ပြီးပါပြီ', en: 'Group deleted' },
+  'mg.needIds': { my: 'Group ID မရပါ — list ပြန်ဖွင့်ကြည့်ပါ', en: 'Group ID unavailable — reopen the list' },
+  /* v1.5.95: user group add form */
+  'ug.name': { my: 'အမည်', en: 'Name' },
+  'ug.price': { my: 'ဈေး', en: 'Price' },
+  'ug.quota': { my: 'ဒေတာ', en: 'Quota' },
+  'ug.noOfDevice': { my: 'စက်အရေအတွက်', en: 'Devices' },
+  'ug.timePeriod': { my: 'သက်တမ်း', en: 'Validity' },
+  'ug.timePeriodTotal': { my: 'စုစုပေါင်းသက်တမ်း', en: 'Total validity' },
+  'ug.timePeriodDaily': { my: 'နေ့စဉ်သက်တမ်း', en: 'Daily validity' },
+  'ug.timePeriodDailyCustom': { my: 'နေ့စဉ်သက်တမ်း (custom)', en: 'Daily validity (custom)' },
+  'ug.uploadRateLimit': { my: 'Upload limit', en: 'Upload limit' },
+  'ug.downloadRateLimit': { my: 'Download limit', en: 'Download limit' },
+  'ug.packageType': { my: 'Package အမျိုးအစား', en: 'Package type' },
+  'ug.bindSsid': { my: 'Bind SSID', en: 'Bind SSID' },
+  'ug.ip': { my: 'IP range', en: 'IP range' },
+  'ug.kickOffType': { my: 'Kick off type', en: 'Kick off type' },
+  'ug.durationCtrlType': { my: 'Duration ctrl type', en: 'Duration ctrl type' },
+  'ug.limitedTimes': { my: 'Limited times', en: 'Limited times' },
+  'ug.lowQuota': { my: 'Low quota', en: 'Low quota' },
+  'ug.lowUploadRateLimit': { my: 'Low upload limit', en: 'Low upload limit' },
+  'ug.lowDownloadRateLimit': { my: 'Low download limit', en: 'Low download limit' },
+  'ug.lowProfileStatus': { my: 'Low profile status', en: 'Low profile status' },
+  'ug.isBindSsid': { my: 'SSID bind', en: 'Bind SSID' },
+  'ug.bindMac': { my: 'MAC bind', en: 'Bind MAC' },
+  'ug.create': { my: 'ဖန်တီးမယ်', en: 'Create' },
+  'ug.cancel': { my: 'မလုပ်တော့ဘူး', en: 'Cancel' },
+  'ug.needName': { my: 'အမည်ထည့်ပေးပါ', en: 'Enter a name' },
+  'ug.needLogin': { my: 'အရင် login ဝင်ပါ', en: 'Please log in first' },
+  'ug.done': { my: 'User group ဖန်တီးပြီးပါပြီ', en: 'User group created' },
+  'ug.devices': { my: 'တစ်ပြိုင်တည်း သုံးနိုင်မည့်စက်', en: 'Concurrent Devices' },
+  'ug.bindMacFirst': { my: 'ပထမဆုံး သုံးစဉ်က MAC bind လုပ်မယ်', en: 'Bind MAC on first use' },
+  'ug.bindMacTip': { my: 'ဖွင့်ထားရင် voucher ကို ပထမဆုံး အသုံးပြုတဲ့ စက်နဲ့ ချိတ်ထားမည်', en: 'When on, the voucher locks to the first device that uses it' },
+  'ug.quotaTip': { my: 'ဒေတာ ကုန်သွားရင် voucher သက်တမ်း ကုန်မည်', en: 'The voucher expires when the data runs out' },
+  'ug.period': { my: 'သက်တမ်း', en: 'Period' },
+  'ug.totalDur': { my: 'စုစုပေါင်း ကြာချိန်', en: 'Total duration' },
+  'ug.dailyDur': { my: 'နေ့စဉ် ကြာချိန်', en: 'Daily duration' },
+  'ug.duration': { my: 'ကြာချိန်', en: 'Duration' },
+  'ug.dataQuota': { my: 'ဒေတာ ပမာဏ', en: 'Data Quota' },
+  'ug.upSpeed': { my: 'Upload မြန်နှုန်း', en: 'Upload Speed' },
+  'ug.downSpeed': { my: 'Download မြန်နှုန်း', en: 'Download Speed' },
+  'ug.unlimited': { my: 'အကန့်အသတ်မရှိ', en: 'Unlimited' },
+  'ug.custom': { my: 'ကိုယ်တိုင်ထည့်မယ်', en: 'Custom' },
+  'ug.customVal': { my: 'တန်ဖိုး ရိုက်ထည့်ပါ', en: 'Enter a value' },
+  'ug.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'ug.namePh': { my: 'User Group အမည် ထည့်ပါ', en: 'Please enter the User Group Name' },
+  'ug.pricePh': { my: 'ဈေးနှုန်း ထည့်ပါ', en: 'Please enter the price.' },
+  'ug.min': { my: 'မိနစ်', en: 'Minutes' },
+  'ug.hr': { my: 'နာရီ', en: 'Hour' },
+  'ug.day': { my: 'ရက်', en: 'Day' },
+  'ug.wk': { my: 'ပတ်', en: 'Week' },
   'md.title': { my: 'Devices', en: 'Devices' },
   'md.all': { my: 'အားလုံး', en: 'All' },
   'md.none': { my: 'စက်မရှိပါ', en: 'No devices' },
@@ -521,7 +633,7 @@ const I18N = {
   'mt.refresh': { my: 'ပြန်ဖတ်', en: 'Refresh' },
   'mt.hint': { my: 'Gateway ချိတ်ထားမှ မြင်ရမည်။ Refresh တစ်ခါနှိပ်တိုင်း ~166 kB ဆွဲမည်။', en: 'Needs a gateway connection. Each refresh pulls ~166 kB.' },
   'mt.flows': { my: 'Flow {n} · {time} က ရထားတာ', en: '{n} flows · updated {time}' },
-  'mt.topTalker': { my: 'အများဆုံးသုံးသူ', en: 'Top talker' },
+  'mt.topTalker': { my: 'ဒေတာပိုသုံးသူ', en: 'Over Data' },
   'mt.ip': { my: 'IP', en: 'IP' },
   'mt.conns': { my: 'ချိတ်ဆက်မှု', en: 'Conns' },
   'mt.up': { my: 'အတက်', en: 'Up' },
@@ -552,11 +664,11 @@ const I18N = {
   'mc.fDataUp': { my: 'ဒေတာပြည့်', en: 'Data up' },
   'mc.fNoAuth': { my: 'Portal မဝင်', en: 'No portal' },
   'mc.fUnknown': { my: 'အခြား', en: 'Other' },
-  'mc.flag.suspicious': { my: 'သံသယရှိ — စစ်ဆေးရန်', en: 'Unattributed, active — review' },
+  'mc.flag.suspicious': { my: 'သံသယရှိ', en: 'Suspend' },
   'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
   'mc.flag.kicked': { my: 'ဖြုတ်ပြီး', en: 'Kicked' },
   'mc.flag.weaksig': { my: 'ဆစ်ဂနယ်အားနည်း', en: 'Weak signal' },
-  'mc.flag.toptalker': { my: 'လိုင်းအသုံးအများဆုံး', en: 'Top talker' },
+  'mc.flag.toptalker': { my: 'ဒေတာပိုသုံး', en: 'Over Data' },
   'mc.flag.highloss': { my: 'ပက်ကက်ပျက်များနေ', en: 'High packet loss' },
   'mc.dQuality': { my: 'လိုင်းအရည်အသွေး', en: 'Line quality' },
   'mc.qSig': { my: 'ဆစ်ဂနယ်', en: 'Signal' },
@@ -580,6 +692,8 @@ const I18N = {
   'mc.dProfile': { my: 'ပက်ကေ့ချ်', en: 'Package' },
   'mc.dPrice': { my: 'ဈေး', en: 'Price' },
   'mc.dStatus': { my: 'အခြေအနေ', en: 'Status' },
+  'mc.dLastUsed': { my: 'နောက်ဆုံးသုံးခဲ့သည်မှာ', en: 'Last used' },
+  'mc.dDaysAgo': { my: '{n}ရက်', en: '{n}Days' },
   'ac.title': { my: 'AP ချိတ်ဆက်သူများ', en: 'AP clients' },
   'ac.none': { my: 'ချိတ်ဆက်ထားသူမရှိပါ', en: 'No connected clients' },
   'ac.total': { my: 'စုစုပေါင်း {n} ယောက်', en: '{n} clients' },
@@ -644,11 +758,16 @@ const I18N = {
   'ai.tenant': { my: 'Tenant', en: 'Tenant' },
   'toast.saved': { my: 'သိမ်းပြီး ချိတ်ဆက်မှုအောင်မြင်ပါသည်', en: 'Saved and connected' },
   'confirm.signout': { my: 'အကောင့်ထွက်ပြီး သိမ်းထားတဲ့ဒေတာအကုန်ရှင်းမှာလား?', en: 'Sign out and clear all saved data?' },
-  'fmt.month': { my: ' လ', en: ' mo' },
-  'fmt.day': { my: ' ရက်', en: 'd' },
-  'fmt.hour': { my: ' နာရီ', en: 'h' },
-  'fmt.min': { my: ' မိနစ်', en: 'm' },
-  'fmt.sec': { my: ' စက္ကန့်', en: 's' },
+  'fmt.month': { my: ' လ', en: ' Month' },
+  'fmt.months': { my: ' လ', en: ' Months' },
+  'fmt.day': { my: ' ရက်', en: ' Day' },
+  'fmt.days': { my: ' ရက်', en: ' Days' },
+  'fmt.hour': { my: ' နာရီ', en: ' Hour' },
+  'fmt.hours': { my: ' နာရီ', en: ' Hours' },
+  'fmt.min': { my: ' မိနစ်', en: ' Minute' },
+  'fmt.mins': { my: ' မိနစ်', en: ' Minutes' },
+  'fmt.sec': { my: ' စက္ကန့်', en: ' Second' },
+  'fmt.secs': { my: ' စက္ကန့်', en: ' Seconds' },
   'fmt.unlimited': { my: 'အကန့်အသတ်မရှိ', en: 'Unlimited' },
   'peek': { my: 'ပြမယ်/ဖုံးမယ်', en: 'Show/hide' },
 };
@@ -711,13 +830,15 @@ const fmtDate = ts => {
   // v1.5.14: 12-hour clock (02:45 PM) per user request
   return isNaN(d) ? String(ts) : d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 };
+/* v1.5.97: full unit words with singular/plural — "1 Day", "3 Days" (user request) */
+const fmtUnit = (n, one, many) => n + (Number(n) === 1 ? t(one) : t(many));
 const fmtPeriod = mins => {
   if (!mins) return '—';
   mins = Number(mins);
-  if (mins % 43200 === 0) return (mins / 43200) + t('fmt.month');
-  if (mins % 1440 === 0) return (mins / 1440) + t('fmt.day');
-  if (mins % 60 === 0) return (mins / 60) + t('fmt.hour');
-  return mins + t('fmt.min');
+  if (mins % 43200 === 0) return fmtUnit(mins / 43200, 'fmt.month', 'fmt.months');
+  if (mins % 1440 === 0) return fmtUnit(mins / 1440, 'fmt.day', 'fmt.days');
+  if (mins % 60 === 0) return fmtUnit(mins / 60, 'fmt.hour', 'fmt.hours');
+  return fmtUnit(mins, 'fmt.min', 'fmt.mins');
 };
 const fmtQuota = mb => {
   if (!mb && mb !== 0) return '—';
@@ -725,21 +846,21 @@ const fmtQuota = mb => {
   if (mb <= 0) return t('fmt.unlimited');
   return mb >= 1024 ? (mb / 1024).toFixed(mb % 1024 ? 1 : 0) + ' GB' : mb + ' MB';
 };
-/* Smart duration for remaining time: "18h 13m", "2d 3h" — built from cloud minutes. */
+/* Smart duration for remaining time: "18 Hours 13 Minutes", "2 Days 3 Hours" — built from cloud minutes. */
 const fmtRemain = mins => {
   if (mins === null || mins === undefined || mins === '') return '—';
   mins = Math.round(Number(mins));
   if (!isFinite(mins)) return '—';
   mins = Math.max(0, mins);
-  if (mins === 0) return '0' + t('fmt.min');
+  if (mins === 0) return fmtUnit(0, 'fmt.min', 'fmt.mins');
   const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
   const p = [];
-  if (d) p.push(d + t('fmt.day'));
-  if (h) p.push(h + t('fmt.hour'));
-  if (m || !p.length) p.push(m + t('fmt.min'));
+  if (d) p.push(fmtUnit(d, 'fmt.day', 'fmt.days'));
+  if (h) p.push(fmtUnit(h, 'fmt.hour', 'fmt.hours'));
+  if (m || !p.length) p.push(fmtUnit(m, 'fmt.min', 'fmt.mins'));
   return p.join(' ');
 };
-/* Live ticking variant with seconds: "18h 12m 45s". Driven by the local clock
+/* Live ticking variant with seconds: "18 Hours 12 Minutes 45 Seconds". Driven by the local clock
    from the cloud snapshot — time always passes at 1s/s, so this is exact. */
 const fmtRemainSecs = secs => {
   secs = Math.max(0, Math.round(Number(secs)));
@@ -747,10 +868,10 @@ const fmtRemainSecs = secs => {
   const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600),
         m = Math.floor((secs % 3600) / 60), s = secs % 60;
   const p = [];
-  if (d) p.push(d + t('fmt.day'));
-  if (h || d) p.push(h + t('fmt.hour'));
-  p.push(m + t('fmt.min'));
-  p.push(s + t('fmt.sec'));
+  if (d) p.push(fmtUnit(d, 'fmt.day', 'fmt.days'));
+  if (h || d) p.push(fmtUnit(h, 'fmt.hour', 'fmt.hours'));
+  p.push(fmtUnit(m, 'fmt.min', 'fmt.mins'));
+  p.push(fmtUnit(s, 'fmt.sec', 'fmt.secs'));
   return p.join(' ');
 };
 const remQuotaTxt = v => {
@@ -1060,9 +1181,11 @@ function ssoLoginWithProfile(profile) {
   try {
     if (window.RuijieBridge.ssoSaveCreds) window.RuijieBridge.ssoSaveCreds(profile.email, profile.password || '');
     if (window.RuijieBridge.ssoSetAutoLogin) window.RuijieBridge.ssoSetAutoLogin(true);
-    window.RuijieBridge.ssoLogin();
+    // fix1: silent login at app entry — dialog hidden, iOS loading shown instead
+    if (window.RuijieBridge.ssoLoginSilent) { showIosLoading(); window.RuijieBridge.ssoLoginSilent(); }
+    else window.RuijieBridge.ssoLogin();
     return true;
-  } catch (e) { return false; }
+  } catch (e) { hideIosLoading(); return false; }
 }
 async function applyProfile(profile) {
   const cfg = {
@@ -1518,15 +1641,21 @@ function anyModalOpen() {
 function closeAnyModal() {
   document.querySelectorAll('.modal:not(.hidden)').forEach(m => closeModal(m.id));
 }
+/* v1.5.92: Back is handled entirely through WebView history.
+   Native onBackPressed() just calls goBack(); this handler decides what
+   that back means. If a modal is open, the back press popped a view state
+   underneath it — close the modal and push the current view back so the
+   user stays where they were. */
 window.addEventListener('popstate', (e) => {
+  const st = e.state || {};
   if (anyModalOpen()) {
+    const cur = S.currentView || 'view-vouchers';
     closeAnyModal();
-    // restore the current entry so the next back press keeps working
-    // (preserve More depth so back keeps walking the sub-page stack)
-    try { history.pushState({ view: S.currentView || 'view-vouchers', moreDepth: S.moreStack.length || undefined }, ''); } catch (err) {}
+    // Restore the view entry that Back just popped, so the next Back
+    // goes to the previous view instead of skipping one.
+    try { history.pushState({ view: cur }, ''); } catch (err) {}
     return;
   }
-  const st = e.state || {};
   const v = st.view;
   // v1.5.34: system back inside More walks the sub-page stack instead of
   // jumping to the previously-open tab.
@@ -1886,6 +2015,12 @@ function openVoucherDetail(uuid) {
   $('modal-disconnect').classList.remove('hidden');
   // v1.5.86: MAC unbind button on voucher preview (user request)
   $('modal-unbind').classList.remove('hidden');
+  // 2026-10-01 (user): manual delete is EXPIRED-vouchers-only. The delete
+  // button appears only when the effective status is '3' (expired). Active /
+  // in-use vouchers can never be deleted from the app — enforcement stays
+  // disconnect/deauth only (2026-09-29 incident).
+  const isExp = vEffStatus(v) === '3';
+  $('modal-delete').classList.toggle('hidden', !isExp);
   const wasOpen = !$('modal').classList.contains('hidden');
   $('modal').classList.remove('hidden');
   // v1.5.74: push a history entry so a browser Back press closes the
@@ -1910,7 +2045,7 @@ function startVoucherLive(v) {
     const el = $('live-remtime');
     if (el) el.textContent = fmtRemainSecs(Math.max(0, (liveBase.timePeriodMin - liveBase.usedTimeMin - elapsedMin) * 60));
     const age = $('live-age');
-    if (age) age.textContent = liveBase.dataAt ? ' · ' + Math.max(0, Math.round((Date.now() - liveBase.dataAt) / 1000)) + t('fmt.sec') + ' ago' : '';
+    if (age) age.textContent = liveBase.dataAt ? ' · ' + fmtUnit(Math.max(0, Math.round((Date.now() - liveBase.dataAt) / 1000)), 'fmt.sec', 'fmt.secs') + ' ago' : '';
   };
   const poll = async () => {
     if (!liveBase) return;
@@ -1947,6 +2082,9 @@ function stopVoucherLive() {
 async function deleteVoucher() {
   const v = modalVoucher;
   if (!v) return;
+  // 2026-10-01 (user): manual delete is expired-vouchers-only — defense in
+  // depth in case the button visibility was bypassed.
+  if (vEffStatus(v) !== '3') { toast(t('del.onlyExpired'), true); return; }
   if (!confirm(tx('del.confirm', { code: vCode(v) }))) return;
   try {
     await Api.voucherDelete(S.projectId, v);
@@ -3297,15 +3435,144 @@ async function moreAccounts() {
 
 async function moreUserGroups() {
   S.moreFn = moreUserGroups;
-  moreShell(`${ic('box', 'sm')} ${esc(t('mg.title'))}`, `<div id="mg-list"><p class="muted">${t('more.loading')}</p></div>`);
+  moreShell(`${ic('box', 'sm')} ${esc(t('mg.title'))}`, `<div id="mg-list"><p class="muted">${t('more.loading')}</p></div>
+    <div class="row"><button class="btn" id="mg-add">${ic('plus', 'sm')}<span>${t('mg.add')}</span></button></div><div id="mg-form"></div>`);
+  $('mg-add').addEventListener('click', () => { renderUserGroupForm(); });
   try {
     await ensurePackages();
     $('mg-list').innerHTML = S.packages.length ? `<div class="wrap-scroll"><table class="data">
-      <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th></tr>
-      ${S.packages.map(p => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
-        <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td></tr>`).join('')}
+      <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th><th></th></tr>
+      ${S.packages.map((p, i) => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
+        <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td>
+        <td><button class="btn danger sm" data-mgdel="${i}">${t('mg.del')}</button></td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('mg.none')}</p>`;
+    $('mg-list').querySelectorAll('[data-mgdel]').forEach(b => b.addEventListener('click', () => {
+      deleteUserGroup(S.packages[Number(b.dataset.mgdel)]);
+    }));
   } catch (e) { $('mg-list').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+/* ── User group delete · v1.5.96 ──
+ * 2-step portal delete, both envelopes verified 2026-10-01 from the user's
+ * DevTools capture of a real portal delete (Delete -> confirm OK).
+ * Destructive: single strong confirm naming the group. Never auto-called. */
+async function deleteUserGroup(p) {
+  if (!p) return;
+  const name = pkgName(p);
+  if (!confirm(t('mg.confirmDel').replace('{name}', name))) return;
+  const ugId = pkgGroupId(p), profId = pkgProfileId(p);
+  if (!ugId || !profId) { toast(t('mg.needIds'), true); return; }
+  let tenantId = '';
+  try {
+    const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}');
+    if (bi) tenantId = bi.tenantId || bi.defaultTenantId || '';
+  } catch (e) {}
+  try {
+    await Api.userGroupDeleteSso(S.projectId, tenantId, ugId, profId);
+    toast(t('mg.deleted'));
+    moreUserGroups();
+  } catch (e) { toast((e && e.message) || String(e), true); }
+}
+
+/* ── User group add form · v1.5.96 ──
+ * Matches the official Ruijie Cloud app's Add User Group screen (user-supplied
+ * screenshots 2026-10-01): 8 fields with fixed option lists + defaults.
+ * iOS UI/UX: bottom-sheet pickers, iOS toggle, segmented period control.
+ * Verified API units from portal capture (2026-10-01): duration = minutes
+ * (timePeriod: 30 = "30 Minutes"), quota = MB (100 = "100 MB"),
+ * rate limits = Kbps (256 = "256 Kbps"), noOfDevice = string ("3").
+ * Inferred — verify on first test save: devices Unlimited -> "0" (portal
+ * convention); Daily duration -> durationCtrlType 1 + timePeriodDaily. */
+function renderUserGroupForm() {
+  const OPT = {
+    devices: [['0', t('ug.unlimited')], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9']],
+    duration: [['0', t('ug.unlimited')], ['30', '30 ' + t('ug.min')], ['60', '1 ' + t('ug.hr')], ['120', '2 ' + t('ug.hr')], ['1440', '1 ' + t('ug.day')], ['2880', '2 ' + t('ug.day')], ['10080', '1 ' + t('ug.wk')], ['20160', '2 ' + t('ug.wk')], ['custom', t('ug.custom')]],
+    quota: [['0', t('ug.unlimited')], ['100', '100 MB'], ['200', '200 MB'], ['500', '500 MB'], ['1024', '1 GB'], ['2048', '2 GB'], ['custom', t('ug.custom')]],
+    speed: [['0', t('ug.unlimited')], ['256', '256 Kbps'], ['512', '512 Kbps'], ['1024', '1 Mbps'], ['2048', '2 Mbps'], ['5120', '5 Mbps'], ['10240', '10 Mbps'], ['custom', t('ug.custom')]],
+  };
+  const pick = (id, opts, label, help) =>
+    `<div class="ug-row"><span class="ug-lab">${esc(label)}${help ? ` <span class="ug-q" title="${esc(help)}">?</span>` : ''}</span>` +
+    `<select id="ug-${id}" class="ug-sel" aria-label="${esc(label)}">` +
+    opts.map(o => `<option value="${o[0]}">${esc(o[1])}</option>`).join('') + `</select></div>` +
+    `<div class="ug-custom" id="ugc-${id}" hidden><input id="ugx-${id}" type="number" inputmode="numeric" min="0" placeholder="${esc(t('ug.customVal'))}"></div>`;
+  $('mg-form').innerHTML = `<div class="ug-card">
+    <div class="ug-field"><span class="ug-lab">${esc(t('ug.name'))}</span>
+      <input id="ug-name" type="text" class="ug-input" placeholder="${esc(t('ug.namePh'))}"></div>
+    ${pick('devices', OPT.devices, t('ug.devices'))}
+    <div class="ug-row"><span class="ug-lab">${esc(t('ug.bindMacFirst'))} <span class="ug-q" title="${esc(t('ug.bindMacTip'))}">?</span></span>
+      <label class="switch"><input id="ug-bindmac" type="checkbox"><span class="track"></span></label></div>
+    <div class="ug-sect">${esc(t('ug.period'))}</div>
+    <div class="segmented ug-seg" id="ug-pseg">
+      <button type="button" class="active" data-p="total">${esc(t('ug.totalDur'))}</button>
+      <button type="button" data-p="daily">${esc(t('ug.dailyDur'))}</button>
+    </div>
+    ${pick('duration', OPT.duration, t('ug.duration'))}
+    ${pick('quota', OPT.quota, t('ug.dataQuota'), t('ug.quotaTip'))}
+    ${pick('upspeed', OPT.speed, t('ug.upSpeed'))}
+    ${pick('downspeed', OPT.speed, t('ug.downSpeed'))}
+    <div class="ug-field"><span class="ug-lab">${esc(t('ug.price'))}</span>
+      <input id="ug-price" type="text" class="ug-input" inputmode="decimal" placeholder="${esc(t('ug.pricePh'))}"></div>
+    <button class="ug-save" id="ug-do">${esc(t('ug.save'))}</button>
+    <button class="ug-cancel" id="ug-cancel">${esc(t('ug.cancel'))}</button>
+  </div>`;
+  // iOS bottom-sheet pickers + Custom inline inputs
+  ['devices', 'duration', 'quota', 'upspeed', 'downspeed'].forEach(id => {
+    const s = $('ug-' + id);
+    if (!s) return;
+    enhanceIosPicker(s);
+    s.addEventListener('change', () => { const c = $('ugc-' + id); if (c) c.hidden = s.value !== 'custom'; });
+  });
+  // segmented period type
+  let periodType = 'total';
+  $('ug-pseg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    periodType = b.dataset.p;
+    $('ug-pseg').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  });
+  $('ug-cancel').addEventListener('click', () => { $('mg-form').innerHTML = ''; });
+  $('ug-do').addEventListener('click', async () => {
+    const name = String(($('ug-name') || {}).value || '').trim();
+    if (!name) { toast(t('ug.needName'), true); return; }
+    const gv = id => {
+      const s = $('ug-' + id);
+      if (!s) return 0;
+      if (s.value === 'custom') return Math.max(0, parseInt(String((($('ugx-' + id) || {}).value || '0')), 10) || 0);
+      return Math.max(0, parseInt(s.value, 10) || 0);
+    };
+    const devSel = $('ug-devices');
+    const noOfDevice = devSel ? String(devSel.value) : '0'; // string; '0' = Unlimited (portal convention — verify on first save)
+    const durMin = gv('duration'), quotaMB = gv('quota'), upK = gv('upspeed'), downK = gv('downspeed');
+    const isDaily = periodType === 'daily';
+    const fields = {
+      name, price: String(($('ug-price') || {}).value || '').trim(),
+      quota: quotaMB, noOfDevice,
+      timePeriod: isDaily ? 0 : durMin, timePeriodTotal: 0,
+      timePeriodDaily: isDaily ? durMin : 0, timePeriodDailyCustom: 0,
+      uploadRateLimit: upK, downloadRateLimit: downK,
+      packageType: 'COMMON', bindSsid: '', isBindSsid: false,
+      bindMac: !!($('ug-bindmac') || {}).checked, ip: '',
+      kickOffType: 1, durationCtrlType: isDaily ? 1 : 0, limitedTimes: 0,
+      lowQuota: 0, lowUploadRateLimit: 0, lowDownloadRateLimit: 0, lowProfileStatus: 0,
+    };
+    // tenant email + tenantId (same resolution as voucher unbind)
+    let email = (S.account && (S.account.account || S.account.email)) || '';
+    let tenantId = '';
+    try {
+      const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}');
+      if (bi) { if (!email && bi.email) email = bi.email; tenantId = bi.tenantId || bi.defaultTenantId || ''; }
+    } catch (e) {}
+    if (!email) { toast(t('ug.needLogin'), true); return; }
+    $('ug-do').disabled = true;
+    try {
+      await Api.userGroupAddSso(S.projectId, email, tenantId, fields);
+      toast(t('ug.done'));
+      $('mg-form').innerHTML = '';
+      moreUserGroups();
+    } catch (e) { toast((e && e.message) || String(e), true); }
+    $('ug-do').disabled = false;
+  });
+  const first = $('ug-name');
+  if (first) first.focus();
 }
 
 /* ── Device status light · v1.5.14 ──
@@ -3318,6 +3585,41 @@ function devStatus(d) {
   if (!v) return { cls: 'st-off', label: '—' };
   return /error|fail|fault|abnorm|alarm|exception/.test(v)
     ? { cls: 'st-err', label: String(raw) } : { cls: 'st-off', label: String(raw) };
+}
+
+/* v1.5.53: silent re-authentication after the portal session dies mid-session
+ * (e.g. stale cookies after the app was swiped away / the phone restarted —
+ * Devices showed "not login"/403). Uses the saved account when auto-login is
+ * enabled; the SSO dialog stays hidden and auto-submits by itself.
+ * Loop-safe: at most one silent re-auth per 5 minutes, and never after an
+ * explicit user logout (window.__ssoExplicitLogout).
+ * v1.5.98: top-level scope (was inside init() → ReferenceError from moreDevices);
+ * uses ssoLoginSilent like startup (v1.5.94 fix1). */
+let ssoLastReauth = 0;
+/* v1.5.53: one-shot retry of the portal operation that died with the session.
+   When a portal call fails with a dead session, the caller stores a retry
+   closure here and kicks off silent re-auth. On the next successful login
+   the closure runs ONCE, then is cleared — so Devices reloads instead of
+   leaving a "not login"/403 banner. Never retries genuine 403s. */
+let ssoPendingRetry = null;
+function ssoDeadSession(e) {
+  const m = String((e && e.message) || e || '').toLowerCase();
+  return m.includes('session expired') || m.includes('not login') || m.includes('ssojump');
+}
+function ssoQueueRetry(fn) {
+  ssoPendingRetry = fn; // at most one pending retry; a newer failure replaces it
+}
+function ssoSilentReauth() {
+  if (!hasSso()) return;
+  const now = Date.now();
+  if (now - ssoLastReauth < 5 * 60 * 1000) return;
+  let info = null;
+  try { info = JSON.parse(window.RuijieBridge.ssoAccountInfo() || '{}'); } catch (e) {}
+  if (!info || !info.has || !info.autoLogin) return;
+  ssoLastReauth = now;
+  // v1.5.98: was calling the VISIBLE ssoLogin() — use silent like startup (v1.5.94 fix1)
+  if (window.RuijieBridge.ssoLoginSilent) { showIosLoading(); window.RuijieBridge.ssoLoginSilent(); }
+  else { try { window.RuijieBridge.ssoLogin(); } catch (e) { /* never break the UI */ } }
 }
 
 async function moreDevices() {
@@ -3504,15 +3806,24 @@ async function loadSsids() {
     body.innerHTML = list.map(s => {
       const nm = esc(s.ssidName || '—');
       const enc = esc(s.encryptionMode || '');
-      const hid = s.ishidden ? ' (hidden)' : '';
-      return `<div class="voucher-row" style="align-items:center">
-        <div style="flex:1;min-width:0"><div style="font-weight:600">${nm}${hid}</div>
-        <div class="muted small">${enc}</div></div>
+      // v1.5.90: portal returns ishidden as string 'false'/'true', not boolean —
+      // the string 'false' is truthy in JS, so compare explicitly.
+      const isHid = s.ishidden === true || String(s.ishidden).toLowerCase() === 'true';
+      const hid = isHid ? ' (hidden)' : '';
+      // 2026-10-01: per-client speed caps shown under the SSID name (full text, no truncation)
+      const spd = fmtSsidSpeed(s);
+      return `<div class="voucher-row ssid-row">
+        <div class="ssid-info"><div class="ssid-name">${nm}${hid}</div>
+        <div class="muted small">${enc}${spd ? ' · ' + esc(spd) : ''}</div></div>
+        <div class="ssid-actions">
         <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}">${t('wifi.changePw')}</button>
+        <button class="btn sm" data-ssidspeed="${esc(s.ssidName || '')}">${t('wifi.speed')}</button>
         <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}">${t('wifi.delete')}</button>
+        </div>
       </div>`;
     }).join('');
     body.querySelectorAll('[data-ssidpw]').forEach(b => b.addEventListener('click', () => openSsidPassword(b.dataset.ssidpw)));
+    body.querySelectorAll('[data-ssidspeed]').forEach(b => b.addEventListener('click', () => openSsidSpeed(b.dataset.ssidspeed)));
     body.querySelectorAll('[data-ssiddel]').forEach(b => b.addEventListener('click', () => deleteSsid(b.dataset.ssiddel)));
   } catch (e) {
     body.innerHTML = `<p class="muted">Error: ${esc(e.message || e)}</p>`;
@@ -3569,10 +3880,9 @@ function openSsidPassword(ssidName) {
     <div class="card" style="padding:14px;max-width:420px">
     <h3 style="margin:0 0 10px">${esc(ssidName)}</h3>
     <div class="fld"><span>${t('wifi.oldPassword')}</span>
-      <div class="row" style="align-items:center">
-        <input id="sp-old" type="password" readonly value="${esc(oldPw)}" placeholder="${t('wifi.noPw')}" style="flex:1">
-        <button class="btn sm" id="sp-toggle">${t('wifi.show')}</button>
-      </div></div>
+      <input id="sp-old" type="password" readonly value="${esc(oldPw)}" placeholder="${t('wifi.noPw')}" style="width:100%">
+      <button class="btn sm" id="sp-toggle" style="margin-top:8px;width:100%">${t('wifi.show')}</button>
+    </div>
     <label class="fld"><span>${t('wifi.newPassword')}</span><input id="sp-pw" type="password" autocomplete="new-password"></label>
     <div class="row" style="margin-top:12px">
       <button class="btn primary" id="sp-ok">${t('wifi.save')}</button>
@@ -3591,6 +3901,265 @@ function openSsidPassword(ssidName) {
     try {
       await Api.ssidSetPasswordSso(S.projectId, ssidName, pw);
       toast(t('wifi.pwChanged')); loadSsids();
+    } catch (e) { toast(e.message || e, true); }
+  });
+}
+
+/* 2026-10-01 (user): per-client speed limit editor for an SSID.
+ * Shows the current per-client caps, edits in Mbps, saves via
+ * Api.ssidSetRatesSso (full-object PUT, only upRate/downRate changed). */
+function fmtSsidSpeed(s) {
+  if (!s) return '';
+  const up = s.upRate, down = s.downRate;
+  if ((up === undefined || up === null || up === '') && (down === undefined || down === null || down === '')) return '';
+  const f = v => (v === undefined || v === null || v === '') ? '—' : String(Api.ssidUnitToMbps(v));
+  return tx('wifi.curSpeed', { up: f(up), down: f(down) });
+}
+
+function openSsidSpeed(ssidName) {
+  if (!Api.ssoLoggedIn()) { toast(t('wifi.needSso')); return; }
+  const cur = (S.ssidList || []).find(s => String(s.ssidName || '') === String(ssidName));
+  const upCur = cur && cur.upRate !== undefined && cur.upRate !== null && cur.upRate !== ''
+    ? Api.ssidUnitToMbps(cur.upRate) : '';
+  const downCur = cur && cur.downRate !== undefined && cur.downRate !== null && cur.downRate !== ''
+    ? Api.ssidUnitToMbps(cur.downRate) : '';
+  const body = $('wifi-body');
+  body.innerHTML = `
+    <div class="card" style="padding:14px;max-width:420px">
+    <h3 style="margin:0 0 10px">${esc(ssidName)}</h3>
+    <p class="muted small" style="margin:0 0 12px">${esc(tx('wifi.curSpeed', { up: upCur === '' ? '—' : upCur, down: downCur === '' ? '—' : downCur }))}</p>
+    <label class="fld"><span>${t('wifi.upRate')}</span>
+      <input id="ss-up" type="number" min="0" step="0.5" inputmode="decimal" value="${esc(String(upCur))}" placeholder="e.g. 5"></label>
+    <label class="fld"><span>${t('wifi.downRate')}</span>
+      <input id="ss-down" type="number" min="0" step="0.5" inputmode="decimal" value="${esc(String(downCur))}" placeholder="e.g. 10"></label>
+    <p class="muted small" style="margin:8px 0 0" id="ss-hint"></p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="ss-ok">${t('wifi.save')}</button>
+      <button class="btn" id="ss-cancel">${t('wifi.cancel')}</button>
+    </div></div>`;
+  const hint = () => {
+    const u = parseFloat($('ss-up').value), d = parseFloat($('ss-down').value);
+    $('ss-hint').textContent =
+      (isFinite(u) && isFinite(d)) ? `= ${Api.ssidMbpsToUnit(u)} / ${Api.ssidMbpsToUnit(d)} ${Api.ssidRateUnit()}` : '';
+  };
+  $('ss-up').addEventListener('input', hint);
+  $('ss-down').addEventListener('input', hint);
+  hint();
+  $('ss-cancel').addEventListener('click', loadSsids);
+  $('ss-ok').addEventListener('click', async () => {
+    const u = parseFloat($('ss-up').value), d = parseFloat($('ss-down').value);
+    if (!(u >= 0 && d >= 0) || !isFinite(u) || !isFinite(d)) { toast(t('wifi.badSpeed'), true); return; }
+    if (!confirm(tx('wifi.confirmSpeed', { ssid: ssidName, up: u, down: d }))) return;
+    try {
+      await Api.ssidSetRatesSso(S.projectId, ssidName, u, d);
+      toast(t('wifi.speedSaved')); loadSsids();
+    } catch (e) { toast(e.message || e, true); }
+  });
+}
+
+/* ── Gateway Web Authentication editor · v1.5.96 (Fix13) ──
+ * More → Web Auth. Verified 2026-10-01 from the user's DevTools captures:
+ *   READ  (2-6.txt): cmdArr [devSta.get app_auth/app_auth_get_macc,
+ *           acConfig.get apPortalMacc, devConfig.get appAuthParamFmt]
+ *   WRITE (2-7.txt): devConfig.set module "app_auth_macc" with the FULL
+ *           read object; reply {code:0, data:{rcode:"00000000",
+ *           message:"success_set"}}
+ * Editable: Authentication toggle, Auth Server URL, HTTPS Redirection
+ * toggle, Idle Client Timeout (min), Wi-Fi List rows (VLAN name + IP
+ * range, add/edit/delete). Save sends back the full object that was
+ * read — never built from scratch, so untouched fields (paramFmt,
+ * wxRedirect, authIpList, …) survive the round-trip.
+ * Fix14: second section — Global Config (globalAuthConf). Verified
+ * 2026-10-01: READ = cmdArr [devConfig.get globalAuthConf, devConfig.get
+ * authCertUpload]; WRITE = devConfig.set module "globalAuthConf" with
+ * exactly the 10 verified keys (proto, remind_days, remind_interval,
+ * remind_content, charge_url, flow_detect_time, http_host_check,
+ * remind_url, user_state_url, version) — the read's configTime/
+ * currentTime/configId are NOT sent. Reply {code:0,
+ * data:{rcode:"00000000", msg:"success"}}. */
+async function moreWebAuth() {
+  S.moreFn = moreWebAuth;
+  moreShell(`${ic('lock', 'sm')} ${esc(t('wa.title'))}`, `
+    ${GwApi.loggedIn() ? '' : `<p class="muted small">${t('wa.needGw')}</p>`}
+    <div id="wa-body"><p class="muted">${t('wa.loading')}</p></div>
+    <div id="wg-body"></div>
+    <div id="al-body"></div>`);
+  let cfg = null, glob = null, allow = null;
+  try { [cfg, glob, allow] = await Promise.all([GwApi.webAuthGet(), GwApi.globalAuthGet(), GwApi.allowlistGet()]); }
+  catch (e) { /* nulls below */ }
+  if (!cfg) { $('wa-body').innerHTML = `<p class="err">${esc(t('wa.loadFail'))}</p>`; return; }
+  S._waCfg = cfg;
+  const swRow = (id, label, on) =>
+    `<div class="switch-row"><span class="ug-lab">${esc(label)}</span>` +
+    `<label class="switch"><input type="checkbox" id="${id}"${on ? ' checked' : ''}><span class="track"></span></label></div>`;
+  // Push in-progress row edits back into S._waCfg before any re-render.
+  const syncRows = () => {
+    S._waCfg.setSsidIpList = (S._waCfg.setSsidIpList || []).map((r, i) => {
+      const vlanEl = document.querySelector(`.wa-vlan[data-wai="${i}"]`);
+      const iprEl = document.querySelector(`.wa-ipr[data-wai="${i}"]`);
+      return {
+        ssidName: vlanEl ? vlanEl.value.trim() : (r.ssidName || ''),
+        ip: iprEl ? iprEl.value.split(',').map(s => s.trim()).filter(Boolean) : (r.ip || []),
+      };
+    });
+  };
+  const renderRows = () => {
+    const rows = S._waCfg.setSsidIpList || [];
+    // v1.5.99: stacked rows — VLAN name + delete on top, IP range full-width
+    // below (one row squeezed the IP into "192.168.2…" on phones).
+    $('wa-rows').innerHTML = rows.map((r, i) => `
+      <div class="wa-row">
+        <div class="wa-row-top">
+          <input class="ug-input wa-vlan" data-wai="${i}" value="${esc(r.ssidName || '')}"
+            placeholder="${esc(t('wa.vlan'))}" aria-label="${esc(t('wa.vlan'))}">
+          <button class="btn danger-ghost wa-del" data-wai="${i}" aria-label="${esc(t('wa.del'))}">${ic('trash', 'sm')}</button>
+        </div>
+        <input class="ug-input wa-ipr" data-wai="${i}" value="${esc((r.ip || []).join(', '))}"
+          placeholder="${esc(t('wa.ipRange'))}" aria-label="${esc(t('wa.ipRange'))}">
+      </div>`).join('') || `<p class="muted small">—</p>`;
+    document.querySelectorAll('.wa-del').forEach(b => b.addEventListener('click', () => {
+      syncRows();
+      S._waCfg.setSsidIpList.splice(Number(b.dataset.wai), 1);
+      renderRows();
+    }));
+  };
+  $('wa-body').innerHTML = `
+    <div class="ug-card">
+      ${swRow('wa-enable', t('wa.enable'), String(cfg.enable) === '1')}
+      <div class="ug-row"><span class="ug-lab">${esc(t('wa.adUrl'))}</span></div>
+      <input id="wa-adurl" class="ug-input" type="url" inputmode="url" value="${esc(cfg.ad_url || '')}" placeholder="https://…">
+      ${swRow('wa-https', t('wa.https'), String(cfg.proxy_https) === '1')}
+      <div class="ug-row"><span class="ug-lab">${esc(t('wa.idle'))}</span>
+        <span><input id="wa-idle" class="ug-input" type="number" inputmode="numeric" min="1" max="1440"
+          value="${esc(cfg.flowDetectTime || '15')}" style="width:90px;text-align:right" aria-label="${esc(t('wa.idle'))}">
+          <span class="muted small">${esc(t('wa.min'))}</span></span></div>
+      <div class="ug-row"><span class="ug-lab">${esc(t('wa.wifiList'))}</span>
+        <button class="btn" id="wa-add">${ic('plus', 'sm')}<span>${t('wa.add')}</span></button></div>
+      <div id="wa-rows"></div>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="wa-save">${t('wa.save')}</button></div>
+    </div>`;
+  renderRows();
+  $('wa-add').addEventListener('click', () => {
+    syncRows();
+    (S._waCfg.setSsidIpList = S._waCfg.setSsidIpList || []).push({ ssidName: '', ip: [''] });
+    renderRows();
+  });
+  $('wa-save').addEventListener('click', async () => {
+    if (!confirm(t('wa.confirm'))) return;
+    syncRows();
+    const c = S._waCfg;
+    c.enable = $('wa-enable').checked ? '1' : '0';
+    c.ad_url = $('wa-adurl').value.trim();
+    c.proxy_https = $('wa-https').checked ? '1' : '0';
+    const idle = Math.max(1, Math.min(1440, parseInt($('wa-idle').value, 10) || 15));
+    c.flowDetectTime = String(idle);
+    c.setSsidIpList = (c.setSsidIpList || []).filter(r => r.ssidName || (r.ip && r.ip.length));
+    try {
+      await GwApi.webAuthSet(c);
+      toast(t('wa.saved'));
+      moreWebAuth(); // re-read to show the gateway's own state
+    } catch (e) { toast(e.message || e, true); }
+  });
+
+  // ── Global Config section (Fix14) ──────────────────────────────
+  const gEl = $('wg-body');
+  if (!gEl) return;
+  if (!glob) { gEl.innerHTML = `<p class="err" style="margin-top:10px">${esc(t('wa.loadFail'))}</p>`; return; }
+  S._waGlob = glob;
+  const gOn = k => String(glob[k] || '') === '1';
+  const gNum = (k, ph) => `<input id="wg-${k}" type="number" min="0" inputmode="numeric" class="ug-input" value="${esc(String(glob[k] ?? ''))}" placeholder="${esc(ph)}">`;
+  gEl.innerHTML = `
+  <div class="ug-card" style="margin-top:12px">
+    <div class="ug-sect">${esc(t('wg.title'))}</div>
+    <div class="segmented ug-seg" id="wg-proto">
+      <button type="button" data-p="http" class="${String(glob.proto) === 'http' ? 'active' : ''}">http</button>
+      <button type="button" data-p="https" class="${String(glob.proto) === 'https' ? 'active' : ''}">https</button>
+    </div>
+    <div class="ug-field"><span class="ug-lab">${esc(t('wg.stateUrl'))}</span>
+      <input id="wg-user_state_url" type="text" class="ug-input" value="${esc(String(glob.user_state_url || ''))}"></div>
+    <div class="ug-field"><span class="ug-lab">${esc(t('wg.remindDays'))}</span>
+      <div class="ug-inline">${gNum('remind_days', '1')}<span class="ug-unit">${esc(t('wg.days'))}</span></div></div>
+    <div class="ug-field"><span class="ug-lab">${esc(t('wg.remindInterval'))}</span>
+      <div class="ug-inline">${gNum('remind_interval', '1')}<span class="ug-unit">${esc(t('wg.hours'))}</span></div></div>
+    <div class="ug-field"><span class="ug-lab">${esc(t('wg.idle'))}</span>
+      <div class="ug-inline">${gNum('flow_detect_time', '15')}<span class="ug-unit">${esc(t('wa.min'))}</span></div></div>
+    <div class="ug-field"><span class="ug-lab">${esc(t('wg.httpCheck'))}</span>
+      <label class="switch"><input id="wg-http_host_check" type="checkbox" ${gOn('http_host_check') ? 'checked' : ''}><span class="track"></span></label></div>
+    <div class="row" style="margin-top:14px"><button class="btn primary" id="wg-save">${t('wa.save')}</button></div>
+  </div>`;
+  $('wg-proto').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $('wg-proto').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  });
+  $('wg-save').addEventListener('click', async () => {
+    if (!confirm(t('wg.confirm'))) return;
+    const g = S._waGlob;
+    const act = $('wg-proto').querySelector('button.active');
+    g.proto = act ? act.dataset.p : String(g.proto || 'http');
+    g.user_state_url = $('wg-user_state_url').value.trim();
+    g.remind_days = String($('wg-remind_days').value || '0');
+    g.remind_interval = String($('wg-remind_interval').value || '0');
+    g.flow_detect_time = String($('wg-flow_detect_time').value || '0');
+    g.http_host_check = $('wg-http_host_check').checked ? '1' : '0';
+    try {
+      await GwApi.globalAuthSet(g);
+      toast(t('wa.saved'));
+      moreWebAuth(); // re-read to show the gateway's own state
+    } catch (e) { toast(e.message || e, true); }
+  });
+
+  // ── Allowlist section (Fix15) ──────────────────────────────────
+  const aEl = $('al-body');
+  if (!aEl) return;
+  if (!allow) { aEl.innerHTML = `<p class="err" style="margin-top:10px">${esc(t('wa.loadFail'))}</p>`; return; }
+  const macOk = s => /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(String(s).trim());
+  const macNorm = s => String(s).trim().toUpperCase().replace(/-/g, ':');
+  let macs = (Array.isArray(allow.mac) ? allow.mac : []).map(macNorm);
+  const domains = Array.isArray(allow.url) ? allow.url : [];
+  const renderMacs = () => {
+    const box = $('al-macs');
+    if (!box) return;
+    box.innerHTML = macs.length ? macs.map((m, i) =>
+      `<div class="ug-row"><span class="mono">${esc(m)}</span>` +
+      `<button class="btn danger sm" data-del="${i}">✕</button></div>`).join('')
+      : `<p class="muted small">${esc(t('al.empty'))}</p>`;
+    box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+      macs.splice(Number(b.dataset.del), 1);
+      renderMacs();
+    }));
+  };
+  aEl.innerHTML = `
+  <div class="ug-card" style="margin-top:12px">
+    <div class="ug-sect">${esc(t('al.title'))}</div>
+    <div class="ug-sect" style="padding-top:6px">${esc(t('al.mac'))}</div>
+    <div id="al-macs"></div>
+    <div class="ug-inline" style="margin-top:8px">
+      <input id="al-newmac" type="text" class="ug-input mono" placeholder="${esc(t('al.macPh'))}" autocapitalize="characters">
+      <button class="btn" id="al-add">${esc(t('al.add'))}</button>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="btn primary" id="al-save">${t('wa.save')}</button></div>
+    <div class="ug-sect" style="padding-top:14px">${esc(t('al.domain'))}
+      <span class="muted small"> · ${esc(t('al.readonly'))}</span></div>
+    ${domains.length ? domains.map(d =>
+      `<div class="ug-row"><span class="mono">${esc(d)}</span></div>`).join('')
+      : `<p class="muted small">${esc(t('al.empty'))}</p>`}
+  </div>`;
+  renderMacs();
+  $('al-add').addEventListener('click', () => {
+    const inp = $('al-newmac'), v = inp.value.trim();
+    if (!macOk(v)) { toast(t('al.badMac'), true); return; }
+    const n = macNorm(v);
+    if (macs.includes(n)) { toast(t('al.dupMac'), true); return; }
+    macs.push(n);
+    inp.value = '';
+    renderMacs();
+  });
+  $('al-save').addEventListener('click', async () => {
+    if (!confirm(t('al.confirm'))) return;
+    try {
+      await GwApi.allowlistMacSet(macs);
+      toast(t('wa.saved'));
+      moreWebAuth(); // re-read to show the gateway's own state
     } catch (e) { toast(e.message || e, true); }
   });
 }
@@ -3713,7 +4282,10 @@ const mcFields = (c, viaPortal, vmap) => {
       })();
   const live = ((c.downRate == null || c.downRate === '') && (c.upRate == null || c.upRate === ''))
     ? '—' : [fmtRate(c.downRate), fmtRate(c.upRate)].join(' / ');
-  return { mac, ip, name, acct, authType, ssid, ap, since, dur: fmtDur(durMs), sig, total, live, dev, conn };
+  return { mac, ip, name, acct, authType, ssid, ap, since, dur: fmtDur(durMs), sig, total, live, dev, conn,
+    // v1.5.96: VLAN label derived from the client IP subnet (verified
+    // gateway DHCP config) — '' when unknown, never guessed.
+    vlan: String(c.vlan || vlanFromIp(c.userIp || c.ip || '') || '') };
 };
 
 /* v1.5.76: normalized line-quality signals for one Online-Clients record.
@@ -3909,6 +4481,8 @@ function openIosPicker(sel) {
   document.body.appendChild(ov);
   requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open')));
 }
+
+/* ── Per-AP clients · v1.5.22 ── */
 function closeIosPicker() {
   const ov = document.querySelector('.ios-sheet-ov');
   if (ov) ov.remove();
@@ -4210,6 +4784,60 @@ function kickStickyClient(c) {
   if (!confirm(w || t('kick.confirm'))) return;
   requestKick(c, { auto: false });
 }
+/* ── Portal MAC block / unblock (manual, v1.5.95) ────────────────
+ * Blocked state is tracked locally (Store.blockedMacs): the portal's
+ * blocklist read is not yet captured, so a MAC the app blocked shows
+ * "Unblock" and everything else shows "Block". */
+function isMacBlocked(mac) {
+  const h = normMac(mac);
+  if (!h) return false;
+  const list = (Store.load() || {}).blockedMacs || [];
+  return Array.isArray(list) && list.includes(h);
+}
+function setMacBlocked(mac, blocked) {
+  const h = normMac(mac);
+  if (!h) return;
+  const st = Store.load() || {};
+  const list = Array.isArray(st.blockedMacs) ? st.blockedMacs.slice() : [];
+  const i = list.indexOf(h);
+  if (blocked && i < 0) list.push(h);
+  if (!blocked && i >= 0) list.splice(i, 1);
+  Store.save({ blockedMacs: list });
+}
+async function blockClient(c) {
+  const mac = c && (c.mac || c.userMac);
+  const cm = colonMac(mac);
+  if (!cm) { toast(t('kick.norecord'), true); return; }
+  if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
+  if (!confirm(t('block.confirm'))) return;
+  try {
+    await Api.clientBlockSso(Number(S.projectId), cm);
+  } catch (e) {
+    toast(String((e && e.message) || e || ''), true);
+    return;
+  }
+  setMacBlocked(mac, true);
+  toast(t('block.done'));
+  closeIosPicker();
+  openMcDetail(c);
+}
+async function unblockClient(c) {
+  const mac = c && (c.mac || c.userMac);
+  const dm = dottedMac(mac);
+  if (!dm) { toast(t('kick.norecord'), true); return; }
+  if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
+  if (!confirm(t('unblock.confirm'))) return;
+  try {
+    await Api.clientUnblockSso(Number(S.projectId), dm);
+  } catch (e) {
+    toast(String((e && e.message) || e || ''), true);
+    return;
+  }
+  setMacBlocked(mac, false);
+  toast(t('unblock.done'));
+  closeIosPicker();
+  openMcDetail(c);
+}
 /* ── Background auto-kick (Android APK only, v1.5.66) ─────────
  * The Settings auto-kick toggle enables BOTH the in-app scan (while the
  * app is open) and the native JobScheduler job (screen off / app closed).
@@ -4265,6 +4893,15 @@ function initKickSettings() {
   if (tg) {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
+  }
+  // fix7: voucher SSID for scoping the "suspicious" flag
+  const si = $('kick-ssid');
+  if (si) {
+    si.value = Store.load().voucherSsid || '';
+    si.addEventListener('change', () => {
+      Store.save({ voucherSsid: si.value.trim() });
+      renderMcList();
+    });
   }
   refreshKickStatus();
 }
@@ -4356,6 +4993,14 @@ async function moreClients() {
           (devs || []).forEach(d => { if (d.serialNumber) apNames[String(d.serialNumber)] = d.name || d.deviceName || String(d.serialNumber); });
         } catch (e) { /* AP names best-effort */ }
         const vc = getVoucherCache();
+        // Fix12b: gateway Authentication -> Online Clients (app_auth) carries
+        // the voucher code (userName) per MAC — the gateway's own auth
+        // record wins over the local portal cache for merged rows.
+        let gwAuthByMac = new Map();
+        try {
+          const au = await GwApi.authOnlineUsers();
+          if (au && au.byMac) gwAuthByMac = au.byMac;
+        } catch (e) { /* best-effort: cache still applies */ }
         (stas || []).forEach(s => {
           const mac = normMac(s.mac);
           if (!mac || seen.has(mac)) return;
@@ -4363,12 +5008,16 @@ async function moreClients() {
           const row = {
             mac: s.mac, ip: s.ip || '', userName: s.host || '',
             ssid: s.ssid || '',
-            deviceName: (s.apSn && apNames[String(s.apSn)]) || s.apSn || '',
+            // v1.5.96: user_list reports deviceAliasName directly
+            // (e.g. "WI-FI 7 RAP2271(MG)") — prefer it over the serial lookup.
+            deviceName: s.apName || (s.apSn && apNames[String(s.apSn)]) || s.apSn || '',
             rssi: (s.rssi != null && s.rssi !== '') ? s.rssi : null,
             __gw: true,
           };
+          const au = gwAuthByMac.get(mac);
           const cv = vc.byMac.get(mac) || (row.ip ? vc.byIp.get(String(row.ip).trim()) : null);
-          if (cv) row.account = cv;
+          if (au && au.voucher) row.account = au.voucher;
+          else if (cv) row.account = cv;
           list.push(row); gwMerged++;
         });
       }
@@ -4471,6 +5120,32 @@ function renderMcList() {
   const qi = $('mc-q');
   if (qi) qi.addEventListener('input', () => { mcCache.q = qi.value; renderMcCells(); });
 }
+/* fix7: voucher-SSID-scoped "suspicious" flag. Pure and unit-testable.
+ * voucherSsidList(store) — Settings "Voucher SSID" (comma-separated) ->
+ * lowercased name list; empty = not configured.
+ * isVoucherSsid(ssid, list) — true when not configured (backwards
+ * compatible: flag everywhere) or the client's SSID matches.
+ * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the SSID
+ * scope: noauth + viaPortal + heavy usage + on the voucher SSID. */
+function voucherSsidList(store) {
+  const raw = String((store && store.voucherSsid) || '').trim();
+  if (!raw) return [];
+  return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+}
+function isVoucherSsid(ssid, list) {
+  if (!list || !list.length) return true;
+  const s = String(ssid || '').trim().toLowerCase();
+  return !!s && list.indexOf(s) >= 0;
+}
+function shouldFlagSuspicious(st, viaPortal, ssid, c, vList) {
+  if (st !== 'noauth' || !viaPortal) return false;
+  if (!isVoucherSsid(ssid, vList)) return false;
+  c = c || {};
+  const bytes = Number(c.flowUpDown) || 0;
+  const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
+    : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : 0);
+  return bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000;
+}
 /* v1.5.67: cells-only render — called by renderMcList and by the search box
    on every keystroke (no focus loss, no list wipe). */
 function renderMcCells() {
@@ -4499,13 +5174,14 @@ function renderMcCells() {
     //   usage (traffic or long session) — worth a review, not a verdict.
     // "sticky": voucher quota exhausted (datalimit/timeup) yet the client
     //   is still in the online list — the AP didn't disconnect it.
+    // fix7: the suspicious flag only makes sense on the voucher SSID.
+    // Clients on other SSIDs (Home/AMH — WPA password) are legitimate by
+    // definition: they entered the WiFi password, no voucher needed.
+    // The voucher SSID name(s) come from Settings (comma-separated);
+    // empty = flag everywhere (backwards compatible).
+    const vSsidList = voucherSsidList(Store.load());
     const flags = [];
-    if (st === 'noauth' && viaPortal) {
-      const bytes = Number(c.flowUpDown) || 0;
-      const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
-        : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : 0);
-      if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
-    }
+    if (shouldFlagSuspicious(st, viaPortal, f.ssid, c, vSsidList)) flags.push('suspicious');
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
     // v1.5.76: line-quality flags — weak signal / heavy talker / packet
     // loss. Read-only signals from verified fields; never accusatory.
@@ -4520,7 +5196,12 @@ function renderMcCells() {
     // v1.5.58: iOS-clean rows — title + voucher + one quiet IP·AP line only.
     // The old 10-field mega-line (SSID, signal, traffic, device…) moved to the
     // tap-to-open detail sheet (openMcDetail).
-    const net = [(f.ip !== '—' ? f.ip : ''), (f.ap !== '—' ? f.ap : '')].filter(Boolean).join(' · ');
+    // v1.5.96: VLAN label joins the quiet line when known (192.168.30.2 · VLAN 30 · AP).
+    const netParts = [];
+    if (f.ip !== '—') netParts.push(f.ip);
+    if (f.vlan) netParts.push('VLAN ' + f.vlan);
+    if (f.ap !== '—') netParts.push(f.ap);
+    const net = netParts.join(' · ');
     // v1.5.55: per-client disconnect on sticky rows (quota spent, still online).
     // v1.5.76: also on weak-signal rows — a client at -80 dBm or worse
     // drags its whole radio cell to low PHY rates; one tap reuses the
@@ -4561,6 +5242,39 @@ function renderMcCells() {
   });
 }
 
+/* ── v1.5.97 · voucher "last used" ──
+   account → newest loginTimes from the portal auth history (AP-independent,
+   keyed by groupId — covers Cloud + China-AP clients alike).
+   The map is cached 15 min; a voucher with no history renders '—' (never guessed). */
+let mcLastUsedCache = null;
+/* Pure: newest loginTimes per voucher account (testable). */
+const lastUsedMap = logs => {
+  const map = new Map();
+  for (const r of logs) {
+    const k = String(r.account || '').trim();
+    const lt = Number(r.loginTimes) || 0;
+    if (k && lt > (map.get(k) || 0)) map.set(k, lt);
+  }
+  return map;
+};
+async function voucherLastUsedTs(acct) {
+  const a = String(acct || '').trim();
+  if (!a) return 0;
+  const now = Date.now();
+  if (!mcLastUsedCache || now - mcLastUsedCache.at > 15 * 60 * 1000) {
+    const logs = await Api.portalAuthLogs(Number(S.projectId));
+    mcLastUsedCache = { at: now, map: lastUsedMap(logs) };
+  }
+  return mcLastUsedCache.map.get(a) || 0;
+}
+/* v1.5.97: compact relative day label — "0Days", "1Days", "11Days" (user request). */
+const fmtDaysAgo = ts => {
+  if (!ts) return '—';
+  const days = Math.floor((Date.now() - Number(ts)) / 86400000);
+  if (!(days >= 0)) return '—'; // future/clock-skew → never guess
+  return tx('mc.dDaysAgo', { n: days });
+};
+
 /* ── v1.5.58 · Online Clients detail sheet ──
    Rows stay iOS-clean; every removed field lives here, grouped iOS-style.
    The sticky Disconnect action is offered here too (same KICK_VERIFIED gate). */
@@ -4574,15 +5288,15 @@ function openMcDetail(idx) {
   const title = (mcCache.showNames && f.name) ? f.name : f.mac;
   const kv = (k, v) => (v != null && v !== '' && v !== '—')
     ? `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>` : '';
+  // v1.5.99: raw-HTML value variant — for trusted markup only (e.g. the
+  // #mc-lastused placeholder span); the key is still escaped.
+  const kvRaw = (k, vHtml) => (vHtml != null && vHtml !== '')
+    ? `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${vHtml}</span></div>` : '';
   const sec = s => `<div class="kv-sec">${esc(s)}</div>`;
   const grp = inner => inner ? `<div class="kv-group">${inner}</div>` : '';
   const flags = [];
-  if (st === 'noauth' && viaPortal) {
-    const bytes = Number(c.flowUpDown) || 0;
-    const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
-      : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : 0);
-    if (bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000) flags.push('suspicious');
-  }
+  // fix7: suspicious flag only on the voucher SSID (see list renderer above)
+  if (shouldFlagSuspicious(st, viaPortal, f.ssid, c, voucherSsidList(Store.load()))) flags.push('suspicious');
   if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
   // v1.5.62: kicked mark in the detail sheet too.
   const kts2 = kickedAt(f.mac);
@@ -4598,6 +5312,7 @@ function openMcDetail(idx) {
   if (f.acct) {
     body += sec(t('mc.dVoucher')) + grp(
       kv(t('ac.voucher'), f.acct) +
+      kvRaw(t('mc.dLastUsed'), '<span id="mc-lastused">…</span>') +
       (vm ? kv(t('mc.dProfile'), voucherPkgName(vm)) : '') +
       (vm ? kv(t('mc.dPrice'), fmtMoney(pkgPriceNum(vm))) : '') +
       kv(t('mc.dStatus'), t(CST_META[st].key)));
@@ -4626,11 +5341,18 @@ function openMcDetail(idx) {
   if (flags.includes('sticky') || flags.includes('weaksig')) {
     body += `<button type="button" class="ios-sheet-danger" id="mc-sheet-kick">${esc(t('kick.btn'))}</button>`;
   }
+  // v1.5.95: manual MAC block / unblock (portal mac_filter, verified 2026-10-01)
+  const _mcMac = c && (c.mac || c.userMac);
+  if (_mcMac && normMac(_mcMac)) {
+    body += isMacBlocked(_mcMac)
+      ? `<button type="button" class="ios-sheet-btn" id="mc-sheet-unblock">${esc(t('unblock.btn'))}</button>`
+      : `<button type="button" class="ios-sheet-danger" id="mc-sheet-block">${esc(t('block.btn'))}</button>`;
+  }
   closeIosPicker();
   const ov = document.createElement('div');
   ov.className = 'ios-sheet-ov';
   const sheet = document.createElement('div');
-  sheet.className = 'ios-sheet';
+  sheet.className = 'ios-sheet ios-sheet-full'; // Fix9: client detail is fullscreen
   sheet.setAttribute('role', 'dialog');
   sheet.innerHTML = `<div class="sheet-handle"></div><div class="ios-sheet-title">${esc(title)}</div><div class="ios-sheet-body">${body}</div>`;
   const cancel = document.createElement('button');
@@ -4641,9 +5363,25 @@ function openMcDetail(idx) {
   sheet.appendChild(cancel);
   const kb = sheet.querySelector('#mc-sheet-kick');
   if (kb) kb.addEventListener('click', () => { closeIosPicker(); kickStickyClient(c); });
+  const bb = sheet.querySelector('#mc-sheet-block');
+  if (bb) bb.addEventListener('click', () => blockClient(c));
+  const ub = sheet.querySelector('#mc-sheet-unblock');
+  if (ub) ub.addEventListener('click', () => unblockClient(c));
   ov.appendChild(sheet);
   ov.addEventListener('click', e => { if (e.target === ov) closeIosPicker(); });
   document.body.appendChild(ov);
+  // v1.5.97: fill the "Last used" row async — keeps the sheet instant; the
+  // placeholder node identity guards against a re-opened sheet being overwritten.
+  if (f.acct) {
+    const luNode = sheet.querySelector('#mc-lastused');
+    voucherLastUsedTs(f.acct).then(ts => {
+      const el = sheet.querySelector('#mc-lastused');
+      if (el && el === luNode) el.textContent = fmtDaysAgo(ts);
+    }).catch(() => {
+      const el = sheet.querySelector('#mc-lastused');
+      if (el && el === luNode) el.textContent = '—';
+    });
+  }
   requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open')));
 }
 
@@ -4725,6 +5463,32 @@ const normMac = s => String(s || '').toUpperCase().replace(/[^0-9A-F]/g, '');
 const dottedMac = s => {
   const h = normMac(s);
   return h.length === 12 ? (h.slice(0, 4) + '.' + h.slice(4, 8) + '.' + h.slice(8)).toLowerCase() : '';
+};
+/* v1.5.95: colon-separated lowercase MAC for the block envelope (portal
+ * reports 62:22:3f:a9:9f:14 form). Returns '' when input has no 12 hex digits. */
+const colonMac = s => {
+  const h = normMac(s);
+  return h.length === 12 ? (h.match(/../g) || []).join(':').toLowerCase() : '';
+};
+/* ── VLAN label from client IP · v1.5.96 ──
+ * Pure. The portal/gateway user_list reports access_vlan "0" for wireless
+ * clients, so the subnet is the honest signal. Mapping is derived from the
+ * gateway's own DHCP Option config (verified 2026-09-30 eWeb capture):
+ *   vlan 30  → 192.168.30.1   (AMH)
+ *   vlan 20  → 192.168.20.1   (Nang Oo, voucher VLAN)
+ *   vlan 233 → 192.168.110.1/23 (Home)
+ * Returns '' for unknown subnets — never guessed.
+ * Fix12b: the gateway's Web Authentication Wi-Fi List (user screenshot
+ * 2026-10-01) shows VLAN20 = 192.168.20.1-192.168.21.254, so 192.168.21.x
+ * is also VLAN 20 — this is where the app_auth voucher clients live. */
+const vlanFromIp = ip => {
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(String(ip || '').trim());
+  if (!m) return '';
+  const key = m[1] + '.' + m[2] + '.' + m[3];
+  if (key === '192.168.30') return '30';
+  if (key === '192.168.20' || key === '192.168.21') return '20';
+  if (key === '192.168.110' || key === '192.168.111') return '233';
+  return '';
 };
 /* Build MAC→voucher and IP→voucher lookup maps from portal client records.
  * Pure and unit-testable. Portal records carry `account` (the voucher code
@@ -4832,10 +5596,20 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
   // AP-independent) sit between live and cache — they cover China-AP
   // clients the live snapshot never lists. Priority: live > auth > cache.
   // Also try the local voucher map (open-API path) as a fallback.
+  // Fix12b: the gateway's OWN Authentication -> Online Clients (app_auth)
+  // carries the voucher code per MAC — the gateway's own auth record wins
+  // over every portal source for gateway-enumerated clients.
   let vmap = new Map();
   try { vmap = await apClientVoucherMap(Number(S.projectId), true); } catch (e) {}
   let vByMac = new Map(), vByIp = new Map();
   let aByMac = new Map(), aByIp = new Map();
+  let gwAuthByMac = new Map();
+  try {
+    if (typeof GwApi !== 'undefined' && GwApi.loggedIn()) {
+      const au = await GwApi.authOnlineUsers();
+      if (au && au.byMac) gwAuthByMac = au.byMac;
+    }
+  } catch (e) { /* app_auth best-effort — portal sources still apply */ }
   if (Api.ssoLoggedIn()) {
     try {
       const pid = Number(S.projectId);
@@ -4863,12 +5637,16 @@ async function renderGwApClients(apSn, apName, clients, staTotal) {
       const sig = (c.rssi !== '' && c.rssi != null) ? String(c.rssi) + ' dBm' : '—';
       const subs = [c.ip, (showNames ? c.host : '')].filter(Boolean).map(esc).join('<br>');
       const hostLine = subs ? `<br><small class="muted">${subs}</small>` : '';
-      const vcode = gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, aByMac, aByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
+      const vcode = (gwAuthByMac.get(normMac(c.mac)) || {}).voucher ||
+        gwVoucherForSta(c, vByMac, vByIp) || gwVoucherForSta(c, aByMac, aByIp) || gwVoucherForSta(c, vcache.byMac, vcache.byIp);
       // v1.5.40: shared voucher cell (plan · period · price + status color).
       const vcell = voucherCellHtml(vcode, vmap);
+      // v1.5.96: VLAN label under the SSID when the subnet is known.
+      const vv = vlanFromIp(c.ip || '');
+      const ssidCell = `<small>${esc(c.ssid || '—')}${vv ? '<br>VLAN ' + esc(vv) : ''}</small>`;
       return `<tr><td>${esc(mac)}${hostLine}</td>` +
         `<td>${vcell}</td>` +
-        `<td><small>${esc(c.ssid || '—')}</small></td>` +
+        `<td>${ssidCell}</td>` +
         `<td><small>${esc(sig)}</small></td></tr>`;
     }).join('') + `</table></div>`;
   $('ac-names').addEventListener('click', () => {
@@ -5317,12 +6095,12 @@ function onSsoAutoLogin() {
   try { window.RuijieBridge.ssoSetAutoLogin($('sso-autologin').checked); } catch (e) {}
 }
 
-/* v1.5.52: one-shot startup SSO auto-login. Opens the SSO login dialog
- * automatically when saved credentials + auto-login are enabled and no
- * portal session exists. The cover auto-submits the saved credentials, so
- * the dialog closes by itself on success. Fires at most once per app
- * launch (window.__ssoAutoTried); an explicit logout sets the flag so the
- * dialog never reopens by itself afterwards. Never breaks startup. */
+/* v1.5.52: one-shot startup SSO auto-login. fix1: runs SILENT — the native
+ * dialog stays hidden while the login completes in the background and the
+ * app shows an iOS-style loading overlay instead. The dialog reveals itself
+ * if the login needs the user (captcha / 2FA / error). Fires at most once
+ * per app launch (window.__ssoAutoTried); an explicit logout sets the flag
+ * so the dialog never reopens by itself afterwards. Never breaks startup. */
 function maybeSsoAutoLogin() {
   if (window.__ssoAutoTried) return;
   window.__ssoAutoTried = true;
@@ -5333,8 +6111,10 @@ function maybeSsoAutoLogin() {
     let loggedIn = false;
     try { loggedIn = !!JSON.parse(window.RuijieBridge.ssoStatus() || '{}').loggedIn; } catch (e) {}
     if (loggedIn) return;
-    window.RuijieBridge.ssoLogin();
-  } catch (e) { /* never break startup */ }
+    // fix1: silent login — dialog hidden, iOS loading shown instead
+    if (window.RuijieBridge.ssoLoginSilent) { showIosLoading(); window.RuijieBridge.ssoLoginSilent(); }
+    else window.RuijieBridge.ssoLogin();
+  } catch (e) { hideIosLoading(); /* never break startup */ }
 }
 
 /* ── Device offline monitor (Android APK only, v1.5.52) ──────────
@@ -5807,10 +6587,12 @@ async function loadAccountInfo() {
       const av = $('topbar-avatar');
       if (av) av.textContent = shown.trim().charAt(0).toUpperCase();
     }
+    const tenant = info.tenantId || info.defaultTenantId || '';
+    // fix5: drop the tenant row entirely when it can't be shown
     $('account-info').innerHTML = `<dl class="kv">
       <dt>${t('ai.name')}</dt><dd>${esc(name || '—')}</dd>
       <dt>Email</dt><dd>${esc(email || '—')}</dd>
-      <dt>${t('ai.tenant')}</dt><dd>${esc(info.tenantId || info.defaultTenantId || '—')}</dd>
+      ${tenant ? `<dt>${t('ai.tenant')}</dt><dd>${esc(tenant)}</dd>` : ''}
     </dl>`;
   } catch (e) { /* silent */ }
 }
@@ -5896,6 +6678,10 @@ function init() {
   initLang();
   initLiquidWobble();
   initPullToRefresh();
+  // v1.5.92: Seed one history entry so WebView.canGoBack() is true from
+  // launch — system Back then always reaches our popstate handler instead
+  // of falling through to the native exit path.
+  try { history.replaceState({ view: 'view-vouchers' }, ''); history.pushState({ view: 'view-vouchers' }, ''); } catch (e) {}
   initIosPickers();   // v1.5.55: bottom-sheet pickers for project/usergroup/package
   initKickSettings(); // v1.5.55: kick toggle + status
   initTeleSettings(); // v1.5.75: monitoring toggle
@@ -6083,6 +6869,7 @@ function init() {
     else if (k === 'usergroups') moreUserGroups();
     else if (k === 'devices') moreDevices();
     else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
+    else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
     else if (k === 'history') moreHistory(); // v1.5.54
@@ -6112,36 +6899,6 @@ function init() {
   $('btn-diag-run').addEventListener('click', runDiagnostics);
   $('btn-diag-save').addEventListener('click', saveDiagReport);
   // SSO login/logout events from the native dialog
-  /* v1.5.53: silent re-authentication after the portal session dies
- * mid-session (e.g. stale cookies after the app was swiped away / the phone
- * restarted — Devices showed "not login"/403). Uses the saved account when
- * auto-login is enabled; the SSO dialog opens and auto-submits by itself.
- * Loop-safe: at most one silent re-auth per 5 minutes, and never after an
- * explicit user logout (window.__ssoExplicitLogout). */
-let ssoLastReauth = 0;
-/* v1.5.53: one-shot retry of the portal operation that died with the session.
-   When a portal call fails with a dead session, the caller stores a retry
-   closure here and kicks off silent re-auth. On the next successful login
-   the closure runs ONCE, then is cleared — so Devices reloads instead of
-   leaving a "not login"/403 banner. Never retries genuine 403s. */
-let ssoPendingRetry = null;
-function ssoDeadSession(e) {
-  const m = String((e && e.message) || e || '').toLowerCase();
-  return m.includes('session expired') || m.includes('not login') || m.includes('ssojump');
-}
-function ssoQueueRetry(fn) {
-  ssoPendingRetry = fn; // at most one pending retry; a newer failure replaces it
-}
-function ssoSilentReauth() {
-  if (!hasSso()) return;
-  const now = Date.now();
-  if (now - ssoLastReauth < 5 * 60 * 1000) return;
-  let info = null;
-  try { info = JSON.parse(window.RuijieBridge.ssoAccountInfo() || '{}'); } catch (e) {}
-  if (!info || !info.has || !info.autoLogin) return;
-  ssoLastReauth = now;
-  try { window.RuijieBridge.ssoLogin(); } catch (e) { /* never break the UI */ }
-}
   document.addEventListener('ruijie-sso', (e) => {
     refreshSsoCard();
     if (e.detail === 'login') {

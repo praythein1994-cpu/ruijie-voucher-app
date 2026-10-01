@@ -92,20 +92,6 @@ public class MainActivity extends Activity {
 
     private long lastBackPress = 0;
 
-    /**
-     * Pure back-press decision — no Android dependencies, unit-testable.
-     * Returns one of "close-modal", "go-back", "exit", "toast".
-     * v1.5.70: an open modal (voucher preview, print layout, …) must close
-     * on system back even when the WebView has no history (fresh launch →
-     * tap voucher → back used to show the exit toast instead).
-     */
-    static String decideBackAction(boolean modalOpen, boolean canGoBack, long nowMs, long lastBackPressMs) {
-        if (modalOpen) return "close-modal";
-        if (canGoBack) return "go-back";
-        if (nowMs - lastBackPressMs < 2000) return "exit";
-        return "toast";
-    }
-
     private void doExitBack() {
         super.onBackPressed();
     }
@@ -116,26 +102,22 @@ public class MainActivity extends Activity {
             super.onBackPressed();
             return;
         }
-        // Ask the page first: a modal closes on back regardless of history.
-        // evaluateJavascript is async; the callback runs on the UI thread.
+        // v1.5.92: Back is handled entirely through WebView history.
+        // The page pushes history states for views and modals; the JS
+        // popstate handler closes modals or navigates. Native only does
+        // goBack() or the double-press-to-exit when no history remains.
         final WebView wv = webView;
-        wv.evaluateJavascript(
-            "(function(){try{return (typeof anyModalOpen==='function'&&anyModalOpen())?'modal':'none';}catch(e){return 'none';}})()",
-            value -> {
-                boolean modalOpen = value != null && value.contains("modal");
-                long now = System.currentTimeMillis();
-                String action = decideBackAction(modalOpen, wv.canGoBack(), now, lastBackPress);
-                if ("close-modal".equals(action)) {
-                    wv.evaluateJavascript("try{closeAnyModal()}catch(e{})", null);
-                } else if ("go-back".equals(action)) {
-                    wv.goBack();
-                } else if ("exit".equals(action)) {
-                    doExitBack();
-                } else {
-                    lastBackPress = now;
-                    android.widget.Toast.makeText(MainActivity.this, "ထွက်ရန် back ထပ်နှိပ်ပါ", android.widget.Toast.LENGTH_SHORT).show();
-                }
-            });
+        if (wv.canGoBack()) {
+            wv.goBack();
+        } else {
+            long now = System.currentTimeMillis();
+            if (now - lastBackPress < 2000) {
+                doExitBack();
+            } else {
+                lastBackPress = now;
+                android.widget.Toast.makeText(MainActivity.this, "ထွက်ရန် back ထပ်နှိပ်ပါ", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override

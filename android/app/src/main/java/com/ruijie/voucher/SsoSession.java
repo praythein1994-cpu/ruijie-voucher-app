@@ -297,8 +297,24 @@ public class SsoSession {
      * Must be called on the UI thread.
      */
     public void showLoginDialog(Activity activity, LoginCallback cb) {
+        showLoginDialog(activity, false, cb);
+    }
+
+    /**
+     * fix1: silent mode hides the dialog (the app shows an iOS-style
+     * loading overlay instead) while the login runs in the background.
+     * The dialog is revealed automatically if the login needs the user
+     * (captcha / 2FA / error) via SsoCoverBridge.needsAttention().
+     * Must be called on the UI thread.
+     */
+    public void showLoginDialog(Activity activity, boolean silent, LoginCallback cb) {
         final Dialog dialog = new Dialog(activity, android.R.style.Theme_NoTitleBar_Fullscreen);
         final boolean[] fired = {false};
+        // v1.5.83: set once the CAS ticket callback URL is observed. A ticket
+        // is only issued after the credentials validate, so combined with a
+        // live portal session it proves login completed even when the WebView
+        // gets stuck on a URL our patterns don't recognize (blank page).
+        final boolean[] sawTicket = {false};
         // Fresh trace for this login attempt.
         loginTrace.clear();
         traceResult("started");
@@ -379,17 +395,44 @@ public class SsoSession {
         // Glass cover bridge: the injected cover reads/writes the encrypted
         // credential store and can dismiss the dialog. (The official Ruijie
         // page keeps running underneath the cover.)
+        // fix1: reveals a hidden (silent) dialog when user intervention is
+        // needed (captcha / 2FA / error). No-op when never hidden.
+        final boolean silentRef = silent;
+        final Dialog dialogRef = dialog;
+        final Activity activityRef = activity;
+        final Runnable reveal = new Runnable() {
+            @Override public void run() {
+                if (!silentRef) return;
+                activityRef.runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        try {
+                            android.view.Window w = dialogRef.getWindow();
+                            if (w != null) {
+                                android.view.WindowManager.LayoutParams lp = w.getAttributes();
+                                lp.alpha = 1f;
+                                w.setAttributes(lp);
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                });
+            }
+        };
         final SecureCredentialStore storeRef = store(activity);
         webView.addJavascriptInterface(
-                new SsoCoverBridge(activity, dialog, storeRef, fired, cb), "SsoCover");
+                new SsoCoverBridge(activity, dialog, storeRef, fired, cb, silent, reveal), "SsoCover");
 
         final Dialog dlgRef = dialog;
         final LoginCallback cbRef = cb;
         final boolean[] firedRef = fired;
+        final boolean[] sawTicketRef = sawTicket;
         webView.setWebViewClient(new WebViewClient() {
             private void checkAuth(String url) {
                 if (firedRef[0]) return;
-                if (isAuthenticatedUrl(url)) {
+                // CAS issued a ticket -> credentials validated. Record it
+                // before the dismiss decision below.
+                if (url != null && url.contains("ticket=")) sawTicketRef[0] = true;
+                if (shouldDismissAsSuccess(url, sawTicketRef[0],
+                        SsoSession.getInstance().isLoggedIn())) {
                     firedRef[0] = true;
                     traceResult("success");
                     try { CookieManager.getInstance().flush(); } catch (Exception ignored) {}
@@ -410,7 +453,7 @@ public class SsoSession {
             public void onPageFinished(WebView view, String url) {
                 progress.setVisibility(View.GONE);
                 traceUrl(url);
-                injectCoverIfNeeded(view, url);
+                injectCoverIfNeeded(view, url, silent);
                 checkAuth(url);
             }
             @Override
@@ -436,7 +479,32 @@ public class SsoSession {
             }
         });
         dialog.show();
-        webView.loadUrl(SSO_LOGIN_URL);
+        // fix1 (silent): keep the dialog shown so the WebView runs, but make
+        // it fully transparent — the app shows an iOS-style loading overlay
+        // instead. Window alpha (not view visibility) keeps the WebView
+        // rendering/JS at full fidelity while invisible.
+        if (silent) {
+            try {
+                android.view.Window w = dialog.getWindow();
+                if (w != null) {
+                    w.setDimAmount(0f);
+                    android.view.WindowManager.LayoutParams lp = w.getAttributes();
+                    lp.alpha = 0f;
+                    w.setAttributes(lp);
+                }
+            } catch (Exception ignored) { /* dialog stays visible */ }
+        }
+        // v1.5.85: start every login with a clean cookie jar. Otherwise a
+        // still-valid session from a previous profile/account sails through
+        // CAS without ever showing the login form — the cover never injects,
+        // the dialog dismisses as "success", but the portal session stays
+        // logged in as the WRONG account ("no permission" on portal calls).
+        // removeAllCookies is async; load only after it completes so the
+        // stale session can never win the race.
+        cm.removeAllCookies(cleared -> activity.runOnUiThread(() -> {
+            try { cm.flush(); } catch (Exception ignored) {}
+            webView.loadUrl(SSO_LOGIN_URL);
+        }));
     }
 
     /**
@@ -445,7 +513,7 @@ public class SsoSession {
      * fields and clicks its button. Guarded by window.__ssoCoverInjected
      * so reloads of the login page never stack covers.
      */
-    private void injectCoverIfNeeded(WebView webView, String url) {
+    private void injectCoverIfNeeded(WebView webView, String url, boolean silent) {
         if (url == null || !url.contains("/sso/login")) return;
         try {
             android.content.Context ctx = webView.getContext();
@@ -457,6 +525,7 @@ public class SsoSession {
             String saved = store(ctx).loadJson();
             prefs.put("hasCreds", saved != null);
             prefs.put("autoLogin", store(ctx).getAutoLogin());
+            prefs.put("silent", silent); // fix1: cover reveals dialog on captcha/2FA/error
             prefs.put("rememberWanted", store(ctx).getRememberWanted());
             prefs.put("email", saved != null ? new org.json.JSONObject(saved).optString("e", "") : "");
             String script = "(function(){"
@@ -505,5 +574,27 @@ public class SsoSession {
     private static int dp(Activity activity, int dp) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp,
                 activity.getResources().getDisplayMetrics());
+    }
+
+    /**
+     * v1.5.83: dismiss decision for the SSO login dialog. Pure logic, no
+     * Android dependencies, unit-testable.
+     *
+     * @param url          the onPageFinished URL (may be null)
+     * @param sawTicket    true once a CAS ticket callback URL was observed in
+     *                    this dialog (a ticket is only issued after the
+     *                    credentials validate)
+     * @param sessionAlive true when the portal session cookies exist
+     */
+    static boolean shouldDismissAsSuccess(String url, boolean sawTicket, boolean sessionAlive) {
+        if (url == null || url.isEmpty()) return false;
+        if (isAuthenticatedUrl(url)) return true;
+        // Fallback: CAS issued a ticket AND the portal session is alive, but
+        // the WebView is stuck on a URL our patterns don't recognize (e.g. a
+        // blank ticket-callback page). Dismissing is safe here because
+        // checkAuth runs in onPageFinished, i.e. after the callback response
+        // (which carries the session cookies) was fully received. Never fire
+        // while still on the login page.
+        return sawTicket && sessionAlive && !url.contains("/sso/login");
     }
 }

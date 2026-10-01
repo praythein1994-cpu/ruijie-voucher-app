@@ -20,14 +20,24 @@ public class SsoCoverBridge {
     private final SecureCredentialStore store;
     private final boolean[] fired;
     private final SsoSession.LoginCallback cb;
+    private final boolean silent; // fix1
+    private final Runnable onReveal; // fix1: reveals a hidden (silent) dialog
 
     public SsoCoverBridge(Activity activity, Dialog dialog, SecureCredentialStore store,
                           boolean[] fired, SsoSession.LoginCallback cb) {
+        this(activity, dialog, store, fired, cb, false, null);
+    }
+
+    public SsoCoverBridge(Activity activity, Dialog dialog, SecureCredentialStore store,
+                          boolean[] fired, SsoSession.LoginCallback cb,
+                          boolean silent, Runnable onReveal) {
         this.activity = activity;
         this.dialog = dialog;
         this.store = store;
         this.fired = fired;
         this.cb = cb;
+        this.silent = silent;
+        this.onReveal = onReveal;
     }
 
     /**
@@ -84,6 +94,14 @@ public class SsoCoverBridge {
     }
 
     /** Dismiss the dialog as cancelled (cover's own close control). */
+    /** fix1: cover calls this when the login needs the user (captcha / 2FA /
+     * error / no creds). Reveals a silent-hidden dialog; no-op otherwise. */
+    @JavascriptInterface
+    public void needsAttention() {
+        if (onReveal == null) return;
+        onReveal.run();
+    }
+
     @JavascriptInterface
     public void cancel() {
         activity.runOnUiThread(() -> {

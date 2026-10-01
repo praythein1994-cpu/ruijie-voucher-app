@@ -12,9 +12,9 @@ PLATFORM="$SDK/platforms/android-34"
 APP=app/src/main
 OUT=build/apk
 KS="$HOME/.ruijie-voucher.keystore"
-VERSION_CODE=84
-VERSION_NAME="1.5.73"
-OUT_NAME="ruijie-voucher-${VERSION_NAME}.apk"
+VERSION_CODE=111
+VERSION_NAME="1.5.100"
+OUT_NAME="ruijie-voucher-${VERSION_NAME}-test.apk"
 
 echo "== 1. sync web app into assets =="
 rm -rf "$APP/assets/www"
@@ -23,6 +23,46 @@ cp ../index.html "$APP/assets/www/"
 cp ../icon.svg ../apple-touch-icon.png "$APP/assets/www/"
 cp -r ../css ../js "$APP/assets/www/"
 cp -r ../sso-cover "$APP/assets/www/sso-cover"
+
+echo "== 1b. inject built-in profile sync key (APK assets only; never committed) =="
+PKEY_FILE="$HOME/workspace/v153/.secrets/profiles_key"
+restore_key() {
+  # v1.5.84: always restore the empty placeholder so the real key never stays in git
+  python3 - "$APP/assets/www/js/api.js" <<'EOF'
+import sys, re
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+open(path, 'w', encoding='utf-8').write(re.sub(r"const BUILTIN_SYNC_KEY = '[^']*';", "const BUILTIN_SYNC_KEY = '';", src, count=1))
+EOF
+}
+trap restore_key EXIT
+if [ -f "$PKEY_FILE" ]; then
+  python3 - "$APP/assets/www/js/api.js" "$PKEY_FILE" <<'EOF'
+import sys, re
+path, kf = sys.argv[1], sys.argv[2]
+key = open(kf).read().strip()
+assert re.fullmatch(r'[A-Za-z0-9_\-]+', key), 'bad key format'
+src = open(path, encoding='utf-8').read()
+pat = "const BUILTIN_SYNC_KEY = '';"
+assert src.count(pat) == 1, 'BUILTIN_SYNC_KEY line not found exactly once'
+open(path, 'w', encoding='utf-8').write(src.replace(pat, "const BUILTIN_SYNC_KEY = '%s';" % key, 1))
+print('sync key injected into APK assets')
+EOF
+else
+  echo "WARN: no .secrets/profiles_key; APK will prompt for the sync key"
+fi
+
+echo "== 1c. stamp APP_VERSION in APK assets (matches VERSION_NAME; never committed) =="
+python3 - "$APP/assets/www/js/app.js" "$VERSION_NAME" <<'EOF'
+import sys, re
+path, ver = sys.argv[1], sys.argv[2]
+assert re.fullmatch(r'\d+\.\d+\.\d+', ver), 'bad version format'
+src = open(path, encoding='utf-8').read()
+pat = r"const APP_VERSION = '[^']*';"
+assert re.search(pat, src), 'APP_VERSION line not found'
+open(path, 'w', encoding='utf-8').write(re.sub(pat, "const APP_VERSION = '%s';" % ver, src, count=1))
+print('APP_VERSION stamped:', ver)
+EOF
 
 echo "== 2. aapt2 compile res + link =="
 rm -rf build && mkdir -p "$OUT" build/gen
