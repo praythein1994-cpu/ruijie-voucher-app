@@ -274,7 +274,7 @@ public class SsoSession {
         } catch (Exception ignored) { /* timestamp optional */ }
     }
 
-    /** JSON: {"result":"success|cancel|started|none","at":"...","urls":[...]} */
+    /** JSON: {\"result\":\"success|cancel|started|none\",\"at\":\"...\",\"urls\":[...]} */
     public static synchronized String getLoginTraceJson() {
         StringBuilder sb = new StringBuilder("{\"result\":\"");
         sb.append(loginTraceResult).append("\",\"at\":\"").append(loginTraceAt).append("\",\"urls\":[");
@@ -283,6 +283,25 @@ public class SsoSession {
             sb.append(org.json.JSONObject.quote(loginTrace.get(i)));
         }
         return sb.append("]}").toString();
+    }
+
+    /**
+     * v1.5.111: last portal URL reached after a successful SSO login.
+     * After the ticket callback the server redirects to the real portal
+     * home — that URL (not a hardcoded guess) is what a recorder WebView
+     * must load. Null when no portal page was reached yet.
+     */
+    public static synchronized String getLastPortalUrl() {
+        for (int i = loginTrace.size() - 1; i >= 0; i--) {
+            String u = loginTrace.get(i);
+            if (u.contains("cloud-as.ruijienetworks.com")
+                    && !u.contains("/sso/")) {
+                // Strip the "…" truncation marker if present.
+                if (u.endsWith("…")) u = u.substring(0, u.length() - 1);
+                return u;
+            }
+        }
+        return null;
     }
 
     // ── login dialog ─────────────────────────────────────────────

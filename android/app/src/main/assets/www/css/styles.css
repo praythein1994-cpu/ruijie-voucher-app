@@ -357,7 +357,7 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .card h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 8px; }
 
 /* ── Voucher page ── */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 0; }
 .stat {
   background: var(--card); border-radius: var(--radius); padding: 10px 4px 9px; text-align: center;
   box-shadow: var(--shadow-card);
@@ -371,7 +371,7 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   position: sticky; top: 0; z-index: 5;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  padding: 5px 0 7px; margin: 0 -16px 4px; padding-left: 16px; padding-right: 16px;
+  padding: 0 0 7px; margin: 0 -16px 4px; padding-left: 16px; padding-right: 16px;
 }
 .toolbar-row { display: flex; gap: 10px; align-items: center; }
 .toolbar-row .search-wrap { flex: 1; }
@@ -524,7 +524,7 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .chip.ok { border-color: var(--green); color: var(--green); font-weight: 600; } /* v1.5.78: AdGuard DNS marker */
 .chip:active { transform: scale(.95); }
 
-#voucher-count { margin: 2px 4px 10px; font-size: 13px; }
+#voucher-count { margin: 2px 4px 6px; font-size: 13px; }
 
 /* iOS grouped voucher list */
 .list { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); }
@@ -1429,6 +1429,32 @@ button.set-row { cursor: pointer; }
 .bulk-mode .voucher-row .bulk-check { display: block; }
 .bulk-mode .voucher-row .chev { display: none; }
 
+/* v1.5.102: voucher More menu (Delete Expired Vouchers, Reset) */
+.voucher-actions .btn { flex: none; } /* buttons hug content — not stretched by .row .btn */
+.more-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+  background: var(--card); border-radius: 14px; box-shadow: var(--shadow-card);
+  min-width: 220px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+}
+.more-menu.hidden { display: none; }
+.more-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: none; border-radius: 10px; padding: 11px 12px;
+  font-size: 15px; color: var(--text); cursor: pointer; text-align: left;
+}
+.more-menu button:active { background: var(--fill); }
+/* v1.5.101: custom checkmark selector replaces native circle checkbox */
+.voucher-row .bulk-check { display: none; }
+.bulk-mode .voucher-row .bulk-check { display: flex; }
+.bulk-check {
+  width: 26px; height: 26px; flex: none; border-radius: 8px;
+  border: 2px solid var(--muted); background: transparent;
+  align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.bulk-check .tick { display: none; font-size: 16px; font-weight: 700; color: #fff; line-height: 1; }
+.bulk-check.on { background: var(--blue); border-color: var(--blue); }
+.bulk-check.on .tick { display: block; }
+
 /* ═══════════ v1.5.55 ═══════════ */
 
 /* ── Sticky two-pane preview (Print Layout + Typography modals) ──
@@ -1881,8 +1907,17 @@ html[data-layout="tablet"] .voucher-row .chev { font-size: 15px; }
 #view-generate .printer-line .ic { width: 16px; height: 16px; }
 #view-generate .printer-dot { font-size: 12px; }
 
-/* ── fix4: Vouchers page — Select button smaller (user request) ── */
-#btn-bulk-select { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+/* ── v1.5.105: Vouchers page — Select & More buttons identical size (user request) ──
+   (replaces the old fix4 rule that made Select smaller) */
+.voucher-actions .btn {
+  flex: none; min-height: 38px; padding: 9px 18px;
+  font-size: 14px; font-weight: 600; line-height: 1.25; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#btn-bulk-select { padding: 9px 18px; font-size: 14px; border-radius: 10px; }
+
+/* ── v1.5.105: voucher count + updated timestamp — same baseline on one line ── */
+#voucher-count, #voucher-fetched { line-height: 1.5; margin: 0; padding: 0; }
 
 /* ── v1.5.99: Web Auth Wi-Fi list — stacked rows ──
    VLAN name + delete on the top line, IP range full-width below.

@@ -1206,6 +1206,59 @@ const Api = {
   },
 
   /**
+   * v1.5.101: Voucher reset (Ruijie Cloud "Reset" in the voucher More menu).
+   * Reset clears a voucher's usage (used time / used quota) back to fresh.
+   * VERIFIED 2026-10-01 from the live Ruijie portal JS (user-authorized):
+   * vue2Compat bundle: USER_MANAGE_VOUCHER_RESET = "/intlSamVoucher/voucher/reset"
+   * UserManagement page reset(e): POST {api, method:"POST",
+   *   params:{recordList:[uuid,...], voucherCode:"code1,code2"},
+   *   querys:{group_id}}
+   * Response: s.code truthy -> error s.msg; s.voucherData.code truthy ->
+   * warn s.voucherData.msg; else success. Throws SSO_REQUIRED without
+   * an SSO session, like delete.
+   */
+  async voucherReset(groupId, voucher) {
+    if (this.ssoLoggedIn()) return this.voucherResetSso(groupId, voucher);
+    throw new Error('SSO_REQUIRED');
+  },
+  /** Batch reset through the SSO session (portal sends one call for all selected). */
+  async voucherResetMany(groupId, vouchers) {
+    if (this.ssoLoggedIn()) return this.voucherResetManySso(groupId, vouchers);
+    throw new Error('SSO_REQUIRED');
+  },
+  ssoResetEnvelope(codes, uuids, groupId) {
+    const api = '/intlSamVoucher/voucher/reset';
+    const gid = Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: { recordList: uuids, voucherCode: codes.join(',') },
+      querys: { group_id: Number.isFinite(gid) ? gid : groupId },
+    };
+  },
+  /** Reset vouchers through the SSO session. Throws on portal error. */
+  async voucherResetSso(groupId, voucher) {
+    return this.voucherResetManySso(groupId, [voucher]);
+  },
+  async voucherResetManySso(groupId, vouchers) {
+    const vs = (vouchers || []).filter(Boolean);
+    const codes = vs.map(v => v.voucherCode || v.codeNo || v.code || '').filter(Boolean);
+    const uuids = vs.map(v => v.uuid || v.id || '').filter(Boolean);
+    const env = this.ssoResetEnvelope(codes, uuids, groupId);
+    const j = await ssoCall(env.api, env);
+    if (j && j.code) {
+      throw new Error(j.msg || j.message || ('Reset မရပါ (code ' + j.code + ')'));
+    }
+    const vd = j && j.voucherData;
+    if (vd && vd.code) {
+      throw new Error(vd.msg || vd.message || ('Reset မရပါ (code ' + vd.code + ')'));
+    }
+    return j;
+  },
+
+  /**
    * Portal webproxy envelope for voucher MAC unbind (internal API, undocumented).
    * EXACT shape from the live Ruijie portal JS (2026-09-30, user-authorized):
    * vue2Compat bundle: USER_MANAGE_VOUCHER_UNBIND_MAC = "/intlSamVoucher/unbindMac/{uuid}"

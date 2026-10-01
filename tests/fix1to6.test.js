@@ -69,9 +69,12 @@ ok(!html.includes('data-more="networks"'), 'fix3: Networks menu item removed');
 ok(html.includes('data-more="usergroups"') && html.includes('data-more="sales"'),
    'fix3: other menu items intact');
 
-// ── Fix4: select button smaller ──
-ok(/#btn-bulk-select \{[^}]*font-size: 12px/.test(css), 'fix4: #btn-bulk-select font-size 12px');
-ok(/#btn-bulk-select \{[^}]*padding: 5px 10px/.test(css), 'fix4: #btn-bulk-select padding smaller');
+// ── Fix4 (SUPERSEDED v1.5.105): Select & More buttons now IDENTICAL size ──
+// v1.5.105 user request: "More နဲ့ Select က icon size မတူဘူး phone view မှာ fix"
+// Both buttons share .voucher-actions .btn with identical padding/font-size.
+ok(/\.voucher-actions \.btn \{[^}]*font-size: 14px/.test(css), 'v1.5.105: .voucher-actions .btn font-size 14px');
+ok(/\.voucher-actions \.btn \{[^}]*min-height: 38px/.test(css), 'v1.5.105: .voucher-actions .btn min-height 38px');
+ok(/#btn-bulk-select \{[^}]*font-size: 14px/.test(css), 'v1.5.105: #btn-bulk-select font-size 14px (same as More)');
 
 // ── Fix5: account info spacing + tenant ──
 ok(/\.kv \{[^}]*margin: 0/.test(css), 'fix5: .kv margin 0 kills dl gaps');

@@ -479,6 +479,45 @@ public class RuijieBridge {
                 }));
     }
 
+    // ── PORTAL NETWORK RECORDER (v1.5.106) ────────────────────────
+    // Opens the Ruijie portal in a full-screen WebView with a fetch/XHR
+    // interceptor. The user performs portal actions normally, taps Stop,
+    // and the captured API calls are saved as a .txt file + share sheet.
+    // Zero DevTools knowledge needed on the user's side.
+
+    /** Open the portal network recorder. Result events go to window._recEvent(name, detail). */
+    @JavascriptInterface
+    public void startPortalRecorder() {
+        activity.runOnUiThread(() -> {
+            // v1.5.110: ALWAYS run the proven SSO login dialog first.
+            // isLoggedIn() only checks cookie presence — a stale session
+            // still returns true and /macc5/ then 403s. The SSO dialog
+            // sails through when the session is truly valid, or shows the
+            // login form when it isn't. Either way the recorder opens with
+            // a live portal session.
+            SsoSession.getInstance().showLoginDialog(activity,
+                    new SsoSession.LoginCallback() {
+                        @Override public void onSuccess() {
+                            openRecorder();
+                        }
+                        @Override public void onCancel() {
+                            webView.post(() -> webView.evaluateJavascript(
+                                    "window._recEvent&&window._recEvent('cancel')", null));
+                        }
+                    });
+        });
+    }
+
+    private void openRecorder() {
+        // v1.5.111: load the real portal URL the SSO dialog reached —
+        // a hardcoded /macc5/ 403s even with a fresh login.
+        final String portalUrl = SsoSession.getLastPortalUrl();
+        PortalRecorder.show(activity, portalUrl,
+                (filePath, count) -> webView.post(() -> webView.evaluateJavascript(
+                        "window._recEvent&&window._recEvent('done'," +
+                                count + ")", null)));
+    }
+
     /** fix1: silent SSO login for app entry — the dialog is hidden (window
      * alpha 0) while the login runs; the app shows an iOS-style loading
      * overlay instead. The dialog is revealed automatically if the login

@@ -230,7 +230,8 @@
           <button class="chip" data-s="3"><span class="dot" style="background:var(--muted)"></span><span data-i18n="chip.s3">သက်တမ်းကုန်</span></button>
         </div>
       </div>
-      <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div class="row" style="gap:8px;align-items:center"><div id="voucher-fetched" class="muted small"></div><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button></div></div>
+      <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div id="voucher-fetched" class="muted small"></div></div>
+      <div class="row voucher-actions" style="justify-content:space-between;align-items:center;position:relative"><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button><button id="btn-voucher-more" class="btn small" aria-label="More">More</button><div id="voucher-more-menu" class="more-menu hidden"><button id="btn-del-expired"><svg class="ic sm"><use href="#i-trash"/></svg><span data-i18n="v.delExpired">သက်တမ်းကုန်တွေ ဖျက်မယ်</span></button><button id="btn-reset-selected"><svg class="ic sm"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button></div></div>
       <div id="bulk-bar" class="bulk-bar hidden">
         <span id="bulk-count" class="muted small"></span>
         <button id="btn-bulk-print" class="btn small primary"><svg class="ic sm"><use href="#i-printer"/></svg><span data-i18n="v.bulkPrint">ပရင့်ထုတ်မယ်</span></button>
@@ -359,6 +360,7 @@
         <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
         <button class="menu-item" data-more="history"><svg class="ic lg"><use href="#i-clock"/></svg><span data-i18n="m.history">History</span><small data-i18n="m.historySub">ဝင်ထွက်မှတ်တမ်း</small></button>
         <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
+        <button class="menu-item" data-more="recorder"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.recorder">Recorder</span><small data-i18n="m.recorderSub">Portal လုပ်ဆောင်ချက်မှတ်တမ်း</small></button>
       </div>
       <div id="more-content"></div>
     </section>
@@ -543,7 +545,6 @@
       <button id="modal-unbind" class="btn hidden"><svg class="ic"><use href="#i-unlink"/></svg><span data-i18n="unbind.btn">MAC ဖြုတ်မယ်</span></button>
       <button id="modal-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="modal.print">ပရင့်ထုတ်မယ်</span></button>
       <button id="modal-queue" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span>Queue</span></button>
-      <button id="modal-delete" class="btn danger"><svg class="ic"><use href="#i-trash"/></svg><span data-i18n="modal.del">ဖျက်မယ်</span></button>
     </div>
   </div>
 </div>

@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.100'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.111'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -127,6 +127,16 @@ const I18N = {
   'del.rejected': { my: 'Ruijie က ဖျက်ခြင်းကို ငြင်းဆိုလိုက်ပါတယ် (403) — အကောင့်တော့ ဝင်ထားဆဲပါ', en: 'Ruijie rejected the delete (403) — you are still logged in' },
   // 2026-10-01 (user): manual delete is expired-vouchers-only
   'del.onlyExpired': { my: 'ကုန်ဆုံးသွားတဲ့ ဗောက်ချာပဲ ဖျက်လို့ရပါတယ်', en: 'Only expired vouchers can be deleted' },
+  // v1.5.101: bulk Delete Expired Vouchers (Ruijie Cloud style) + Reset
+  'v.more': { my: 'ပို၍', en: 'More' },
+  'v.delExpired': { my: 'သက်တမ်းကုန်တွေ ဖျက်မယ်', en: 'Delete Expired Vouchers' },
+  'v.delExpiredConfirm': { my: 'သက်တမ်းကုန်ဗောက်ချာ {n} ခုကို ဖျက်မှာလား?', en: 'Delete {n} expired vouchers?' },
+  'v.delExpiredNone': { my: 'သက်တမ်းကုန်ဗောက်ချာ မရှိပါ', en: 'No expired vouchers' },
+  'v.delExpiredDone': { my: '{ok} ခု ဖျက်ပြီးပြီ', en: 'Deleted {ok}' },
+  'v.reset': { my: 'Reset', en: 'Reset' },
+  'v.resetConfirm': { my: 'ရွေးထားတဲ့ ဗောက်ချာ {n} ခုကို reset လုပ်မှာလား? (သုံးပြီးသားအချက်အလက် ပြန်စမယ်)', en: 'Reset {n} selected vouchers? (usage will be cleared)' },
+  'v.resetNone': { my: 'ဗောက်ချာ ရွေးထားတာ မရှိပါ', en: 'No vouchers selected' },
+  'v.resetDone': { my: '{ok} ခု reset ပြီးပြီ', en: 'Reset {ok}' },
   'sso.title': { my: 'Ruijie အကောင့်', en: 'Ruijie account' },
   'sso.sub': { my: 'ဝင်ထားမှ voucher ဖျက်လို့ရမယ်', en: 'Log in to enable voucher delete' },
   'sso.login': { my: 'အကောင့်ဝင်မယ်', en: 'Log in' },
@@ -511,6 +521,9 @@ const I18N = {
   'm.networksSub': { my: 'ကွန်ရက်များ', en: 'Networks' },
   'm.sales': { my: 'ရောင်းရငွေ', en: 'Sales' },
   'm.salesSub': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
+  'm.recorder': { my: 'Recorder', en: 'Recorder' },
+  'm.recorderSub': { my: 'Portal လုပ်ဆောင်ချက်မှတ်တမ်း', en: 'Record portal actions' },
+  'rec.done': { my: 'မှတ်တမ်းသိမ်းပြီးပြီ', en: 'Recording saved' },
   'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
   'sl.pkg': { my: 'ပက်ကေ့ခ်ျ', en: 'Package' },
@@ -664,6 +677,7 @@ const I18N = {
   'mc.fDataUp': { my: 'ဒေတာပြည့်', en: 'Data up' },
   'mc.fNoAuth': { my: 'Portal မဝင်', en: 'No portal' },
   'mc.fUnknown': { my: 'အခြား', en: 'Other' },
+  'mc.fBlocked': { my: 'Block ထားတယ်', en: 'Blocked' },
   'mc.flag.suspicious': { my: 'သံသယရှိ', en: 'Suspend' },
   'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
   'mc.flag.kicked': { my: 'ဖြုတ်ပြီး', en: 'Kicked' },
@@ -1507,6 +1521,7 @@ function initLiquidWobble() {
     if (e.clientX == null || e.clientY == null || !e.target || !e.target.closest) return;
     const el = e.target.closest(SEL);
     if (!el || !el.getBoundingClientRect) return;
+    if (el.id === 'search-clear') return; // v1.5.101: search ✕ stays static (no wobble)
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return;
     el.style.transformOrigin = Math.round(e.clientX - r.left) + 'px ' + Math.round(e.clientY - r.top) + 'px';
@@ -1872,29 +1887,18 @@ function renderVouchers() {
     ? tx('v.found', { n: list.length, total: S.vouchers.length })
     : tx('v.total', { n: S.vouchers.length });
   const el = $('voucher-list');
-  // v1.5.54: expiry alerts — vouchers expiring within 24h (in-use or unused)
-  const now = Date.now(), DAY = 86400000;
-  const expiring = S.vouchers.filter(v => {
-    const st = vEffStatus(v); // v1.5.66: spent/kicked are expired, not "expiring"
-    if (st !== '1' && st !== '2') return false;
-    const exp = Number(v.expiryTime);
-    return exp > now && exp <= now + DAY;
-  });
-  const expBanner = expiring.length
-    ? `<div class="warn-banner" data-expiring><svg class="ic sm"><use href="#i-alert"/></svg><span>${esc(t('v.expiring'))}: <b>${expiring.length}</b></span></div>`
-    : '';
   if (!list.length) {
     el.innerHTML = (S.vFilter || S.vStatus)
       ? `<div class="empty"><div class="big">${ic('search', 'xl')}</div><p><b>${t('v.noResult')}</b></p><p class="small">${t('v.noResultSub')}</p></div>`
       : `<div class="empty"><div class="big">${ic('ticket', 'xl')}</div><p><b>${t('v.empty')}</b></p><p class="small">${t('v.emptySub')}</p></div>`;
     return;
   }
-  el.innerHTML = expBanner + list.slice(0, 300).map(v => {
+  el.innerHTML = list.slice(0, 300).map(v => {
     const ri = remainInfo(v); // v1.5.53: decreasing remaining-resource fill
     const es = vEffStatus(v); // v1.5.66: badge/dot follow effective status
     return `
     <div class="voucher-row" data-uuid="${esc(v.uuid)}">
-      <input type="checkbox" class="bulk-check" data-bulk="${esc(v.uuid)}" aria-label="select">
+      <button type="button" class="bulk-check" data-bulk="${esc(v.uuid)}" aria-label="select"><span class="tick">✓</span></button>
       ${ri ? `<div class="remain-fill" style="width:${ri.pct.toFixed(1)}%"></div>` : ''}
       <span class="status-dot s${esc(es)}"></span>
       <div class="voucher-meta">
@@ -1910,16 +1914,16 @@ function renderVouchers() {
   if (list.length > 300) el.innerHTML += `<div class="empty" style="padding:20px"><p class="small">${t('v.first300')}</p></div>`;
   el.querySelectorAll('.voucher-row').forEach(r => r.addEventListener('click', e => {
     if (S.bulkMode) {
-      // v1.5.54: in bulk mode, row tap toggles the checkbox
-      if (e.target.classList.contains('bulk-check')) return; // let checkbox handle itself
+      // v1.5.54: in bulk mode, row tap toggles the checkmark (v1.5.101: custom ✓, not native checkbox)
+      if (e.target.closest('.bulk-check')) return; // let checkmark handle itself
       const cb = r.querySelector('.bulk-check');
-      if (cb) { cb.checked = !cb.checked; updateBulkCount(); }
+      if (cb) { cb.classList.toggle('on'); updateBulkCount(); }
       return;
     }
     openVoucherDetail(r.dataset.uuid);
   }));
   el.querySelectorAll('.bulk-check').forEach(cb => cb.addEventListener('click', e => {
-    e.stopPropagation(); updateBulkCount();
+    e.stopPropagation(); cb.classList.toggle('on'); updateBulkCount();
   }));
 }
 
@@ -1930,12 +1934,12 @@ function toggleBulkMode() {
   $('bulk-bar').classList.toggle('hidden', !S.bulkMode);
   $('btn-bulk-select').querySelector('span').textContent = S.bulkMode ? t('a.cancel') : t('v.select');
   if (!S.bulkMode) {
-    document.querySelectorAll('.bulk-check').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.bulk-check').forEach(cb => cb.classList.remove('on'));
   }
   updateBulkCount();
 }
 function bulkSelectedUuids() {
-  return Array.from(document.querySelectorAll('.bulk-check:checked')).map(cb => cb.dataset.bulk);
+  return Array.from(document.querySelectorAll('.bulk-check.on')).map(cb => cb.dataset.bulk);
 }
 function updateBulkCount() {
   const n = bulkSelectedUuids().length;
@@ -1974,6 +1978,51 @@ async function bulkDelete() {
   toast(`${ok} ✓${fail ? ` · ${fail} ✗` : ''}${stale ? ` · ${stale} ⏭` : ''}`);
   toggleBulkMode();
   loadVouchers();
+}
+
+/* ═══════════ v1.5.101: bulk Delete Expired Vouchers (Ruijie Cloud style) ═══════════
+   Deletes ALL expired vouchers (effective status '3') — no selection needed.
+   Unlike bulkDelete (session-generated only), this targets expired vouchers
+   regardless of provenance, matching the portal's "Delete Expired Vouchers". */
+async function deleteExpiredVouchers() {
+  const expired = (S.vouchers || []).filter(v => vEffStatus(v) === '3');
+  if (!expired.length) { toast(t('v.delExpiredNone')); return; }
+  if (!confirm(tx('v.delExpiredConfirm', { n: expired.length }))) return;
+  let ok = 0, fail = 0;
+  for (const v of expired) {
+    try { await Api.voucherDelete(S.projectId, v); ok++; }
+    catch (e) { fail++; }
+  }
+  toast(tx('v.delExpiredDone', { ok }) + (fail ? ` · ${fail} ✗` : ''));
+  loadVouchers();
+}
+
+/* ═══════════ v1.5.101: Reset selected vouchers (Ruijie Cloud style) ═══════════
+   Reset clears a voucher's usage (used time/quota) back to fresh/unused.
+   v1.5.104: uses the VERIFIED portal envelope (2026-10-01, from live portal
+   JS): POST /intlSamVoucher/voucher/reset with
+   params:{recordList:[uuids], voucherCode:"codes"} querys:{group_id}.
+   The portal sends ONE call for all selected vouchers — we do the same. */
+async function resetSelectedVouchers() {
+  const uuids = bulkSelectedUuids();
+  if (!uuids.length) { toast(t('v.resetNone')); return; }
+  const vs = uuids.map(u => S.vouchers.find(x => x.uuid === u)).filter(Boolean);
+  if (!confirm(tx('v.resetConfirm', { n: vs.length }))) return;
+  try {
+    await Api.voucherResetMany(S.projectId, vs);
+    toast(tx('v.resetDone', { ok: vs.length }));
+  } catch (e) {
+    toast(tx('v.resetDone', { ok: 0 }) + ` · ${vs.length} ✗`);
+  }
+  if (S.bulkMode) toggleBulkMode();
+  loadVouchers();
+}
+
+/* v1.5.101: voucher More menu (⋯) */
+function toggleVoucherMore(show) {
+  const m = $('voucher-more-menu');
+  const willShow = show !== undefined ? show : m.classList.contains('hidden');
+  m.classList.toggle('hidden', !willShow);
 }
 
 
@@ -2015,12 +2064,7 @@ function openVoucherDetail(uuid) {
   $('modal-disconnect').classList.remove('hidden');
   // v1.5.86: MAC unbind button on voucher preview (user request)
   $('modal-unbind').classList.remove('hidden');
-  // 2026-10-01 (user): manual delete is EXPIRED-vouchers-only. The delete
-  // button appears only when the effective status is '3' (expired). Active /
-  // in-use vouchers can never be deleted from the app — enforcement stays
-  // disconnect/deauth only (2026-09-29 incident).
-  const isExp = vEffStatus(v) === '3';
-  $('modal-delete').classList.toggle('hidden', !isExp);
+  // v1.5.101: per-voucher delete REMOVED (user) — replaced by bulk Delete Expired Vouchers
   const wasOpen = !$('modal').classList.contains('hidden');
   $('modal').classList.remove('hidden');
   // v1.5.74: push a history entry so a browser Back press closes the
@@ -2077,29 +2121,6 @@ function stopVoucherLive() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
   if (livePoller) { clearInterval(livePoller); livePoller = null; }
   liveBase = null;
-}
-
-async function deleteVoucher() {
-  const v = modalVoucher;
-  if (!v) return;
-  // 2026-10-01 (user): manual delete is expired-vouchers-only — defense in
-  // depth in case the button visibility was bypassed.
-  if (vEffStatus(v) !== '3') { toast(t('del.onlyExpired'), true); return; }
-  if (!confirm(tx('del.confirm', { code: vCode(v) }))) return;
-  try {
-    await Api.voucherDelete(S.projectId, v);
-    closeModal('modal');
-    modalVoucher = null;
-    toast(t('del.done'));
-    loadVouchers();
-  } catch (e) {
-    // Ruijie Open API has no delete endpoint; delete needs an SSO session
-    // (Ruijie account login in the Android app).
-    const m = e.message || '';
-    if (m === 'SSO_REQUIRED') toast(t('del.needSso'), true);
-    else if (/HTTP 403/.test(m)) toast(t('del.rejected') + ' — ' + m.replace(/^SSO request failed:\s*/, ''), true);
-    else toast(m || t('del.unsupported'), true);
-  }
 }
 
 /* ═══════════ PACKAGES (user groups) ═══════════ */
@@ -5092,12 +5113,15 @@ function renderMcList() {
   const counts = { all: list.length };
   CSTS.forEach(s => counts[s] = 0);
   sts.forEach(s => counts[s]++);
+  // v1.5.105: Blocked chip — counts clients whose MAC is in the local blocklist
+  const blockedCount = list.filter(c => isMacBlocked(mcFields(c, viaPortal, vmap).mac)).length;
   const srcLine = `📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(S.clientsFetchedAt)) : ''}`; // v1.5.54: last-fetched
   const seg = (key, label, n) =>
     `<button type="button" class="${filter === key ? 'active' : ''}" data-mcf="${key}">${esc(label)} (${n})</button>`;
   const segHtml = `<div class="segmented seg-scroll" role="tablist">` +
     seg('all', t('mc.fAll'), counts.all) +
-    CSTS.map(s => seg(s, t(CST_META[s].key), counts[s])).join('') + `</div>`;
+    CSTS.map(s => seg(s, t(CST_META[s].key), counts[s])).join('') +
+    seg('blocked', t('mc.fBlocked'), blockedCount) + `</div>`;
   // v1.5.67: search box — typing re-renders only the cells, input keeps focus.
   const searchHtml = `<div class="mc-search">${ic('search', 'sm')}<input id="mc-q" type="search" value="${esc(mcCache.q || '')}" placeholder="${esc(t('mc.search'))}" autocomplete="off" aria-label="${esc(t('mc.search'))}"></div>`;
   $('mc-list').innerHTML =
@@ -5165,7 +5189,10 @@ function renderMcCells() {
   // v1.5.76: heaviest transferrers get a top-talker flag (read-only signal).
   const topSet = topTalkerIdx(list, viaPortal);
   list.forEach((c, i) => {
-    if (filter !== 'all' && sts[i] !== filter) return;
+    // v1.5.105: 'blocked' filter — MAC in local blocklist (not a voucher status)
+    if (filter === 'blocked') {
+      if (!isMacBlocked(mcFields(c, viaPortal, vmap).mac)) return;
+    } else if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
     if (!mcMatchQ(f, q)) return;
     const st = sts[i];
@@ -5918,6 +5945,21 @@ function salesReportData(vouchers, priceByPkg, rs, re) {
   });
   return { rows, tm, ts, tr };
 }
+/* v1.5.106: portal network recorder — opens the Ruijie portal in a native
+ * WebView with a fetch/XHR interceptor. The user does portal actions
+ * normally, taps Stop, and the captured API calls are saved as a .txt file
+ * + offered via the Android share sheet. Zero DevTools knowledge needed. */
+function startNetworkRecorder() {
+  if (window.RuijieBridge && window.RuijieBridge.startPortalRecorder) {
+    window._recEvent = function(name, count) {
+      if (name === 'done') toast(t('rec.done') + ' (' + count + ')');
+    };
+    window.RuijieBridge.startPortalRecorder();
+  } else {
+    toast('Recorder: native bridge မရှိ');
+  }
+}
+
 async function moreSales() {
   const todayStr = new Date().toISOString().slice(0, 10);
   S.moreFn = moreSales;
@@ -6755,6 +6797,14 @@ function init() {
   $('btn-bulk-print').addEventListener('click', bulkPrint);
   $('btn-bulk-delete').addEventListener('click', bulkDelete);
   $('btn-bulk-cancel').addEventListener('click', toggleBulkMode);
+  // v1.5.101: voucher More menu (Delete Expired Vouchers, Reset)
+  $('btn-voucher-more').addEventListener('click', e => { e.stopPropagation(); toggleVoucherMore(); });
+  document.addEventListener('click', e => {
+    const m = $('voucher-more-menu');
+    if (m && !m.classList.contains('hidden') && !e.target.closest('#voucher-more-menu') && !e.target.closest('#btn-voucher-more')) toggleVoucherMore(false);
+  });
+  $('btn-del-expired').addEventListener('click', () => { toggleVoucherMore(false); deleteExpiredVouchers(); });
+  $('btn-reset-selected').addEventListener('click', () => { toggleVoucherMore(false); resetSelectedVouchers(); });
 
   document.querySelectorAll('#voucher-status-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#voucher-status-chips .chip').forEach(x => x.classList.remove('active'));
@@ -6802,7 +6852,6 @@ function init() {
     }
   });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
-  $('modal-delete').addEventListener('click', deleteVoucher);
 
   // print progress sheet (v1.5.56)
   $('pp-close').addEventListener('click', ppClose);
@@ -6875,6 +6924,7 @@ function init() {
     else if (k === 'history') moreHistory(); // v1.5.54
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
+  else if (k === 'recorder') startNetworkRecorder(); // v1.5.106: portal network recorder
   }));
 
   $('btn-save-settings').addEventListener('click', saveSettings);
