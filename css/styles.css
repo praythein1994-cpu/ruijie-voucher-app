@@ -1435,6 +1435,52 @@ html[data-layout="tablet"] .upd-ready-notes { max-height: 240px; }
 }
 /* Tablet — forced tablet layout */
 html[data-layout="tablet"] .upd-banner { margin-left: auto; margin-right: auto; max-width: 720px; }
+
+/* ── v1.5.139: premium download ring — phone-first base, tablet overrides below. */
+.upd-dl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 14px 14px;
+}
+.upd-dl[hidden] { display: none; }
+.upd-ring { position: relative; width: 84px; height: 84px; }
+.upd-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.upd-ring-bg { fill: none; stroke: rgba(127,127,127,.18); stroke-width: 7; }
+.upd-ring-fg {
+  fill: none;
+  stroke: url(#updRingGrad);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 188.5;
+  stroke-dashoffset: 188.5;
+  transition: stroke-dashoffset .3s ease;
+}
+.upd-ring-fg.done { stroke: #30D158; }
+.upd-ring-icon {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #0A84FF;
+}
+.upd-ring-icon .ic { width: 30px; height: 30px; }
+.upd-ring-icon.done { color: #30D158; }
+.upd-dl-pct {
+  font-size: 12.5px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+  padding: 3px 10px; border-radius: 999px;
+  min-width: 52px; text-align: center;
+}
+.upd-dl-pct.done { background: #30D158; }
+.upd-dl-label { font-size: 13px; color: var(--gray); }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .upd-dl { flex-direction: row; justify-content: center; gap: 16px; }
+  html:not([data-layout="phone"]) .upd-ring { width: 96px; height: 96px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .upd-dl { flex-direction: row; justify-content: center; gap: 16px; }
+html[data-layout="tablet"] .upd-ring { width: 96px; height: 96px; }
 .fld-stack { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .set-group .codetype-grid, .set-group .qty-grid { display: flex; gap: 8px; width: 100%; }
 .set-group .codetype { flex: 1; border: none; background: var(--fill-bg); border-radius: 10px; padding: 10px 6px; font-family: inherit; color: var(--label); cursor: pointer; display: flex; flex-direction: column; gap: 2px; align-items: center; }

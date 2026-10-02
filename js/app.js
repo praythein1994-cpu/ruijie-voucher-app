@@ -5585,7 +5585,10 @@ function updRefreshInstallUI() {
   if (st === 'waiting') {
     // Download survived an app restart — resume watching it to completion.
     const p = updPendingLoad();
+    updDlShow(p && p.tag ? p.tag : ''); // v1.5.139: ring visible if user opens Settings mid-download
     if (p && p.tag) updPollDownload(Number(p.id), (ok, id) => updOnDownloadDone({ tag: p.tag, name: p.name, notes: p.notes }, ok, id));
+  } else {
+    updDlHide(); // v1.5.139: no download running — ring stays out of the way
   }
   if (st === 'ready') {
     row.hidden = false;
@@ -5608,6 +5611,7 @@ function updOnDownloadDone(rel, ok, id) {
     updSetStatus(t('upd.downloaded'));
     updRefreshInstallUI();
     updBannerShow(rel.tag, true); // v1.5.138: banner upgrades to UPDATE Ready
+    updDlDone(); // v1.5.139: ring celebrates, then the UPDATE Ready card takes over
     try {
       const B2 = updBridge();
       if (B2 && B2.updateNotify) B2.updateNotify(t('upd.notiTitle'), tx('upd.notiText', { v: rel.tag }));
@@ -5617,6 +5621,7 @@ function updOnDownloadDone(rel, ok, id) {
   } else {
     updPendingClear();
     updRefreshInstallUI();
+    updDlHide(); // v1.5.139
     updSetStatus('');
     toast(t('upd.failed'), true);
   }
@@ -5637,6 +5642,7 @@ function updPollDownload(id, onDone) {
     } else {
       const p = q.total > 0 ? Math.round(100 * q.soFar / q.total) : 0;
       updSetStatus(tx('upd.downloading', { p }));
+      updDlProgress(p); // v1.5.139: premium ring follows the download
     }
   }, 1000);
 }
@@ -5661,6 +5667,7 @@ function updStartDownload(rel, silent) {
   try { r = JSON.parse(B.updateDownload(rel.url, rel.name) || '{}'); } catch (e) {}
   if (!r || !r.ok) { if (!silent) toast(t('upd.failed'), true); return; }
   updPendingSave({ id: r.id, tag: rel.tag, name: rel.name, notes: rel.notes || '' }); // v1.5.133: persist early so a restart can resume watching
+  updDlShow(rel.tag); // v1.5.139: premium progress ring
   updSetStatus(tx('upd.downloading', { p: 0 }));
   updPollDownload(r.id, (ok, id) => updOnDownloadDone(rel, ok, id));
 }
@@ -5782,6 +5789,52 @@ function updWatchStart() {
       try { updWatchTick(); } catch (e) {}
     }
   });
+}
+/* ═══════════ v1.5.139: PREMIUM DOWNLOAD RING ═══════════
+ * Circular progress ring (video reference): fills as the APK downloads,
+ * % pill below, green check on completion. Shown in Settings → App Update
+ * while a download runs — manual or auto. */
+const UPD_RING_C = 188.5; // 2πr, r = 30
+function updDlShow(tag) {
+  const w = $('upd-dl');
+  if (!w) return;
+  w.hidden = false;
+  const fg = $('upd-ring-fg');
+  if (fg) { fg.classList.remove('done'); fg.style.strokeDashoffset = UPD_RING_C; }
+  const ic = $('upd-ring-icon');
+  if (ic) {
+    ic.classList.remove('done');
+    ic.innerHTML = '<svg class="ic" style="transform:rotate(180deg)"><use href="#i-up"/></svg>';
+  }
+  const pct = $('upd-dl-pct');
+  if (pct) { pct.classList.remove('done'); pct.textContent = '0%'; }
+  const lb = $('upd-dl-label');
+  if (lb) lb.textContent = tag || '';
+}
+function updDlProgress(p) {
+  const pct = $('upd-dl-pct');
+  if (pct) pct.textContent = Math.round(p) + '%';
+  const fg = $('upd-ring-fg');
+  if (fg) fg.style.strokeDashoffset = UPD_RING_C * (1 - Math.min(100, Math.max(0, p)) / 100);
+}
+function updDlDone() {
+  const w0 = $('upd-dl');
+  if (w0) w0.hidden = false; // re-show for the celebration even if a refresh hid it
+  updDlProgress(100);
+  const fg = $('upd-ring-fg');
+  if (fg) fg.classList.add('done');
+  const ic = $('upd-ring-icon');
+  if (ic) {
+    ic.classList.add('done');
+    ic.innerHTML = '<svg class="ic"><use href="#i-check"/></svg>';
+  }
+  const pct = $('upd-dl-pct');
+  if (pct) pct.classList.add('done');
+  setTimeout(() => updDlHide(), 1600); // celebrate, then the UPDATE Ready card takes over
+}
+function updDlHide() {
+  const w = $('upd-dl');
+  if (w) w.hidden = true;
 }
 function initUpdateSettings() {
   const B = updBridge();
