@@ -109,6 +109,44 @@ const hasGw = () => !!(window.RuijieBridge && window.RuijieBridge.gatewayLogin);
 const GW_AUTH_RE = /GW_NOT_LOGGED_IN|auth|login|session|sid|token|expire|invalid|unauthori|forbidden|\b40[13]\b/i;
 /** Is this error text (or throwaway message) an auth/session failure? */
 function gwAuthLike(m) { return GW_AUTH_RE.test(String((m && m.message) || m || '')); }
+/* v1.5.115: pull MAC-like strings out of a blocklist reply of unknown
+ * shape. v1.5.117: recurse through EVERY key (the real response nests the
+ * list under keys we cannot predict — the old fixed key list silently
+ * returned []), unwrap stringified JSON, dedupe, and never match a MAC
+ * pattern buried inside a longer hex token. Returns [] when nothing
+ * recognizable is found. */
+function extractMacList(j) {
+  const out = [];
+  const seen = new Set();
+  const MAC_RE = /(?:^|[^0-9a-fA-F])([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}|[0-9a-fA-F]{4}(?:\.[0-9a-fA-F]{4}){2}|[0-9a-fA-F]{12})(?:[^0-9a-fA-F]|$)/;
+  function emit(s) {
+    const m = String(s).match(MAC_RE);
+    if (m) {
+      const key = m[1].toUpperCase();
+      if (!seen.has(key)) { seen.add(key); out.push(m[1]); }
+    }
+  }
+  function grab(v, depth) {
+    if (v == null || depth > 8) return;
+    if (typeof v === 'string') {
+      const t = v.trim();
+      if (t.length > 1 && (t[0] === '{' || t[0] === '[')) {
+        try { grab(JSON.parse(t), depth + 1); return; } catch (e) { /* not JSON */ }
+      }
+      emit(v);
+      return;
+    }
+    if (Array.isArray(v)) { for (const x of v) grab(x, depth + 1); return; }
+    if (typeof v === 'object') {
+      for (const k of Object.keys(v)) {
+        if (/^(code|msg|message|error|success)$/i.test(k)) continue;
+        grab(v[k], depth + 1);
+      }
+    }
+  }
+  grab(j, 0);
+  return out;
+}
 /**
  * Does a resolved gateway response look like an auth/session failure?
  * (401/403, or an auth-ish message with a non-zero code.) A code-0 response
@@ -1667,6 +1705,110 @@ const Api = {
     return j;
   },
 
+  /* ── Portal MAC deny-list READ (v1.5.116) ──
+   * VERIFIED from the user's Recorder capture 2026-10-01 23:41 +0630
+   * (portal-capture-20261001-234138.txt, entry [100]): visiting the
+   * portal's block page fires
+   *   outer POST .../webproxy/common/api?/homescene/mac_filter/{gid}
+   *   inner {"api":"/homescene/mac_filter/{gid}","method":"GET",
+   *          "module":"default","querys":{"lang":"en","cloudType":"smb"},
+   *          "authParams":{"api":"/homescene/mac_filter/{gid}",
+   *                        "method":"GET"}}
+   * The response shape was NOT captured, so extractMacList() parses
+   * flexibly and clientBlocklistSso() still never throws (null on any
+   * failure → caller keeps the local list). */
+  ssoBlocklistEnvelope(groupId) {
+    const api = '/homescene/mac_filter/' + Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'GET' },
+      method: 'GET',
+      module: 'default',
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  async clientBlocklistSso(groupId) {
+    try {
+      const env = this.ssoBlocklistEnvelope(groupId);
+      const j = await ssoCall(env.api, env);
+      const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+      if (c !== 0) return null;
+      return extractMacList(j);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  /* ── Delete Expired Vouchers (bulk, portal-verified) · v1.5.113 ──
+   * VERIFIED 2026-10-01 from the user's Recorder capture of the live
+   * Cloud portal voucher page (240 requests). The portal does NOT loop
+   * per-voucher deletes — it calls the macc3 agent through webproxy:
+   * count:  POST /webproxy/common/api?/authconfig/group/{gid}/api/agent/read
+   *          inner {api, method:'POST', authParams, module:'default',
+   *                 params:{urlSuffix:'/macc3/getExpireVoucherCount/{gid}',
+   *                        httpMethod:'POST', bodyParam:{expireTime:<ms>}},
+   *                 querys:{lang:'en',cloudType:'smb'}}
+   * delete: POST /webproxy/common/api?/authconfig/group/{gid}/api/agent/write
+   *          inner params:{urlSuffix:'/macc3/batchDelete/voucher/{gid}',
+   *                       httpMethod:'DELETE', bodyParam:{expireTime:<ms>}}
+   * expireTime is an epoch-ms cutoff; we use Date.now(). */
+  ssoExpireCountEnvelope(groupId, expireTimeMs) {
+    const gid = Number(groupId);
+    const api = '/authconfig/group/' + gid + '/api/agent/read';
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: {
+        urlSuffix: '/macc3/getExpireVoucherCount/' + gid,
+        httpMethod: 'POST',
+        bodyParam: { expireTime: expireTimeMs },
+      },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Returns the portal's expired-voucher count (raw JSON). Throws on portal error. */
+  async voucherExpireCountSso(groupId, expireTimeMs) {
+    const env = this.ssoExpireCountEnvelope(groupId, expireTimeMs);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Count မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  ssoDeleteExpiredEnvelope(groupId, expireTimeMs) {
+    const gid = Number(groupId);
+    const api = '/authconfig/group/' + gid + '/api/agent/write';
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: {
+        urlSuffix: '/macc3/batchDelete/voucher/' + gid,
+        httpMethod: 'DELETE',
+        bodyParam: { expireTime: expireTimeMs },
+      },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Bulk-delete expired vouchers through the SSO session. Throws on portal error. */
+  async voucherDeleteExpiredSso(groupId, expireTimeMs) {
+    const env = this.ssoDeleteExpiredEnvelope(groupId, expireTimeMs);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Delete မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
   /* ── User group add (portal, SSO) · v1.5.95 ──
    * Verified 2026-10-01 from the user's DevTools capture on
    * #/config_group_userManagement_menu — 2-step flow:
@@ -2094,7 +2236,87 @@ const Store = {
   save(patch) {
     const s = Object.assign(this.load(), patch);
     localStorage.setItem(STATE_KEY, JSON.stringify(s));
+    try { if (typeof SettingsSync !== 'undefined') SettingsSync.onLocalChange(patch); } catch (e) {}
     return s;
+  },
+};
+
+/* ═══════════ APP SETTINGS SYNC (v1.5.120) ═══════════
+ * Syncs app settings across the user's phones via the proxy:
+ *   PUT /api/settings/:name { settings, updatedAt, key }
+ *   GET /api/settings/:name -> { settings, updatedAt }
+ * NEVER syncs: gwPass, gwIp, gwAuto (gateway credentials stay on-device).
+ * Conflict: last-write-wins by updatedAt. Push is debounced 3s. */
+const SETTINGS_NEVER_SYNC = ['gwPass', 'gwIp', 'gwAuto', 'liveStats', 'lastGen', '_settingsUpdatedAt'];
+const SettingsSync = {
+  _timer: null,
+  _proxyBase() {
+    try {
+      const p = (typeof Profiles !== 'undefined' && Profiles.getProxyBase) ? Profiles.getProxyBase() : '';
+      if (p) return String(p).replace(/\/+$/, '');
+    } catch (e) {}
+    return 'https://ruijie-voucher-proxy.onrender.com';
+  },
+  _userName() {
+    try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+  },
+  _syncKey() {
+    try { return (typeof BUILTIN_SYNC_KEY !== 'undefined' && BUILTIN_SYNC_KEY) || ''; } catch (e) { return ''; }
+  },
+  getSyncable() {
+    const s = Store.load(), out = {};
+    for (const k of Object.keys(s)) {
+      if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+      out[k] = s[k];
+    }
+    return out;
+  },
+  onLocalChange(patch) {
+    if (!patch || typeof patch !== 'object') return;
+    const keys = Object.keys(patch);
+    if (!keys.some(k => !SETTINGS_NEVER_SYNC.includes(k))) return;
+    if (!this._userName()) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.push(), 3000);
+  },
+  async push() {
+    const name = this._userName();
+    if (!name) return { ok: false, reason: 'no-user' };
+    const norm = (typeof Profiles !== 'undefined' && Profiles.normName) ? Profiles.normName(name) : String(name).toLowerCase().replace(/\s+/g, '');
+    if (!norm) return { ok: false, reason: 'bad-name' };
+    const body = { settings: this.getSyncable(), updatedAt: Date.now(), key: this._syncKey() };
+    try {
+      const r = await fetch(this._proxyBase() + '/api/settings/' + encodeURIComponent(norm), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return await r.json();
+    } catch (e) { return { ok: false, reason: 'network' }; }
+  },
+  async pull() {
+    const name = this._userName();
+    if (!name) return { ok: false, reason: 'no-user' };
+    const norm = (typeof Profiles !== 'undefined' && Profiles.normName) ? Profiles.normName(name) : String(name).toLowerCase().replace(/\s+/g, '');
+    if (!norm) return { ok: false, reason: 'bad-name' };
+    try {
+      const r = await fetch(this._proxyBase() + '/api/settings/' + encodeURIComponent(norm), { method: 'GET' });
+      if (r.status === 404) return { ok: false, reason: 'not-found' };
+      const j = await r.json();
+      if (!j.ok || !j.settings) return { ok: false, reason: 'bad-response' };
+      const localUpdatedAt = Number(Store.load()._settingsUpdatedAt) || 0;
+      if ((Number(j.updatedAt) || 0) > localUpdatedAt) {
+        const clean = {};
+        for (const k of Object.keys(j.settings)) {
+          if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+          clean[k] = j.settings[k];
+        }
+        clean._settingsUpdatedAt = Number(j.updatedAt) || Date.now();
+        const s = Object.assign(Store.load(), clean);
+        localStorage.setItem(STATE_KEY, JSON.stringify(s));
+        return { ok: true, applied: true, updatedAt: clean._settingsUpdatedAt };
+      }
+      return { ok: true, applied: false };
+    } catch (e) { return { ok: false, reason: 'network' }; }
   },
 };
 
