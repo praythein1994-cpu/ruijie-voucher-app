@@ -329,6 +329,26 @@ public class RuijieBridge {
         }
     }
 
+    /**
+     * Single-shot auto-connect to the default (else last-used) printer.
+     * V1-style: tries once, fails silently, never retries, never backs off.
+     * Async — poll btState() for CONNECTED.
+     */
+    @JavascriptInterface
+    public String btAutoConnect() {
+        try {
+            BluetoothPrinterManager m = bt();
+            if (!m.isBluetoothSupported()) return btErr("Bluetooth not supported on this device");
+            if (!m.isBluetoothEnabled()) return btErr("Bluetooth is turned off");
+            m.autoConnectDefault();
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
     /** Set the default printer (starred in the device list). */
     @JavascriptInterface
     public String btSetDefault(String address) {

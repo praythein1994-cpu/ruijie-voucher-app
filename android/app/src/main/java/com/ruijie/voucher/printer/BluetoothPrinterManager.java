@@ -223,6 +223,14 @@ public class BluetoothPrinterManager {
                         if (d.address.equals(address)) { exists = true; break; }
                     }
                     if (!exists) discoveredDevices.add(new DiscoveredPrinter(name, address, paired));
+                    // V1-style: the default (else last-used) printer showed up
+                    // in discovery — try it once, now.
+                    String defAddr = getDefaultPrinterAddress();
+                    if (defAddr == null || defAddr.isEmpty()) defAddr = getLastPrinterAddress();
+                    if (defAddr != null && defAddr.equals(address)) {
+                        Log.i(TAG, "Default printer discovered — auto-connecting once");
+                        autoConnectDefault();
+                    }
                 }
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 scanning = false;
@@ -255,6 +263,20 @@ public class BluetoothPrinterManager {
                 if (state == BluetoothAdapter.STATE_TURNING_OFF || state == BluetoothAdapter.STATE_OFF) {
                     Log.i(TAG, "Bluetooth turned off broadcast received. Transitioning to Disconnected.");
                     handleConnectionLost("Bluetooth is turned off");
+                } else if (state == BluetoothAdapter.STATE_ON) {
+                    // V1-style: Bluetooth just turned on — try the default printer once.
+                    Log.i(TAG, "Bluetooth turned on — auto-connecting default printer once");
+                    autoConnectDefault();
+                }
+            } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                BluetoothDevice device = intentDevice(intent);
+                String defAddr = getDefaultPrinterAddress();
+                if (defAddr == null || defAddr.isEmpty()) defAddr = getLastPrinterAddress();
+                if (device != null && defAddr != null && defAddr.equals(device.getAddress())) {
+                    // Our default printer reached ACL level (e.g. powered on
+                    // while bonded) — grab the SPP connection immediately.
+                    Log.i(TAG, "Default printer ACL connected — auto-connecting SPP now");
+                    autoConnectDefault();
                 }
             } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)
                     || BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action)) {
@@ -353,22 +375,54 @@ public class BluetoothPrinterManager {
 
     /** Async connect by device address (runs on a background thread). */
     public void connectAsync(final String address) {
+        connectAsync(address, false);
+    }
+
+    private void connectAsync(final String address, final boolean quiet) {
         userInitiatedDisconnect = false;
-        Thread t = new Thread(() -> doConnect(address));
+        Thread t = new Thread(() -> doConnect(address, quiet));
         t.setDaemon(true);
         t.start();
     }
 
+    /**
+     * Single-shot auto-connect to the default printer (else the last-used
+     * printer). V1-style: tries once, fails silently, never retries, never
+     * backs off. Called at app startup and when the printer becomes available
+     * (Bluetooth on / discovered / ACL connected). No-op when the user
+     * explicitly disconnected or a connect is already in flight.
+     */
+    public void autoConnectDefault() {
+        if (userInitiatedDisconnect) return;
+        String s = connState;
+        if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) return;
+        if (!isBluetoothEnabled()) return;
+        String addr = getDefaultPrinterAddress();
+        if (addr == null || addr.isEmpty()) addr = getLastPrinterAddress();
+        if (addr == null || addr.isEmpty()) return;
+        Log.i(TAG, "Auto-connecting once to default printer " + addr);
+        connectAsync(addr, true);
+    }
+
+    /** Silent failure for a background auto-connect: stay DISCONNECTED, no error UI. */
+    private void quietFail() {
+        if (!STATE_DISCONNECTED.equals(connState)) {
+            setState(STATE_DISCONNECTED, null, null, null);
+        }
+    }
+
     @SuppressLint("MissingPermission")
-    private void doConnect(String address) {
+    private void doConnect(String address, boolean quiet) {
         disconnectInternal();
         if (!isBluetoothEnabled()) {
+            if (quiet) { quietFail(); return; }
             setState(STATE_ERROR, null, null, "Bluetooth is turned off. Please turn on Bluetooth.");
             setLastResult(false, "Bluetooth is turned off. Please turn on Bluetooth.");
             return;
         }
         BluetoothDevice device = findDevice(address);
         if (device == null) {
+            if (quiet) { quietFail(); return; }
             setState(STATE_ERROR, null, null, "Device not found: " + address);
             setLastResult(false, "Device not found: " + address);
             return;
@@ -425,6 +479,7 @@ public class BluetoothPrinterManager {
             startContinuousMonitoring(socket);
         } catch (Exception e) {
             disconnectInternal();
+            if (quiet) { quietFail(); return; }
             String msg = "Connection to " + finalName + " failed: "
                     + (e.getMessage() != null ? e.getMessage() : "Device unreachable");
             setState(STATE_ERROR, null, null, msg);

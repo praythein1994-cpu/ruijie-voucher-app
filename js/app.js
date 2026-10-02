@@ -7597,6 +7597,10 @@ function init() {
   // bluetooth thermal printer (printer-v1 engine, APK only)
   initBtPrinter();
   btPollStart();
+  // v1.5.135: V1-style auto-connect — one silent attempt to the default
+  // (else last-used) printer at startup. No toggle, no retry, no backoff.
+  // Native also retries on Bluetooth-on / discovery / ACL events.
+  setTimeout(() => { try { btCall(B => B.btAutoConnect()); } catch (e) {} }, 2000);
   wireTypoModal();
   $('btn-print-layout').addEventListener('click', openLayoutModal);
   $('btn-print-typo').addEventListener('click', openTypoModal);
