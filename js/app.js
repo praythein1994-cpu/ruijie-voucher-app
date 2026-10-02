@@ -280,6 +280,9 @@ const I18N = {
   'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
   'kick.ssid': { my: 'Voucher SSID', en: 'Voucher SSID' },
   'kick.ssidPh': { my: 'ဥပမာ ShopWiFi', en: 'e.g. ShopWiFi' },
+  'kick.ssidDetect': { my: 'Auto', en: 'Auto' },
+  'kick.ssidDetected': { my: 'Auto-detect: {ssid}', en: 'Auto-detected: {ssid}' },
+  'kick.ssidNotFound': { my: 'Voucher client မတွေ့ပါ — Online Clients အရင်ဖွင့်ပါ', en: 'No voucher clients found — open Online Clients first' },
   'kick.ssidSub': { my: 'သံသယရှိ flag က ဒီ SSID ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် (မထည့်ရင် အားလုံးပြ)', en: 'Suspicious flag only shows for clients on this SSID (empty = all)' },
   'kick.interval': { my: 'ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ', en: 'Check every N minutes' },
   'v.delExpiredThrough': { my: 'ရက်စွဲ', en: 'Through' },
@@ -5341,6 +5344,17 @@ function initKickSettings() {
       renderMcList();
     });
   }
+  // auto-detect voucher SSID from online clients (no typing needed)
+  const sd = $('kick-ssid-detect');
+  if (sd) {
+    sd.addEventListener('click', () => {
+      const cached = (typeof mcCache !== 'undefined' && mcCache && mcCache.list) || null;
+      if (!cached || !cached.length) { toast(t('kick.ssidNotFound'), true); return; }
+      const det = detectVoucherSsid(cached);
+      if (det) { applyDetectedSsid(det); toast(tx('kick.ssidDetected', { ssid: det })); }
+      else toast(t('kick.ssidNotFound'), true);
+    });
+  }
   refreshKickStatus();
 }
 // v1.5.75: monitoring toggle (Settings → စစ်ဆေးမှုများ)
@@ -5472,6 +5486,13 @@ async function moreClients() {
     showNames: Store.load().clientShowNames !== false,
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
+  // auto-detect voucher SSID when the user hasn't typed one (no typing needed)
+  try {
+    if (!String(Store.load().voucherSsid || '').trim()) {
+      const det = detectVoucherSsid(list);
+      if (det) applyDetectedSsid(det);
+    }
+  } catch (e) {}
   renderMcList(); // rebuilds #mc-list innerHTML — the .mc-sync spinner goes with it
   // v1.5.115: pull the portal deny-list so blocks from any phone show.
   try { refreshPortalBlocklist(); } catch (e) { /* best-effort */ }
@@ -5581,6 +5602,35 @@ function isVoucherSsid(ssid, list) {
   if (!list || !list.length) return true;
   const s = String(ssid || '').trim().toLowerCase();
   return !!s && list.indexOf(s) >= 0;
+}
+/* Auto-detect the voucher SSID: the SSID carrying the most voucher-
+ * authenticated online clients. Portal authType "15" = Voucher; gateway
+ * merged rows (__gw) carry the voucher code in `account`. Pure and
+ * unit-testable. Returns '' when nothing conclusive. */
+function detectVoucherSsid(clients) {
+  const counts = new Map();
+  (clients || []).forEach(c => {
+    if (!c) return;
+    const at = String(c.authType || '').trim();
+    const voucherAuth = at === '15' || at.toLowerCase() === 'voucher' ||
+      (c.__gw === true && !!String(c.account || '').trim());
+    if (!voucherAuth) return;
+    const ssid = String(c.ssid || '').trim();
+    if (!ssid || ssid === '—') return;
+    counts.set(ssid, (counts.get(ssid) || 0) + 1);
+  });
+  let best = '', bestN = 0;
+  counts.forEach((n, s) => { if (n > bestN) { bestN = n; best = s; } });
+  return best;
+}
+/** Apply a detected SSID to the setting + input. Returns the SSID or ''. */
+function applyDetectedSsid(ssid) {
+  if (!ssid) return '';
+  Store.save({ voucherSsid: ssid });
+  const si = $('kick-ssid');
+  if (si) si.value = ssid;
+  try { renderMcList(); } catch (e) {}
+  return ssid;
 }
 function shouldFlagSuspicious(st, viaPortal, ssid, c, vList) {
   if (st !== 'noauth' || !viaPortal) return false;
