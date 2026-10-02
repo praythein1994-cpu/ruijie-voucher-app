@@ -5941,8 +5941,8 @@ function updOnDownloadDone(rel, ok, id) {
       const B2 = updBridge();
       if (B2 && B2.updateNotify) B2.updateNotify(t('upd.notiTitle'), tx('upd.notiText', { v: rel.tag }));
     } catch (e) {}
-    iosConfirm(t('upd.downloaded'), '', t('upd.install'), t('a.cancel'), false)
-      .then(yes => { if (yes) updInstallApk(id); });
+    // v1.5.144: no immediate install prompt here — the UPDATE Ready card
+    // (with its Update Now button + v1.5.140 pre-install guide) is the flow.
   } else {
     updPendingClear();
     updRefreshInstallUI();
