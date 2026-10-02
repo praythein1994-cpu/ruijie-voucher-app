@@ -1218,4 +1218,72 @@ public class RuijieBridge {
             return btErr(e.getMessage());
         }
     }
+
+    /** Ask the user for the POST_NOTIFICATIONS runtime permission (Android 13+).
+     * Safe no-op on older versions or when already granted. */
+    @JavascriptInterface
+    public String updateNotifRequest() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                if (activity.checkSelfPermission(
+                        android.Manifest.permission.POST_NOTIFICATIONS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    activity.requestPermissions(
+                            new String[]{ android.Manifest.permission.POST_NOTIFICATIONS }, 9001);
+                }
+            }
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Post a high-priority system notification (e.g. "update downloaded").
+     * Tapping it reopens the app. Silently skipped when notifications are
+     * disabled for the app — never crashes. */
+    @JavascriptInterface
+    public String updateNotify(String title, String text) {
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager)
+                    activity.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (!nm.areNotificationsEnabled()) {
+                JSONObject o = new JSONObject();
+                o.put("ok", false);
+                o.put("reason", "disabled");
+                return o.toString();
+            }
+            String chId = "app_updates";
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                android.app.NotificationChannel ch = new android.app.NotificationChannel(
+                        chId, "App updates",
+                        android.app.NotificationManager.IMPORTANCE_HIGH);
+                nm.createNotificationChannel(ch);
+            }
+            android.content.Intent li = activity.getPackageManager()
+                    .getLaunchIntentForPackage(activity.getPackageName());
+            int flags = android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                flags |= android.app.PendingIntent.FLAG_IMMUTABLE;
+            }
+            android.app.PendingIntent pi = android.app.PendingIntent.getActivity(
+                    activity, 0, li, flags);
+            android.app.Notification.Builder b =
+                    android.os.Build.VERSION.SDK_INT >= 26
+                            ? new android.app.Notification.Builder(activity, chId)
+                            : new android.app.Notification.Builder(activity);
+            b.setContentTitle(title != null ? title : "Update")
+                    .setContentText(text != null ? text : "")
+                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentIntent(pi)
+                    .setAutoCancel(true);
+            nm.notify(2001, b.build());
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
 }

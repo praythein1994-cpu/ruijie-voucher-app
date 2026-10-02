@@ -781,6 +781,12 @@ const I18N = {
   'upd.needPerm': { my: '"Install unknown apps" ခွင့်ပြုပေးပါ', en: 'Please allow "Install unknown apps"' },
   'upd.apkOnly': { my: 'အပ်ဒိတ်က Android app သီးသန့်ပါ', en: 'In-app update is Android-app only' },
   'upd.netErr': { my: 'စစ်လို့မရပါ — အင်တာနက်စစ်ပါ', en: "Couldn't check — verify internet" },
+  'upd.ready': { my: 'ဗားရှင်းအသစ် အသင့်ဖြစ်ပြီ', en: 'New version ready' },
+  'upd.readySub': { my: 'တပ်ဆင်ဖို့ အသင့်ဖြစ်နေပါပြီ', en: 'Ready to install' },
+  'upd.gone': { my: 'ဒေါင်းလုပ်ဖိုင် မတွေ့တော့ပါ — ပြန်ဒေါင်းလုပ်ပေးပါ', en: 'Downloaded file not found — please download again' },
+  'upd.notiTitle': { my: 'P Manager အပ်ဒိတ်', en: 'P Manager update' },
+  'upd.notiText': { my: 'ဗားရှင်း {v} ဒေါင်းလုပ်ပြီးပြီ — တပ်ဆင်ဖို့ နှိပ်ပါ', en: 'Version {v} downloaded — tap to install' },
+  'upd.checkFail': { my: 'အပ်ဒိတ်စစ်မရပါ — နောက်မှ ထပ်စစ်မယ်', en: "Couldn't check for updates — will retry later" },
   's.layout': { my: 'အပြင်အဆင်', en: 'Layout' },
   's.layoutAuto': { my: 'အလိုအလျောက်', en: 'Auto' },
   's.layoutAutoSub': { my: 'စခရင်အရွယ်အစားအလိုက် ရွေးမယ်', en: 'Follow screen size' },
@@ -5565,6 +5571,76 @@ function updSetStatus(msg) {
   const el = $('upd-status');
   if (el) el.textContent = msg || '';
 }
+/* v1.5.133: persistent "ready to install" state. The downloaded APK's
+ * DownloadManager id is kept in raw localStorage (device-local, never
+ * synced) so the Install button survives dialog dismissal and app
+ * restarts — previously the only install path was a one-time dialog. */
+function updPendingLoad() {
+  try { return JSON.parse(localStorage.getItem('updPending') || 'null'); } catch (e) { return null; }
+}
+function updPendingSave(p) {
+  try { localStorage.setItem('updPending', JSON.stringify(p)); } catch (e) {}
+}
+function updPendingClear() {
+  try { localStorage.removeItem('updPending'); } catch (e) {}
+}
+/* 'ready'   = APK on disk and newer than the current build
+ * 'waiting' = download still in progress (e.g. survived an app restart)
+ * 'gone'    = stale record (already installed / file missing / failed)
+ * 'none'    = nothing pending */
+function updPendingState() {
+  const p = updPendingLoad();
+  if (!p || !p.id) return 'none';
+  const cur = updCurVersion();
+  if (p.tag && cmpVersions(p.tag, cur.name) <= 0) return 'gone'; // already installed
+  const B = updBridge();
+  if (!B) return 'none';
+  let q = null;
+  try { q = JSON.parse(B.updateQuery(Number(p.id)) || '{}'); } catch (e) {}
+  if (!q) return 'none';
+  if (q.status === 'success') return 'ready';
+  if (q.status === 'running' || q.status === 'paused' || q.status === 'pending') return 'waiting';
+  return 'gone';
+}
+function updRefreshInstallUI() {
+  const row = $('upd-install-row');
+  if (!row) return;
+  const st = updPendingState();
+  if (st === 'gone') updPendingClear();
+  if (st === 'waiting') {
+    // Download survived an app restart — resume watching it to completion.
+    const p = updPendingLoad();
+    if (p && p.tag) updPollDownload(Number(p.id), (ok, id) => updOnDownloadDone({ tag: p.tag, name: p.name }, ok, id));
+  }
+  if (st === 'ready') {
+    row.hidden = false;
+    const sub = $('upd-install-sub');
+    const p = updPendingLoad();
+    if (sub) sub.textContent = (p && p.tag ? p.tag + ' — ' : '') + t('upd.readySub');
+  } else {
+    row.hidden = true;
+  }
+}
+/* Shared download-completion handler: persist, show the Install button,
+ * post a system notification, and offer immediate install. */
+function updOnDownloadDone(rel, ok, id) {
+  if (ok) {
+    updPendingSave({ id, tag: rel.tag, name: rel.name });
+    updSetStatus(t('upd.downloaded'));
+    updRefreshInstallUI();
+    try {
+      const B2 = updBridge();
+      if (B2 && B2.updateNotify) B2.updateNotify(t('upd.notiTitle'), tx('upd.notiText', { v: rel.tag }));
+    } catch (e) {}
+    iosConfirm(t('upd.downloaded'), '', t('upd.install'), t('a.cancel'), false)
+      .then(yes => { if (yes) updInstallApk(id); });
+  } else {
+    updPendingClear();
+    updRefreshInstallUI();
+    updSetStatus('');
+    toast(t('upd.failed'), true);
+  }
+}
 let updPollTimer = null;
 function updPollDownload(id, onDone) {
   if (updPollTimer) clearInterval(updPollTimer);
@@ -5604,21 +5680,20 @@ function updStartDownload(rel, silent) {
   let r = null;
   try { r = JSON.parse(B.updateDownload(rel.url, rel.name) || '{}'); } catch (e) {}
   if (!r || !r.ok) { if (!silent) toast(t('upd.failed'), true); return; }
+  updPendingSave({ id: r.id, tag: rel.tag, name: rel.name }); // v1.5.133: persist early so a restart can resume watching
   updSetStatus(tx('upd.downloading', { p: 0 }));
-  updPollDownload(r.id, (ok, id) => {
-    if (ok) {
-      updSetStatus(t('upd.downloaded'));
-      iosConfirm(t('upd.downloaded'), '', t('upd.install'), t('a.cancel'), false)
-        .then(yes => { if (yes) updInstallApk(id); });
-    } else {
-      updSetStatus('');
-      toast(t('upd.failed'), true);
-    }
-  });
+  updPollDownload(r.id, (ok, id) => updOnDownloadDone(rel, ok, id));
 }
 async function checkAppUpdate(manual) {
   const B = updBridge();
   if (!B) { if (manual) toast(t('upd.apkOnly'), true); return; }
+  updRefreshInstallUI();
+  // v1.5.133: never re-download what is already downloaded — offer install.
+  if (updPendingState() === 'ready') {
+    updSetStatus(t('upd.downloaded'));
+    if (manual) toast(t('upd.downloaded'));
+    return;
+  }
   if (manual) updSetStatus(t('upd.checking'));
   try {
     const rel = await updLatestRelease();
@@ -5637,6 +5712,7 @@ async function checkAppUpdate(manual) {
     }
   } catch (e) {
     if (manual) { updSetStatus(''); toast(t('upd.netErr'), true); }
+    else updSetStatus(t('upd.checkFail')); // v1.5.133: auto mode no longer fully silent
   }
 }
 function initUpdateSettings() {
@@ -5648,11 +5724,23 @@ function initUpdateSettings() {
     tg.checked = !!Store.load().updateAutoDl;
     tg.addEventListener('change', () => {
       Store.save({ updateAutoDl: tg.checked });
-      if (tg.checked) checkAppUpdate(false); // check right away when enabled
+      if (tg.checked) {
+        // v1.5.133: ask for the notification permission so the
+        // "update downloaded" alert can actually appear.
+        try { const B3 = updBridge(); if (B3 && B3.updateNotifRequest) B3.updateNotifRequest(); } catch (e) {}
+        checkAppUpdate(false); // check right away when enabled
+      }
     });
   }
   const btn = $('upd-check-btn');
   if (btn) btn.addEventListener('click', () => checkAppUpdate(true));
+  const ibtn = $('upd-install-btn');
+  if (ibtn) ibtn.addEventListener('click', () => {
+    const p = updPendingLoad();
+    if (p && updPendingState() === 'ready') updInstallApk(Number(p.id));
+    else { updPendingClear(); updRefreshInstallUI(); toast(t('upd.gone'), true); }
+  });
+  updRefreshInstallUI(); // v1.5.133: show Install if an update is already downloaded
   // auto-download on startup (quiet)
   if (B && Store.load().updateAutoDl) {
     setTimeout(() => { try { checkAppUpdate(false); } catch (e) {} }, 8000);
