@@ -776,6 +776,20 @@ const I18N = {
   's.themeNeo': { my: 'Neumorphism', en: 'Neumorphism' },
   's.themeClay': { my: 'Claymorphism', en: 'Claymorphism' },
   's.language': { my: 'ဘာသာစကား', en: 'Language' },
+  'upd.title': { my: 'အပ်ဒိတ်', en: 'App Update' },
+  'upd.check': { my: 'အပ်ဒိတ်စစ်မယ်', en: 'Check for updates' },
+  'upd.auto': { my: 'အော်တိုဒေါင်းလုပ်လုပ်မယ်', en: 'Auto-download updates' },
+  'upd.autoSub': { my: 'ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်', en: 'Download new versions automatically' },
+  'upd.checking': { my: 'စစ်နေတယ်…', en: 'Checking…' },
+  'upd.latest': { my: 'နောက်ဆုံးဗားရှင်းပဲ', en: 'Already on the latest version' },
+  'upd.found': { my: 'ဗားရှင်းအသစ် {v} တွေ့ပြီ — ဒေါင်းလုပ်မလား?', en: 'New version {v} found — download?' },
+  'upd.downloading': { my: 'ဒေါင်းလုပ်နေတယ်… {p}%', en: 'Downloading… {p}%' },
+  'upd.downloaded': { my: 'ဒေါင်းလုပ်ပြီးပြီ — တပ်ဆင်မလား?', en: 'Download complete — install?' },
+  'upd.install': { my: 'တပ်ဆင်မယ်', en: 'Install' },
+  'upd.failed': { my: 'ဒေါင်းလုပ်မအောင်မြင်ပါ', en: 'Download failed' },
+  'upd.needPerm': { my: '"Install unknown apps" ခွင့်ပြုပေးပါ', en: 'Please allow "Install unknown apps"' },
+  'upd.apkOnly': { my: 'အပ်ဒိတ်က Android app သီးသန့်ပါ', en: 'In-app update is Android-app only' },
+  'upd.netErr': { my: 'စစ်လို့မရပါ — အင်တာနက်စစ်ပါ', en: "Couldn't check — verify internet" },
   's.layout': { my: 'အပြင်အဆင်', en: 'Layout' },
   's.layoutAuto': { my: 'အလိုအလျောက်', en: 'Auto' },
   's.layoutAutoSub': { my: 'စခရင်အရွယ်အစားအလိုက် ရွေးမယ်', en: 'Follow screen size' },
@@ -1485,6 +1499,7 @@ function refreshSyncedUI(st2) {
     if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
     if (st2.btAutoConnect !== undefined && $('bt-autoconnect')) $('bt-autoconnect').checked = !!st2.btAutoConnect;
     if (st2.teleOn !== undefined && $('tele-on')) $('tele-on').checked = st2.teleOn !== false;
+    if (st2.updateAutoDl !== undefined && $('upd-auto')) $('upd-auto').checked = !!st2.updateAutoDl;
     // v1.5.126: refresh print layout/style (reload PS from Store)
     if (st2.printStyle && typeof loadPrintStyle === 'function') {
       try { loadPrintStyle(); } catch (e) {}
@@ -5401,6 +5416,142 @@ function initTeleSettings() {
     });
   }
 }
+
+/* ═══════════ IN-APP UPDATE (APK only) ═══════════
+ * Version source: GitHub releases/latest for ruijie-voucher-app.
+ * - "Check for updates" button: manual check -> confirm -> DownloadManager
+ *   download -> prompt install.
+ * - Auto-download toggle (updateAutoDl, synced): on startup, quietly check;
+ *   a newer release downloads in the background and toasts "tap to install".
+ * Web build never needs this (GitHub Pages serves the latest instantly). */
+const UPD_REPO = 'praythein1994-cpu/ruijie-voucher-app';
+function updBridge() {
+  const B = window.RuijieBridge;
+  return (B && B.appVersion) ? B : null;
+}
+function updCurVersion() {
+  try {
+    const v = JSON.parse(updBridge().appVersion() || '{}');
+    return { name: String(v.versionName || ''), code: Number(v.versionCode) || 0 };
+  } catch (e) { return { name: '', code: 0 }; }
+}
+function cmpVersions(a, b) {
+  const pa = String(a || '').replace(/^[vV]/, '').split('.').map(x => Number(x) || 0);
+  const pb = String(b || '').replace(/^[vV]/, '').split('.').map(x => Number(x) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+async function updLatestRelease() {
+  const r = await fetch('https://api.github.com/repos/' + UPD_REPO + '/releases/latest', {
+    headers: { 'Accept': 'application/vnd.github+json' },
+  });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  const tag = String(j.tag_name || '').trim();
+  const apk = (j.assets || []).find(a => /\.apk$/i.test(String(a.name || '')));
+  if (!tag || !apk || !apk.browser_download_url) throw new Error('no-apk');
+  return { tag, name: String(apk.name || 'update.apk'), url: apk.browser_download_url };
+}
+function updSetStatus(msg) {
+  const el = $('upd-status');
+  if (el) el.textContent = msg || '';
+}
+let updPollTimer = null;
+function updPollDownload(id, onDone) {
+  if (updPollTimer) clearInterval(updPollTimer);
+  updPollTimer = setInterval(() => {
+    let q = null;
+    try { q = JSON.parse(updBridge().updateQuery(Number(id)) || '{}'); } catch (e) {}
+    if (!q) return;
+    if (q.status === 'success') {
+      clearInterval(updPollTimer); updPollTimer = null;
+      if (onDone) onDone(true, id);
+    } else if (q.status === 'failed' || q.status === 'error' || q.status === 'unknown') {
+      clearInterval(updPollTimer); updPollTimer = null;
+      if (onDone) onDone(false, id);
+    } else {
+      const p = q.total > 0 ? Math.round(100 * q.soFar / q.total) : 0;
+      updSetStatus(tx('upd.downloading', { p }));
+    }
+  }, 1000);
+}
+async function updInstallApk(id) {
+  const B = updBridge();
+  if (!B) return;
+  try {
+    if (!B.updateCanInstall()) {
+      toast(t('upd.needPerm'), true);
+      try { B.updateOpenInstallSettings(); } catch (e) {}
+      return;
+    }
+  } catch (e) {}
+  let r = null;
+  try { r = JSON.parse(B.updateInstall(Number(id)) || '{}'); } catch (e) {}
+  if (r && r.ok === false && r.message) toast(r.message, true);
+}
+function updStartDownload(rel, silent) {
+  const B = updBridge();
+  if (!B) return;
+  let r = null;
+  try { r = JSON.parse(B.updateDownload(rel.url, rel.name) || '{}'); } catch (e) {}
+  if (!r || !r.ok) { if (!silent) toast(t('upd.failed'), true); return; }
+  updSetStatus(tx('upd.downloading', { p: 0 }));
+  updPollDownload(r.id, (ok, id) => {
+    if (ok) {
+      updSetStatus(t('upd.downloaded'));
+      iosConfirm(t('upd.downloaded'), '', t('upd.install'), t('a.cancel'), false)
+        .then(yes => { if (yes) updInstallApk(id); });
+    } else {
+      updSetStatus('');
+      toast(t('upd.failed'), true);
+    }
+  });
+}
+async function checkAppUpdate(manual) {
+  const B = updBridge();
+  if (!B) { if (manual) toast(t('upd.apkOnly'), true); return; }
+  if (manual) updSetStatus(t('upd.checking'));
+  try {
+    const rel = await updLatestRelease();
+    const cur = updCurVersion();
+    if (cmpVersions(rel.tag, cur.name) <= 0) {
+      if (manual) { updSetStatus(t('upd.latest')); toast(t('upd.latest')); }
+      return;
+    }
+    if (manual) {
+      updSetStatus('');
+      const yes = await iosConfirm(tx('upd.found', { v: rel.tag }), '', t('a.ok'), t('a.cancel'), false);
+      if (yes) updStartDownload(rel, false);
+    } else {
+      // auto-download mode: fetch quietly in the background
+      updStartDownload(rel, true);
+    }
+  } catch (e) {
+    if (manual) { updSetStatus(''); toast(t('upd.netErr'), true); }
+  }
+}
+function initUpdateSettings() {
+  const B = updBridge();
+  const card = $('upd-card');
+  if (card && !B) card.style.display = 'none'; // web build: no updater needed
+  const tg = $('upd-auto');
+  if (tg) {
+    tg.checked = !!Store.load().updateAutoDl;
+    tg.addEventListener('change', () => {
+      Store.save({ updateAutoDl: tg.checked });
+      if (tg.checked) checkAppUpdate(false); // check right away when enabled
+    });
+  }
+  const btn = $('upd-check-btn');
+  if (btn) btn.addEventListener('click', () => checkAppUpdate(true));
+  // auto-download on startup (quiet)
+  if (B && Store.load().updateAutoDl) {
+    setTimeout(() => { try { checkAppUpdate(false); } catch (e) {} }, 8000);
+  }
+}
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
   if (!Store.load().kickAuto) return;
@@ -7253,6 +7404,7 @@ function init() {
   initIosPickers();   // v1.5.55: bottom-sheet pickers for project/usergroup/package
   initKickSettings(); // v1.5.55: kick toggle + status
   initTeleSettings(); // v1.5.75: monitoring toggle
+  initUpdateSettings(); // in-app update: check + auto-download toggle
   initTabbarDrag();   // v1.5.55: press-drag along the tabbar to switch pages
 
   // password peek toggles

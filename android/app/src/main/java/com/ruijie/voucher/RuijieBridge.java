@@ -1077,4 +1077,145 @@ public class RuijieBridge {
             catch (Exception ignored) {}
         });
     }
+
+    /* ── In-app update (APK) ────────────────────────────── */
+    /** Current app version: {"versionName","versionCode","packageName"}. */
+    @JavascriptInterface
+    public String appVersion() {
+        try {
+            android.content.pm.PackageInfo pi = activity.getPackageManager()
+                    .getPackageInfo(activity.getPackageName(), 0);
+            JSONObject o = new JSONObject();
+            o.put("versionName", pi.versionName != null ? pi.versionName : "");
+            long vc = android.os.Build.VERSION.SDK_INT >= 28
+                    ? pi.getLongVersionCode() : pi.versionCode;
+            o.put("versionCode", vc);
+            o.put("packageName", activity.getPackageName());
+            return o.toString();
+        } catch (Exception e) {
+            return "{\"versionName\":\"\",\"versionCode\":0,\"packageName\":\"\"}";
+        }
+    }
+
+    /** Enqueue an APK download via DownloadManager. Returns {"ok","id"}. */
+    @JavascriptInterface
+    public String updateDownload(String url, String fileName) {
+        try {
+            if (url == null || url.trim().isEmpty()) return btErr("Empty URL");
+            String fn = (fileName == null || fileName.trim().isEmpty())
+                    ? "update.apk" : fileName.trim();
+            android.app.DownloadManager dm = (android.app.DownloadManager)
+                    activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            android.app.DownloadManager.Request req =
+                    new android.app.DownloadManager.Request(Uri.parse(url.trim()));
+            req.setTitle(fn);
+            req.setDescription("App update");
+            req.setNotificationVisibility(
+                    android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setMimeType("application/vnd.android.package-archive");
+            req.setDestinationInExternalPublicDir(
+                    android.os.Environment.DIRECTORY_DOWNLOADS, "RuijieVoucher/" + fn);
+            long id = dm.enqueue(req);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            o.put("id", id);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Query a DownloadManager download: {"status","soFar","total"}. */
+    @JavascriptInterface
+    public String updateQuery(long id) {
+        JSONObject o = new JSONObject();
+        try {
+            android.app.DownloadManager dm = (android.app.DownloadManager)
+                    activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            android.app.DownloadManager.Query q = new android.app.DownloadManager.Query();
+            q.setFilterById(id);
+            android.database.Cursor c = dm.query(q);
+            try {
+                if (c != null && c.moveToFirst()) {
+                    int st = c.getInt(c.getColumnIndex(
+                            android.app.DownloadManager.COLUMN_STATUS));
+                    long soFar = c.getLong(c.getColumnIndex(
+                            android.app.DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                    long total = c.getLong(c.getColumnIndex(
+                            android.app.DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                    String status;
+                    switch (st) {
+                        case android.app.DownloadManager.STATUS_SUCCESSFUL: status = "success"; break;
+                        case android.app.DownloadManager.STATUS_FAILED: status = "failed"; break;
+                        case android.app.DownloadManager.STATUS_PAUSED: status = "paused"; break;
+                        case android.app.DownloadManager.STATUS_RUNNING: status = "running"; break;
+                        default: status = "pending";
+                    }
+                    o.put("status", status);
+                    o.put("soFar", soFar);
+                    o.put("total", total);
+                } else {
+                    o.put("status", "unknown");
+                    o.put("soFar", 0);
+                    o.put("total", 0);
+                }
+            } finally {
+                if (c != null) c.close();
+            }
+            return o.toString();
+        } catch (Exception e) {
+            try { o.put("status", "error"); o.put("soFar", 0); o.put("total", 0); } catch (Exception ignored) {}
+            return o.toString();
+        }
+    }
+
+    /** True when the app may request package installs (Android 8+). */
+    @JavascriptInterface
+    public boolean updateCanInstall() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                return activity.getPackageManager().canRequestPackageInstalls();
+            }
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    /** Open the "install unknown apps" settings page for this app. */
+    @JavascriptInterface
+    public String updateOpenInstallSettings() {
+        try {
+            Intent i = new Intent(
+                    android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + activity.getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            activity.startActivity(i);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Launch the system installer for a completed download. */
+    @JavascriptInterface
+    public String updateInstall(long id) {
+        try {
+            android.app.DownloadManager dm = (android.app.DownloadManager)
+                    activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            Uri uri = dm.getUriForDownloadedFile(id);
+            if (uri == null) return btErr("Download not found");
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setDataAndType(uri, "application/vnd.android.package-archive");
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            activity.startActivity(i);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
 }
