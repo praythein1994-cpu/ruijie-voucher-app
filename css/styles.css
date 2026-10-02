@@ -2138,7 +2138,7 @@ html[data-theme="dark"] .ios-alert {
 }
 .ios-alert-body { padding: 18px 16px 14px; text-align: center; }
 .ios-alert-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
-.ios-alert-msg { font-size: 13px; opacity: .75; line-height: 1.4; }
+.ios-alert-msg { font-size: 13px; opacity: .75; line-height: 1.4; white-space: pre-wrap; } /* v1.5.140: multiline guide text */
 .ios-alert-btns { display: flex; border-top: .5px solid rgba(128,128,128,.35); }
 .ios-alert-btn {
   flex: 1; padding: 12px 8px; font-size: 17px; text-align: center;

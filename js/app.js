@@ -787,6 +787,8 @@ const I18N = {
   'upd.noNotes': { my: 'အချက်အလက်မရှိပါ', en: 'No details available' },
   'upd.bannerNew': { my: 'ဗားရှင်းအသစ် {v} ထွက်ပြီ — နှိပ်ပြီး ကြည့်မယ်', en: 'New version {v} is out — tap to view' },
   'upd.bannerReady': { my: 'UPDATE Ready {v} — နှိပ်ပြီး တပ်ဆင်မယ်', en: 'UPDATE Ready {v} — tap to install' },
+  'upd.preTitle': { my: 'တပ်ဆင်ဖို့ အသင့်ဖြစ်ပြီ', en: 'Ready to install' },
+  'upd.preBody': { my: 'ခဏနေ system installer ပွင့်လာမယ်။\n\n1. Play Protect က "Unknown app" လို့ပြရင် → "Install anyway" ကိုနှိပ်ပါ\n2. Xiaomi security scan ပေါ်လာရင် → "Install" / "Continue" ကိုနှိပ်ပါ\n\nPlay Store ပြင်ပက သွင်းတဲ့ app တိုင်း ဒီလိုပဲမို့ ပုံမှန်ပါ။', en: 'The system installer will open now.\n\n1. If Play Protect shows "Unknown app" → tap "Install anyway"\n2. If Xiaomi shows a security scan → tap "Install" / "Continue"\n\nThis is normal for apps installed outside the Play Store.' },
   'upd.gone': { my: 'ဒေါင်းလုပ်ဖိုင် မတွေ့တော့ပါ — ပြန်ဒေါင်းလုပ်ပေးပါ', en: 'Downloaded file not found — please download again' },
   'upd.notiTitle': { my: 'P Manager အပ်ဒိတ်', en: 'P Manager update' },
   'upd.notiText': { my: 'ဗားရှင်း {v} ဒေါင်းလုပ်ပြီးပြီ — တပ်ဆင်ဖို့ နှိပ်ပါ', en: 'Version {v} downloaded — tap to install' },
@@ -5856,10 +5858,15 @@ function initUpdateSettings() {
   const btn = $('upd-check-btn');
   if (btn) btn.addEventListener('click', () => checkAppUpdate(true));
   const ibtn = $('upd-install-btn');
-  if (ibtn) ibtn.addEventListener('click', () => {
+  if (ibtn) ibtn.addEventListener('click', async () => {
     const p = updPendingLoad();
-    if (p && updPendingState() === 'ready') updInstallApk(Number(p.id));
-    else { updPendingClear(); updRefreshInstallUI(); toast(t('upd.gone'), true); }
+    if (!(p && updPendingState() === 'ready')) {
+      updPendingClear(); updRefreshInstallUI(); toast(t('upd.gone'), true); return;
+    }
+    // v1.5.140: pre-install guide — Play Protect / MIUI screens are explained
+    // before the system installer opens (they cannot be bypassed by code).
+    const go = await iosConfirm(t('upd.preTitle'), t('upd.preBody'), t('upd.install'), t('a.cancel'), false);
+    if (go) updInstallApk(Number(p.id));
   });
   updRefreshInstallUI(); // v1.5.133: show Install if an update is already downloaded
   // v1.5.138: live update banner wiring
