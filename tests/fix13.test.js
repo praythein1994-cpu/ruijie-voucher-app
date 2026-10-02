@@ -105,7 +105,7 @@ ok(/async function moreWebAuth\(\)/.test(appSrc), 'moreWebAuth page exists');
 ok(/S\.moreFn = moreWebAuth/.test(appSrc), 'moreWebAuth registers S.moreFn');
 ok(/GwApi\.webAuthGet\(\)/.test(appSrc), 'page reads via GwApi.webAuthGet');
 ok(/GwApi\.webAuthSet\(c\)/.test(appSrc), 'page saves via GwApi.webAuthSet');
-ok(/confirm\(t\('wa\.confirm'\)\)/.test(appSrc), 'save asks for confirmation first');
+ok(/await iosConfirm\(t\('wa\.confirm'\)/.test(appSrc), 'save asks for confirmation first (iOS dialog)');
 ok(/data-wai/.test(appSrc), 'Wi-Fi list rows are editable');
 ok(/wa-add/.test(appSrc) && /wa-del/.test(appSrc), 'Wi-Fi list add/delete wired');
 // Untouched-field safety: the page must mutate the read object, not rebuild it.

@@ -21,7 +21,27 @@ public class AutoKick {
 
     public static final int JOB_ID = 7201;
     static final String PREFS = "autokick";
-    private static final long INTERVAL_MS = 15L * 60 * 1000; // JobScheduler minimum
+    static final String INTERVAL_MIN_KEY = "intervalMin";
+    static final int DEFAULT_INTERVAL_MIN = 15;
+    /** v1.5.116: user-configurable check interval (minutes, min 1).
+     *  JobScheduler.setPeriodic() enforces a 15-minute minimum, so
+     *  intervals under 15 use one-shot jobs that reschedule on each run. */
+    public static int getIntervalMin(android.content.Context ctx) {
+        try {
+            return Math.max(1,
+                    prefs(ctx).getInt(INTERVAL_MIN_KEY, DEFAULT_INTERVAL_MIN));
+        } catch (Exception e) { return DEFAULT_INTERVAL_MIN; }
+    }
+    public static void setIntervalMin(android.content.Context ctx, int min) {
+        int m = Math.max(1, min);
+        try { prefs(ctx).edit().putInt(INTERVAL_MIN_KEY, m).apply(); } catch (Exception ignored) {}
+        try {
+            if (prefs(ctx).getBoolean("enabled", false)) schedule(ctx);
+        } catch (Exception ignored) {}
+    }
+    private static long getIntervalMs(android.content.Context ctx) {
+        return (long) getIntervalMin(ctx) * 60 * 1000;
+    }
     /** Per-voucher kick cooldown — mirrors the in-app 5-minute cooldown. */
     static final long KICK_COOLDOWN_MS = 5L * 60 * 1000;
 
@@ -33,12 +53,19 @@ public class AutoKick {
         try {
             JobScheduler js = ctx.getSystemService(JobScheduler.class);
             if (js == null) return;
-            JobInfo job = new JobInfo.Builder(JOB_ID, new ComponentName(ctx, AutoKickJob.class))
-                    .setPeriodic(INTERVAL_MS)
+            long intervalMs = getIntervalMs(ctx);
+            JobInfo.Builder b = new JobInfo.Builder(JOB_ID,
+                    new ComponentName(ctx, AutoKickJob.class))
                     .setPersisted(true) // survives reboot (needs RECEIVE_BOOT_COMPLETED)
-                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                    .build();
-            js.schedule(job);
+                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+            if (intervalMs >= 15L * 60 * 1000) {
+                b.setPeriodic(intervalMs); // efficient system-batched
+            } else {
+                // One-shot: rescheduled at the end of each run (see AutoKickJob).
+                b.setMinimumLatency(intervalMs)
+                 .setOverrideDeadline(intervalMs + 60 * 1000);
+            }
+            js.schedule(b.build());
         } catch (Exception ignored) {}
     }
 

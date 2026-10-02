@@ -30,8 +30,12 @@ ok('voucher-count/fetch no margin', /#voucher-count,\s*#voucher-fetched\s*\{[^}]
 // 3. Blocked chip in Online Clients
 ok('mc.fBlocked i18n key exists', /'mc\.fBlocked':\s*\{\s*my:\s*'[^']*',\s*en:\s*'Blocked'\s*\}/.test(appJs));
 ok('blocked chip rendered after unknown', /CSTS\.map\(s => seg\(s, t\(CST_META\[s\]\.key\), counts\[s\]\)\)\.join\(''\)\s*\+\s*\n?\s*seg\('blocked',\s*t\('mc\.fBlocked'\),\s*blockedCount\)/.test(appJs));
-ok('blockedCount counts isMacBlocked', /blockedCount = list\.filter\(c => isMacBlocked\(mcFields\(c, viaPortal, vmap\)\.mac\)\)\.length/.test(appJs));
-ok('renderMcCells handles blocked filter', /if \(filter === 'blocked'\) \{\s*\n?\s*if \(!isMacBlocked\(mcFields\(c, viaPortal, vmap\)\.mac\)\) return;/.test(appJs));
+ok('blockedCount counts the deny-list (local + portal union)', /blockedCount = getBlockedMacList\(\)\.length/.test(appJs));
+ok('blocked tab renders the deny-list (not an online-client filter)',
+  /getBlockedMacList\(\)\.forEach/.test(appJs)
+  && /st\.blockedMacs/.test(appJs) && /S\.portalBlockedMacs/.test(appJs));
+ok('blocked chip counts the deny-list',
+  /blockedCount = getBlockedMacList\(\)\.length/.test(appJs));
 
 const failed = results.filter(r => !r[1]);
 for (const [name, passed] of results) if (!passed) console.log('FAIL:', name);

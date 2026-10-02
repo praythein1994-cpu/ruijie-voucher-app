@@ -15,12 +15,14 @@ const rec = fs.readFileSync(path.join(ROOT,
   'android/app/src/main/java/com/ruijie/voucher/PortalRecorder.java'), 'utf8');
 
 describe('v1.5.107 recorder 403 fix', () => {
-  test('does NOT load /macc5/ directly', () => {
-    expect(rec).not.toMatch(/cloud-as\.ruijienetworks\.com\/macc5/);
+  test('prefers the SSO-captured startUrl, direct URL is fallback only', () => {
+    // v1.5.111 design: RuijieBridge passes SsoSession.getLastPortalUrl() as
+    // startUrl; PORTAL_URL (/macc5/) is only the null fallback.
+    expect(rec).toMatch(/startUrl != null && !startUrl\.isEmpty\(\)\s*\?\s*startUrl : PORTAL_URL/);
   });
 
-  test('uses the SSO entry point', () => {
-    expect(rec).toMatch(/SsoSession\.SSO_LOGIN_URL/);
+  test('takes the portal URL as a parameter (SSO entry via bridge)', () => {
+    expect(rec).toMatch(/show\(final Activity activity, final String startUrl/);
   });
 
   test('capture log persisted in sessionStorage (survives redirects)', () => {

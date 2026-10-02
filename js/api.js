@@ -109,6 +109,44 @@ const hasGw = () => !!(window.RuijieBridge && window.RuijieBridge.gatewayLogin);
 const GW_AUTH_RE = /GW_NOT_LOGGED_IN|auth|login|session|sid|token|expire|invalid|unauthori|forbidden|\b40[13]\b/i;
 /** Is this error text (or throwaway message) an auth/session failure? */
 function gwAuthLike(m) { return GW_AUTH_RE.test(String((m && m.message) || m || '')); }
+/* v1.5.115: pull MAC-like strings out of a blocklist reply of unknown
+ * shape. v1.5.117: recurse through EVERY key (the real response nests the
+ * list under keys we cannot predict — the old fixed key list silently
+ * returned []), unwrap stringified JSON, dedupe, and never match a MAC
+ * pattern buried inside a longer hex token. Returns [] when nothing
+ * recognizable is found. */
+function extractMacList(j) {
+  const out = [];
+  const seen = new Set();
+  const MAC_RE = /(?:^|[^0-9a-fA-F])([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}|[0-9a-fA-F]{4}(?:\.[0-9a-fA-F]{4}){2}|[0-9a-fA-F]{12})(?:[^0-9a-fA-F]|$)/;
+  function emit(s) {
+    const m = String(s).match(MAC_RE);
+    if (m) {
+      const key = m[1].toUpperCase();
+      if (!seen.has(key)) { seen.add(key); out.push(m[1]); }
+    }
+  }
+  function grab(v, depth) {
+    if (v == null || depth > 8) return;
+    if (typeof v === 'string') {
+      const t = v.trim();
+      if (t.length > 1 && (t[0] === '{' || t[0] === '[')) {
+        try { grab(JSON.parse(t), depth + 1); return; } catch (e) { /* not JSON */ }
+      }
+      emit(v);
+      return;
+    }
+    if (Array.isArray(v)) { for (const x of v) grab(x, depth + 1); return; }
+    if (typeof v === 'object') {
+      for (const k of Object.keys(v)) {
+        if (/^(code|msg|message|error|success)$/i.test(k)) continue;
+        grab(v[k], depth + 1);
+      }
+    }
+  }
+  grab(j, 0);
+  return out;
+}
 /**
  * Does a resolved gateway response look like an auth/session failure?
  * (401/403, or an auth-ish message with a non-zero code.) A code-0 response
@@ -1663,6 +1701,110 @@ const Api = {
     const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
     if (c !== 0) {
       throw new Error((j && (j.msg || j.message)) || ('Unblock မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  /* ── Portal MAC deny-list READ (v1.5.116) ──
+   * VERIFIED from the user's Recorder capture 2026-10-01 23:41 +0630
+   * (portal-capture-20261001-234138.txt, entry [100]): visiting the
+   * portal's block page fires
+   *   outer POST .../webproxy/common/api?/homescene/mac_filter/{gid}
+   *   inner {"api":"/homescene/mac_filter/{gid}","method":"GET",
+   *          "module":"default","querys":{"lang":"en","cloudType":"smb"},
+   *          "authParams":{"api":"/homescene/mac_filter/{gid}",
+   *                        "method":"GET"}}
+   * The response shape was NOT captured, so extractMacList() parses
+   * flexibly and clientBlocklistSso() still never throws (null on any
+   * failure → caller keeps the local list). */
+  ssoBlocklistEnvelope(groupId) {
+    const api = '/homescene/mac_filter/' + Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'GET' },
+      method: 'GET',
+      module: 'default',
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  async clientBlocklistSso(groupId) {
+    try {
+      const env = this.ssoBlocklistEnvelope(groupId);
+      const j = await ssoCall(env.api, env);
+      const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+      if (c !== 0) return null;
+      return extractMacList(j);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  /* ── Delete Expired Vouchers (bulk, portal-verified) · v1.5.113 ──
+   * VERIFIED 2026-10-01 from the user's Recorder capture of the live
+   * Cloud portal voucher page (240 requests). The portal does NOT loop
+   * per-voucher deletes — it calls the macc3 agent through webproxy:
+   * count:  POST /webproxy/common/api?/authconfig/group/{gid}/api/agent/read
+   *          inner {api, method:'POST', authParams, module:'default',
+   *                 params:{urlSuffix:'/macc3/getExpireVoucherCount/{gid}',
+   *                        httpMethod:'POST', bodyParam:{expireTime:<ms>}},
+   *                 querys:{lang:'en',cloudType:'smb'}}
+   * delete: POST /webproxy/common/api?/authconfig/group/{gid}/api/agent/write
+   *          inner params:{urlSuffix:'/macc3/batchDelete/voucher/{gid}',
+   *                       httpMethod:'DELETE', bodyParam:{expireTime:<ms>}}
+   * expireTime is an epoch-ms cutoff; we use Date.now(). */
+  ssoExpireCountEnvelope(groupId, expireTimeMs) {
+    const gid = Number(groupId);
+    const api = '/authconfig/group/' + gid + '/api/agent/read';
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: {
+        urlSuffix: '/macc3/getExpireVoucherCount/' + gid,
+        httpMethod: 'POST',
+        bodyParam: { expireTime: expireTimeMs },
+      },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Returns the portal's expired-voucher count (raw JSON). Throws on portal error. */
+  async voucherExpireCountSso(groupId, expireTimeMs) {
+    const env = this.ssoExpireCountEnvelope(groupId, expireTimeMs);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Count မရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
+  ssoDeleteExpiredEnvelope(groupId, expireTimeMs) {
+    const gid = Number(groupId);
+    const api = '/authconfig/group/' + gid + '/api/agent/write';
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params: {
+        urlSuffix: '/macc3/batchDelete/voucher/' + gid,
+        httpMethod: 'DELETE',
+        bodyParam: { expireTime: expireTimeMs },
+      },
+      querys: { lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Bulk-delete expired vouchers through the SSO session. Throws on portal error. */
+  async voucherDeleteExpiredSso(groupId, expireTimeMs) {
+    const env = this.ssoDeleteExpiredEnvelope(groupId, expireTimeMs);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Delete မရပါ (code ' + c + ')'));
     }
     return j;
   },

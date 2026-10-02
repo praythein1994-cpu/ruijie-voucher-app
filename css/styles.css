@@ -439,6 +439,7 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .mc-ico.cst-datalimit { --tile: #ef4444; }
 .mc-ico.cst-noauth { --tile: #9ca3af; }
 .mc-ico.cst-unknown { --tile: #a78bfa; }
+.mc-ico.cst-blocked { --tile: #ef4444; } /* v1.5.117: Blocked-tab rows */
 .mc-top { display: flex; align-items: center; gap: 8px; }
 .mc-top .t-main {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
@@ -1928,3 +1929,40 @@ html[data-layout="tablet"] .voucher-row .chev { font-size: 15px; }
 .wa-row-top .wa-vlan { flex: 1; min-width: 0; }
 .wa-row-top .wa-del { flex: none; }
 .wa-row .wa-ipr { width: 100%; }
+
+/* ── iOS Liquid Glass alert dialog (v1.5.116) ──
+ * Permanent design rule: iOS UI/UX, Liquid Glass, compact, rounded. */
+.ios-alert-ov {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.32);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .18s ease;
+}
+.ios-alert-ov.open { opacity: 1; }
+.ios-alert {
+  width: min(270px, 82vw);
+  border-radius: 22px;
+  background: rgba(255,255,255,.72);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: .5px solid rgba(255,255,255,.4);
+  box-shadow: 0 12px 40px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.5);
+  overflow: hidden;
+  transform: scale(.94); transition: transform .18s ease;
+}
+.ios-alert-ov.open .ios-alert { transform: scale(1); }
+html[data-theme="dark"] .ios-alert {
+  background: rgba(36,36,38,.72);
+  border-color: rgba(255,255,255,.12);
+}
+.ios-alert-body { padding: 18px 16px 14px; text-align: center; }
+.ios-alert-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+.ios-alert-msg { font-size: 13px; opacity: .75; line-height: 1.4; }
+.ios-alert-btns { display: flex; border-top: .5px solid rgba(128,128,128,.35); }
+.ios-alert-btn {
+  flex: 1; padding: 12px 8px; font-size: 17px; text-align: center;
+  color: #007AFF; background: none; border: none; cursor: pointer;
+}
+.ios-alert-btn + .ios-alert-btn { border-left: .5px solid rgba(128,128,128,.35); }
+.ios-alert-btn.destructive { color: #FF3B30; }
+.ios-alert-btn:active { background: rgba(128,128,128,.12); }

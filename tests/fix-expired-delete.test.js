@@ -80,22 +80,61 @@ async function main() {
     var __reset = [];
     var __realVoucherResetMany = Api.voucherResetMany;
     Api.voucherResetMany = async (gid, vs) => { __reset.push(vs.map(v => v.uuid).join(',')); };
-    window.confirm = () => true;
+    window.iosConfirm = async () => true; // v1.5.116+: native confirm() replaced by iOS dialog
   `);
 
-  // 4. deleteExpiredVouchers deletes only expired (u-inuse + u-expired), not u-active
-  await w.eval(`(async () => { await deleteExpiredVouchers(); })()`);
-  const deleted = w.eval(`__deleted.slice().sort()`);
-  ok('deleteExpiredVouchers targets only expired', JSON.stringify(deleted) === JSON.stringify(['u-expired', 'u-inuse']));
-
-  // 5. deleteExpiredVouchers with no expired vouchers toasts v.delExpiredNone
+  // v1.5.116 redesign: bulk portal delete by cutoff date (portal's More menu
+  // design) — drive the REAL flow with stubs, no vacuous passes.
   w.eval(`
-    __toasts = []; __deleted = [];
+    Api.ssoLoggedIn = () => true;
+    pickExpireDate = async () => '2026-09-16';
+    var __bulkDel = [];
+    Api.voucherDeleteExpiredSso = async (gid, expireTime) => { __bulkDel.push([gid, expireTime]); };
+    var __countCalls = 0;
+    Api.voucherExpireCountSso = async (gid, expireTime) => { __countCalls++; return 2; };
+    var __confirmArgs = [];
+    window.iosConfirm = async (title, msg) => { __confirmArgs.push([title, msg]); return true; };
+    var __loadVouchers = 0;
+    loadVouchers = () => { __loadVouchers++; }; // DOM-heavy; count calls only
+  `);
+
+  // 4. bulk delete called ONCE with (gid, end-of-picked-day ms)
+  await w.eval(`(async () => { await deleteExpiredVouchers(); })()`);
+  const bulkOk = w.eval(`
+    __bulkDel.length === 1 && __bulkDel[0][0] === 123 &&
+    __bulkDel[0][1] === endOfDayMs('2026-09-16')`);
+  ok('deleteExpiredVouchers bulk-deletes with picked cutoff', bulkOk);
+  // confirm dialog names the portal count
+  const confirmOk = w.eval(`__confirmArgs.length === 1 && /2/.test(__confirmArgs[0][0])`);
+  ok('deleteExpiredVouchers confirms with the portal count', confirmOk);
+  ok('voucher list refreshes after delete', w.eval(`__loadVouchers === 1`));
+
+  // 4b. cancel at the confirm dialog -> no delete call
+  w.eval(`__bulkDel = []; __confirmArgs = []; window.iosConfirm = async () => false;`);
+  await w.eval(`(async () => { await deleteExpiredVouchers(); })()`);
+  ok('deleteExpiredVouchers aborts when confirm cancelled',
+    w.eval(`__bulkDel.length === 0`));
+
+  // 5. portal count 0 -> toasts delExpiredNone, no delete, no confirm
+  w.eval(`
+    __toasts = []; __bulkDel = []; __confirmArgs = [];
+    window.iosConfirm = async () => true;
+    Api.voucherExpireCountSso = async () => 0;
     S.vouchers = [{ uuid: 'u-active', voucherCode: 'ACTIVE1', status: '1', packageName: 'P1', timePeriod: 60, usedTime: 0, quota: 1073741824, usedQuota: 0, expiryTime: Date.now() + 86400000 }];
   `);
   await w.eval(`(async () => { await deleteExpiredVouchers(); })()`);
-  const noneToast = w.eval(`__toasts.length > 0 && __deleted.length === 0`);
+  const noneToast = w.eval(`__toasts.some(m => m.includes(t('v.delExpiredNone'))) && __bulkDel.length === 0 && __confirmArgs.length === 0`);
   ok('deleteExpiredVouchers toasts when none expired', noneToast);
+
+  // 5b. no SSO session -> needSso toast, nothing else happens
+  w.eval(`
+    __toasts = []; __bulkDel = []; __countCalls = 0;
+    Api.ssoLoggedIn = () => false;
+  `);
+  await w.eval(`(async () => { await deleteExpiredVouchers(); })()`);
+  ok('deleteExpiredVouchers requires SSO first',
+    w.eval(`__toasts.some(m => m.includes(t('ac.needSso'))) && __bulkDel.length === 0 && __countCalls === 0`));
+  w.eval(`Api.ssoLoggedIn = () => true;`);
 
   // 6. resetSelectedVouchers with no selection toasts v.resetNone
   w.eval(`
@@ -117,7 +156,7 @@ async function main() {
   ok('resetSelectedVouchers calls Api.voucherResetMany once for selected', resetDone);
 
   // 8. Api.voucherResetMany throws SSO_REQUIRED without SSO session (use the real method, not the stub)
-  const ssoRequired = await w.eval(`(async () => { try { await __realVoucherResetMany.call(Api, 1, [{uuid:'x', voucherCode:'X'}]); return false; } catch (e) { return e.message === 'SSO_REQUIRED'; } })()`);
+  const ssoRequired = await w.eval(`(async () => { Api.ssoLoggedIn = () => false; try { await __realVoucherResetMany.call(Api, 1, [{uuid:'x', voucherCode:'X'}]); return false; } catch (e) { return e.message === 'SSO_REQUIRED'; } finally { Api.ssoLoggedIn = () => true; } })()`);
   ok('Api.voucherResetMany requires SSO session', ssoRequired);
 
   // 8b. ssoResetEnvelope matches the VERIFIED portal envelope

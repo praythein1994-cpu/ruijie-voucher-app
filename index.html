@@ -318,14 +318,12 @@
       <div class="section-title" data-i18n="p.settings">ပရင့်ဆက်တင်</div>
       <div class="set-group">
         <div class="set-row"><div class="fld-stack"><span class="fld-label" data-i18n="p.paper">စာရွက်အကျယ်</span><div class="segmented" id="paper-seg" role="group" aria-label="စာရွက်အကျယ်">
-                <button type="button" data-paper="80" class="active">80mm</button>
-                <button type="button" data-paper="58">58mm</button>
+                <button type="button" data-paper="58" class="active">58mm</button>
               </div>
           <div class="segmented" id="layout-typo-seg" role="group" aria-label="Print Layout & Typography" style="margin-top:8px;margin-bottom:0">
               <button type="button" id="btn-print-layout" data-i18n-aria="pl.openLayout" aria-label="Print Layout & Spacing"><svg class="ic"><use href="#i-roller"/></svg> <span data-i18n="p.layoutBtn">Print Layout</span></button>
               <button type="button" id="btn-print-typo" data-i18n-aria="ty.openTypo" aria-label="Typography / Font Settings"><svg class="ic"><use href="#i-text"/></svg> <span data-i18n="p.typoBtn">Typography</span></button>
             </div><select id="print-paper" class="hidden" aria-hidden="true" tabindex="-1">
-              <option value="80">80mm (thermal)</option>
               <option value="58">58mm (thermal)</option>
             </select></div></div>
         <label class="set-row set-field"><span class="fld-label" data-i18n="p.header">ခေါင်းစဉ်စာသား</span><input id="print-header" class="fld-input" type="text" data-i18n-ph="p.headerPh" placeholder="ဥပမာ My Shop WiFi"></label>
@@ -462,6 +460,7 @@
           <span class="set-val" id="kick-status">…</span>
         </div>
         <label class="set-row set-field"><span class="fld-label" data-i18n="kick.ssid">Voucher SSID</span><input id="kick-ssid" class="fld-input" type="text" data-i18n-ph="kick.ssidPh" placeholder="SSID name"></label>
+        <label class="set-row set-field"><span class="fld-label" data-i18n="kick.interval">ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ</span><input id="kick-interval" class="fld-input" type="number" min="1" step="1" value="15" style="width:80px"></label>
         <div class="set-row"><div class="t"><div class="sub" data-i18n="kick.ssidSub">သံသယရှိ flag က ဒီ SSID ပေါ်ကလူတွေအတွက်ပဲ ပြမယ်</div></div></div>
       </div>
 

@@ -93,7 +93,7 @@ for (const key of ['mg.del', 'mg.confirmDel', 'mg.deleted', 'mg.needIds']) {
 }
 ok(appSrc.includes('data-mgdel'), 'per-row delete button exists');
 ok(appSrc.includes('deleteUserGroup('), 'deleteUserGroup handler exists');
-ok(/confirm\(t\('mg\.confirmDel'\)/.test(appSrc), 'delete asks confirmation naming the group');
+ok(/await iosConfirm\(t\('mg\.confirmDel'\)/.test(appSrc), 'delete asks confirmation naming the group (iOS dialog)');
 ok(appSrc.includes('pkgGroupId(p)') && appSrc.includes('pkgProfileId(p)'),
   'delete resolves ids via pkgGroupId/pkgProfileId');
 ok(appSrc.includes('userGroupDeleteSso(S.projectId, tenantId, ugId, profId)'),

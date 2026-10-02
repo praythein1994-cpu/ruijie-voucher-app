@@ -994,6 +994,7 @@ public class RuijieBridge {
             o.put("enabled", AutoKick.prefs(activity).getBoolean("enabled", false));
             o.put("scheduled", AutoKick.isScheduled(activity));
             o.put("hasConfig", AutoKick.hasConfig(activity));
+            o.put("intervalMin", AutoKick.getIntervalMin(activity));
             return o.toString();
         } catch (Exception e) {
             return "{\"enabled\":false,\"scheduled\":false,\"hasConfig\":false}";
@@ -1021,6 +1022,13 @@ public class RuijieBridge {
             if (on) AutoKick.schedule(activity);
             else AutoKick.cancel(activity);
         } catch (Exception ignored) {}
+    }
+
+    /** v1.5.116: set the background auto-kick check interval (minutes, min 15). */
+    @JavascriptInterface
+    public void autoKickSetInterval(int min) {
+        try { AutoKick.setIntervalMin(activity, min); }
+        catch (Exception ignored) {}
     }
 
     /** Run one background kick cycle right now on a background thread. */

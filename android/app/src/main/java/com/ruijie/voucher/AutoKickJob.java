@@ -53,6 +53,12 @@ public class AutoKickJob extends JobService {
             } catch (Exception ignored) {
             } finally {
                 try { jobFinished(params, false); } catch (Exception ignored) {}
+                // v1.5.116: chain the next one-shot run for sub-15-min intervals.
+                try {
+                    if (AutoKick.getIntervalMin(this) < 15) {
+                        AutoKick.schedule(this);
+                    }
+                } catch (Exception ignored) {}
             }
         }).start();
         return true; // work continues on our thread
