@@ -1468,19 +1468,24 @@ function enterApp() {
   if (S.projectId) loadVouchers();
   loadAccountInfo();
   // v1.5.120: pull synced settings from other phones (last-write-wins)
-  try {
-    if (typeof SettingsSync !== 'undefined') SettingsSync.pull().then(r => {
-      if (r && r.ok && r.applied) {
-        try {
-          const st2 = Store.load();
-          if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
-          if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
-          if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
-          if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
-        } catch (e) {}
-      }
-    });
-  } catch (e) {}
+  const doSettingsPull = () => {
+    try {
+      if (typeof SettingsSync !== 'undefined') SettingsSync.pull().then(r => {
+        if (r && r.ok && r.applied) {
+          try {
+            const st2 = Store.load();
+            if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
+            if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
+            if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
+            if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
+          } catch (e) {}
+        }
+      });
+    } catch (e) {}
+  };
+  doSettingsPull();
+  // v1.5.121: periodic settings pull every 60s + manual sync button
+  setInterval(doSettingsPull, 60000);
   // v1.5.52: one-shot startup SSO auto-login (saved creds + auto-login on,
   // no portal session -> open the login dialog once; it auto-submits).
   setTimeout(maybeSsoAutoLogin, 1200);
@@ -7029,6 +7034,20 @@ function init() {
   $('btn-profile-done-back').addEventListener('click', profileFormBack);
   const bmp = $('btn-my-profile');
   if (bmp) bmp.addEventListener('click', showProfileUpdateFromSettings);
+  // v1.5.121: manual settings sync button
+  const bss = $('btn-sync-settings');
+  if (bss) bss.addEventListener('click', async () => {
+    const st = $('sync-status');
+    try {
+      if (st) st.textContent = 'Syncing…';
+      const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
+      const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
+      if (st) {
+        if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
+        else st.textContent = '✗ ' + (pushR.reason || pullR.reason || 'failed');
+      }
+    } catch (e) { if (st) st.textContent = '✗ error'; }
+  });
   document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view)));
   $('project-select').addEventListener('change', onProjectChange);
 
