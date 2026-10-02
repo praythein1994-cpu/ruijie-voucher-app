@@ -813,6 +813,9 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
   html:not([data-layout="phone"]) .modal-box { max-width: 640px; }
   html:not([data-layout="phone"]) #tabbar { max-width: 620px; left: 20px; right: 20px; }
   html:not([data-layout="phone"]) .connect-card { max-width: 440px; padding: 38px 32px; }
+  /* tablet: topbar action icons (search/refresh/printer) to the right, off the corner */
+  html:not([data-layout="phone"]) #btn-search { margin-left: auto; }
+  html:not([data-layout="phone"]) #topbar { padding-right: 28px; }
 }
 /* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
 html[data-layout="tablet"] .view { max-width: 980px; }
@@ -830,6 +833,9 @@ html[data-layout="tablet"] .stat .n { font-size: 24px; }
 html[data-layout="tablet"] .modal-box { max-width: 640px; }
 html[data-layout="tablet"] #tabbar { max-width: 620px; left: 20px; right: 20px; }
 html[data-layout="tablet"] .connect-card { max-width: 440px; padding: 38px 32px; }
+/* tablet: topbar action icons (search/refresh/printer) to the right, off the corner */
+html[data-layout="tablet"] #btn-search { margin-left: auto; }
+html[data-layout="tablet"] #topbar { padding-right: 28px; }
 
 @media (min-width: 1100px) {
   html:not([data-layout="phone"]) .view { max-width: 1180px; }
