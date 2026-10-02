@@ -2269,6 +2269,13 @@ const SettingsSync = {
       if (SETTINGS_NEVER_SYNC.includes(k)) continue;
       out[k] = s[k];
     }
+    // v1.5.125: include native device-offline-monitor setting
+    try {
+      if (window.RuijieBridge && window.RuijieBridge.monitorInfo) {
+        const info = JSON.parse(window.RuijieBridge.monitorInfo());
+        out._monEnabled = !!info.enabled;
+      }
+    } catch (e) {}
     return out;
   },
   onLocalChange(patch) {
@@ -2313,6 +2320,15 @@ const SettingsSync = {
         clean._settingsUpdatedAt = Number(j.updatedAt) || Date.now();
         const s = Object.assign(Store.load(), clean);
         localStorage.setItem(STATE_KEY, JSON.stringify(s));
+        // v1.5.125: apply native monitor setting
+        try {
+          if (clean._monEnabled !== undefined && window.RuijieBridge && window.RuijieBridge.monitorSetEnabled) {
+            const info = JSON.parse(window.RuijieBridge.monitorInfo());
+            if (!!info.enabled !== !!clean._monEnabled) {
+              window.RuijieBridge.monitorSetEnabled(!!clean._monEnabled);
+            }
+          }
+        } catch (e) {}
         return { ok: true, applied: true, updatedAt: clean._settingsUpdatedAt };
       }
       return { ok: true, applied: false };
