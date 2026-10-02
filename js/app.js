@@ -464,11 +464,9 @@ const I18N = {
   'p.btNoDevices': { my: 'စက်မတွေ့သေးပါ — Scan နှိပ်ပါ', en: 'No devices yet — tap Scan' },
   'p.btNeedApk': { my: 'ဘလူးတုသ်ပရင့်က Android app သီးသန့်ပါ', en: 'Bluetooth printing is Android-app only' },
   'p.btNoQueue': { my: 'Print Queue ထဲမှာ voucher မရှိသေးပါ', en: 'Print Queue is empty' },
-  'p.btAuto': { my: 'Default ပရင်တာကို အော်တိုချိတ်မယ်', en: 'Auto-connect default printer' },
   'p.btSetDefault': { my: 'Default လုပ်မယ်', en: 'Set as Default' },
   'p.btDefaultSaved': { my: 'Default ပရင်တာ မှတ်ပြီးပြီ', en: 'Default printer saved' },
   'p.btDefaultCleared': { my: 'Default ပရင်တာ ဖျက်ပြီးပြီ', en: 'Default printer cleared' },
-  'p.btAutoTrying': { my: 'အော်တိုချိတ်နေတယ်…', en: 'Auto-connecting…' },
   'm.title': { my: 'နောက်ထပ်', en: 'More' },
   'm.accounts': { my: 'Auth Accounts', en: 'Auth Accounts' },
   'm.accountsSub': { my: 'အသုံးပြုသူများ', en: 'Users' },
@@ -1494,7 +1492,6 @@ function refreshSyncedUI(st2) {
     }
     if (st2.adDnsOn !== undefined && $('dns-adblock')) $('dns-adblock').checked = !!st2.adDnsOn;
     if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
-    if (st2.btAutoConnect !== undefined && $('bt-autoconnect')) $('bt-autoconnect').checked = !!st2.btAutoConnect;
     if (st2.teleOn !== undefined && $('tele-on')) $('tele-on').checked = st2.teleOn !== false;
     if (st2.updateAutoDl !== undefined && $('upd-auto')) $('upd-auto').checked = !!st2.updateAutoDl;
     // v1.5.126: refresh print layout/style (reload PS from Store)
@@ -3028,38 +3025,7 @@ function btPollStart() {
 }
 function btPollStop() { if (btTimer) { clearInterval(btTimer); btTimer = null; } }
 
-/** Auto-connect to the last used printer (APK only). quiet=true skips toasts. */
-function btAutoConnect(quiet) {
-  const B = btBridge();
-  if (!B || !B.btAutoConnect) return;
-  let r = null;
-  try { r = JSON.parse(B.btAutoConnect() || '{}'); } catch (e) { return; }
-  if (!r) return;
-  if (r.ok) {
-    const prEl = $('bt-progress');
-    if (prEl) prEl.textContent = t('p.btAutoTrying') + (r.name ? ' ' + r.name : '');
-    btRefreshSoon(); setTimeout(btRefresh, 3000);
-  } else if (!quiet && r.message) {
-    toast(r.message, true);
-  }
-}
-
 function initBtPrinter() {
-  // auto-connect preference (persisted) — also drives native auto-reconnect
-  // after unexpected loss (printer power cycle). Explicit disconnect never reconnects.
-  const acBox = $('bt-autoconnect');
-  const syncAutoReconnect = () => {
-    try { btCall(B => (B.btSetAutoReconnect ? B.btSetAutoReconnect(!!acBox.checked) : null)); } catch (e) {}
-  };
-  if (acBox) {
-    acBox.checked = !!Store.load().btAutoConnect;
-    syncAutoReconnect();
-    acBox.addEventListener('change', () => {
-      Store.save({ btAutoConnect: acBox.checked });
-      syncAutoReconnect();
-      if (acBox.checked) btAutoConnect(true);
-    });
-  }
   $('btn-bt-scan').addEventListener('click', () => {
     const r = btCall(B => B.btScan());
     if (r) { try { if (!JSON.parse(r).ok) toast(JSON.parse(r).message, true); } catch (e) {} }
@@ -7631,8 +7597,6 @@ function init() {
   // bluetooth thermal printer (printer-v1 engine, APK only)
   initBtPrinter();
   btPollStart();
-  // auto-connect to the last used printer if the user enabled it
-  if (Store.load().btAutoConnect) setTimeout(() => btAutoConnect(true), 2000);
   wireTypoModal();
   $('btn-print-layout').addEventListener('click', openLayoutModal);
   $('btn-print-typo').addEventListener('click', openTypoModal);

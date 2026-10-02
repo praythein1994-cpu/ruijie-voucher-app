@@ -329,31 +329,7 @@ public class RuijieBridge {
         }
     }
 
-    /**
-     * Auto-connect to the default printer (explicit default if set, else the
-     * last used printer — stored MAC, no scan).
-     * Async — poll btState() for CONNECTED.
-     */
-    @JavascriptInterface
-    public String btAutoConnect() {
-        try {
-            BluetoothPrinterManager m = bt();
-            if (!m.isBluetoothSupported()) return btErr("Bluetooth not supported on this device");
-            if (!m.isBluetoothEnabled()) return btErr("Bluetooth is turned off");
-            String addr = m.getLastPrinterAddress();
-            if (addr == null || addr.isEmpty()) return btErr("No saved printer yet");
-            m.autoConnectAsync();
-            JSONObject o = new JSONObject();
-            o.put("ok", true);
-            o.put("address", addr);
-            o.put("name", m.getLastPrinterName());
-            return o.toString();
-        } catch (Exception e) {
-            return btErr(e.getMessage());
-        }
-    }
-
-    /** Set the default printer (auto-detect / auto-connect target). */
+    /** Set the default printer (starred in the device list). */
     @JavascriptInterface
     public String btSetDefault(String address) {
         try {
@@ -394,24 +370,6 @@ public class RuijieBridge {
             bt().userDisconnect();
             JSONObject o = new JSONObject();
             o.put("ok", true);
-            return o.toString();
-        } catch (Exception e) {
-            return btErr(e.getMessage());
-        }
-    }
-
-    /**
-     * Enable/disable auto-reconnect after unexpected connection loss
-     * (e.g. printer power cycle). Persisted natively; mirrors the JS
-     * auto-connect toggle. Explicit user disconnect never reconnects.
-     */
-    @JavascriptInterface
-    public String btSetAutoReconnect(boolean enabled) {
-        try {
-            bt().setAutoReconnectEnabled(enabled);
-            JSONObject o = new JSONObject();
-            o.put("ok", true);
-            o.put("autoReconnect", enabled);
             return o.toString();
         } catch (Exception e) {
             return btErr(e.getMessage());
