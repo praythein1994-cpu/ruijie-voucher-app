@@ -1478,6 +1478,9 @@ function refreshSyncedUI(st2) {
     }
     if (st2.kickAuto !== undefined && $('kick-auto')) $('kick-auto').checked = !!st2.kickAuto;
     if (st2.kickIntervalMin !== undefined && $('kick-interval')) $('kick-interval').value = st2.kickIntervalMin;
+    if (st2.voucherVlan !== undefined && $('kick-vlan') && typeof ensureVlanOptions === 'function') {
+      try { ensureVlanOptions(); } catch (e) {}
+    }
     if (st2.adDnsOn !== undefined && $('dns-adblock')) $('dns-adblock').checked = !!st2.adDnsOn;
     if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
     if (st2.btAutoConnect !== undefined && $('bt-autoconnect')) $('bt-autoconnect').checked = !!st2.btAutoConnect;
