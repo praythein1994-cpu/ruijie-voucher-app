@@ -2042,6 +2042,76 @@ const Api = {
     throw new Error('SSO_REQUIRED');
   },
 
+  // ── 2.4a Device firmware upgrade (SSO portal) ─────────────────
+  /* Verified from the portal's own upgradeDeviceModal bundle (2026-10-02):
+   * trigger: POST /upgrade/device with params {snList:[...],
+   * jobUniqueId: epoch-ms, targetVersion, schedule:{startInterval,
+   * endInterval, beginDate}, retryTimes (1-10), firmwareId, groupId}.
+   * check: POST /upgrade/condition/check with {groupId[, serialNumbers]}
+   * returns {checkInofs:[{recommendSoftware, real_recommendSoftware,
+   * newestSoftwareVersion, real_newestSoftwareVersion, firmwareId,
+   * newestFirmwareId, deviceSns (comma-joined), deviceNum, deviceType,
+   * deviceSoftware, deviceHardware, releaseNotes, ...}]}.
+   * firmwares: GET /firmwares/cloud?page={p}&per_page={n}[&software..]. */
+  upgradeCheckEnvelope(groupId) {
+    return {
+      api: '/upgrade/condition/check?cloudType=smb',
+      method: 'POST',
+      params: { groupId },
+      module: 'default',
+      querys: { lang: 'en' },
+    };
+  },
+
+  /** Check which firmware upgrades are available (SSO). Returns the
+   *  portal's checkInofs array (per-model upgrade info). */
+  async upgradeConditionCheckSso(groupId) {
+    const env = this.upgradeCheckEnvelope(groupId);
+    const j = await ssoCall('/upgrade/condition/check', env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : -1;
+    if (c !== 0) throw new Error(j.msg || j.message || ('အပ်ဒိတ်စစ်မရပါ (code ' + c + ')'));
+    const d = j.data || j;
+    return d.checkInofs || d.checkInfo || d.list || [];
+  },
+
+  upgradeDeviceEnvelope({ snList, targetVersion, firmwareId, groupId, retryTimes = 3 }) {
+    const now = Date.now();
+    return {
+      api: '/upgrade/device?cloudType=smb',
+      method: 'POST',
+      params: {
+        snList,
+        jobUniqueId: now,
+        targetVersion: targetVersion || '',
+        schedule: { startInterval: '00:00', endInterval: '23:50', beginDate: now },
+        retryTimes,
+        firmwareId: firmwareId || null,
+        groupId,
+      },
+      module: 'default',
+      querys: { lang: 'en' },
+    };
+  },
+
+  /** Trigger a firmware upgrade job (SSO). Throws on portal error. */
+  async upgradeDeviceSso(opts) {
+    const env = this.upgradeDeviceEnvelope(opts);
+    const j = await ssoCall('/upgrade/device', env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : -1;
+    if (c !== 0) throw new Error(j.msg || j.message || ('အပ်ဒိတ်တင်မရပါ (code ' + c + ')'));
+    return j;
+  },
+
+  /** Upgrade entry points: SSO session required (Ruijie account login). */
+  async upgradeConditionCheck(groupId) {
+    if (this.ssoLoggedIn()) return this.upgradeConditionCheckSso(groupId);
+    throw new Error('SSO_REQUIRED');
+  },
+  async upgradeDevice(opts) {
+    if (this.ssoLoggedIn()) return this.upgradeDeviceSso(opts);
+    throw new Error('SSO_REQUIRED');
+  },
+
   // ── 2.4 Auth accounts ──
   async accountList(groupId, { start = 0, pageSize = 50, name = '', status = '' } = {}) {
     const q = { start, pageSize };

@@ -665,6 +665,17 @@ const I18N = {
   'md.rebooting': { my: 'ပြန်လည်စတင်ခိုင်းနေပါသည်…', en: 'Sending reboot…' },
   'md.rebootOk': { my: 'ပြန်လည်စတင်ခိုင်းပြီးပါပြီ', en: 'Reboot command sent' },
   'md.rebootFail': { my: 'ပြန်ဖွင့်မရပါ', en: 'Reboot failed' },
+  'md.upgrade': { my: 'အပ်ဒိတ်တင်', en: 'Upgrade' },
+  'md.upCheck': { my: 'အပ်ဒိတ်စစ်နေပါသည်…', en: 'Checking for upgrades…' },
+  'md.upNone': { my: '{name} အတွက် အပ်ဒိတ်အသစ်မရှိပါ', en: 'No new firmware for {name}' },
+  'md.upCur': { my: 'လက်ရှိ', en: 'Current' },
+  'md.upNew': { my: 'အသစ်', en: 'New' },
+  'md.upRec': { my: 'အကြံပြု', en: 'Recommended' },
+  'md.upConfirm': { my: '{name} ကို {ver} တင်မှာလား? စက်ခနရပ်မည်။', en: 'Upgrade {name} to {ver}? The device will briefly go offline.' },
+  'md.upSending': { my: 'အပ်ဒိတ်ခိုင်းနေပါသည်…', en: 'Sending upgrade…' },
+  'md.upOk': { my: 'အပ်ဒိတ်ခိုင်းပြီးပါပြီ', en: 'Upgrade command sent' },
+  'md.upFail': { my: 'အပ်ဒိတ်တင်မရပါ', en: 'Upgrade failed' },
+  'md.upNeedSso': { my: 'အပ်ဒိတ်တင်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Upgrade needs Ruijie account login (Settings → Ruijie account)' },
   'md.total': { my: 'စုစုပေါင်း {n} လုံး', en: 'Total {n} devices' },
   'md.partial': { my: 'အချို့စက်များ မရသေးပါ', en: 'Some device types failed to load' },
   'md.needSsoHint': { my: 'Switch/Gateway အပြည့်အစုံမြင်ရရန် Settings မှာ Ruijie အကောင့်ဝင်ပါ', en: 'Log in to your Ruijie account in Settings to see Switch/Gateway' },
@@ -4055,6 +4066,9 @@ async function moreDevices() {
           // v1.5.78: local reboot wire format verified (devSta.set devReboot) —
           // local rows get the reboot button too (gateway bridge, APK).
           const rb = sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}" data-local="${d.local ? '1' : ''}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
+          // v1.5.131: firmware upgrade — Cloud operation only (needs SSO),
+          // so local gateway rows don't get it.
+          const up = (sn && !d.local) ? `<button class="btn" data-upgrade="${esc(sn)}" data-name="${esc(nm)}">${ic('up', 'sm')}<span>${t('md.upgrade')}</span></button>` : '';
           // v1.5.22: per-AP client count badge → tap opens that AP's client list.
           // v1.5.24: WR (home router, e.g. EW3200GX-PRO in AP mode) counts too.
           // v1.5.29: gateway-local APs (incl. China-version APs invisible to
@@ -4084,10 +4098,11 @@ async function moreDevices() {
           })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
-          <td>${rb}${cb}</td></tr>`;
+          <td>${rb}${up}${cb}</td></tr>`;
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name, b.dataset.local === '1')));
+    document.querySelectorAll('#md-list [data-upgrade]').forEach(b => b.addEventListener('click', () => upgradeDeviceFlow(b.dataset.upgrade, b.dataset.name)));
     document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames, b.dataset.aplocal === '1')));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
@@ -4115,6 +4130,85 @@ async function rebootDevice(sn, name, isLocal) {
     toast(t('md.rebootOk'));
   } catch (e) { toast(e.message || t('md.rebootFail'), true); }
   if (S.moreFn === moreDevices) moreDevices();
+}
+
+/* ── Device firmware upgrade (v1.5.131 SSO portal) ──
+   Per-device flow, verified against the portal's own upgradeDeviceModal
+   bundle: POST /upgrade/condition/check {groupId} returns checkInofs
+   (per-model: deviceSns comma-joined, deviceSoftware, recommendSoftware,
+   real_recommendSoftware, newestSoftwareVersion, real_newestSoftwareVersion,
+   firmwareId, newestFirmwareId, releaseNotes); POST /upgrade/device
+   {snList, jobUniqueId, targetVersion, schedule, retryTimes, firmwareId,
+   groupId} starts the job. Cloud rows only (needs SSO login). */
+async function upgradeDeviceFlow(sn, name) {
+  if (!Api.ssoLoggedIn()) { toast(t('md.upNeedSso'), true); return; }
+  const gid = Number(S.projectId) || 0;
+  if (!gid) { toast(t('md.upFail'), true); return; }
+  toast(t('md.upCheck'));
+  let infos;
+  try {
+    infos = await Api.upgradeConditionCheck(gid);
+  } catch (e) { toast(e.message || t('md.upFail'), true); return; }
+  const info = (infos || []).find(x =>
+    String(x.deviceSns || '').split(',').some(s => s.trim() === sn));
+  const cur = info ? (info.deviceSoftware || info.softwareVersion || '') : '';
+  const rec = info ? (info.real_recommendSoftware || info.recommendSoftware || '') : '';
+  const newest = info ? (info.real_newestSoftwareVersion || info.newestSoftwareVersion || '') : '';
+  const opts = [];
+  if (rec && rec !== cur) opts.push({ ver: rec, fid: info.firmwareId || null, rec: true });
+  if (newest && newest !== cur && newest !== rec) opts.push({ ver: newest, fid: info.newestFirmwareId || null, rec: false });
+  if (!opts.length) { toast(tx('md.upNone', { name: name || sn })); return; }
+  const pick = await pickUpgradeVersion(name || sn, cur, opts, info);
+  if (!pick) return;
+  if (!(await iosConfirm(tx('md.upConfirm', { name: name || sn, ver: pick.ver }), '', t('md.upgrade'), t('a.cancel'), true))) return;
+  toast(t('md.upSending'));
+  try {
+    await Api.upgradeDevice({ snList: [sn], targetVersion: pick.ver, firmwareId: pick.fid, groupId: gid, retryTimes: 3 });
+    toast(t('md.upOk'));
+  } catch (e) { toast(e.message || t('md.upFail'), true); }
+}
+
+/* Firmware version picker (bottom sheet). Returns {ver, fid} or null. */
+function pickUpgradeVersion(name, cur, opts, info) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'ios-sheet-ov';
+    const sheet = document.createElement('div');
+    sheet.className = 'ios-sheet';
+    sheet.setAttribute('role', 'dialog');
+    const notes = info ? (info.newestReleaseNotes || info.releaseNotes || '') : '';
+    sheet.innerHTML =
+      '<div class="sheet-handle"></div>' +
+      '<div class="ios-sheet-title">' + esc(name) + '</div>' +
+      '<div style="padding:0 16px 8px;font-size:15px">' +
+        esc(t('md.upCur')) + ': <b>' + esc(cur || '—') + '</b></div>' +
+      (notes ? '<div style="padding:0 16px 8px;font-size:13px;color:var(--secondary)">' +
+        esc(String(notes).slice(0, 300)) + '</div>' : '') +
+      '<div class="ios-sheet-opts"></div>';
+    const optsEl = sheet.querySelector('.ios-sheet-opts');
+    const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+    opts.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ios-sheet-opt' + (i === 0 ? ' active' : '');
+      b.innerHTML = '<span>' + esc(t('md.upNew')) + ': <b>' + esc(o.ver) + '</b>' +
+        (o.rec ? ' <small class="muted">· ' + esc(t('md.upRec')) + '</small>' : '') + '</span>';
+      b.addEventListener('click', () => { close(); resolve(o); });
+      optsEl.appendChild(b);
+    });
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'ios-sheet-opt';
+    cancel.innerHTML = '<span>' + esc(t('a.cancel')) + '</span>';
+    cancel.addEventListener('click', () => { close(); resolve(null); });
+    optsEl.appendChild(cancel);
+    const onKey = e => { if (e.key === 'Escape') { close(); resolve(null); } };
+    document.addEventListener('keydown', onKey);
+    ov.appendChild(sheet);
+    ov.addEventListener('click', e => { if (e.target === ov) { close(); resolve(null); } });
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open')));
+  });
 }
 
 /* ── Flow Table traffic view (More → Traffic) · v1.5.78 ──
