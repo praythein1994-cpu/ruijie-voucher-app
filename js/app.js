@@ -7056,14 +7056,15 @@ function init() {
     const st = $('sync-status');
     try {
       if (st) st.textContent = 'Syncing…';
-      const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
+      // v1.5.124: pull FIRST (get other phone's changes), then push (send our changes)
       const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
       if (pullR.ok && pullR.applied && typeof refreshSyncedUI === 'function') {
         try { refreshSyncedUI(Store.load()); } catch (e) {}
       }
+      const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
       if (st) {
         if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
-        else st.textContent = '✗ ' + (pushR.reason || pullR.reason || 'failed');
+        else st.textContent = '✗ ' + (pullR.reason || pushR.reason || 'failed');
       }
     } catch (e) { if (st) st.textContent = '✗ error'; }
   });
