@@ -5663,6 +5663,17 @@ async function voucherLastUsedTs(acct) {
   if (!a) return 0;
   const now = Date.now();
   if (!mcLastUsedCache || now - mcLastUsedCache.at > 15 * 60 * 1000) {
+    // v1.5.128: ensure SSO login before fetching auth logs
+    try {
+      if (typeof Api !== 'undefined' && Api.ssoLoggedIn && !Api.ssoLoggedIn()) {
+        if (window.RuijieBridge && window.RuijieBridge.ssoLoginSilent) {
+          await new Promise((resolve) => {
+            try { window.RuijieBridge.ssoLoginSilent(); } catch (e) {}
+            setTimeout(resolve, 3000);
+          });
+        }
+      }
+    } catch (e) {}
     const logs = await Api.portalAuthLogs(Number(S.projectId));
     mcLastUsedCache = { at: now, map: lastUsedMap(logs) };
   }
