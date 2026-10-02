@@ -240,11 +240,14 @@
       </div>
       <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div id="voucher-fetched" class="muted small"></div></div>
       <div class="row voucher-actions" style="justify-content:space-between;align-items:center;position:relative"><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button><button id="btn-voucher-more" class="btn small" aria-label="More">More</button><div id="voucher-more-menu" class="more-menu hidden"><button id="btn-del-expired"><svg class="ic sm"><use href="#i-trash"/></svg><span data-i18n="v.delExpired">သက်တမ်းကုန်တွေ ဖျက်မယ်</span></button><button id="btn-reset-selected"><svg class="ic sm"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button></div></div>
-      <div id="bulk-bar" class="bulk-bar hidden">
-        <span id="bulk-count" class="muted small"></span>
-        <button id="btn-bulk-print" class="btn small primary"><svg class="ic sm"><use href="#i-printer"/></svg><span data-i18n="v.bulkPrint">ပရင့်ထုတ်မယ်</span></button>
-        <button id="btn-bulk-delete" class="btn small danger-ghost"><span data-i18n="v.bulkDelete">ဖျက်မယ်</span></button>
-        <button id="btn-bulk-cancel" class="btn small"><span data-i18n="a.cancel">မလုပ်တော့ဘူး</span></button>
+      <div id="bulk-bar" class="bulk-bar premium hidden">
+        <button id="btn-bulk-delete" class="pdel-bar" disabled>
+          <span class="pdel-ico"><svg class="ic"><use href="#i-trash"/></svg></span>
+          <span class="pdel-t"><b id="bulk-del-title">ဖျက်မယ်</b><small id="bulk-count"></small></span>
+          <span class="pdel-go"><svg class="ic sm"><use href="#i-chev-r"/></svg></span>
+        </button>
+        <button id="btn-bulk-print" class="btn small"><svg class="ic sm"><use href="#i-printer"/></svg><span data-i18n="v.bulkPrint">ပရင့်ထုတ်မယ်</span></button>
+        <button id="btn-bulk-cancel" class="btn small"><svg class="ic sm"><use href="#i-x"/></svg><span data-i18n="a.cancel">မလုပ်တော့ဘူး</span></button>
       </div>
       <div id="voucher-list" class="list"></div>
       <div id="voucher-loading" class="loading hidden"></div>

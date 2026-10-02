@@ -86,6 +86,9 @@ const I18N = {
   'v.select': { my: 'ရွေးမယ်', en: 'Select' },
   'v.bulkPrint': { my: 'ပရင့်ထုတ်မယ်', en: 'Print' },
   'v.bulkDelete': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'v.delN': { my: 'ဖျက်မယ် ({n})', en: 'Delete ({n})' },
+  'v.deleting': { my: 'ဖျက်နေတယ် {i}/{n}…', en: 'Deleting {i}/{n}…' },
+  'v.deleted': { my: 'ဖျက်ပြီးပြီ ✓', en: 'Deleted ✓' },
   'v.selected': { my: '{n} ခုရွေးထားသည်', en: '{n} selected' },
   'v.noResult': { my: 'ရှာမတွေ့ပါ', en: 'No results' },
   'v.noResultSub': { my: 'ရှာဖွေမှုစာသား (သို့) စစ်ထုတ်မှုပြောင်းကြည့်ပါ', en: 'Try a different search or filter' },
@@ -864,6 +867,7 @@ function applyLang() {
   const vv = $('app-version');
   if (vv) vv.textContent = tx('s.version', { v: APP_VERSION });
   renderVouchers();
+  if (S.bulkMode) updateBulkCount(); // v1.5.141: premium delete bar title follows language
   renderQueue();
   if (modalVoucher && !$('modal').classList.contains('hidden')) openVoucherDetail(modalVoucher.uuid);
   if (!$('preview-modal').classList.contains('hidden')) openPrintPreview();
@@ -2017,13 +2021,17 @@ function renderVouchers() {
       // v1.5.54: in bulk mode, row tap toggles the checkmark (v1.5.101: custom ✓, not native checkbox)
       if (e.target.closest('.bulk-check')) return; // let checkmark handle itself
       const cb = r.querySelector('.bulk-check');
-      if (cb) { cb.classList.toggle('on'); updateBulkCount(); }
+      // v1.5.141: premium selection — the whole row highlights purple
+      if (cb) { cb.classList.toggle('on'); r.classList.toggle('sel', cb.classList.contains('on')); updateBulkCount(); }
       return;
     }
     openVoucherDetail(r.dataset.uuid);
   }));
   el.querySelectorAll('.bulk-check').forEach(cb => cb.addEventListener('click', e => {
-    e.stopPropagation(); cb.classList.toggle('on'); updateBulkCount();
+    e.stopPropagation(); cb.classList.toggle('on');
+    const r = cb.closest('.voucher-row'); // v1.5.141: row highlight follows the check
+    if (r) r.classList.toggle('sel', cb.classList.contains('on'));
+    updateBulkCount();
   }));
 }
 
@@ -2035,6 +2043,7 @@ function toggleBulkMode() {
   $('btn-bulk-select').querySelector('span').textContent = S.bulkMode ? t('a.cancel') : t('v.select');
   if (!S.bulkMode) {
     document.querySelectorAll('.bulk-check').forEach(cb => cb.classList.remove('on'));
+    document.querySelectorAll('.voucher-row.sel').forEach(r => r.classList.remove('sel')); // v1.5.141
   }
   updateBulkCount();
 }
@@ -2044,6 +2053,10 @@ function bulkSelectedUuids() {
 function updateBulkCount() {
   const n = bulkSelectedUuids().length;
   $('bulk-count').textContent = tx('v.selected', { n });
+  const dt = $('bulk-del-title'); // v1.5.141: premium bar title
+  if (dt) dt.textContent = n ? tx('v.delN', { n }) : t('v.bulkDelete');
+  const bar = $('btn-bulk-delete');
+  if (bar) bar.classList.remove('done');
   $('btn-bulk-print').disabled = !n;
   $('btn-bulk-delete').disabled = !n;
 }
@@ -2068,16 +2081,26 @@ async function bulkDelete() {
   if (!fresh.length) { toast(t('del.noNew')); return; }
   const skipTxt = stale ? tx('del.skipOld', { n: stale }) : '';
   if (!(await iosConfirm(tx('del.confirmBulkNew', { n: fresh.length, skip: skipTxt }), '', t('a.delete'), t('a.cancel'), true))) return;
+  // v1.5.141: premium exit — selected rows fly out staggered, the bar shows progress
+  const bar = $('btn-bulk-delete');
+  const delTitle = $('bulk-del-title');
+  fresh.forEach((v, i) => {
+    const row = document.querySelector('.voucher-row[data-uuid="' + v.uuid + '"]');
+    if (row) setTimeout(() => row.classList.add('leaving'), i * 70);
+  });
   let ok = 0, fail = 0;
   for (const v of fresh) {
+    if (delTitle) delTitle.textContent = tx('v.deleting', { i: ok + fail + 1, n: fresh.length });
     try { await Api.voucherDelete(S.projectId, v); ok++; }
     catch (e) { fail++; }
   }
   // Remove successfully deleted codes from the session set
   try { fresh.forEach(v => S.sessionGenCodes.delete(vCode(v))); } catch (e) {}
+  // v1.5.141: success flash on the bar, then exit bulk mode + reload
+  if (bar) { bar.classList.add('done'); bar.disabled = false; }
+  if (delTitle) delTitle.textContent = t('v.deleted');
   toast(`${ok} ✓${fail ? ` · ${fail} ✗` : ''}${stale ? ` · ${stale} ⏭` : ''}`);
-  toggleBulkMode();
-  loadVouchers();
+  setTimeout(() => { toggleBulkMode(); loadVouchers(); }, 900);
 }
 
 /* ═══════════ v1.5.113: bulk Delete Expired Vouchers (portal-verified) ═══════════

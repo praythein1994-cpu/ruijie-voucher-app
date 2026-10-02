@@ -1637,6 +1637,63 @@ html[data-layout="tablet"] .upd-ring { width: 96px; height: 96px; }
 .bulk-check.on { background: var(--blue); border-color: var(--blue); }
 .bulk-check.on .tick { display: block; }
 
+/* ── v1.5.141: premium bulk delete (video reference) — phone-first base,
+ * tablet overrides at the end. Purple selection + gradient delete bar,
+ * staggered row exit, success flash. */
+.bulk-check { transition: transform .15s ease, background .2s ease, border-color .2s ease; }
+.bulk-check.on {
+  background: linear-gradient(135deg, #7C5CFF, #5E5CE6);
+  border-color: transparent;
+  animation: tickpop .25s var(--spring);
+}
+@keyframes tickpop {
+  0% { transform: scale(.7); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.voucher-row { transition: background .2s ease, border-color .2s ease, opacity .35s ease, transform .35s ease; }
+.voucher-row.sel {
+  background: rgba(124, 92, 255, .12);
+  border-color: rgba(124, 92, 255, .55);
+}
+.voucher-row.leaving { opacity: 0; transform: translateX(60px) scale(.96); }
+/* premium delete bar */
+.bulk-bar.premium { background: none; box-shadow: none; padding: 0; }
+.pdel-bar {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+  border: none; cursor: pointer; color: #fff; text-align: left; font-family: inherit;
+  background: linear-gradient(135deg, #7C5CFF, #5E5CE6);
+  border-radius: 16px; padding: 10px 14px;
+  box-shadow: 0 8px 22px rgba(124, 92, 255, .4);
+  transition: transform .15s ease, opacity .2s ease;
+}
+.pdel-bar:disabled { background: var(--fill-bg); color: var(--gray); box-shadow: none; cursor: default; }
+.pdel-bar:not(:disabled):active { transform: scale(.98); }
+.pdel-ico {
+  width: 34px; height: 34px; border-radius: 10px; flex: none;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.pdel-bar:disabled .pdel-ico { background: rgba(127,127,127,.2); }
+.pdel-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pdel-t b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdel-t small { opacity: .85; font-size: 12px; }
+.pdel-go {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.pdel-bar.done { background: linear-gradient(135deg, #30D158, #1FA84A); }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .pdel-bar { padding: 12px 18px; }
+  html:not([data-layout="phone"]) .pdel-t b { font-size: 16px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .pdel-bar { padding: 12px 18px; }
+html[data-layout="tablet"] .pdel-t b { font-size: 16px; }
+
 /* ═══════════ v1.5.55 ═══════════ */
 
 /* ── Sticky two-pane preview (Print Layout + Typography modals) ──
