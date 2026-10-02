@@ -1445,6 +1445,30 @@ async function startupSync() {
 }
 
 /* ═══════════ APP SHELL ═══════════ */
+// v1.5.123: refresh all synced settings UI after a pull
+function refreshSyncedUI(st2) {
+  try {
+    if (!st2) st2 = Store.load();
+    if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
+    if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
+    if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
+    if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
+    if (st2.liveStats && typeof st2.liveStats === 'object') {
+      const le = $('live-enable');
+      if (le) le.checked = !!st2.liveStats.enabled;
+      if (typeof refreshLiveCard === 'function') refreshLiveCard();
+      document.querySelectorAll('#live-int-seg [data-live-int]').forEach(b => {
+        b.classList.toggle('active', +b.dataset.liveInt === +st2.liveStats.secs);
+      });
+    }
+    if (st2.kickAuto !== undefined && $('kick-auto')) $('kick-auto').checked = !!st2.kickAuto;
+    if (st2.kickIntervalMin !== undefined && $('kick-interval')) $('kick-interval').value = st2.kickIntervalMin;
+    if (st2.adDnsOn !== undefined && $('dns-adblock')) $('dns-adblock').checked = !!st2.adDnsOn;
+    if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
+    if (st2.btAutoConnect !== undefined && $('bt-autoconnect')) $('bt-autoconnect').checked = !!st2.btAutoConnect;
+    if (st2.teleOn !== undefined && $('tele-on')) $('tele-on').checked = st2.teleOn !== false;
+  } catch (e) {}
+}
 function enterApp() {
   /* User-requested: the app always starts in English. A manual language
    * switch still works for the session; the next startup is English again. */
@@ -1471,24 +1495,7 @@ function enterApp() {
   const doSettingsPull = () => {
     try {
       if (typeof SettingsSync !== 'undefined') SettingsSync.pull().then(r => {
-        if (r && r.ok && r.applied) {
-          try {
-            const st2 = Store.load();
-            if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
-            if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
-            if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
-            if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
-            // v1.5.122: refresh live stats toggle + interval UI
-            if (st2.liveStats && typeof st2.liveStats === 'object') {
-              const le = $('live-enable');
-              if (le) le.checked = !!st2.liveStats.enabled;
-              if (typeof refreshLiveCard === 'function') refreshLiveCard();
-              document.querySelectorAll('#live-int-seg [data-live-int]').forEach(b => {
-                b.classList.toggle('active', +b.dataset.liveInt === +st2.liveStats.secs);
-              });
-            }
-          } catch (e) {}
-        }
+        if (r && r.ok && r.applied) refreshSyncedUI(Store.load());
       });
     } catch (e) {}
   };
@@ -7051,15 +7058,8 @@ function init() {
       if (st) st.textContent = 'Syncing…';
       const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
       const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
-      if (pullR.ok && pullR.applied) {
-        try {
-          const st2 = Store.load();
-          if (st2.liveStats && typeof st2.liveStats === 'object') {
-            const le = $('live-enable');
-            if (le) le.checked = !!st2.liveStats.enabled;
-            if (typeof refreshLiveCard === 'function') refreshLiveCard();
-          }
-        } catch (e) {}
+      if (pullR.ok && pullR.applied && typeof refreshSyncedUI === 'function') {
+        try { refreshSyncedUI(Store.load()); } catch (e) {}
       }
       if (st) {
         if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
