@@ -239,12 +239,33 @@ public class BluetoothPrinterManager {
                         if (d.address.equals(address)) { exists = true; break; }
                     }
                     if (!exists) discoveredDevices.add(new DiscoveredPrinter(name, address, paired));
+                    // Event-driven auto-detect: the default printer showed up
+                    // in discovery — connect now instead of waiting out backoff.
+                    String lastAddr = getLastPrinterAddress();
+                    if (lastAddr != null && lastAddr.equals(address)) {
+                        Log.i(TAG, "Default printer discovered — connecting now");
+                        onPrinterAvailableHint();
+                    }
                 }
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 scanning = false;
             }
         }
     };
+
+    @SuppressLint("MissingPermission")
+    private BluetoothDevice intentDevice(Intent intent) {
+        if (intent == null) return null;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                return intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
+            } else {
+                return intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     @SuppressLint("MissingPermission")
     private final BroadcastReceiver connectionEventReceiver = new BroadcastReceiver() {
@@ -257,15 +278,24 @@ public class BluetoothPrinterManager {
                 if (state == BluetoothAdapter.STATE_TURNING_OFF || state == BluetoothAdapter.STATE_OFF) {
                     Log.i(TAG, "Bluetooth turned off broadcast received. Transitioning to Disconnected.");
                     handleConnectionLost("Bluetooth is turned off");
+                } else if (state == BluetoothAdapter.STATE_ON) {
+                    // Bluetooth just turned on: the default printer may be
+                    // available — connect now instead of waiting out backoff.
+                    Log.i(TAG, "Bluetooth turned on — checking default printer");
+                    onPrinterAvailableHint();
+                }
+            } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                BluetoothDevice device = intentDevice(intent);
+                String lastAddr = getLastPrinterAddress();
+                if (device != null && lastAddr != null && lastAddr.equals(device.getAddress())) {
+                    // Our default printer reached ACL level (e.g. powered on
+                    // while bonded) — grab the SPP connection immediately.
+                    Log.i(TAG, "Default printer ACL connected — connecting SPP now");
+                    onPrinterAvailableHint();
                 }
             } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)
                     || BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action)) {
-                BluetoothDevice device;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
-                } else {
-                    device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                }
+                BluetoothDevice device = intentDevice(intent);
                 String currentAddr = currentConnectedAddress;
                 if (currentAddr != null && (device == null || currentAddr.equals(device.getAddress()))) {
                     Log.i(TAG, "ACL disconnected for connected device (" + currentAddr + "). Transitioning to Disconnected.");
@@ -282,6 +312,7 @@ public class BluetoothPrinterManager {
         if (!connectionReceiverRegistered) {
             IntentFilter filter = new IntentFilter();
             filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+            filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
             filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
             filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
             try {
@@ -535,7 +566,13 @@ public class BluetoothPrinterManager {
                 }
                 long wait = RECONNECT_BACKOFF_MS[
                         Math.min(reconnectAttempts, RECONNECT_BACKOFF_MS.length - 1)];
-                try { Thread.sleep(wait); } catch (InterruptedException e) { break; }
+                try { Thread.sleep(wait); } catch (InterruptedException e) {
+                    // stopReconnect() nulls reconnectThread before interrupting;
+                    // any other interrupt is an event-driven "printer available"
+                    // wakeup -> retry immediately instead of waiting out backoff.
+                    if (reconnectThread != Thread.currentThread()) break;
+                    Log.i(TAG, "Reconnect woken early by availability event — retrying now");
+                }
                 if (userInitiatedDisconnect || Thread.currentThread().isInterrupted()) break;
                 reconnectAttempts++;
                 Log.i(TAG, "Auto-reconnect attempt " + reconnectAttempts + " to " + addr);
@@ -553,6 +590,29 @@ public class BluetoothPrinterManager {
         Thread t = reconnectThread;
         reconnectThread = null;
         if (t != null) t.interrupt();
+    }
+
+    /** Event-driven auto-detect: the default (last-used) printer may have become
+     *  available — Bluetooth just turned on, or the device was seen during
+     *  discovery / ACL connect. Wakes the backoff loop for an immediate retry,
+     *  or connects at once when no loop is running. No-op when already
+     *  connected/connecting, after an explicit user disconnect, or when
+     *  auto-reconnect is off. */
+    public void onPrinterAvailableHint() {
+        if (userInitiatedDisconnect || !autoReconnectEnabled) return;
+        String s = connState;
+        if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) return;
+        String addr = getLastPrinterAddress();
+        if (addr == null || addr.isEmpty()) return;
+        if (!isBluetoothEnabled()) return;
+        Thread t = reconnectThread;
+        if (t != null && t.isAlive()) {
+            Log.i(TAG, "Printer available — waking reconnect loop for immediate retry");
+            t.interrupt();
+        } else {
+            Log.i(TAG, "Printer available — connecting now to " + addr);
+            connectAsync(addr);
+        }
     }
 
     public void cleanup() {
