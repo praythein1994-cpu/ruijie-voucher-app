@@ -254,18 +254,18 @@
         <label class="set-row set-field"><span class="fld-label" data-i18n="g.profile">Profile (Package)</span><select id="gen-package" class="fld-input"></select></label>
         <div class="set-row"><div class="fld-stack"><span class="fld-label" data-i18n="g.length">Voucher Length</span><div class="segmented" id="vlen-seg" role="group" aria-label="Voucher Length">
               <button type="button" data-vlen="6">6</button>
-              <button type="button" data-vlen="7">7</button>
-              <button type="button" data-vlen="8" class="active">8</button>
+              <button type="button" data-vlen="7" class="active">7</button>
+              <button type="button" data-vlen="8">8</button>
               <button type="button" data-vlen="9">9</button>
             </div></div></div>
         <div class="set-row"><div class="fld-stack"><span class="fld-label" data-i18n="g.codetype">Voucher Code Type</span><div class="codetype-grid" id="vtype-grid" role="group" aria-label="Voucher Code Type">
-              <button type="button" data-vtype="alnum" class="codetype active">
+              <button type="button" data-vtype="alnum" class="codetype">
                 <b data-i18n="g.ctAlnum">Alphanumeric</b><small>(0-9a-z)</small>
               </button>
               <button type="button" data-vtype="alpha" class="codetype">
                 <b data-i18n="g.ctAlpha">Alphabetic</b><small>(a-z)</small>
               </button>
-              <button type="button" data-vtype="numeric" class="codetype">
+              <button type="button" data-vtype="numeric" class="codetype active">
                 <b data-i18n="g.ctNum">Numeric</b><small>(0-9)</small>
               </button>
             </div></div></div>
@@ -547,6 +547,7 @@
     <div class="row modal-actions">
       <button id="modal-disconnect" class="btn danger hidden"><svg class="ic"><use href="#i-x"/></svg><span data-i18n="kick.btn">ဖြုတ်မယ်</span></button>
       <button id="modal-unbind" class="btn hidden"><svg class="ic"><use href="#i-unlink"/></svg><span data-i18n="unbind.btn">MAC ဖြုတ်မယ်</span></button>
+      <button id="modal-reset" class="btn hidden"><svg class="ic"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button>
       <button id="modal-print" class="btn primary"><svg class="ic"><use href="#i-printer"/></svg><span data-i18n="modal.print">ပရင့်ထုတ်မယ်</span></button>
       <button id="modal-queue" class="btn"><svg class="ic"><use href="#i-plus"/></svg><span>Queue</span></button>
     </div>
