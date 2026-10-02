@@ -1478,6 +1478,15 @@ function enterApp() {
             if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
             if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
             if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
+            // v1.5.122: refresh live stats toggle + interval UI
+            if (st2.liveStats && typeof st2.liveStats === 'object') {
+              const le = $('live-enable');
+              if (le) le.checked = !!st2.liveStats.enabled;
+              if (typeof refreshLiveCard === 'function') refreshLiveCard();
+              document.querySelectorAll('#live-int-seg [data-live-int]').forEach(b => {
+                b.classList.toggle('active', +b.dataset.liveInt === +st2.liveStats.secs);
+              });
+            }
           } catch (e) {}
         }
       });
@@ -7042,6 +7051,16 @@ function init() {
       if (st) st.textContent = 'Syncing…';
       const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
       const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
+      if (pullR.ok && pullR.applied) {
+        try {
+          const st2 = Store.load();
+          if (st2.liveStats && typeof st2.liveStats === 'object') {
+            const le = $('live-enable');
+            if (le) le.checked = !!st2.liveStats.enabled;
+            if (typeof refreshLiveCard === 'function') refreshLiveCard();
+          }
+        } catch (e) {}
+      }
       if (st) {
         if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
         else st.textContent = '✗ ' + (pushR.reason || pullR.reason || 'failed');
