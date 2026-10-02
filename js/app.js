@@ -3950,7 +3950,11 @@ async function moreDevices() {
           const ncliShow = ncli > 0 ? ncli : ncliLocal;
           const showCli = isApRow && sn && (ncliShow > 0 || !d.local);
           const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" data-aplocal="${d.local ? '1' : ''}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncliShow}</span></button>` : '';
-          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
+          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small>${(() => {
+            // v1.5.127: show gateway/device IP (portal /maint/devices/list carries `ip`)
+            const ip = d.ip || d.deviceIp || d.ipAddress || d.mgmtIp || '';
+            return ip ? `<br><small class="muted">${esc(t('mt.ip'))}: ${esc(ip)}</small>` : '';
+          })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
           <td>${rb}${cb}</td></tr>`;
