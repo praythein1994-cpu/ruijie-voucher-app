@@ -9,6 +9,11 @@
  *  GET  /health
  *  POST /telemetry   { events: [{ ts, app, type, msg, data }] } — app event inbox
  *  GET  /telemetry?since=<ms>[&key=...] — read recent events (monitoring)
+ *  POST /api/devices/register { deviceId, model, manufacturer, android, appVersion, profile, src } — device install registry (v1.5.143)
+ *  GET  /api/devices/check?deviceId=... — install status: allowed|pending|blocked|unknown
+ *  GET  /api/devices/list?profile=... — all devices + config (admin: profile=praythein)
+ *  POST /api/devices/set { profile, deviceId, status, by } — allow/pending/block a device (admin)
+ *  POST /api/devices/config { profile, maxDevices, requireApproval } — device cap config (admin)
  *  GET  /api/profiles/:name — named login profile (tier 2: render disk, tier 3: github)
  *  PUT  /api/profiles/:name { profile, key } — save profile (disk + github write-through)
  *  GET  /amh-wifi/<token> — AMH customer self-service page (capability URL, no login form)
@@ -50,6 +55,7 @@ const path = require('path');
 const { URL } = require('url');
 const Profiles = require('./profiles');
 const AmhWifi = require('./amh-wifi');
+const Devices = require('./devices'); // v1.5.143: app install device registry
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim());
@@ -381,6 +387,81 @@ async function handleSettingsPut(req, res, u) {
   return send(res, req, 200, { ok: true, source: 'render', github, updatedAt: entry.updatedAt });
 }
 
+/* ── App install device registry (v1.5.143) ────────────────────────
+ * The owner sees which devices installed the app, caps the count, can
+ * require approval for new devices, and blocks unknown ones. Register +
+ * check are open (rate-limited); list/set/config need profile=praythein
+ * (same casual name-only trust as the named login). */
+async function handleDeviceRegister(req, res) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let p;
+  try { p = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  const store = Devices.readStore();
+  const status = Devices.registerDevice(store, p);
+  if (!status) return send(res, req, 400, { code: -1, msg: 'deviceId is required' });
+  try { Devices.writeStore(store); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save device registry' }); }
+  return send(res, req, 200, { ok: true, status });
+}
+function handleDeviceCheck(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  const id = String(u.searchParams.get('deviceId') || '').slice(0, 128);
+  const store = Devices.readStore();
+  const d = store.devices[id];
+  return send(res, req, 200, { ok: true, status: d ? (d.status || 'allowed') : 'unknown' });
+}
+function deviceAdmin(u, payload) {
+  const prof = Devices.normName((payload && payload.profile) || u.searchParams.get('profile'));
+  return prof === Devices.ADMIN_PROFILE;
+}
+function handleDeviceList(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  if (!deviceAdmin(u)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const store = Devices.readStore();
+  const devices = Object.values(store.devices).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+  return send(res, req, 200, { ok: true, devices, config: store.config });
+}
+async function handleDeviceSet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let p;
+  try { p = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!deviceAdmin(u, p)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const id = String(p.deviceId || '').slice(0, 128);
+  const status = String(p.status || '');
+  if (!['allowed', 'pending', 'blocked'].includes(status)) {
+    return send(res, req, 400, { code: -1, msg: 'status must be allowed|pending|blocked' });
+  }
+  const store = Devices.readStore();
+  const d = store.devices[id];
+  if (!d) return send(res, req, 404, { code: -7, msg: 'Device not found' });
+  // Safety: never block the device you're managing from.
+  const by = String(p.by || '').slice(0, 128);
+  if (status === 'blocked' && by && by === id) {
+    return send(res, req, 400, { code: -1, msg: 'Cannot block the device you are managing from' });
+  }
+  d.status = status;
+  d.lastSeen = Date.now();
+  try { Devices.writeStore(store); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save device registry' }); }
+  return send(res, req, 200, { ok: true, status });
+}
+async function handleDeviceConfig(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let p;
+  try { p = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!deviceAdmin(u, p)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const store = Devices.readStore();
+  const m = Number(p.maxDevices);
+  if (Number.isFinite(m)) store.config.maxDevices = Math.min(100, Math.max(1, Math.round(m)));
+  if (typeof p.requireApproval === 'boolean') store.config.requireApproval = p.requireApproval;
+  try { Devices.writeStore(store); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save device registry' }); }
+  return send(res, req, 200, { ok: true, config: store.config });
+}
+
 function corsHeaders(req) {  const origin = req.headers.origin || '';
   const allow = ALLOWED_ORIGINS.includes('*') ? '*' : (ALLOWED_ORIGINS.includes(origin) ? origin : '');
   const h = { 'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
@@ -537,6 +618,12 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
     if (u.pathname.startsWith('/api/settings/') && req.method === 'GET') return handleSettingsGet(req, res, u);
     if (u.pathname.startsWith('/api/settings/') && req.method === 'PUT') return handleSettingsPut(req, res, u);
+    // v1.5.143: app install device registry
+    if (u.pathname === '/api/devices/register' && req.method === 'POST') return handleDeviceRegister(req, res);
+    if (u.pathname === '/api/devices/check' && req.method === 'GET') return handleDeviceCheck(req, res, u);
+    if (u.pathname === '/api/devices/list' && req.method === 'GET') return handleDeviceList(req, res, u);
+    if (u.pathname === '/api/devices/set' && req.method === 'POST') return handleDeviceSet(req, res, u);
+    if (u.pathname === '/api/devices/config' && req.method === 'POST') return handleDeviceConfig(req, res, u);
     // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
     // server-side portal CAS login, only the VLAN-30 SSID can be changed.
     if (u.pathname.startsWith('/amh-wifi/')) return AmhWifi.handle(req, res, u);

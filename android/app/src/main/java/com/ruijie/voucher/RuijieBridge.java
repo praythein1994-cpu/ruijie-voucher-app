@@ -1075,6 +1075,26 @@ public class RuijieBridge {
         }
     }
 
+    /* ── v1.5.143: device identity for the app install registry ──
+     * Stable per-app ANDROID_ID + model info. No permissions needed. */
+    @JavascriptInterface
+    public String deviceInfo() {
+        try {
+            JSONObject o = new JSONObject();
+            String androidId = android.provider.Settings.Secure.getString(
+                    activity.getContentResolver(),
+                    android.provider.Settings.Secure.ANDROID_ID);
+            o.put("id", androidId != null ? androidId : "");
+            o.put("model", android.os.Build.MODEL != null ? android.os.Build.MODEL : "");
+            o.put("manufacturer", android.os.Build.MANUFACTURER != null ? android.os.Build.MANUFACTURER : "");
+            o.put("brand", android.os.Build.BRAND != null ? android.os.Build.BRAND : "");
+            o.put("android", android.os.Build.VERSION.RELEASE != null ? android.os.Build.VERSION.RELEASE : "");
+            return o.toString();
+        } catch (Exception e) {
+            return "{\"id\":\"\",\"model\":\"\",\"manufacturer\":\"\",\"brand\":\"\",\"android\":\"\"}";
+        }
+    }
+
     /** Enqueue an APK download via DownloadManager. Returns {"ok","id"}. */
     @JavascriptInterface
     public String updateDownload(String url, String fileName) {

@@ -1716,6 +1716,47 @@ html[data-layout="tablet"] .upd-ring { width: 96px; height: 96px; }
 html[data-layout="tablet"] .pdel-bar { padding: 12px 18px; }
 html[data-layout="tablet"] .pdel-t b { font-size: 16px; }
 
+/* ── v1.5.143: device lock screen + app device registry ── */
+#view-devlock {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; position: relative; overflow: hidden;
+  background: #04070f;
+}
+#view-devlock .connect-card { text-align: center; }
+#view-devlock h1 { font-size: 24px; }
+.devlock-idrow {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 14px 0 18px;
+}
+.devlock-idrow code {
+  font-size: 12px; color: #9fb3c8;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: 7px 10px;
+  max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ad-chip {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 9px; border-radius: 999px;
+}
+.ad-chip.allowed { background: rgba(48,209,88,.16); color: #30D158; }
+.ad-chip.pending { background: rgba(255,159,10,.16); color: #FF9F0A; }
+.ad-chip.blocked { background: rgba(255,69,58,.16); color: #FF453A; }
+.ad-id { font-size: 11px; color: var(--gray); }
+.ad-me {
+  display: inline-block; font-size: 11px; font-weight: 700; color: var(--blue);
+  background: rgba(10,132,255,.14); padding: 2px 9px; border-radius: 999px;
+}
+.ad-btns { display: flex; gap: 6px; flex: none; margin-left: auto; }
+.ad-stepper { display: flex; align-items: center; gap: 14px; flex: none; }
+.ad-stepper button {
+  width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--fill-bg); color: var(--blue); font-size: 20px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.ad-stepper button:active { opacity: .5; }
+.ad-stepper b { font-size: 17px; min-width: 28px; text-align: center; }
+
 /* ═══════════ v1.5.55 ═══════════ */
 
 /* ── Sticky two-pane preview (Print Layout + Typography modals) ──

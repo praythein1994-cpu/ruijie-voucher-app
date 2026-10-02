@@ -531,6 +531,32 @@ const I18N = {
   'm.salesSub': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'm.recorder': { my: 'Recorder', en: 'Recorder' },
   'm.recorderSub': { my: 'Portal လုပ်ဆောင်ချက်မှတ်တမ်း', en: 'Record portal actions' },
+  'm.appdevices': { my: 'App Devices', en: 'App Devices' },
+  'm.appdevicesSub': { my: 'သွင်းထားတဲ့ဖုန်းများ', en: 'Installed phones' },
+  'dev.lockTitle': { my: 'ဒီ device ကို ပိတ်ထားပါတယ်', en: 'This device is blocked' },
+  'dev.lockMsg': { my: 'Pray Thein က ဒီ device ကို ပိတ်ထားပါတယ်။ သုံးချင်ရင် သူ့ကို ဆက်သွယ်ပါ။', en: 'Pray Thein has blocked this device. Contact him to request access.' },
+  'dev.pendingTitle': { my: 'ခွင့်ပြုချက် စောင့်နေပါတယ်', en: 'Waiting for approval' },
+  'dev.pendingMsg': { my: 'ဒီ device ကို မှတ်ထားပြီးပါပြီ — Pray Thein ခွင့်ပြုမှ သုံးလို့ရမယ်။', en: 'This device is registered — you can use the app once Pray Thein approves it.' },
+  'dev.retry': { my: 'ပြန်စစ်မယ်', en: 'Retry' },
+  'dev.copied': { my: 'ကူးယူပြီးပြီ', en: 'Copied' },
+  'dev.copyFail': { my: 'ကူးမရပါ', en: "Couldn't copy" },
+  'ad.loadFail': { my: 'စာရင်း ရမလာပါ', en: "Couldn't load the device list" },
+  'ad.saveFail': { my: 'သိမ်းမရပါ', en: "Couldn't save" },
+  'ad.saved': { my: 'သိမ်းပြီးပြီ', en: 'Saved' },
+  'ad.allow': { my: 'ခွင့်ပြုမယ်', en: 'Allow' },
+  'ad.block': { my: 'ပိတ်မယ်', en: 'Block' },
+  'ad.allowed': { my: 'ခွင့်ပြုပြီး', en: 'Allowed' },
+  'ad.pending': { my: 'စောင့်နေတယ်', en: 'Pending' },
+  'ad.blocked': { my: 'ပိတ်ထားတယ်', en: 'Blocked' },
+  'ad.thisDevice': { my: 'ဒီဖုန်း', en: 'This phone' },
+  'ad.maxDevices': { my: 'Device အရေအတွက် ကန့်သတ်ချက်', en: 'Device limit' },
+  'ad.maxDevicesSub': { my: 'ကျော်ရင် အသစ်‌တွေ ခွင့်ပြုချက်စောင့်ရမယ်', en: 'New devices beyond this wait for approval' },
+  'ad.requireApproval': { my: 'Device အသစ်တိုင်း ခွင့်ပြုချက်တောင်းမယ်', en: 'Require approval for new devices' },
+  'ad.requireApprovalSub': { my: 'ဖွင့်ထားရင် သွင်းသမျှ device တိုင်း စောင့်ရမယ်', en: 'Every new install waits for your approval' },
+  'ad.lastSeen': { my: 'နောက်ဆုံးသုံးတာ', en: 'Last seen' },
+  'ad.unknownDevice': { my: 'အမည်မသိ device', en: 'Unknown device' },
+  'ad.empty': { my: 'device မရှိသေးပါ', en: 'No devices yet' },
+  'ad.confirmBlock': { my: 'ဒီ device ကို ပိတ်မှာလား?', en: 'Block this device?' },
   'rec.done': { my: 'မှတ်တမ်းသိမ်းပြီးပြီ', en: 'Recording saved' },
   'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
@@ -1542,7 +1568,10 @@ function enterApp() {
   $('view-connect').classList.add('hidden');
   $('view-profile').classList.add('hidden');
   $('view-profile-new').classList.add('hidden');
+  devHideLock(); // v1.5.143: in case we arrived via the lock-screen retry
   $('app').classList.remove('hidden');
+  // v1.5.143: App Devices admin is visible to the owner profile only.
+  try { $('more-appdevices').hidden = !devIsAdmin(); } catch (e) {}
   const st = Store.load();
   if (st.printHeader) $('print-header').value = st.printHeader;
   if (st.printFooter) $('print-footer').value = st.printFooter;
@@ -5880,6 +5909,203 @@ function updDlHide() {
   const w = $('upd-dl');
   if (w) w.hidden = true;
 }
+/* ═══════════ v1.5.143: DEVICE INSTALL CONTROL ═══════════
+ * The owner (Pray Thein) sees which devices installed the app, caps the
+ * device count, can require approval for new installs, and blocks unknown
+ * devices — More → App Devices (admin profile only).
+ * Enforcement: a startup gate + a 30-min re-check while the app runs.
+ * Offline: fail-open, except a cached 'blocked' status (fail-closed). */
+const DEV_ADMIN = 'praythein';
+function devProxyBase() {
+  return ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+}
+function devGetInfo() {
+  // Native bridge (APK): stable per-app ANDROID_ID + real model info.
+  try {
+    const B = window.RuijieBridge;
+    if (B && B.deviceInfo) {
+      const o = JSON.parse(B.deviceInfo() || '{}');
+      if (o && o.id) return {
+        id: String(o.id), model: String(o.model || ''),
+        manufacturer: String(o.manufacturer || ''), android: String(o.android || ''),
+        src: 'native',
+      };
+    }
+  } catch (e) {}
+  // Web / old APK fallback: persisted random UUID.
+  let id = null;
+  try { id = localStorage.getItem('devUuid'); } catch (e) {}
+  if (!id) {
+    id = 'web-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    try { localStorage.setItem('devUuid', id); } catch (e) {}
+  }
+  return { id, model: '', manufacturer: '', android: '', src: 'web' };
+}
+function devMyId() { return devGetInfo().id; }
+function devIsAdmin() {
+  try {
+    return String(localStorage.getItem('rv_profile_name') || '').toLowerCase().replace(/\s+/g, '') === DEV_ADMIN;
+  } catch (e) { return false; }
+}
+function devAdminProfile() {
+  try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+}
+function devLastProfile() {
+  try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+}
+async function devRegister() {
+  const info = devGetInfo();
+  const cur = updCurVersion();
+  const r = await fetch(devProxyBase() + '/api/devices/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      deviceId: info.id, model: info.model, manufacturer: info.manufacturer,
+      android: info.android, appVersion: cur.name || '', profile: devLastProfile(), src: info.src,
+    }),
+  });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  if (!j || !j.ok || !j.status) throw new Error('bad response');
+  return j.status;
+}
+function devCacheGet() {
+  try { return localStorage.getItem('devStatus') || ''; } catch (e) { return ''; }
+}
+function devCacheSet(s) {
+  try { localStorage.setItem('devStatus', s); } catch (e) {}
+}
+/* Startup gate — returns true when the app may start. */
+async function devStartupGate() {
+  const info = devGetInfo();
+  const cached = devCacheGet();
+  if (cached === 'blocked') { devShowLock(info, 'blocked'); return false; }
+  try {
+    const st = await devRegister();
+    devCacheSet(st);
+    if (st === 'blocked') { devShowLock(info, 'blocked'); return false; }
+    if (st === 'pending') { devShowLock(info, 'pending'); return false; }
+    devHideLock();
+    return true;
+  } catch (e) {
+    if (cached === 'pending') { devShowLock(info, 'pending'); return false; }
+    return true; // offline / proxy down: fail open for unknown devices
+  }
+}
+function devShowLock(info, kind) {
+  const scr = $('view-devlock');
+  if (!scr) return;
+  const title = $('devlock-title'), msg = $('devlock-msg'), idEl = $('devlock-id');
+  if (title) title.textContent = t(kind === 'blocked' ? 'dev.lockTitle' : 'dev.pendingTitle');
+  if (msg) msg.textContent = t(kind === 'blocked' ? 'dev.lockMsg' : 'dev.pendingMsg');
+  if (idEl) idEl.textContent = info.id;
+  ['view-connect', 'view-profile', 'view-profile-new', 'app'].forEach(id => {
+    const el = $(id); if (el) el.classList.add('hidden');
+  });
+  scr.classList.remove('hidden');
+}
+function devHideLock() {
+  const scr = $('view-devlock');
+  if (scr) scr.classList.add('hidden');
+}
+/* Re-check every 30 min while the app runs — a device blocked mid-session
+ * gets locked out without needing a restart. */
+let devCheckTimer = null;
+function devWatchStart() {
+  if (devCheckTimer) clearInterval(devCheckTimer);
+  devCheckTimer = setInterval(async () => {
+    try {
+      const st = await devRegister();
+      devCacheSet(st);
+      if (st === 'blocked' || st === 'pending') devShowLock(devGetInfo(), st);
+    } catch (e) {}
+  }, 30 * 60 * 1000);
+}
+/* ── Admin: More → App Devices ── */
+async function adApi(path, opts) {
+  const r = await fetch(devProxyBase() + path, opts);
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.msg) || ('http ' + r.status));
+  return j;
+}
+function adFmtDate(ts) {
+  try { return ts ? new Date(ts).toLocaleString() : '—'; } catch (e) { return '—'; }
+}
+async function moreAppDevices() {
+  S.moreFn = moreAppDevices;
+  moreShell(`${ic('lock', 'sm')} ${esc(t('m.appdevices'))}`,
+    `<div class="set-group" id="ad-cfg"></div><div class="set-group" id="ad-list"><p class="muted" style="padding:12px 16px">${esc(t('more.loading'))}</p></div>`);
+  await adRender();
+}
+async function adRender() {
+  const listBox = $('ad-list'), cfgBox = $('ad-cfg');
+  if (!listBox || !cfgBox) return;
+  let j;
+  try {
+    j = await adApi('/api/devices/list?profile=' + encodeURIComponent(devAdminProfile()));
+  } catch (e) {
+    cfgBox.innerHTML = '';
+    listBox.innerHTML = `<p class="err" style="padding:12px 16px">${esc(t('ad.loadFail'))}</p>`;
+    return;
+  }
+  const cfg = j.config || { maxDevices: 10, requireApproval: false };
+  const myId = devMyId();
+  let maxN = cfg.maxDevices;
+  cfgBox.innerHTML =
+    `<div class="set-row"><div class="t"><div class="t-main">${esc(t('ad.maxDevices'))}</div>` +
+    `<div class="sub">${esc(t('ad.maxDevicesSub'))}</div></div>` +
+    `<div class="ad-stepper"><button type="button" id="ad-max-dec">−</button><b id="ad-max-n">${maxN}</b><button type="button" id="ad-max-inc">+</button></div></div>` +
+    `<div class="set-row"><div class="t"><div class="t-main">${esc(t('ad.requireApproval'))}</div>` +
+    `<div class="sub">${esc(t('ad.requireApprovalSub'))}</div></div>` +
+    `<label class="switch"><input type="checkbox" id="ad-approval"${cfg.requireApproval ? ' checked' : ''}><span class="track"></span></label></div>`;
+  const pushCfg = async () => {
+    try {
+      await adApi('/api/devices/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: devAdminProfile(), maxDevices: maxN, requireApproval: $('ad-approval').checked }),
+      });
+    } catch (e) { toast(t('ad.saveFail'), true); adRender(); }
+  };
+  const setMax = v => { maxN = Math.min(100, Math.max(1, v)); $('ad-max-n').textContent = maxN; };
+  $('ad-max-dec').addEventListener('click', () => { setMax(maxN - 1); pushCfg(); });
+  $('ad-max-inc').addEventListener('click', () => { setMax(maxN + 1); pushCfg(); });
+  $('ad-approval').addEventListener('change', pushCfg);
+  const rows = (j.devices || []).map(d => {
+    const st = d.status || 'allowed';
+    const chipKey = st === 'blocked' ? 'ad.blocked' : st === 'pending' ? 'ad.pending' : 'ad.allowed';
+    const isMe = d.id === myId;
+    const name = [d.manufacturer, d.model].filter(Boolean).join(' ') || t('ad.unknownDevice');
+    const sub = [d.android ? 'Android ' + d.android : '', d.appVersion ? 'v' + d.appVersion : '', d.profile || '']
+      .filter(Boolean).join(' · ');
+    const actBtn = st === 'blocked'
+      ? `<button type="button" class="btn small" data-ad="allow" data-id="${esc(d.id)}">${esc(t('ad.allow'))}</button>`
+      : (st === 'pending'
+        ? `<button type="button" class="btn small primary" data-ad="allow" data-id="${esc(d.id)}">${esc(t('ad.allow'))}</button>`
+        : '') +
+        (st !== 'blocked'
+          ? `<button type="button" class="btn small danger-ghost" data-ad="block" data-id="${esc(d.id)}"${isMe ? ' disabled' : ''}>${esc(t('ad.block'))}</button>`
+          : '');
+    return `<div class="set-row"><div class="t"><div class="t-main">${esc(name)}${isMe ? ` <span class="ad-me">${esc(t('ad.thisDevice'))}</span>` : ''}</div>` +
+      (sub ? `<div class="sub">${esc(sub)}</div>` : '') +
+      `<div class="sub">${esc(t('ad.lastSeen'))}: ${esc(adFmtDate(d.lastSeen))}</div>` +
+      `<div class="sub"><span class="ad-chip ${st}">${esc(t(chipKey))}</span> <code class="ad-id">${esc(String(d.id).slice(0, 14))}…</code></div></div>` +
+      `<div class="ad-btns">${actBtn}</div></div>`;
+  }).join('');
+  listBox.innerHTML = rows || `<p class="muted" style="padding:12px 16px">${esc(t('ad.empty'))}</p>`;
+  listBox.querySelectorAll('[data-ad]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.id, act = b.dataset.ad;
+    if (act === 'block' && !(await iosConfirm(t('ad.confirmBlock'), '', t('ad.block'), t('a.cancel'), true))) return;
+    b.disabled = true;
+    try {
+      await adApi('/api/devices/set', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, status: act === 'block' ? 'blocked' : 'allowed', by: myId }),
+      });
+      toast(t('ad.saved'));
+    } catch (e) { toast(t('ad.saveFail'), true); }
+    adRender();
+  }));
+}
 function initUpdateSettings() {
   const B = updBridge();
   const card = $('upd-card');
@@ -7568,7 +7794,7 @@ function initPullToRefresh() {
 }
 
 /* ═══════════ INIT ═══════════ */
-function init() {
+async function init() {
   if (init._done) return; // guard against double script evaluation
   init._done = true;
   Tele.load(); Learn.load(); // v1.5.75: monitoring queue + usage learning
@@ -7827,6 +8053,7 @@ function init() {
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
   else if (k === 'recorder') startNetworkRecorder(); // v1.5.106: portal network recorder
+  else if (k === 'appdevices') moreAppDevices(); // v1.5.143: app install device registry (admin)
   }));
 
   $('btn-save-settings').addEventListener('click', saveSettings);
@@ -7874,13 +8101,43 @@ function init() {
   applyLang();
 
   Api.loadCfg();
+  // v1.5.143: device install control — wire the lock screen buttons once.
+  const dr = $('devlock-retry');
+  if (dr) dr.addEventListener('click', async () => {
+    dr.disabled = true;
+    try {
+      if (await devStartupGate()) {
+        if (Api.cfg && Api.cfg.appid) enterApp();
+        else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
+      }
+    } finally { dr.disabled = false; }
+  });
+  const dc = $('devlock-copy');
+  if (dc) dc.addEventListener('click', () => {
+    const idtxt = ($('devlock-id') && $('devlock-id').textContent) || '';
+    const done = () => toast(t('dev.copied'));
+    const fail = () => toast(t('dev.copyFail'), true);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(idtxt).then(done, fail);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = idtxt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { fail(); }
+      ta.remove();
+    }
+  });
   // Login stays clean: proxy has a working default and is editable in Settings.
   // Show the login proxy field only on web when no proxy is saved yet (it is required there).
   const pf = $('cfg-proxy');
   const needProxyField = !hasBridge() && !(Api.cfg && Api.cfg.proxy);
   if (pf && pf.closest('label')) pf.closest('label').style.display = needProxyField ? '' : 'none';
-  if (Api.cfg && Api.cfg.appid) enterApp();
-  else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
+  // v1.5.143: device gate runs before anything else; the 30-min watcher
+  // re-checks while the app runs.
+  devWatchStart();
+  if (await devStartupGate()) {
+    if (Api.cfg && Api.cfg.appid) enterApp();
+    else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

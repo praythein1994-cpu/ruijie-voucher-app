@@ -195,6 +195,22 @@
   </div>
 </div>
 
+<!-- ══════════ DEVICE LOCK (v1.5.143) ══════════ -->
+<div id="view-devlock" class="screen hidden">
+  <div class="connect-card">
+    <div style="display:flex;justify-content:center;margin-bottom:6px">
+      <span class="set-ico" style="--tile:#FF3B30"><svg class="ic lg"><use href="#i-lock"/></svg></span>
+    </div>
+    <h1 id="devlock-title"></h1>
+    <p class="muted" id="devlock-msg"></p>
+    <div class="devlock-idrow">
+      <code id="devlock-id"></code>
+      <button type="button" class="btn small" id="devlock-copy" aria-label="Copy"><svg class="ic sm"><use href="#i-copy"/></svg></button>
+    </div>
+    <button id="devlock-retry" class="btn primary big"><span data-i18n="dev.retry">ပြန်စစ်မယ်</span></button>
+  </div>
+</div>
+
 <!-- ══════════ MAIN APP ══════════ -->
 <div id="app" class="hidden">
   <header id="topbar">
@@ -368,6 +384,7 @@
         <button class="menu-item" data-more="history"><svg class="ic lg"><use href="#i-clock"/></svg><span data-i18n="m.history">History</span><small data-i18n="m.historySub">ဝင်ထွက်မှတ်တမ်း</small></button>
         <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
         <button class="menu-item" data-more="recorder"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.recorder">Recorder</span><small data-i18n="m.recorderSub">Portal လုပ်ဆောင်ချက်မှတ်တမ်း</small></button>
+        <button class="menu-item" data-more="appdevices" id="more-appdevices" hidden><svg class="ic lg"><use href="#i-lock"/></svg><span data-i18n="m.appdevices">App Devices</span><small data-i18n="m.appdevicesSub">သွင်းထားတဲ့ဖုန်းများ</small></button>
       </div>
       <div id="more-content"></div>
     </section>
