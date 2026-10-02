@@ -13,12 +13,12 @@ const ok = (name, cond) => results.push([name, !!cond]);
 
 // ── HTML: premium bar structure ──
 ok('bulk bar has premium class', /id="bulk-bar" class="bulk-bar premium hidden"/.test(html));
-ok('delete button is the premium bar', /id="btn-bulk-delete" class="pdel-bar" disabled/.test(html));
-ok('bar has trash icon', /pdel-ico[\s\S]{0,80}?#i-trash/.test(html));
-ok('bar has title element', /id="bulk-del-title"/.test(html));
-ok('bar keeps count element', /id="bulk-count"/.test(html));
-ok('bar has go arrow', /pdel-go[\s\S]{0,80}?#i-chev-r/.test(html));
-ok('print + cancel buttons kept', /id="btn-bulk-print"/.test(html) && /id="btn-bulk-cancel"/.test(html));
+ok('delete button is the compact pdel-mini', /id="btn-bulk-delete" class="pdel-mini" disabled/.test(html));
+ok('bar has trash icon', /pdel-mini[\s\S]{0,120}?#i-trash/.test(html));
+ok('bar has NO title element (v1.5.145 compact)', !/id="bulk-del-title"/.test(html));
+ok('bar keeps count badge', /id="bulk-count"/.test(html));
+ok('bar has NO go arrow (v1.5.145 compact)', !/pdel-go/.test(html));
+ok('print kept, cancel removed (v1.5.145: single cancel in top row)', /id="btn-bulk-print"/.test(html) && !/id="btn-bulk-cancel"/.test(html));
 
 // ── Selection: whole row highlights ──
 ok('row tap toggles sel class',

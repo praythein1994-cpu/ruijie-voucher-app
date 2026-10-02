@@ -40,7 +40,8 @@ ok('upgradeDevice requires SSO',
 const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
 ok('app has upgradeDeviceFlow', /function upgradeDeviceFlow\(/.test(app));
 ok('app has pickUpgradeVersion', /function pickUpgradeVersion\(/.test(app));
-ok('device row has data-upgrade button', /data-upgrade=/.test(app));
+ok('device rows have NO data-upgrade button (v1.5.145: moved to dedicated Firmware screen)', !/data-upgrade=/.test(app));
+ok('dedicated firmware screen exists', /async function moreFirmware\(\)/.test(app));
 ok('i18n md.upgrade defined', /'md\.upgrade':/.test(app));
 ok('i18n md.upConfirm defined', /'md\.upConfirm':/.test(app));
 

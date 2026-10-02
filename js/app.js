@@ -493,6 +493,21 @@ const I18N = {
   'm.usergroupsSub': { my: 'အုပ်စုများ', en: 'Groups' },
   'm.devices': { my: 'Devices', en: 'Devices' },
   'm.devicesSub': { my: 'စက်များ', en: 'Devices' },
+  'm.firmware': { my: 'Firmware update', en: 'Firmware update' },
+  'm.firmwareSub': { my: 'စက်အပ်ဒိတ်များ', en: 'Device firmware' },
+  'fw.title': { my: 'Firmware update', en: 'Firmware update' },
+  'fw.checking': { my: 'အပ်ဒိတ်စစ်နေပါတယ်…', en: 'Checking for firmware…' },
+  'fw.none': { my: 'စက်မရှိပါ', en: 'No devices' },
+  'fw.upToDate': { my: 'နောက်ဆုံးဗားရှင်းပါ', en: 'Up to date' },
+  'fw.cur': { my: 'လက်ရှိ', en: 'Current' },
+  'fw.new': { my: 'အသစ်', en: 'New' },
+  'fw.update': { my: 'တင်မယ်', en: 'Update' },
+  'fw.sending': { my: 'ခိုင်းနေပါတယ်…', en: 'Sending…' },
+  'fw.updating': { my: 'တင်နေပါတယ်…', en: 'Updating…' },
+  'fw.rebooting': { my: 'စက်ပြန်တက်နေပါတယ်…', en: 'Rebooting…' },
+  'fw.done': { my: 'ပြီးပါပြီ ✓', en: 'Done ✓' },
+  'fw.needSso': { my: 'Ruijie အကောင့် login လိုပါတယ်', en: 'Ruijie login required' },
+  'fw.confirm': { my: '{name} ကို {ver} တင်မှာလား? စက်ခနရပ်မည်။', en: 'Update {name} to {ver}? Device will restart.' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
   'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
@@ -540,6 +555,12 @@ const I18N = {
   'mh.title': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Client History' },
   'mh.empty': { my: 'မှတ်တမ်းမရှိပါ', en: 'No history' },
   'mh.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
+  'mh.shared': { my: 'မျှသုံးနေနိုင်', en: 'Possibly shared' },
+  'mh.susp': { my: 'သံသယရှိ', en: 'Suspicious' },
+  'mh.rotation': { my: 'MAC ချိန်းထားတာ', en: 'MAC rotated' },
+  'mh.reason': { my: 'ပြုတ်ရတဲ့အကြောင်း', en: 'Logout reason' },
+  'mh.online': { my: 'အခုသုံးနေဆဲ', en: 'Still online' },
+  'mh.grpSub': { my: '{n} ကြိမ် · စက် {m} လုံး', en: '{n} sessions · {m} devices' },
   'm.clientsSub': { my: 'ချိတ်ထားသူများ', en: 'Connected' },
   'm.networks': { my: 'Networks', en: 'Networks' },
   'm.networksSub': { my: 'ကွန်ရက်များ', en: 'Networks' },
@@ -2352,13 +2373,18 @@ function bulkSelectedUuids() {
 }
 function updateBulkCount() {
   const n = bulkSelectedUuids().length;
-  $('bulk-count').textContent = tx('v.selected', { n });
-  const dt = $('bulk-del-title'); // v1.5.141: premium bar title
+  const bc = $('bulk-count');
+  if (bc) bc.textContent = n; // v1.5.145: compact badge shows the count only
+  const dt = $('bulk-del-title'); // v1.5.141: premium bar title (tablet layout only)
   if (dt) dt.textContent = n ? tx('v.delN', { n }) : t('v.bulkDelete');
   const bar = $('btn-bulk-delete');
-  if (bar) bar.classList.remove('done');
-  $('btn-bulk-print').disabled = !n;
-  $('btn-bulk-delete').disabled = !n;
+  if (bar) {
+    bar.classList.remove('done');
+    bar.setAttribute('aria-label', n ? tx('v.delN', { n }) : t('v.bulkDelete'));
+  }
+  const pb = $('btn-bulk-print');
+  if (pb) pb.disabled = !n;
+  if (bar) bar.disabled = !n;
 }
 async function bulkPrint() {
   const uuids = bulkSelectedUuids();
@@ -4062,7 +4088,7 @@ async function moreUserGroups() {
       <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th><th></th></tr>
       ${S.packages.map((p, i) => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
         <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td>
-        <td><button class="btn danger sm" data-mgdel="${i}">${t('mg.del')}</button></td></tr>`).join('')}
+        <td><button class="btn danger sm mg-delbtn" data-mgdel="${i}" aria-label="${esc(t('mg.del'))}">${ic('trash', 'sm')}<span class="btn-t">${t('mg.del')}</span></button></td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('mg.none')}</p>`;
     $('mg-list').querySelectorAll('[data-mgdel]').forEach(b => b.addEventListener('click', () => {
       deleteUserGroup(S.packages[Number(b.dataset.mgdel)]);
@@ -4358,9 +4384,8 @@ async function moreDevices() {
           // v1.5.78: local reboot wire format verified (devSta.set devReboot) —
           // local rows get the reboot button too (gateway bridge, APK).
           const rb = sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}" data-local="${d.local ? '1' : ''}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
-          // v1.5.131: firmware upgrade — Cloud operation only (needs SSO),
-          // so local gateway rows don't get it.
-          const up = (sn && !d.local) ? `<button class="btn" data-upgrade="${esc(sn)}" data-name="${esc(nm)}">${ic('up', 'sm')}<span>${t('md.upgrade')}</span></button>` : '';
+          // v1.5.145: firmware upgrade moved to More → Firmware update
+          // (dedicated screen); device rows keep Reboot only.
           // v1.5.22: per-AP client count badge → tap opens that AP's client list.
           // v1.5.24: WR (home router, e.g. EW3200GX-PRO in AP mode) counts too.
           // v1.5.29: gateway-local APs (incl. China-version APs invisible to
@@ -4390,11 +4415,10 @@ async function moreDevices() {
           })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
-          <td>${rb}${up}${cb}</td></tr>`;
+          <td>${rb}${cb}</td></tr>`;
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name, b.dataset.local === '1')));
-    document.querySelectorAll('#md-list [data-upgrade]').forEach(b => b.addEventListener('click', () => upgradeDeviceFlow(b.dataset.upgrade, b.dataset.name)));
     document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames, b.dataset.aplocal === '1')));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
@@ -4503,6 +4527,128 @@ function pickUpgradeVersion(name, cur, opts, info) {
   });
 }
 
+/* ── Firmware update · dedicated More screen (v1.5.145) ──
+ * Moved out of the Devices rows per user request. Per-device rows show
+ * current vs available firmware; tapping Update reuses the verified
+ * upgradeDeviceFlow trigger. Progress is HONEST: the portal API reports
+ * no live percentage, so the row shows real observed stages
+ * (sending → updating → rebooting → done) with an indeterminate
+ * animation — never a fake 1–100% bar. Completion is confirmed by
+ * re-checking /upgrade/condition/check for the new version. */
+async function moreFirmware() {
+  S.moreFn = moreFirmware;
+  moreShell(`${ic('up', 'sm')} ${esc(t('fw.title'))}`, `<div id="fw-list"><p class="muted">${t('more.loading')}</p></div>`);
+  if (!Api.ssoLoggedIn()) {
+    $('fw-list').innerHTML = `<p class="err">${esc(t('fw.needSso'))}</p>`;
+    return;
+  }
+  $('fw-list').innerHTML = `<p class="muted">${esc(t('fw.checking'))}</p>`;
+  try {
+    const gid = Number(S.projectId) || 0;
+    if (!gid) throw new Error(t('fw.needSso'));
+    const [devRes, infos] = await Promise.all([
+      Api.deviceListSso(gid, '', 1, 100).catch(() => null),
+      Api.upgradeConditionCheck(gid),
+    ]);
+    const devs = (devRes && (devRes.list || devRes.data || devRes)) || [];
+    const infoBySn = new Map();
+    for (const info of infos || []) {
+      for (const sn of String(info.deviceSns || '').split(',')) {
+        const k = sn.trim();
+        if (k) infoBySn.set(k, info);
+      }
+    }
+    const rows = (Array.isArray(devs) ? devs : []).map(d => {
+      const sn = String(d.serialNumber || d.sn || '');
+      if (!sn) return null;
+      const info = infoBySn.get(sn) || null;
+      const cur = info ? (info.deviceSoftware || info.softwareVersion || '') : '';
+      const rec = info ? (info.real_recommendSoftware || info.recommendSoftware || '') : '';
+      const newest = info ? (info.real_newestSoftwareVersion || info.newestSoftwareVersion || '') : '';
+      const avail = (rec && rec !== cur) ? { ver: rec, fid: info.firmwareId || null }
+        : (newest && newest !== cur && newest !== rec) ? { ver: newest, fid: info.newestFirmwareId || null } : null;
+      return {
+        sn,
+        name: d.aliasName || d.alias || d.deviceAliasName || d.name || sn,
+        model: d.productClass || d.model || d.productModel || '',
+        cur, avail,
+        fid: avail ? avail.fid : null,
+      };
+    }).filter(Boolean);
+    S._fwRows = rows;
+    if (!S._fwState) S._fwState = {};
+    if (!rows.length) { $('fw-list').innerHTML = `<p class="muted">${esc(t('fw.none'))}</p>`; return; }
+    renderFwRows();
+  } catch (e) {
+    $('fw-list').innerHTML = `<p class="err">${esc(e.message || String(e))}</p>`;
+  }
+}
+function renderFwRows() {
+  const el = $('fw-list');
+  if (!el) return;
+  const rows = S._fwRows || [];
+  el.innerHTML = `<div class="list">` + rows.map((x, i) => {
+    const st = (S._fwState || {})[x.sn] || { stage: 'idle' };
+    const stageHtml =
+      st.stage === 'sending' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.sending'))}</div>`
+      : st.stage === 'updating' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.updating'))}</div>`
+      : st.stage === 'rebooting' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.rebooting'))}</div>`
+      : st.stage === 'done' ? `<div class="pkg" style="color:var(--green);font-weight:600">${esc(t('fw.done'))}</div>`
+      : st.stage === 'error' ? `<div class="pkg" style="color:var(--red)">${esc(st.err || t('md.upFail'))}</div>`
+      : '';
+    const verLine = x.cur
+      ? `${esc(t('fw.cur'))}: <b>${esc(x.cur)}</b>` + (x.avail ? ` → <b style="color:var(--blue)">${esc(x.avail.ver)}</b>` : ` · <span class="muted">${esc(t('fw.upToDate'))}</span>`)
+      : `<span class="muted">—</span>`;
+    const btn = (st.stage === 'idle' || st.stage === 'error') && x.avail
+      ? `<button class="btn sm primary" data-fwup="${i}">${ic('up', 'sm')}<span>${esc(t('fw.update'))}</span></button>` : '';
+    return `<div class="voucher-row fw-row"><span class="status-dot s2"></span>
+      <div class="voucher-meta"><div class="voucher-code" style="font-size:15px">${esc(x.name)}</div>
+      <div class="pkg muted small">${esc(x.sn)}${x.model ? ' · ' + esc(x.model) : ''}</div>
+      <div class="pkg" style="font-size:13px">${verLine}</div>${stageHtml}</div>
+      <div class="fw-actions">${btn}</div></div>`;
+  }).join('') + `</div>`;
+  el.querySelectorAll('[data-fwup]').forEach(b =>
+    b.addEventListener('click', () => fwStartUpgrade(Number(b.dataset.fwup))));
+}
+/* Trigger + honest stage tracking for one device. */
+async function fwStartUpgrade(idx) {
+  const x = (S._fwRows || [])[idx];
+  if (!x || !x.avail) return;
+  if (!(await iosConfirm(tx('fw.confirm', { name: x.name, ver: x.avail.ver }), '', t('fw.update'), t('a.cancel'), true))) return;
+  const gid = Number(S.projectId) || 0;
+  const st = S._fwState[x.sn] = { stage: 'sending' };
+  renderFwRows();
+  try {
+    await Api.upgradeDevice({ snList: [x.sn], targetVersion: x.avail.ver, firmwareId: x.fid, groupId: gid, retryTimes: 3 });
+  } catch (e) {
+    st.stage = 'error'; st.err = e.message || String(e);
+    renderFwRows();
+    return;
+  }
+  st.stage = 'updating';
+  renderFwRows();
+  // Poll for real completion: the device's reported version becomes the target.
+  // Offline (no info) mid-upgrade → rebooting stage. 20 min cap, 45 s interval.
+  const deadline = Date.now() + 20 * 60 * 1000;
+  for (;;) {
+    await new Promise(r => setTimeout(r, 45000));
+    if (Date.now() > deadline) break;
+    try {
+      const infos = await Api.upgradeConditionCheck(gid);
+      const info = (infos || []).find(y =>
+        String(y.deviceSns || '').split(',').some(s => s.trim() === x.sn));
+      if (!info) { st.stage = 'rebooting'; }
+      else {
+        const cur = info.deviceSoftware || info.softwareVersion || '';
+        if (cur && cur === x.avail.ver) { st.stage = 'done'; break; }
+        st.stage = st.stage === 'rebooting' ? 'updating' : st.stage;
+      }
+    } catch (e) { /* keep polling on transient errors */ }
+    renderFwRows();
+  }
+  renderFwRows();
+}
+
 /* ── Flow Table traffic view (More → Traffic) · v1.5.78 ──
    Read-only, gateway-local (APK only). Manual refresh ONLY — one poll is
    ~166 kB on the EG105G-V3. Combined view: per-client up/down totals,
@@ -4549,9 +4695,9 @@ async function loadSsids() {
         <div class="ssid-info"><div class="ssid-name">${nm}${hid}</div>
         <div class="muted small">${sub}</div></div>
         <div class="ssid-actions">
-        <button class="btn sm" data-ssidrename="${esc(s.ssidName || '')}">${t('wifi.rename')}</button>
-        <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}">${t('wifi.changePw')}</button>
-        <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}">${t('wifi.delete')}</button>
+        <button class="btn sm" data-ssidrename="${esc(s.ssidName || '')}" aria-label="${esc(t('wifi.rename'))}">${ic('pencil', 'sm')}<span class="btn-t">${t('wifi.rename')}</span></button>
+        <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}" aria-label="${esc(t('wifi.changePw'))}">${ic('lock', 'sm')}<span class="btn-t">${t('wifi.changePw')}</span></button>
+        <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}" aria-label="${esc(t('wifi.delete'))}">${ic('trash', 'sm')}<span class="btn-t">${t('wifi.delete')}</span></button>
         </div>
       </div>`;
     }).join('');
@@ -6533,6 +6679,67 @@ async function moreClients() {
 /* ═══════════ v1.5.54: client auth history ═══════════
    Uses the verified /samTransfer/userauthlogs/bypage endpoint (portal SSO).
    Shows recent login/logout records: voucher account, MAC, login/logout time. */
+/* ── v1.5.145: Client History grouped by voucher ──
+ * One row per voucher code; tap for that voucher's full session list.
+ * Sharing estimate per voucher from MAC + IP + time overlap:
+ *   shared     — 2+ MACs with overlapping sessions (strong signal)
+ *   suspicious — 2+ MACs, no overlap, different IPs (ambiguous)
+ *   rotation   — 2+ MACs but same IP (likely one device, MAC randomized)
+ *   none       — single MAC
+ * Pure helpers (groupHistoryByVoucher, historyShareFlag, mapLogoutReason)
+ * are unit-testable; mapLogoutReason matches keywords and NEVER hides
+ * the raw portal value (unknown reasons fall back to raw). */
+function groupHistoryByVoucher(records) {
+  const map = new Map();
+  for (const r of records || []) {
+    const acct = String((r && r.account) || '—');
+    if (!map.has(acct)) map.set(acct, { account: acct, sessions: [] });
+    map.get(acct).sessions.push(r);
+  }
+  const groups = [...map.values()];
+  for (const g of groups) {
+    g.sessions.sort((a, b) => Number(b.loginTimes || 0) - Number(a.loginTimes || 0));
+    g.macs = [...new Set(g.sessions.map(s => normMac(s.userMac)).filter(Boolean))];
+    g.lastSeen = g.sessions.reduce((m, s) => Math.max(m, Number(s.loginTimes || 0)), 0);
+    g.flag = historyShareFlag(g.sessions);
+  }
+  groups.sort((a, b) => b.lastSeen - a.lastSeen);
+  return groups;
+}
+function historyShareFlag(sessions) {
+  const macs = [...new Set(sessions.map(s => normMac(s.userMac)).filter(Boolean))];
+  if (macs.length < 2) return 'none';
+  const ivs = sessions.map(s => ({
+    mac: normMac(s.userMac),
+    start: Number(s.loginTimes || 0),
+    end: Number(s.logoutTimes || 0) || Date.now(),
+  })).filter(x => x.mac && x.start > 0);
+  for (let i = 0; i < ivs.length; i++) {
+    for (let j = i + 1; j < ivs.length; j++) {
+      if (ivs[i].mac === ivs[j].mac) continue;
+      if (ivs[i].start < ivs[j].end && ivs[j].start < ivs[i].end) return 'shared';
+    }
+  }
+  const ips = [...new Set(sessions.map(s => String(s.userIp || '').trim()).filter(Boolean))];
+  if (ips.length <= 1) return 'rotation';
+  return 'suspicious';
+}
+/* Keyword map of portal logout reasons → Burmese/English.
+ * The portal's exact vocabulary was never captured, so this matches
+ * keywords case-insensitively; anything unknown returns the RAW value. */
+function mapLogoutReason(raw) {
+  const r = String(raw || '').trim();
+  if (!r) return '—';
+  const k = r.toLowerCase();
+  const my = LANG !== 'en';
+  if (/(kick|admin|manual|force)/.test(k)) return my ? 'ဖြုတ်ချခံရတာ' : 'Kicked by admin';
+  if (/idle/.test(k)) return my ? 'မသုံးပဲကြာလို့ ပြုတ်သွားတာ' : 'Idle timeout';
+  if (/(quota|flow|data|traffic|limit|usage)/.test(k)) return my ? 'Data ကုန်လို့ ပြုတ်သွားတာ' : 'Quota used up';
+  if (/(timeout|expire|session|lease)/.test(k)) return my ? 'အချိန်ကုန်လို့ ပြုတ်သွားတာ' : 'Session timeout';
+  if (/re-?auth/.test(k)) return my ? 'ပြန်ဝင်ခိုင်းလို့ ပြုတ်သွားတာ' : 'Re-authentication';
+  if (/(nas|disconnect|network|ap |roam)/.test(k)) return my ? 'လိုင်းပြတ်သွားတာ' : 'Connection lost';
+  return r;
+}
 async function moreHistory() {
   S.moreFn = moreHistory;
   moreShell(`${ic('clock', 'sm')} ${esc(t('mh.title'))}`, `<div id="mh-list"><p class="muted">${t('more.loading')}</p></div>`);
@@ -6542,27 +6749,61 @@ async function moreHistory() {
   }
   try {
     const list = await Api.portalAuthLogs(Number(S.projectId)) || [];
-    if (!list.length) {
-      $('mh-list').innerHTML = `<p class="muted">${esc(t('mh.empty'))}</p>`;
-      return;
-    }
-    // Newest first by login time
-    list.sort((a, b) => Number(b.loginTimes || 0) - Number(a.loginTimes || 0));
-    $('mh-list').innerHTML =
-      `<p class="muted small">${list.length} records${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(Date.now())) : ''}</p>` +
-      `<div class="list">` + list.slice(0, 100).map(r => {
-        const acct = esc(r.account || '—');
-        const mac = esc(r.userMac || '');
-        const login = fmtDate(r.loginTimes);
-        const logout = r.logoutTimes ? fmtDate(r.logoutTimes) : '—';
-        const reason = r.logoutReason ? ` <small class="muted">· ${esc(r.logoutReason)}</small>` : '';
-        return `<div class="voucher-row"><span class="status-dot s2"></span>
-          <div class="voucher-meta"><div class="voucher-code">${acct}</div>
-          <div class="pkg">${mac} · ${esc(login)} → ${esc(logout)}${reason}</div></div></div>`;
-      }).join('') + `</div>`;
+    S._histGroups = groupHistoryByVoucher(list);
+    S._histTotal = list.length;
+    renderHistoryGroups();
   } catch (e) {
     $('mh-list').innerHTML = `<p class="err">${esc(e.message || String(e))}</p>`;
   }
+}
+function renderHistoryGroups() {
+  const groups = S._histGroups || [];
+  if (!groups.length) {
+    $('mh-list').innerHTML = `<p class="muted">${esc(t('mh.empty'))}</p>`;
+    return;
+  }
+  $('mh-list').innerHTML =
+    `<p class="muted small">${groups.length} vouchers · ${S._histTotal || ''} records</p>` +
+    `<div class="list">` + groups.map((g, i) => {
+      const flag = g.flag === 'shared'
+        ? `<span class="mh-flag bad">🔴 ${esc(t('mh.shared'))}</span>`
+        : g.flag === 'suspicious'
+          ? `<span class="mh-flag warn">🟡 ${esc(t('mh.susp'))}</span>`
+          : g.flag === 'rotation'
+            ? `<span class="mh-flag ok">🟢 ${esc(t('mh.rotation'))}</span>` : '';
+      return `<div class="voucher-row mh-group" data-mhg="${i}" role="button" tabindex="0">
+        <span class="status-dot s2"></span>
+        <div class="voucher-meta"><div class="voucher-code">${esc(g.account)}</div>
+        <div class="pkg">${esc(tx('mh.grpSub', { n: g.sessions.length, m: g.macs.length }))} · ${esc(fmtDate(g.lastSeen))}</div></div>
+        ${flag}<span class="chev">›</span></div>`;
+    }).join('') + `</div>`;
+  $('mh-list').querySelectorAll('[data-mhg]').forEach(el => {
+    const open = () => openHistoryDetail(Number(el.dataset.mhg));
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+  });
+}
+/* Per-voucher session detail (drill-down; system back walks moreStack). */
+function openHistoryDetail(idx) {
+  const g = (S._histGroups || [])[idx];
+  if (!g) return;
+  S.moreFn = () => openHistoryDetail(idx);
+  moreShell(`${ic('ticket', 'sm')} ${esc(g.account)}`,
+    `<p class="muted small">${esc(tx('mh.grpSub', { n: g.sessions.length, m: g.macs.length }))}</p>` +
+    `<div class="list">` + g.sessions.map(s => {
+      const mac = esc(s.userMac || '—');
+      const ip = esc(s.userIp || '—');
+      const login = esc(fmtDate(s.loginTimes));
+      const logout = s.logoutTimes ? esc(fmtDate(s.logoutTimes)) : esc(t('mh.online'));
+      const mapped = mapLogoutReason(s.logoutReason);
+      const reason = esc(mapped);
+      const raw = (s.logoutReason && mapped !== String(s.logoutReason).trim())
+        ? ` <small class="muted">(${esc(String(s.logoutReason))})</small>` : '';
+      return `<div class="voucher-row"><span class="status-dot s2"></span>
+        <div class="voucher-meta"><div class="voucher-code" style="font-size:14px">${mac}</div>
+        <div class="pkg">${ip} · ${login} → ${logout}</div>
+        <div class="pkg">${esc(t('mh.reason'))}: ${reason}${raw}</div></div></div>`;
+    }).join('') + `</div>`);
 }
 
 /* v1.5.67: Online Clients search — voucher code, IP, or MAC. A MAC typed
@@ -8172,7 +8413,6 @@ async function init() {
   $('btn-bulk-select').addEventListener('click', toggleBulkMode);
   $('btn-bulk-print').addEventListener('click', bulkPrint);
   $('btn-bulk-delete').addEventListener('click', bulkDelete);
-  $('btn-bulk-cancel').addEventListener('click', toggleBulkMode);
   // v1.5.101: voucher More menu (Delete Expired Vouchers, Reset)
   $('btn-voucher-more').addEventListener('click', e => { e.stopPropagation(); toggleVoucherMore(); });
   document.addEventListener('click', e => {
@@ -8314,6 +8554,7 @@ async function init() {
     if (k === 'accounts') moreAccounts();
     else if (k === 'usergroups') moreUserGroups();
     else if (k === 'devices') moreDevices();
+    else if (k === 'firmware') moreFirmware(); // v1.5.145: dedicated firmware screen
     else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
