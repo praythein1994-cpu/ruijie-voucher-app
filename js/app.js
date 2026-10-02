@@ -479,7 +479,10 @@ const I18N = {
   'p.btNoDevices': { my: 'စက်မတွေ့သေးပါ — Scan နှိပ်ပါ', en: 'No devices yet — tap Scan' },
   'p.btNeedApk': { my: 'ဘလူးတုသ်ပရင့်က Android app သီးသန့်ပါ', en: 'Bluetooth printing is Android-app only' },
   'p.btNoQueue': { my: 'Print Queue ထဲမှာ voucher မရှိသေးပါ', en: 'Print Queue is empty' },
-  'p.btAuto': { my: 'နောက်ဆုံးသုံးခဲ့တဲ့ပရင်တာကို အော်တိုချိတ်မယ်', en: 'Auto-connect last printer' },
+  'p.btAuto': { my: 'Default ပရင်တာကို အော်တိုချိတ်မယ်', en: 'Auto-connect default printer' },
+  'p.btSetDefault': { my: 'Default လုပ်မယ်', en: 'Set as Default' },
+  'p.btDefaultSaved': { my: 'Default ပရင်တာ မှတ်ပြီးပြီ', en: 'Default printer saved' },
+  'p.btDefaultCleared': { my: 'Default ပရင်တာ ဖျက်ပြီးပြီ', en: 'Default printer cleared' },
   'p.btAutoTrying': { my: 'အော်တိုချိတ်နေတယ်…', en: 'Auto-connecting…' },
   'm.title': { my: 'နောက်ထပ်', en: 'More' },
   'm.accounts': { my: 'Auth Accounts', en: 'Auth Accounts' },
@@ -2921,13 +2924,23 @@ function btRefresh() {
   // devices
   let devs = [];
   try { devs = JSON.parse(B.btDevices() || '[]'); } catch (e) {}
-  devEl.innerHTML = devs.length ? devs.map((d, i) =>
-    `<button class="bt-dev" data-i="${i}"><span class="bt-dev-name">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}</span><span class="bt-dev-mac">${esc(d.address)}</span></button>`
-  ).join('') : `<p class="muted">${t('p.btNoDevices')}</p>`;
-  devEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const d = devs[Number(b.dataset.i)];
+  const defAddr = state.defaultPrinterAddress || null;
+  devEl.innerHTML = devs.length ? devs.map((d, i) => {
+    const isDef = !!(defAddr && d.address === defAddr);
+    return `<div class="bt-dev-row"><button class="bt-dev" data-connect="${i}"><span class="bt-dev-name">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}${isDef ? ' ★' : ''}</span><span class="bt-dev-mac">${esc(d.address)}</span></button>` +
+      `<button class="bt-dev-star${isDef ? ' on' : ''}" data-default="${i}" title="${esc(t('p.btSetDefault'))}">★</button></div>`;
+  }).join('') : `<p class="muted">${t('p.btNoDevices')}</p>`;
+  devEl.querySelectorAll('[data-connect]').forEach(b => b.addEventListener('click', () => {
+    const d = devs[Number(b.dataset.connect)];
     btCall(B2 => B2.btConnect(d.address));
     setTimeout(btRefresh, 800);
+  }));
+  devEl.querySelectorAll('[data-default]').forEach(b => b.addEventListener('click', () => {
+    const d = devs[Number(b.dataset.default)];
+    const isDef = !!(defAddr && d.address === defAddr);
+    btCall(B2 => isDef ? B2.btClearDefault() : B2.btSetDefault(d.address));
+    toast(t(isDef ? 'p.btDefaultCleared' : 'p.btDefaultSaved'));
+    setTimeout(btRefresh, 600);
   }));
   // progress + last result
   try {

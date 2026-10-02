@@ -41,6 +41,8 @@ public class BluetoothPrinterManager {
     private static final String PREFS_NAME = "printer_v1_device_prefs";
     private static final String KEY_LAST_DEVICE_ADDRESS = "key_last_device_address";
     private static final String KEY_LAST_DEVICE_NAME = "key_last_device_name";
+    private static final String KEY_DEFAULT_DEVICE_ADDRESS = "key_default_device_address";
+    private static final String KEY_DEFAULT_DEVICE_NAME = "key_default_device_name";
     private static final String KEY_AUTO_RECONNECT = "key_auto_reconnect";
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -241,7 +243,7 @@ public class BluetoothPrinterManager {
                     if (!exists) discoveredDevices.add(new DiscoveredPrinter(name, address, paired));
                     // Event-driven auto-detect: the default printer showed up
                     // in discovery — connect now instead of waiting out backoff.
-                    String lastAddr = getLastPrinterAddress();
+                    String lastAddr = getAutoConnectAddress();
                     if (lastAddr != null && lastAddr.equals(address)) {
                         Log.i(TAG, "Default printer discovered — connecting now");
                         onPrinterAvailableHint();
@@ -286,7 +288,7 @@ public class BluetoothPrinterManager {
                 }
             } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
                 BluetoothDevice device = intentDevice(intent);
-                String lastAddr = getLastPrinterAddress();
+                String lastAddr = getAutoConnectAddress();
                 if (device != null && lastAddr != null && lastAddr.equals(device.getAddress())) {
                     // Our default printer reached ACL level (e.g. powered on
                     // while bonded) — grab the SPP connection immediately.
@@ -391,7 +393,7 @@ public class BluetoothPrinterManager {
     /** Auto-connect to the last used printer (stored MAC, no scan).
      *  No-op when already connected/connecting or when no printer was saved. */
     public void autoConnectAsync() {
-        String addr = getLastPrinterAddress();
+        String addr = getAutoConnectAddress();
         if (addr == null || addr.isEmpty()) return;
         String s = connState;
         if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) return;
@@ -548,7 +550,7 @@ public class BluetoothPrinterManager {
      * range). Skipped when the user disconnected explicitly or auto-reconnect is off. */
     private void maybeScheduleReconnect() {
         if (suppressReconnect || userInitiatedDisconnect || !autoReconnectEnabled) return;
-        String addr = getLastPrinterAddress();
+        String addr = getAutoConnectAddress();
         if (addr == null || addr.isEmpty()) return;
         Thread cur = reconnectThread;
         if (cur != null && cur.isAlive() && cur != Thread.currentThread()) return;
@@ -602,7 +604,7 @@ public class BluetoothPrinterManager {
         if (userInitiatedDisconnect || !autoReconnectEnabled) return;
         String s = connState;
         if (STATE_CONNECTED.equals(s) || STATE_CONNECTING.equals(s)) return;
-        String addr = getLastPrinterAddress();
+        String addr = getAutoConnectAddress();
         if (addr == null || addr.isEmpty()) return;
         if (!isBluetoothEnabled()) return;
         Thread t = reconnectThread;
@@ -719,6 +721,29 @@ public class BluetoothPrinterManager {
 
     public String getLastPrinterName() { return prefs.getString(KEY_LAST_DEVICE_NAME, null); }
     public String getLastPrinterAddress() { return prefs.getString(KEY_LAST_DEVICE_ADDRESS, null); }
+
+    /** Explicitly chosen default printer (user tapped "Set as Default"). */
+    public void setDefaultPrinter(String address, String name) {
+        prefs.edit()
+                .putString(KEY_DEFAULT_DEVICE_ADDRESS, address)
+                .putString(KEY_DEFAULT_DEVICE_NAME, name)
+                .apply();
+        Log.i(TAG, "Default printer set: " + name + " (" + address + ")");
+    }
+    public void clearDefaultPrinter() {
+        prefs.edit()
+                .remove(KEY_DEFAULT_DEVICE_ADDRESS)
+                .remove(KEY_DEFAULT_DEVICE_NAME)
+                .apply();
+        Log.i(TAG, "Default printer cleared");
+    }
+    public String getDefaultPrinterAddress() { return prefs.getString(KEY_DEFAULT_DEVICE_ADDRESS, null); }
+    public String getDefaultPrinterName() { return prefs.getString(KEY_DEFAULT_DEVICE_NAME, null); }
+    /** Auto-connect identity: explicit default if set, else the last-used printer. */
+    public String getAutoConnectAddress() {
+        String d = getDefaultPrinterAddress();
+        return (d != null && !d.isEmpty()) ? d : getLastPrinterAddress();
+    }
 
     // ── Printing ─────────────────────────────────────────────────────
 

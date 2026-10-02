@@ -981,6 +981,15 @@ html[data-layout="tablet"] .codetype-grid { gap: 12px; }
 .bt-dev:active { opacity: .6; }
 .bt-dev-name { font-weight: 600; font-size: 16px; }
 .bt-dev-mac { font-size: 13px; color: var(--gray); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* v1.5.131 — default-printer star button beside each device */
+.bt-dev-row { display: flex; gap: 8px; align-items: stretch; }
+.bt-dev-row .bt-dev { flex: 1; }
+.bt-dev-star {
+  border: none; border-radius: 12px; background: var(--fill-bg); color: var(--gray);
+  font-size: 20px; padding: 0 14px; cursor: pointer; font-family: inherit;
+}
+.bt-dev-star.on { color: #ff9f0a; }
+.bt-dev-star:active { opacity: .6; }
 
 /* ═══════════ v1.5.12 — live ticking indicator in voucher detail ═══════════ */
 .live-dot {

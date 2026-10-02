@@ -273,6 +273,8 @@ public class RuijieBridge {
             o.put("enabled", m.isBluetoothEnabled());
             o.put("lastPrinterName", m.getLastPrinterName());
             o.put("lastPrinterAddress", m.getLastPrinterAddress());
+            o.put("defaultPrinterName", m.getDefaultPrinterName());
+            o.put("defaultPrinterAddress", m.getDefaultPrinterAddress());
             return o.toString();
         } catch (Exception e) {
             return btErr(e.getMessage());
@@ -328,7 +330,8 @@ public class RuijieBridge {
     }
 
     /**
-     * Auto-connect to the last used printer (stored MAC, no scan).
+     * Auto-connect to the default printer (explicit default if set, else the
+     * last used printer — stored MAC, no scan).
      * Async — poll btState() for CONNECTED.
      */
     @JavascriptInterface
@@ -344,6 +347,41 @@ public class RuijieBridge {
             o.put("ok", true);
             o.put("address", addr);
             o.put("name", m.getLastPrinterName());
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Set the default printer (auto-detect / auto-connect target). */
+    @JavascriptInterface
+    public String btSetDefault(String address) {
+        try {
+            if (address == null || address.trim().isEmpty()) return btErr("No device address");
+            String addr = address.trim();
+            String name = null;
+            for (BluetoothPrinterManager.DiscoveredPrinter d : bt().getDiscoveredDevices()) {
+                if (addr.equals(d.address)) { name = d.name; break; }
+            }
+            if (name == null) name = bt().getLastPrinterName();
+            bt().setDefaultPrinter(addr, name);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            o.put("address", addr);
+            o.put("name", name);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /** Clear the default printer (falls back to last-used printer). */
+    @JavascriptInterface
+    public String btClearDefault() {
+        try {
+            bt().clearDefaultPrinter();
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
             return o.toString();
         } catch (Exception e) {
             return btErr(e.getMessage());
