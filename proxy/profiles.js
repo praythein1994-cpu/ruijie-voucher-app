@@ -100,14 +100,23 @@ function normalizeStore(data) {
       if (key && sp && sp.name) profiles[key] = sp;
     }
   }
-  return { profiles };
+  const settings = {};
+  if (data && typeof data === 'object' && data.settings && typeof data.settings === 'object') {
+    for (const k of Object.keys(data.settings)) {
+      const key = normName(k);
+      const e = data.settings[k];
+      if (key && e && typeof e === 'object' && e.settings && typeof e.settings === 'object') {
+        settings[key] = { settings: e.settings, updatedAt: Number(e.updatedAt) || 0 };
+      }
+    }
+  }
+  return { profiles, settings };
 }
 
 /** Merge: disk wins over github (writes always hit disk first, so it is fresher). */
 function mergeStores(diskStore, githubStore) {
-  const disk = normalizeStore(diskStore).profiles;
-  const gh = normalizeStore(githubStore).profiles;
-  return { profiles: { ...gh, ...disk } };
+  const d = normalizeStore(diskStore), g = normalizeStore(githubStore);
+  return { profiles: { ...g.profiles, ...d.profiles }, settings: { ...g.settings, ...d.settings } };
 }
 
 module.exports = {

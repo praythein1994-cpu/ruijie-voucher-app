@@ -1467,6 +1467,20 @@ function enterApp() {
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
   loadAccountInfo();
+  // v1.5.120: pull synced settings from other phones (last-write-wins)
+  try {
+    if (typeof SettingsSync !== 'undefined') SettingsSync.pull().then(r => {
+      if (r && r.ok && r.applied) {
+        try {
+          const st2 = Store.load();
+          if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
+          if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
+          if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
+          if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
+        } catch (e) {}
+      }
+    });
+  } catch (e) {}
   // v1.5.52: one-shot startup SSO auto-login (saved creds + auto-login on,
   // no portal session -> open the login dialog once; it auto-submits).
   setTimeout(maybeSsoAutoLogin, 1200);

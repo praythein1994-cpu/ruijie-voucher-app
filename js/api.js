@@ -2236,7 +2236,87 @@ const Store = {
   save(patch) {
     const s = Object.assign(this.load(), patch);
     localStorage.setItem(STATE_KEY, JSON.stringify(s));
+    try { if (typeof SettingsSync !== 'undefined') SettingsSync.onLocalChange(patch); } catch (e) {}
     return s;
+  },
+};
+
+/* ═══════════ APP SETTINGS SYNC (v1.5.120) ═══════════
+ * Syncs app settings across the user's phones via the proxy:
+ *   PUT /api/settings/:name { settings, updatedAt, key }
+ *   GET /api/settings/:name -> { settings, updatedAt }
+ * NEVER syncs: gwPass, gwIp, gwAuto (gateway credentials stay on-device).
+ * Conflict: last-write-wins by updatedAt. Push is debounced 3s. */
+const SETTINGS_NEVER_SYNC = ['gwPass', 'gwIp', 'gwAuto', 'liveStats', 'lastGen', '_settingsUpdatedAt'];
+const SettingsSync = {
+  _timer: null,
+  _proxyBase() {
+    try {
+      const p = (typeof Profiles !== 'undefined' && Profiles.getProxyBase) ? Profiles.getProxyBase() : '';
+      if (p) return String(p).replace(/\/+$/, '');
+    } catch (e) {}
+    return 'https://ruijie-voucher-proxy.onrender.com';
+  },
+  _userName() {
+    try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+  },
+  _syncKey() {
+    try { return (typeof BUILTIN_SYNC_KEY !== 'undefined' && BUILTIN_SYNC_KEY) || ''; } catch (e) { return ''; }
+  },
+  getSyncable() {
+    const s = Store.load(), out = {};
+    for (const k of Object.keys(s)) {
+      if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+      out[k] = s[k];
+    }
+    return out;
+  },
+  onLocalChange(patch) {
+    if (!patch || typeof patch !== 'object') return;
+    const keys = Object.keys(patch);
+    if (!keys.some(k => !SETTINGS_NEVER_SYNC.includes(k))) return;
+    if (!this._userName()) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.push(), 3000);
+  },
+  async push() {
+    const name = this._userName();
+    if (!name) return { ok: false, reason: 'no-user' };
+    const norm = (typeof Profiles !== 'undefined' && Profiles.normName) ? Profiles.normName(name) : String(name).toLowerCase().replace(/\s+/g, '');
+    if (!norm) return { ok: false, reason: 'bad-name' };
+    const body = { settings: this.getSyncable(), updatedAt: Date.now(), key: this._syncKey() };
+    try {
+      const r = await fetch(this._proxyBase() + '/api/settings/' + encodeURIComponent(norm), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return await r.json();
+    } catch (e) { return { ok: false, reason: 'network' }; }
+  },
+  async pull() {
+    const name = this._userName();
+    if (!name) return { ok: false, reason: 'no-user' };
+    const norm = (typeof Profiles !== 'undefined' && Profiles.normName) ? Profiles.normName(name) : String(name).toLowerCase().replace(/\s+/g, '');
+    if (!norm) return { ok: false, reason: 'bad-name' };
+    try {
+      const r = await fetch(this._proxyBase() + '/api/settings/' + encodeURIComponent(norm), { method: 'GET' });
+      if (r.status === 404) return { ok: false, reason: 'not-found' };
+      const j = await r.json();
+      if (!j.ok || !j.settings) return { ok: false, reason: 'bad-response' };
+      const localUpdatedAt = Number(Store.load()._settingsUpdatedAt) || 0;
+      if ((Number(j.updatedAt) || 0) > localUpdatedAt) {
+        const clean = {};
+        for (const k of Object.keys(j.settings)) {
+          if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+          clean[k] = j.settings[k];
+        }
+        clean._settingsUpdatedAt = Number(j.updatedAt) || Date.now();
+        const s = Object.assign(Store.load(), clean);
+        localStorage.setItem(STATE_KEY, JSON.stringify(s));
+        return { ok: true, applied: true, updatedAt: clean._settingsUpdatedAt };
+      }
+      return { ok: true, applied: false };
+    } catch (e) { return { ok: false, reason: 'network' }; }
   },
 };
 
