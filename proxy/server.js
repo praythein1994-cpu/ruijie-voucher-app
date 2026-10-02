@@ -305,6 +305,82 @@ async function handleProfilePut(req, res, u) {
   return send(res, req, 200, { ok: true, source: 'render', github, profile: Profiles.sanitizeProfile(profile) });
 }
 
+/* ── App settings sync (v1.5.120) ────────────────────────────────
+ * Per-user app settings sync across phones. Same 3-tier pattern as profiles:
+ * phone localStorage -> render disk -> github write-through.
+ * NEVER syncs secrets: gwPass/gwIp/gwAuto are stripped server-side too.
+ * Body: { settings: {...}, updatedAt, key } — key gated by PROFILES_KEY.
+ * Conflict: last-write-wins by updatedAt. */
+const SETTINGS_NEVER_SYNC = ['gwPass', 'gwIp', 'gwAuto'];
+function sanitizeSettings(s) {
+  if (!s || typeof s !== 'object') return {};
+  const out = {};
+  for (const k of Object.keys(s)) {
+    if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+    const v = s[k];
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+async function handleSettingsGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  const segs = u.pathname.split('/');
+  const name = Profiles.normName(decodeURIComponent(segs[segs.length - 1] || ''));
+  if (!name) return send(res, req, 400, { code: -1, msg: 'Invalid profile name' });
+  const disk = profilesReadDisk();
+  const entry = disk.settings && disk.settings[name];
+  if (entry) {
+    return send(res, req, 200, { ok: true, source: 'render', settings: sanitizeSettings(entry.settings), updatedAt: entry.updatedAt || 0 });
+  }
+  try {
+    const gh = await githubFile('GET');
+    if (gh && gh.store.settings && gh.store.settings[name]) {
+      const merged = Profiles.mergeStores(disk, gh.store);
+      try { profilesWriteDisk(merged); } catch (e) {}
+      const e2 = merged.settings[name];
+      return send(res, req, 200, { ok: true, source: 'github', settings: sanitizeSettings(e2.settings), updatedAt: e2.updatedAt || 0 });
+    }
+  } catch (e) {}
+  return send(res, req, 404, { ok: false, code: -7, msg: 'Settings not found' });
+}
+async function handleSettingsPut(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (PROFILES_KEY && payload.key !== PROFILES_KEY) {
+    return send(res, req, 403, { code: -6, msg: 'Forbidden: bad sync key' });
+  }
+  const segs = u.pathname.split('/');
+  const urlName = Profiles.normName(decodeURIComponent(segs[segs.length - 1] || ''));
+  if (!urlName || !payload.settings || typeof payload.settings !== 'object') {
+    return send(res, req, 400, { code: -1, msg: 'Invalid settings payload' });
+  }
+  const entry = { settings: sanitizeSettings(payload.settings), updatedAt: Number(payload.updatedAt) || Date.now() };
+  const disk = profilesReadDisk();
+  const cur = disk.settings && disk.settings[urlName];
+  if (cur && cur.updatedAt > entry.updatedAt) {
+    return send(res, req, 200, { ok: true, source: 'render', kept: 'server-newer', settings: sanitizeSettings(cur.settings), updatedAt: cur.updatedAt });
+  }
+  disk.settings = disk.settings || {};
+  disk.settings[urlName] = entry;
+  try { profilesWriteDisk(disk); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save settings on server' }); }
+  let github = 'skipped';
+  if (GH_TOKEN && GH_REPO) {
+    try {
+      const cur2 = await githubFile('GET');
+      const storeObj = Profiles.mergeStores({ profiles: {}, settings: {} }, cur2 ? cur2.store : { profiles: {}, settings: {} });
+      storeObj.settings = storeObj.settings || {};
+      storeObj.settings[urlName] = entry;
+      if (cur2 && cur2.sha) storeObj.__sha = cur2.sha;
+      const sha = await githubFile('PUT', storeObj);
+      github = sha ? 'ok' : 'error';
+    } catch (e) { github = 'error'; }
+  }
+  return send(res, req, 200, { ok: true, source: 'render', github, updatedAt: entry.updatedAt });
+}
+
 function corsHeaders(req) {  const origin = req.headers.origin || '';
   const allow = ALLOWED_ORIGINS.includes('*') ? '*' : (ALLOWED_ORIGINS.includes(origin) ? origin : '');
   const h = { 'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
@@ -459,6 +535,8 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname.startsWith('/api/pc/result/') && req.method === 'GET') return handlePcResultGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'GET') return handleProfileGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
+    if (u.pathname.startsWith('/api/settings/') && req.method === 'GET') return handleSettingsGet(req, res, u);
+    if (u.pathname.startsWith('/api/settings/') && req.method === 'PUT') return handleSettingsPut(req, res, u);
     // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
     // server-side portal CAS login, only the VLAN-30 SSID can be changed.
     if (u.pathname.startsWith('/amh-wifi/')) return AmhWifi.handle(req, res, u);
