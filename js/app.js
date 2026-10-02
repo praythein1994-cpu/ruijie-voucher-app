@@ -2355,10 +2355,12 @@ function startVoucherLive(v) {
   const poll = async () => {
     if (!liveBase) return;
     try {
-      const fresh = await Api.voucherListAll(S.projectId);
-      if (!liveBase || !fresh) return;
-      S.vouchers = fresh;
-      const fv = fresh.find(x => x.uuid === liveBase.uuid);
+      // v1.5.132: was voucherListAll (EVERY voucher, every 45s) just to
+      // refresh ONE voucher's live stats. One page is enough — the modal
+      // only needs this voucher; the list itself has its own 60s refresher.
+      const { list } = await Api.voucherListPage(S.projectId, 0, 200);
+      const fv = (list || []).find(x => x.uuid === liveBase.uuid);
+      if (!liveBase || !fv) return;
       if (fv && modalVoucher && modalVoucher.uuid === liveBase.uuid) {
         Object.assign(modalVoucher, { usedTime: fv.usedTime, usedQuota: fv.usedQuota, status: fv.status, expiryTime: fv.expiryTime });
         liveBase.usedTimeMin = Number(fv.usedTime) || 0;
@@ -5727,12 +5729,15 @@ async function moreClients() {
   let gwMerged = 0;
   try {
     if (typeof GwApi !== 'undefined' && GwApi.loggedIn()) {
-      const stas = await GwApi.staList();
+      // v1.5.132: independent calls — run in parallel, not sequentially.
+      const [stas, devs] = await Promise.all([
+        GwApi.staList().catch(() => null),
+        GwApi.deviceList().catch(() => null),
+      ]);
       if (stas && stas.length) {
         const seen = new Set((list || []).map(c => normMac(c.mac || c.userMac || c.staMac)));
         let apNames = {};
         try {
-          const devs = await GwApi.deviceList();
           (devs || []).forEach(d => { if (d.serialNumber) apNames[String(d.serialNumber)] = d.name || d.deviceName || String(d.serialNumber); });
         } catch (e) { /* AP names best-effort */ }
         const vc = getVoucherCache();

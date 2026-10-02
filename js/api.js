@@ -2218,12 +2218,21 @@ const Api = {
   /** Whether the portal project has auth (voucher/portal) configured.
    * Portal: GET /intl/auth/v2/status/{groupId} -> {code, hasConfigAuth}.
    * The portal only shows/requests the account column when this is true. */
+  /* v1.5.132: cache the auth-config flag per project (5-min TTL) — it
+   * changes only when portal auth is (de)configured, and callers await it
+   * before every client-list fetch. Saves one SSO round-trip per load. */
+  _authStatusCache: {},
   async portalAuthStatus(groupId) {
-    const p = '/intl/auth/v2/status/' + Number(groupId);
+    const gid = Number(groupId);
+    const hit = this._authStatusCache[gid];
+    if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.val;
+    const p = '/intl/auth/v2/status/' + gid;
     const j = await ssoCall(p, { api: p, method: 'GET', module: 'default', params: {}, querys: { lang: 'en' } });
     if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
     if (Number(j.code) !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + j.code)));
-    return !!j.hasConfigAuth;
+    const val = !!j.hasConfigAuth;
+    this._authStatusCache[gid] = { val, at: Date.now() };
+    return val;
   },
 
   /* ── Voucher Authenticate records (auth-server data) · v1.5.39 ──
