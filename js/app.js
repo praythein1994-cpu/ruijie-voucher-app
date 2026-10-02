@@ -2108,6 +2108,15 @@ function pickExpireDate() {
     countBtn.type = 'button';
     countBtn.className = 'ios-sheet-opt active';
     countBtn.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
+    // v1.5.130: reset to Show count when date changes
+    const dateInput = sheet.querySelector('#exp-date-cutoff');
+    const resetToCount = () => {
+      optsEl.innerHTML = '';
+      optsEl.appendChild(countBtn);
+      countBtn.disabled = false;
+      sheet.querySelector('#exp-count-result').textContent = '';
+    };
+    dateInput.addEventListener('change', resetToCount);
     // v1.5.129: two-step - show count in dialog, then reveal Delete button
     countBtn.addEventListener('click', async () => {
       const v = sheet.querySelector('#exp-date-cutoff').value || null;
@@ -2123,7 +2132,12 @@ function pickExpireDate() {
           n = extractExpireCount(cj);
         } catch (e) {}
         if (n === null) {
-          n = (S.vouchers || []).filter(x => vEffStatus(x) === '3').length;
+          // v1.5.130: filter by expiry date <= selected date, not just status
+          n = (S.vouchers || []).filter(x => {
+            if (vEffStatus(x) !== '3') return false;
+            const exp = Number(x.expiryTime) || 0;
+            return !exp || exp <= expireTime;
+          }).length;
         }
         if (!n) {
           resultEl.textContent = t('v.delExpiredNone');
