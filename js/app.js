@@ -1203,11 +1203,29 @@ let profileFormMode = 'create';
 /* Where the form's back/done button returns: 'gate' | 'app'. */
 let profileFormReturn = 'gate';
 
+/* ═══════════ v1.5.142: LOGIN AUTO-EXPAND MORPH ═══════════
+ * Video reference: the login card blooms from a small pill every time a
+ * login screen appears. The pill shows the primary action label (set via
+ * data-pill from i18n), holds ~300ms, then springs open; the glow orb
+ * fades back in as the card expands. */
+function playLoginMorph(card, pillKey) {
+  if (!card) return;
+  try { card.dataset.pill = t(pillKey); } catch (e) {}
+  card.classList.remove('morph-open');
+  card.classList.add('morph-collapsed');
+  void card.offsetWidth; // commit the collapsed state before animating
+  setTimeout(() => {
+    card.classList.remove('morph-collapsed');
+    card.classList.add('morph-open'); // clip children until fully bloomed
+    setTimeout(() => card.classList.remove('morph-open'), 750);
+  }, 300);
+}
 function showProfileGate() {
   profileFormReturn = 'gate';
   $('view-connect').classList.add('hidden');
   $('view-profile-new').classList.add('hidden');
   $('view-profile').classList.remove('hidden');
+  playLoginMorph(document.querySelector('#view-profile .connect-card'), 'pf.login'); // v1.5.142
   setTimeout(() => { try { $('pf-name').focus(); } catch (e) {} }, 50);
 }
 
@@ -1288,6 +1306,7 @@ function openProfileForm(mode, presetName) {
   const tiersBox = $('profile-new-tiers');
   tiersBox.classList.add('hidden');
   tiersBox.innerHTML = '';
+  playLoginMorph(document.querySelector('#view-profile-new .connect-card'), 'pf.create'); // v1.5.142
   const errEl = $('profile-new-err');
   if (errEl) errEl.classList.add('hidden');
   // title + button per mode
@@ -7587,6 +7606,7 @@ function init() {
   $('btn-profile-manual').addEventListener('click', () => {
     $('view-profile').classList.add('hidden');
     $('view-connect').classList.remove('hidden');
+    playLoginMorph(document.querySelector('#view-connect .connect-card'), 'connect.btn'); // v1.5.142
   });
   // v1.5.79: manual connect screen → back to the profile login gate
   $('btn-connect-back').addEventListener('click', e => { e.preventDefault(); showProfileGate(); });
