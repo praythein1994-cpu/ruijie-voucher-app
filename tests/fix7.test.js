@@ -1,7 +1,8 @@
 /**
  * fix7 test — "suspicious" (Unattributed, active — review) flag is scoped
- * to the voucher SSID. Clients on other SSIDs (Home/AMH — WPA password)
- * are legitimate by definition and must NOT be flagged.
+ * to the voucher VLAN (the captive-portal LAN from Ruijie Cloud).
+ * Clients on other VLANs (Home/AMH — WPA password) are legitimate by
+ * definition and must NOT be flagged. No WiFi name needed.
  * Extracts the REAL pure functions from js/app.js.
  */
 'use strict';
@@ -16,60 +17,72 @@ function ok(cond, name) {
 
 /* ── extract the REAL functions from js/app.js ────────── */
 const appSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-const startMark = '/* fix7: voucher-SSID-scoped "suspicious" flag.';
+const startMark = '/* fix7: voucher-VLAN-scoped "suspicious" flag.';
 const startIdx = appSrc.indexOf(startMark);
 if (startIdx < 0) { console.log('  FAIL fix7 helpers not found in js/app.js'); process.exit(1); }
 const endMark = '/* v1.5.67: cells-only render';
 const endIdx = appSrc.indexOf(endMark, startIdx);
 if (endIdx < 0) { console.log('  FAIL fix7 block end not found'); process.exit(1); }
 const blockSrc = appSrc.slice(startIdx, endIdx);
-const factory = new Function(blockSrc + '\n;return { voucherSsidList, isVoucherSsid, shouldFlagSuspicious };');
-const { voucherSsidList, isVoucherSsid, shouldFlagSuspicious } = factory();
+const factory = new Function(blockSrc + '\n;return { voucherVlan, isVoucherVlan, detectVoucherVlan, shouldFlagSuspicious };');
+const { voucherVlan, isVoucherVlan, detectVoucherVlan, shouldFlagSuspicious } = factory();
 
-/* ── voucherSsidList ── */
-ok(JSON.stringify(voucherSsidList({})) === '[]', 'empty store -> []');
-ok(JSON.stringify(voucherSsidList(null)) === '[]', 'null store -> []');
-ok(JSON.stringify(voucherSsidList({ voucherSsid: 'ShopWiFi' })) === '["shopwifi"]',
-  'single SSID lowercased');
-ok(JSON.stringify(voucherSsidList({ voucherSsid: 'ShopWiFi, Home ,AMH' })) === '["shopwifi","home","amh"]',
-  'comma-separated, trimmed');
-ok(JSON.stringify(voucherSsidList({ voucherSsid: '  ' })) === '[]', 'blank -> []');
+/* ── voucherVlan ── */
+ok(voucherVlan({}) === '', 'empty store -> empty');
+ok(voucherVlan(null) === '', 'null store -> empty');
+ok(voucherVlan({ voucherVlan: '20' }) === '20', 'configured VLAN returned');
+ok(voucherVlan({ voucherVlan: '  ' }) === '', 'blank -> empty');
 
-/* ── isVoucherSsid ── */
-ok(isVoucherSsid('Home', []) === true, 'not configured: any SSID matches (backwards compat)');
-ok(isVoucherSsid('Anything', null) === true, 'not configured (null): matches');
-ok(isVoucherSsid('ShopWiFi', ['shopwifi']) === true, 'exact match');
-ok(isVoucherSsid('shopwifi', ['shopwifi']) === true, 'case-insensitive client SSID');
-ok(isVoucherSsid('SHOPWIFI', ['shopwifi']) === true, 'upper-case client SSID matches');
-ok(isVoucherSsid('Home', ['shopwifi']) === false, 'non-voucher SSID rejected');
-ok(isVoucherSsid('', ['shopwifi']) === false, 'blank SSID rejected when configured');
-ok(isVoucherSsid('—', ['shopwifi']) === false, 'dash SSID rejected when configured');
+/* ── isVoucherVlan ── */
+ok(isVoucherVlan('20', '') === true, 'not configured: any VLAN matches (backwards compat)');
+ok(isVoucherVlan('30', null) === true, 'not configured (null): matches');
+ok(isVoucherVlan('20', '20') === true, 'exact match');
+ok(isVoucherVlan('30', '20') === false, 'non-voucher VLAN rejected');
+ok(isVoucherVlan('', '20') === false, 'blank VLAN rejected when configured');
+ok(isVoucherVlan('—', '20') === false, 'dash VLAN rejected when configured');
+
+/* ── detectVoucherVlan ── */
+ok(detectVoucherVlan([]) === '', 'empty WLAN list -> empty');
+ok(detectVoucherVlan(null) === '', 'null -> empty');
+ok(detectVoucherVlan([
+  { ssidName: 'Nang Oo', vlanId: '20', authEnable: true },
+  { ssidName: 'Home', vlanId: '233', authEnable: false },
+]) === '20', 'captive-portal (authEnable) VLAN detected');
+ok(detectVoucherVlan([
+  { ssidName: 'Nang Oo', vlanId: 20, authEnable: 'true' },
+]) === '20', 'string "true" authEnable + numeric vlanId');
+ok(detectVoucherVlan([
+  { ssidName: 'Home', vlanId: '233', authEnable: false },
+]) === '', 'no captive portal -> empty');
+ok(detectVoucherVlan([
+  { ssidName: 'Shop', vlanId: '', authEnable: true },
+]) === '', 'captive portal without VLAN id -> empty (never guessed)');
 
 /* ── shouldFlagSuspicious ── */
 const heavy = { flowUpDown: 60 * 1024 * 1024, activeSec: 100 };
 const longSess = { flowUpDown: 1000, activeSec: 3 * 3600 };
 const light = { flowUpDown: 1000, activeSec: 100 };
-const cfg = ['shopwifi'];
+const cfg = '20';
 
-ok(shouldFlagSuspicious('active', true, 'ShopWiFi', heavy, cfg) === false,
+ok(shouldFlagSuspicious('active', true, '20', heavy, cfg) === false,
   'voucher-authenticated client never flagged');
-ok(shouldFlagSuspicious('unknown', true, 'ShopWiFi', heavy, cfg) === false,
+ok(shouldFlagSuspicious('unknown', true, '20', heavy, cfg) === false,
   'old/unknown-code client never gets suspicious flag');
-ok(shouldFlagSuspicious('noauth', false, 'ShopWiFi', heavy, cfg) === false,
+ok(shouldFlagSuspicious('noauth', false, '20', heavy, cfg) === false,
   'non-portal source never flagged');
-ok(shouldFlagSuspicious('noauth', true, 'ShopWiFi', heavy, cfg) === true,
-  'voucher SSID + noauth + heavy traffic -> flagged');
-ok(shouldFlagSuspicious('noauth', true, 'ShopWiFi', longSess, cfg) === true,
-  'voucher SSID + noauth + long session -> flagged');
-ok(shouldFlagSuspicious('noauth', true, 'ShopWiFi', light, cfg) === false,
-  'voucher SSID + noauth + light usage -> not flagged');
-ok(shouldFlagSuspicious('noauth', true, 'Home', heavy, cfg) === false,
-  'fix7: Home SSID + heavy usage -> NOT flagged (wife phone case)');
-ok(shouldFlagSuspicious('noauth', true, 'Home', longSess, cfg) === false,
-  'fix7: Home SSID + long session -> NOT flagged');
-ok(shouldFlagSuspicious('noauth', true, 'AMH', heavy, cfg) === false,
-  'fix7: AMH SSID -> NOT flagged');
-ok(shouldFlagSuspicious('noauth', true, 'Home', heavy, []) === true,
+ok(shouldFlagSuspicious('noauth', true, '20', heavy, cfg) === true,
+  'voucher VLAN + noauth + heavy traffic -> flagged');
+ok(shouldFlagSuspicious('noauth', true, '20', longSess, cfg) === true,
+  'voucher VLAN + noauth + long session -> flagged');
+ok(shouldFlagSuspicious('noauth', true, '20', light, cfg) === false,
+  'voucher VLAN + noauth + light usage -> not flagged');
+ok(shouldFlagSuspicious('noauth', true, '233', heavy, cfg) === false,
+  'fix7: Home VLAN + heavy usage -> NOT flagged (wife phone case)');
+ok(shouldFlagSuspicious('noauth', true, '233', longSess, cfg) === false,
+  'fix7: Home VLAN + long session -> NOT flagged');
+ok(shouldFlagSuspicious('noauth', true, '30', heavy, cfg) === false,
+  'fix7: AMH VLAN -> NOT flagged');
+ok(shouldFlagSuspicious('noauth', true, '233', heavy, '') === true,
   'not configured: old behaviour preserved (flag everywhere)');
 
 /* ── the two call sites use the scoped helper ── */

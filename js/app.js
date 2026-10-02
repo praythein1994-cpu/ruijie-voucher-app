@@ -284,6 +284,8 @@ const I18N = {
   'kick.ssidDetected': { my: 'Auto-detect: {ssid}', en: 'Auto-detected: {ssid}' },
   'kick.ssidNotFound': { my: 'Voucher client မတွေ့ပါ — Online Clients အရင်ဖွင့်ပါ', en: 'No voucher clients found — open Online Clients first' },
   'kick.ssidSub': { my: 'သံသယရှိ flag က ဒီ SSID ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် (မထည့်ရင် အားလုံးပြ)', en: 'Suspicious flag only shows for clients on this SSID (empty = all)' },
+  'kick.vlan': { my: 'Voucher VLAN', en: 'Voucher VLAN' },
+  'kick.vlanSub': { my: 'သံသယရှိ flag က ဒီ VLAN ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် — captive portal သုံးတဲ့ VLAN ကို အလိုအလို ရွေးပေးမယ်', en: 'Suspicious flag only shows for clients on this VLAN — the captive-portal VLAN is auto-selected' },
   'kick.interval': { my: 'ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ', en: 'Check every N minutes' },
   'v.delExpiredThrough': { my: 'ရက်စွဲ', en: 'Through' },
   'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
@@ -5335,27 +5337,55 @@ function initKickSettings() {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
   }
-  // fix7: voucher SSID for scoping the "suspicious" flag
-  const si = $('kick-ssid');
-  if (si) {
-    si.value = Store.load().voucherSsid || '';
-    si.addEventListener('change', () => {
-      Store.save({ voucherSsid: si.value.trim() });
+  // voucher VLAN for scoping the "suspicious" flag — picked from the
+  // Ruijie Cloud WLAN list; the captive-portal VLAN is auto-selected.
+  const vs = $('kick-vlan');
+  if (vs) {
+    enhanceIosPicker(vs);
+    vs.addEventListener('change', () => {
+      Store.save({ voucherVlan: vs.value });
       renderMcList();
     });
-  }
-  // auto-detect voucher SSID from online clients (no typing needed)
-  const sd = $('kick-ssid-detect');
-  if (sd) {
-    sd.addEventListener('click', () => {
-      const cached = (typeof mcCache !== 'undefined' && mcCache && mcCache.list) || null;
-      if (!cached || !cached.length) { toast(t('kick.ssidNotFound'), true); return; }
-      const det = detectVoucherSsid(cached);
-      if (det) { applyDetectedSsid(det); toast(tx('kick.ssidDetected', { ssid: det })); }
-      else toast(t('kick.ssidNotFound'), true);
-    });
+    ensureVlanOptions();
   }
   refreshKickStatus();
+}
+/* Populate the Voucher VLAN picker from the Ruijie Cloud WLAN list.
+ * Auto-selects the captive-portal VLAN when the user hasn't chosen one. */
+async function ensureVlanOptions() {
+  const sel = $('kick-vlan');
+  if (!sel) return;
+  let list = S.ssidList || [];
+  if (!list.length && S.projectId && Api.ssoLoggedIn()) {
+    try { list = (await Api.ssidListSso(S.projectId)).list || []; S.ssidList = list; }
+    catch (e) { list = []; }
+  }
+  const seen = new Map();
+  list.forEach(s => {
+    const v = String(s && s.vlanId !== undefined && s.vlanId !== null ? s.vlanId : '').trim();
+    if (!v || seen.has(v)) return;
+    seen.set(v, s.ssidName || '');
+  });
+  const det = detectVoucherVlan(list);
+  let cur = voucherVlan(Store.load());
+  if (!cur) {
+    // migrate: previously typed SSID -> its VLAN from the WLAN list
+    const oldSsid = String(Store.load().voucherSsid || '').trim().toLowerCase();
+    if (oldSsid) {
+      const hit = list.find(s => String(s.ssidName || '').trim().toLowerCase() === oldSsid);
+      const hv = hit ? String(hit.vlanId !== undefined && hit.vlanId !== null ? hit.vlanId : '').trim() : '';
+      if (hv) cur = hv;
+    }
+  }
+  if (!cur && det) { cur = det; }
+  if (cur) { try { Store.save({ voucherVlan: cur }); } catch (e) {} }
+  const opts = Array.from(seen.entries()).map(([v, nm]) =>
+    `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>VLAN ${esc(v)}` +
+    `${nm ? ' — ' + esc(nm) : ''}${v === det ? ' (captive portal)' : ''}</option>`).join('');
+  sel.innerHTML = (cur && !seen.has(cur)
+    ? `<option value="${esc(cur)}" selected>VLAN ${esc(cur)}</option>` : '') +
+    (opts || `<option value="">—</option>`);
+  try { syncIosPickerBtn(sel); } catch (e) {}
 }
 // v1.5.75: monitoring toggle (Settings → စစ်ဆေးမှုများ)
 function initTeleSettings() {
@@ -5486,13 +5516,6 @@ async function moreClients() {
     showNames: Store.load().clientShowNames !== false,
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
-  // auto-detect voucher SSID when the user hasn't typed one (no typing needed)
-  try {
-    if (!String(Store.load().voucherSsid || '').trim()) {
-      const det = detectVoucherSsid(list);
-      if (det) applyDetectedSsid(det);
-    }
-  } catch (e) {}
   renderMcList(); // rebuilds #mc-list innerHTML — the .mc-sync spinner goes with it
   // v1.5.115: pull the portal deny-list so blocks from any phone show.
   try { refreshPortalBlocklist(); } catch (e) { /* best-effort */ }
@@ -5586,55 +5609,45 @@ function renderMcList() {
   const qi = $('mc-q');
   if (qi) qi.addEventListener('input', () => { mcCache.q = qi.value; renderMcCells(); });
 }
-/* fix7: voucher-SSID-scoped "suspicious" flag. Pure and unit-testable.
- * voucherSsidList(store) — Settings "Voucher SSID" (comma-separated) ->
- * lowercased name list; empty = not configured.
- * isVoucherSsid(ssid, list) — true when not configured (backwards
- * compatible: flag everywhere) or the client's SSID matches.
- * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the SSID
+/* fix7: voucher-VLAN-scoped "suspicious" flag. Pure and unit-testable.
+ * voucherVlan(store) — Settings "Voucher VLAN" -> '20' or '';
+ * empty = not configured.
+ * isVoucherVlan(vlan, cfg) — true when not configured (backwards
+ * compatible: flag everywhere) or the client's VLAN matches.
+ * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the VLAN
  * scope: noauth + viaPortal + heavy usage + on the voucher SSID. */
-function voucherSsidList(store) {
-  const raw = String((store && store.voucherSsid) || '').trim();
-  if (!raw) return [];
-  return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+/* ── Voucher-VLAN-scoped "suspicious" flag ──
+ * The voucher network is identified by its captive-portal VLAN (Ruijie
+ * Cloud WLAN list) — no WiFi name needed.
+ * voucherVlan(store) — Settings "Voucher VLAN" -> '20' or ''; empty = not
+ *   configured.
+ * isVoucherVlan(vlan, cfg) — true when not configured (backwards
+ *   compatible: flag everywhere) or the client's VLAN matches.
+ * detectVoucherVlan(ssidList) — the VLAN of the SSID with captive portal
+ *   (authEnable) from the Ruijie Cloud WLAN list; '' when none.
+ * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the VLAN
+ *   scope: noauth + viaPortal + heavy usage + on the voucher VLAN. */
+function voucherVlan(store) {
+  return String((store && store.voucherVlan) || '').trim();
 }
-function isVoucherSsid(ssid, list) {
-  if (!list || !list.length) return true;
-  const s = String(ssid || '').trim().toLowerCase();
-  return !!s && list.indexOf(s) >= 0;
+function isVoucherVlan(vlan, cfg) {
+  if (!cfg) return true;
+  const v = String(vlan || '').trim();
+  return !!v && v === String(cfg).trim();
 }
-/* Auto-detect the voucher SSID: the SSID carrying the most voucher-
- * authenticated online clients. Portal authType "15" = Voucher; gateway
- * merged rows (__gw) carry the voucher code in `account`. Pure and
- * unit-testable. Returns '' when nothing conclusive. */
-function detectVoucherSsid(clients) {
-  const counts = new Map();
-  (clients || []).forEach(c => {
-    if (!c) return;
-    const at = String(c.authType || '').trim();
-    const voucherAuth = at === '15' || at.toLowerCase() === 'voucher' ||
-      (c.__gw === true && !!String(c.account || '').trim());
-    if (!voucherAuth) return;
-    const ssid = String(c.ssid || '').trim();
-    if (!ssid || ssid === '—') return;
-    counts.set(ssid, (counts.get(ssid) || 0) + 1);
-  });
-  let best = '', bestN = 0;
-  counts.forEach((n, s) => { if (n > bestN) { bestN = n; best = s; } });
-  return best;
+function detectVoucherVlan(ssidList) {
+  for (const s of (ssidList || [])) {
+    if (!s) continue;
+    const ae = s.authEnable === true || String(s.authEnable).toLowerCase() === 'true';
+    if (!ae) continue;
+    const v = String(s.vlanId !== undefined && s.vlanId !== null ? s.vlanId : '').trim();
+    if (v) return v;
+  }
+  return '';
 }
-/** Apply a detected SSID to the setting + input. Returns the SSID or ''. */
-function applyDetectedSsid(ssid) {
-  if (!ssid) return '';
-  Store.save({ voucherSsid: ssid });
-  const si = $('kick-ssid');
-  if (si) si.value = ssid;
-  try { renderMcList(); } catch (e) {}
-  return ssid;
-}
-function shouldFlagSuspicious(st, viaPortal, ssid, c, vList) {
+function shouldFlagSuspicious(st, viaPortal, vlan, c, vVlan) {
   if (st !== 'noauth' || !viaPortal) return false;
-  if (!isVoucherSsid(ssid, vList)) return false;
+  if (!isVoucherVlan(vlan, vVlan)) return false;
   c = c || {};
   const bytes = Number(c.flowUpDown) || 0;
   const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
@@ -5698,14 +5711,14 @@ function renderMcCells() {
     //   usage (traffic or long session) — worth a review, not a verdict.
     // "sticky": voucher quota exhausted (datalimit/timeup) yet the client
     //   is still in the online list — the AP didn't disconnect it.
-    // fix7: the suspicious flag only makes sense on the voucher SSID.
-    // Clients on other SSIDs (Home/AMH — WPA password) are legitimate by
+    // fix7: the suspicious flag only makes sense on the voucher VLAN.
+    // Clients on other VLANs (Home/AMH — WPA password) are legitimate by
     // definition: they entered the WiFi password, no voucher needed.
-    // The voucher SSID name(s) come from Settings (comma-separated);
-    // empty = flag everywhere (backwards compatible).
-    const vSsidList = voucherSsidList(Store.load());
+    // The voucher VLAN comes from Settings (Ruijie Cloud captive-portal
+    // VLAN); empty = flag everywhere (backwards compatible).
+    const vVlan = voucherVlan(Store.load());
     const flags = [];
-    if (shouldFlagSuspicious(st, viaPortal, f.ssid, c, vSsidList)) flags.push('suspicious');
+    if (shouldFlagSuspicious(st, viaPortal, f.vlan, c, vVlan)) flags.push('suspicious');
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
     // v1.5.76: line-quality flags — weak signal / heavy talker / packet
     // loss. Read-only signals from verified fields; never accusatory.
@@ -5830,8 +5843,8 @@ function openMcDetail(idx) {
   const sec = s => `<div class="kv-sec">${esc(s)}</div>`;
   const grp = inner => inner ? `<div class="kv-group">${inner}</div>` : '';
   const flags = [];
-  // fix7: suspicious flag only on the voucher SSID (see list renderer above)
-  if (shouldFlagSuspicious(st, viaPortal, f.ssid, c, voucherSsidList(Store.load()))) flags.push('suspicious');
+  // fix7: suspicious flag only on the voucher VLAN (see list renderer above)
+  if (shouldFlagSuspicious(st, viaPortal, f.vlan, c, voucherVlan(Store.load()))) flags.push('suspicious');
   if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
   // v1.5.62: kicked mark in the detail sheet too.
   const kts2 = kickedAt(f.mac);
