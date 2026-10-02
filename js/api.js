@@ -2247,7 +2247,7 @@ const Store = {
  *   GET /api/settings/:name -> { settings, updatedAt }
  * NEVER syncs: gwPass, gwIp, gwAuto (gateway credentials stay on-device).
  * Conflict: last-write-wins by updatedAt. Push is debounced 3s. */
-const SETTINGS_NEVER_SYNC = ['gwPass', 'gwIp', 'gwAuto', 'lastGen', '_settingsUpdatedAt'];
+const SETTINGS_NEVER_SYNC = ['gwPass', 'gwIp', 'gwAuto', 'lastGen', 'kicked', 'kickedVouchers', 'vcache', '_settingsUpdatedAt'];
 const SettingsSync = {
   _timer: null,
   _proxyBase() {
