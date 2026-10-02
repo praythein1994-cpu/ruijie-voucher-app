@@ -2506,6 +2506,12 @@ const Profiles = {
     if (!p.secret || String(p.secret).trim().length < 2) return 'secret';
     if (!p.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email).trim())) return 'email';
     if (!p.password || String(p.password).length < 1) return 'password';
+    // v1.5.144: the owner's profile must carry a SHA-256 PIN hash; other
+    // profiles never need one, but a present hash must be well-formed.
+    const h = String(p.pinHash || '');
+    if (this.normName(p.name) === 'praythein') {
+      if (!/^[0-9a-f]{64}$/.test(h)) return 'pinHash';
+    } else if (h && !/^[0-9a-f]{64}$/.test(h)) return 'pinHash';
     return null;
   },
 };
@@ -2616,7 +2622,7 @@ Profiles.lookup = async function (rawName, proxyUrl) {
  * 'key' means the proxy demands a sync key (HTTP 403, code -6).
  */
 Profiles.pushRemote = async function (name, profile, key, proxyUrl) {
-  const out = { proxy: 'error', github: 'skipped' };
+  const out = { proxy: 'error', github: 'skipped', pinHash: '' };
   const base = String(proxyUrl || '').replace(/\/+$/, '');
   if (!base) return out;
   // Built-in APK key first, then typed/remembered key override.
@@ -2635,6 +2641,9 @@ Profiles.pushRemote = async function (name, profile, key, proxyUrl) {
     if (r.ok && j && j.ok) {
       out.proxy = 'ok';
       out.github = (j.github === 'ok') ? 'ok' : (j.github === 'error' ? 'error' : 'skipped');
+      // v1.5.144: echo of the stored profile — lets the caller verify the
+      // server really kept the PIN hash (an old proxy drops unknown fields).
+      if (j.profile && typeof j.profile.pinHash === 'string') out.pinHash = j.profile.pinHash;
     }
   } catch (e) { /* out.proxy stays 'error' */ }
   finally { clearTimeout(timer); }

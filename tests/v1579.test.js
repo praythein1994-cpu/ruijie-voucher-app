@@ -40,12 +40,14 @@ const mod = { exports: {} };
 factory(mod, mod.exports, require);
 const { Profiles, GITHUB_PROFILES } = mod.exports;
 
+const PINH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 const VALID = {
   name: 'praythein', display: 'Pray Thein',
   cloud: 'https://cloud-as.ruijienetworks.com',
   appid: 'APPID123', secret: 'SECRET123',
   proxy: 'https://ruijie-voucher-proxy.onrender.com',
   email: 'user@example.com', password: 'pw123',
+  pinHash: PINH, // v1.5.144: owner's profile must carry a PIN hash
 };
 function ghFileBody(profiles) {
   const b64 = Buffer.from(JSON.stringify({ profiles }), 'utf8').toString('base64');
@@ -76,6 +78,8 @@ ok(Profiles.validate({ ...VALID, secret: '' }) === 'secret', 'validate: bad secr
 ok(Profiles.validate({ ...VALID, email: 'not-an-email' }) === 'email', 'validate: bad email');
 ok(Profiles.validate({ ...VALID, password: '' }) === 'password', 'validate: bad password');
 ok(Profiles.validate(null) === 'profile', 'validate: null');
+ok(Profiles.validate({ ...VALID, pinHash: '' }) === 'pinHash', 'validate: praythein needs pinHash'); // v1.5.144
+ok(Profiles.validate({ ...VALID, name: 'htunnaing', pinHash: '' }) === null, 'validate: others need no pinHash'); // v1.5.144
 
 /* ── 3. local store roundtrip ────────────────────────── */
 localStorage.clear();

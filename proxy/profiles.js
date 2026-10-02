@@ -24,12 +24,15 @@
  *
  * File shape on disk / GitHub:
  *   { "profiles": { "<name>": { name, display, cloud, appid, secret,
- *                               proxy, email, password, updatedAt } } }
+ *                               proxy, email, password, pinHash, updatedAt } } }
+ * pinHash (v1.5.144): SHA-256 hex of the owner's 6-digit login PIN. Only the
+ *   "praythein" profile uses it; the app hashes the typed PIN and compares,
+ *   so the PIN itself is never stored on disk/GitHub/the phone.
  */
 
 'use strict';
 
-const PROFILE_FIELDS = ['name', 'display', 'cloud', 'appid', 'secret', 'proxy', 'email', 'password', 'updatedAt'];
+const PROFILE_FIELDS = ['name', 'display', 'cloud', 'appid', 'secret', 'proxy', 'email', 'password', 'pinHash', 'updatedAt'];
 
 /** Normalize a typed name to its lookup key. Case- and space-insensitive:
  *  "PrayThein", "praythein", "Pray Thein" and "pray Thein" all -> "praythein".
@@ -55,6 +58,9 @@ function validateProfile(p) {
   if (!p.secret || String(p.secret).trim().length < 2) return 'secret';
   if (!p.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email).trim())) return 'email';
   if (!p.password || String(p.password).length < 1) return 'password';
+  // v1.5.144: owner login PIN — stored as SHA-256 hex, never plaintext.
+  if (p.pinHash !== undefined && p.pinHash !== null && String(p.pinHash) !== '' &&
+      !/^[0-9a-f]{64}$/i.test(String(p.pinHash))) return 'pinHash';
   const cloud = String(p.cloud || '').trim().replace(/\/+$/, '');
   if (cloud && !/^https?:\/\//i.test(cloud)) return 'cloud';
   const proxy = String(p.proxy || '').trim().replace(/\/+$/, '');
@@ -75,6 +81,8 @@ function buildProfile(p) {
     proxy: clean(p.proxy).replace(/\/+$/, ''),
     email: clean(p.email),
     password: String(p.password || ''),
+    // v1.5.144: keep only a well-formed SHA-256 hex PIN hash, else blank.
+    pinHash: /^[0-9a-f]{64}$/i.test(clean(p.pinHash)) ? clean(p.pinHash).toLowerCase() : '',
     updatedAt: Date.now(),
   };
 }

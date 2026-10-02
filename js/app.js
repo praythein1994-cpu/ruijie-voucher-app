@@ -52,6 +52,22 @@ const I18N = {
   'pf.keyNeeded': { my: 'Sync key လိုနေပါတယ် — ဖြည့်ပြီးထပ်နှိပ်ပါ', en: 'Sync key required — fill it in and retry' },
   'pf.typeNameFirst': { my: 'နာမည်အရင်ရိုက်ပါ', en: 'Type your name first' },
   'pf.verifyFail': { my: 'App ID/Secret စမ်းတာ မအောင်မြင်ပါ', en: 'App ID/Secret verification failed' },
+  /* v1.5.144 — owner login PIN (praythein profile only) */
+  'pin.unlockTitle': { my: 'PIN ရိုက်ပါ', en: 'Enter PIN' },
+  'pin.unlockSub': { my: 'PrayThein အကောင့်အတွက် ၆-လုံး PIN', en: '6-digit PIN for the PrayThein account' },
+  'pin.setupTitle': { my: 'PIN သတ်မှတ်ပါ', en: 'Set your PIN' },
+  'pin.setupSub': { my: '၆-လုံး PIN အသစ် ရိုက်ပါ', en: 'Enter a new 6-digit PIN' },
+  'pin.setupConfirm': { my: 'PIN ကို ထပ်ရိုက်ပြီး အတည်ပြုပါ', en: 'Re-enter the PIN to confirm' },
+  'pin.wrong': { my: 'PIN မှားနေပါတယ်', en: 'Wrong PIN' },
+  'pin.mismatch': { my: 'PIN ချင်း မတူပါ — အစက ပြန်ရိုက်ပါ', en: 'PINs do not match — start over' },
+  'pin.need6': { my: 'PIN က ဂဏန်း ၆ လုံး ဖြစ်ရမယ်', en: 'PIN must be 6 digits' },
+  'pin.curPin': { my: 'လက်ရှိ PIN (၆ လုံး)', en: 'Current PIN (6 digits)' },
+  'pin.newPin': { my: 'PIN အသစ် (၆ လုံး)', en: 'New PIN (6 digits)' },
+  'pin.confirmPin': { my: 'PIN အတည်ပြုပါ', en: 'Confirm PIN' },
+  'pin.curWrong': { my: 'လက်ရှိ PIN မှားနေပါတယ်', en: 'Current PIN is wrong' },
+  'pin.sending': { my: 'Server ကို ပို့နေသည်…', en: 'Sending to server…' },
+  'pin.serverFail': { my: 'Server ကို PIN မပို့နိုင်သေးပါ — လိုင်းစစ်ပြီး ၆ လုံး ပြန်ရိုက်ပါ', en: 'Could not send the PIN to the server — check connection and re-enter the 6 digits' },
+  'pin.serverOld': { my: 'Proxy အသစ် မရောက်သေးပါ — proxy update လုပ်ပြီးမှ ထပ်စမ်းပါ', en: 'Proxy is not updated yet — update the proxy and try again' },
   's.myProfile': { my: 'My Profile (နာမည် login)', en: 'My Profile (name login)' },
   'btn.connecting': { my: 'ချိတ်ဆက်နေသည်…', en: 'Connecting…' },
   'err.needCreds': { my: 'App ID နဲ့ App Secret ထည့်ပါ', en: 'Enter your App ID and App Secret' },
@@ -1226,6 +1242,8 @@ const DEFAULT_PROXY = 'https://ruijie-voucher-proxy.onrender.com';
 
 /* 'create' | 'update' — which mode the profile form is in. */
 let profileFormMode = 'create';
+/** v1.5.144: pinHash of the profile being updated (never shown in the form). */
+let pfnExistingPinHash = '';
 /* Where the form's back/done button returns: 'gate' | 'app'. */
 let profileFormReturn = 'gate';
 
@@ -1250,9 +1268,182 @@ function showProfileGate() {
   profileFormReturn = 'gate';
   $('view-connect').classList.add('hidden');
   $('view-profile-new').classList.add('hidden');
+  pinHide(); // v1.5.144: never leave the PIN screen layered under the gate
   $('view-profile').classList.remove('hidden');
   playLoginMorph(document.querySelector('#view-profile .connect-card'), 'pf.login'); // v1.5.142
   setTimeout(() => { try { $('pf-name').focus(); } catch (e) {} }, 50);
+}
+
+/* ═══════════ OWNER PIN GATE (v1.5.144) ═══════════
+ * The "praythein" profile is PIN-protected: 6 digits, stored as SHA-256 hex
+ * (profile.pinHash) across all 3 tiers. Other profiles skip this entirely.
+ * - unlock: profile already has a pinHash → must match to log in / to open
+ *   the profile form (the form pre-fills the real App ID/Secret).
+ * - setup: no pinHash yet → enter twice, then the hash MUST reach the server
+ *   (all tiers echo it back) before the login continues, so the same PIN
+ *   works after changing phones. A half-synced PIN is rolled back. */
+
+/** Compact pure-JS SHA-256 (fallback when WebCrypto is unavailable). */
+function sha256hex(str) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  let H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const bytes = new TextEncoder().encode(String(str));
+  const l = bytes.length;
+  const words = [];
+  for (let i = 0; i < l; i++) words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
+  words[l >> 2] |= 0x80 << (24 - (l % 4) * 8);
+  words[(((l + 8) >> 6) << 4) + 15] = l * 8;
+  const w = new Array(64);
+  for (let j = 0; j < words.length; j += 16) {
+    for (let i = 0; i < 16; i++) w[i] = words[j + i] | 0;
+    for (let i = 16; i < 64; i++) {
+      const x0 = w[i - 15], x1 = w[i - 2];
+      const s0 = ((x0 >>> 7) | (x0 << 25)) ^ ((x0 >>> 18) | (x0 << 14)) ^ (x0 >>> 3);
+      const s1 = ((x1 >>> 17) | (x1 << 15)) ^ ((x1 >>> 19) | (x1 << 13)) ^ (x1 >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const mj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + mj) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H = H.map((x, i) => (x + [a, b, c, d, e, f, g, h][i]) | 0);
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+/** SHA-256 hex of the typed PIN. WebCrypto first, pure-JS fallback.
+ *  Never throws — returns '' when hashing is impossible. */
+async function pinHash(pin) {
+  const s = String(pin || '');
+  try {
+    if (window.crypto && window.crypto.subtle) {
+      const d = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return Array.from(new Uint8Array(d)).map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+  } catch (e) { /* fall through to the pure-JS implementation */ }
+  try { return sha256hex(s); } catch (e) { return ''; }
+}
+
+let pinState = null;
+
+function pinHide() {
+  const v = $('view-pin');
+  if (v) v.classList.add('hidden');
+}
+
+/** Show the PIN screen. mode: 'unlock' | 'setup'. onOk(profile) continues. */
+function pinShow(mode, profile, onOk) {
+  for (const id of ['view-connect', 'view-profile', 'view-profile-new']) {
+    const el = $(id); if (el) el.classList.add('hidden');
+  }
+  const app = $('app'); if (app) app.classList.add('hidden');
+  $('view-pin').classList.remove('hidden');
+  pinState = { mode, profile, onOk, phase: mode === 'setup' ? 'new' : 'type', first: '' };
+  $('pin-title').textContent = t(mode === 'setup' ? 'pin.setupTitle' : 'pin.unlockTitle');
+  $('pin-sub').textContent = t(mode === 'setup' ? 'pin.setupSub' : 'pin.unlockSub');
+  $('pin-err').classList.add('hidden');
+  pinPaint('');
+  try { playLoginMorph(document.querySelector('#view-pin .pin-card'), mode === 'setup' ? 'pin.setupTitle' : 'pin.unlockTitle'); } catch (e) {}
+  const inp = $('pin-input');
+  inp.value = '';
+  setTimeout(() => { try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} } }, 60);
+}
+
+function pinPaint(digits) {
+  const dots = $('pin-dots').children;
+  for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i < digits.length);
+}
+
+function pinFail(key) {
+  const errEl = $('pin-err');
+  errEl.textContent = t(key);
+  errEl.classList.remove('hidden');
+  const card = document.querySelector('#view-pin .pin-card');
+  if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  const inp = $('pin-input');
+  inp.value = '';
+  pinPaint('');
+  setTimeout(() => { try { inp.focus(); } catch (e) {} }, 400);
+}
+
+async function pinSubmit(digits) {
+  const st = pinState;
+  if (!st) return;
+  if (!/^\d{6}$/.test(digits)) { pinFail('pin.need6'); return; }
+  if (st.mode === 'unlock') {
+    const want = String(st.profile.pinHash || '').toLowerCase();
+    const got = await pinHash(digits);
+    if (got && got === want) {
+      const cb = st.onOk, prof = st.profile;
+      pinState = null; pinHide();
+      try { await cb(prof); }
+      catch (e) { showProfileGate(); showErr('profile-err', t('err.connectFail') + (e && e.message ? e.message : e)); }
+    } else pinFail('pin.wrong');
+    return;
+  }
+  // setup: two phases — new PIN, then confirm
+  const errEl = $('pin-err');
+  if (st.phase === 'new') {
+    st.first = digits;
+    st.phase = 'confirm';
+    $('pin-sub').textContent = t('pin.setupConfirm');
+    $('pin-input').value = '';
+    pinPaint('');
+    errEl.classList.add('hidden');
+    return;
+  }
+  if (digits !== st.first) {
+    st.phase = 'new'; st.first = '';
+    $('pin-sub').textContent = t('pin.setupSub');
+    pinFail('pin.mismatch');
+    return;
+  }
+  const hash = await pinHash(digits);
+  if (!/^[0-9a-f]{64}$/.test(hash || '')) { pinFail('pin.need6'); return; }
+  const key = Profiles.normName(st.profile.name);
+  const updated = { ...st.profile, name: key, pinHash: hash };
+  // strict: the PIN must reach the server (all tiers) before the login
+  // continues — otherwise a new phone would not know this PIN.
+  const inp = $('pin-input');
+  inp.disabled = true;
+  $('pin-sub').textContent = t('pin.sending');
+  let serverOk = false;
+  try {
+    const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+    let rkey = '';
+    try { rkey = localStorage.getItem('rv_profile_key') || ''; } catch (e) {}
+    // phone tier first (gates this device), then the server must echo the hash
+    try { Profiles.put(updated); } catch (e) {}
+    const res = await Profiles.pushRemote(key, updated, rkey, proxy);
+    serverOk = res.proxy === 'ok' && res.github === 'ok' &&
+      String(res.pinHash || '').toLowerCase() === hash;
+  } catch (e) { serverOk = false; }
+  inp.disabled = false;
+  if (!serverOk) {
+    // roll the phone tier back: a half-synced PIN is worse than none
+    try { Profiles.put(st.profile); } catch (e) {}
+    st.phase = 'new'; st.first = '';
+    $('pin-sub').textContent = t('pin.setupSub');
+    pinFail('pin.serverFail');
+    return;
+  }
+  const cb = st.onOk;
+  pinState = null; pinHide();
+  try { await cb(updated); }
+  catch (e) { showProfileGate(); showErr('profile-err', t('err.connectFail') + (e && e.message ? e.message : e)); }
 }
 
 async function doProfileLogin() {
@@ -1268,7 +1459,15 @@ async function doProfileLogin() {
   try {
     const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
     const res = await Profiles.lookup(name, proxy);
-    if (res.status === 'found') { await applyProfile(res.profile); return; }
+    if (res.status === 'found') {
+      // v1.5.144: the owner's profile is PIN-gated; other names log straight in
+      if (Profiles.normName(res.profile.name) === 'praythein') {
+        const hasPin = /^[0-9a-f]{64}$/i.test(String(res.profile.pinHash || ''));
+        pinShow(hasPin ? 'unlock' : 'setup', res.profile, (p) => applyProfile(p));
+        return;
+      }
+      await applyProfile(res.profile); return;
+    }
     if (res.status === 'error') return showErr(errId, t('pf.slowConn'));
     return showErr(errId, t('pf.notFound'));
   } catch (e) {
@@ -1342,6 +1541,14 @@ function openProfileForm(mode, presetName) {
   // the sync-key field stays hidden unless the proxy demands a key
   $('pfn-key-wrap').classList.add('hidden');
   $('pfn-key').value = '';
+  // v1.5.144: PIN fields — visible only for the owner's profile
+  pfnExistingPinHash = '';
+  $('pfn-pin').value = '';
+  $('pfn-pin2').value = '';
+  $('pfn-curpin').value = '';
+  $('pfn-curpin-wrap').classList.add('hidden');
+  const isPrayForm = Profiles.normName(presetName || (mode === 'create' ? $('pfn-name').value : '')) === 'praythein';
+  $('pfn-pin-wrap').classList.toggle('hidden', !isPrayForm);
   if (!$('pfn-cloud').value) $('pfn-cloud').value = 'https://cloud-as.ruijienetworks.com';
   if (!$('pfn-proxy').value) $('pfn-proxy').value = (Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY;
   const nm = $('pfn-name');
@@ -1369,6 +1576,10 @@ async function fillProfileForm(name) {
   $('pfn-proxy').value = p.proxy || ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY);
   $('pfn-email').value = p.email || '';
   $('pfn-pass').value = p.password || '';
+  // v1.5.144: remember (don't display) the existing PIN hash; the current-PIN
+  // field appears only when one is set.
+  pfnExistingPinHash = /^[0-9a-f]{64}$/i.test(String(p.pinHash || '')) ? String(p.pinHash).toLowerCase() : '';
+  $('pfn-curpin-wrap').classList.toggle('hidden', !pfnExistingPinHash);
 }
 
 function showProfileNew() {
@@ -1381,6 +1592,21 @@ function showProfileUpdate() {
   const name = Profiles.normName($('pf-name').value);
   if (!name) { showErr('profile-err', t('pf.typeNameFirst')); return; }
   profileFormReturn = 'gate';
+  // v1.5.144: the owner's form pre-fills the real App ID/Secret, so opening
+  // it needs the PIN first (unless no PIN exists yet — the form then forces
+  // setting one on save).
+  if (name === 'praythein') {
+    const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+    Profiles.lookup(name, proxy).then(res => {
+      const prof = res.status === 'found' ? res.profile : null;
+      if (prof && /^[0-9a-f]{64}$/i.test(String(prof.pinHash || ''))) {
+        pinShow('unlock', prof, () => openProfileForm('update', name));
+      } else {
+        openProfileForm('update', name);
+      }
+    });
+    return;
+  }
   openProfileForm('update', name);
 }
 
@@ -1421,6 +1647,25 @@ async function doProfileCreate() {
     email: $('pfn-email').value.trim(),
     password: $('pfn-pass').value,
   };
+  // v1.5.144: owner PIN — create requires a new 6-digit PIN; update keeps the
+  // existing one unless a new PIN is typed (changing it needs the current PIN).
+  if (Profiles.normName($('pfn-name').value) === 'praythein') {
+    const curPin = $('pfn-curpin').value.replace(/\D/g, '');
+    const newPin = $('pfn-pin').value.replace(/\D/g, '');
+    const newPin2 = $('pfn-pin2').value.replace(/\D/g, '');
+    const wantsNewPin = !isUpdate || !pfnExistingPinHash || newPin || newPin2;
+    let finalHash = isUpdate ? pfnExistingPinHash : '';
+    if (wantsNewPin) {
+      if (isUpdate && pfnExistingPinHash) {
+        if ((await pinHash(curPin)) !== pfnExistingPinHash) return showErr(errId, t('pin.curWrong'));
+      }
+      if (!/^\d{6}$/.test(newPin)) return showErr(errId, t('pin.need6'));
+      if (newPin !== newPin2) return showErr(errId, t('pin.mismatch'));
+      finalHash = await pinHash(newPin);
+      if (!/^[0-9a-f]{64}$/.test(finalHash || '')) return showErr(errId, t('pin.need6'));
+    }
+    p.pinHash = finalHash;
+  }
   const bad = Profiles.validate(p);
   if (bad) return showErr(errId, t('pf.needFields'));
   const btn = $('btn-profile-new-save');
@@ -1460,9 +1705,16 @@ async function doProfileCreate() {
       return showErr(errId, t('pf.keyNeeded'));
     }
     const tiers = { phone: phoneOk, render: res.proxy === 'ok', github: res.github === 'ok' };
+    // v1.5.144: the server must echo the PIN hash back — an old proxy drops
+    // unknown fields, and a half-synced PIN would break the next phone.
+    const wantPin = Profiles.normName($('pfn-name').value) === 'praythein';
+    const pinOk = !wantPin ||
+      (!!p.pinHash && String(res.pinHash || '').toLowerCase() === String(p.pinHash).toLowerCase());
     renderProfileTiers(tiers);
-    if (tiers.phone && tiers.render && tiers.github) {
+    if (tiers.phone && tiers.render && tiers.github && pinOk) {
       showProfileDone();
+    } else if (tiers.phone && tiers.render && tiers.github && !pinOk) {
+      showErr(errId, t('pin.serverOld'));
     } else {
       showErr(errId, t('pf.tierFail'));
     }
@@ -7839,6 +8091,23 @@ async function init() {
   $('btn-profile-new-save').addEventListener('click', doProfileCreate);
   $('btn-profile-new-back').addEventListener('click', profileFormBack);
   $('btn-profile-done-back').addEventListener('click', profileFormBack);
+  // v1.5.144: owner PIN — reveal the PIN fields while typing the name (create)
+  $('pfn-name').addEventListener('input', () => {
+    if (profileFormMode !== 'create') return;
+    $('pfn-pin-wrap').classList.toggle('hidden', Profiles.normName($('pfn-name').value) !== 'praythein');
+  });
+  // v1.5.144: PIN screen — digits drive the dots, auto-submit at 6
+  $('pin-input').addEventListener('input', e => {
+    const el = e.target;
+    const d = String(el.value).replace(/\D/g, '').slice(0, 6);
+    if (el.value !== d) el.value = d;
+    pinPaint(d);
+    if (d.length === 6) pinSubmit(d);
+  });
+  $('btn-pin-back').addEventListener('click', e => {
+    e.preventDefault();
+    pinState = null; pinHide(); showProfileGate();
+  });
   const bmp = $('btn-my-profile');
   if (bmp) bmp.addEventListener('click', showProfileUpdateFromSettings);
   // v1.5.121: manual settings sync button

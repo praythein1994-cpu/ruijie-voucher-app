@@ -145,6 +145,23 @@
   </div>
 </div>
 
+<!-- ══════════ OWNER PIN GATE (v1.5.144) ══════════ -->
+<div id="view-pin" class="screen hidden">
+  <div class="connect-card pin-card">
+    <div class="connect-logo"><img src="icon.svg" alt="Ruijie Voucher"></div>
+    <h1 id="pin-title" data-i18n="pin.unlockTitle">PIN ရိုက်ပါ</h1>
+    <p class="muted" id="pin-sub" data-i18n="pin.unlockSub">PrayThein အကောင့်အတွက် ၆-လုံး PIN</p>
+    <div class="pin-field">
+      <div class="pin-dots" id="pin-dots" aria-hidden="true">
+        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN">
+    </div>
+    <p id="pin-err" class="err hidden"></p>
+    <p class="muted small" style="text-align:center"><a href="#" id="btn-pin-back" data-i18n="pf.backToLogin">Login ပြန်သွားမယ်</a></p>
+  </div>
+</div>
+
 <div id="view-profile-new" class="screen hidden">
   <div class="connect-card">
     <div class="connect-logo"><img src="icon.svg" alt="Ruijie Voucher"></div>
@@ -181,6 +198,17 @@
     <label id="pfn-key-wrap" class="hidden"><span data-i18n="pf.writeKey">Sync key (မရှိရင် ချန်ထားပါ)</span>
       <input id="pfn-key" type="password" autocomplete="off">
     </label>
+    <div id="pfn-pin-wrap" class="hidden">
+      <label id="pfn-curpin-wrap" class="hidden"><span data-i18n="pin.curPin">လက်ရှိ PIN (၆ လုံး)</span>
+        <input id="pfn-curpin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">
+      </label>
+      <label id="pfn-newpin-wrap"><span data-i18n="pin.newPin">PIN အသစ် (၆ လုံး)</span>
+        <input id="pfn-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      </label>
+      <label id="pfn-newpin2-wrap"><span data-i18n="pin.confirmPin">PIN အတည်ပြုပါ</span>
+        <input id="pfn-pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      </label>
+    </div>
     <div id="profile-new-tiers" class="hidden" style="margin:8px 0"></div>
     <button id="btn-profile-new-save" class="btn primary big"><span id="btn-profile-new-save-label" data-i18n="pf.createBtn">Create</span></button>
     <button id="btn-profile-new-back" class="btn big"><span data-i18n="pf.back">နောက်သို့</span></button>
