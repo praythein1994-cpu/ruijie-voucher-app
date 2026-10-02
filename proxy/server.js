@@ -14,6 +14,10 @@
  *  GET  /amh-wifi/<token> — AMH customer self-service page (capability URL, no login form)
  *  GET  /amh-wifi/<token>/info — the VLAN-30 SSID name
  *  POST /amh-wifi/<token>/set-password { newPassword } — change ONLY that SSID's password
+ *  POST /api/pc/queue { key, cmd } — owner queues a shell command for their PC
+ *  GET  /api/pc/queue?key=... — the PC polls & drains pending commands
+ *  POST /api/pc/result { key, id, output, exit } — the PC posts a command result
+ *  GET  /api/pc/result/<id>?key=... — owner polls for a command result
  *
  * - Tokens are cached in memory per (cloud, appid) and auto-refreshed.
  * - App secrets are NEVER written to disk or logs; tokens live only in RAM.
@@ -106,6 +110,73 @@ function handleTelemetryGet(req, res, u) {
   const since = Number(u.searchParams.get('since')) || 0;
   const list = telemetryBuf.filter(e => e.ts > since).slice(-100);
   return send(res, req, 200, { ok: true, count: list.length, events: list });
+}
+
+/* ── PC command relay (v1.5.118) ────────────────────────────────
+ * The assistant's VM cannot open direct tunnels (egress proxy MITMs TLS,
+ * breaking Tailscale's client-cert handshake; Cloudflare's argotunnel edge
+ * is SNI-filtered). Instead the owner's PC polls this queue over plain
+ * HTTPS and runs commands locally, posting results back. Full shell access
+ * with a few seconds of latency — enough to drive ADB, check the PC, etc.
+ * Auth reuses TELEMETRY_KEY on purpose: it is already set on Render, so no
+ * dashboard change is needed. In-memory only; a Render restart drops
+ * pending commands (the PC just polls again).
+ * The PC agent is a ~30-line PowerShell loop (see docs/pc-relay-agent.ps1). */
+const pcQueue = [];   // [{ id, cmd, ts }]
+const pcResults = new Map(); // id -> { output, exit, ts }
+let pcSeq = 0;
+function pcCheckKey(u, payload) {
+  if (!TELEMETRY_KEY) return true; // open only if no key configured (dev)
+  const k = (payload && payload.key) || u.searchParams.get('key');
+  return k === TELEMETRY_KEY;
+}
+async function handlePcQueuePost(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!pcCheckKey(u, payload)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const cmd = String(payload.cmd || '').slice(0, 4000);
+  if (!cmd.trim()) return send(res, req, 400, { code: -1, msg: 'cmd is required' });
+  const id = 'c' + Date.now().toString(36) + (++pcSeq).toString(36);
+  pcQueue.push({ id, cmd, ts: Date.now() });
+  if (pcQueue.length > 50) pcQueue.splice(0, pcQueue.length - 50);
+  return send(res, req, 200, { ok: true, id });
+}
+function handlePcQueueGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  if (!pcCheckKey(u, null)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const commands = pcQueue.splice(0, pcQueue.length);
+  return send(res, req, 200, { ok: true, commands });
+}
+async function handlePcResultPost(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!pcCheckKey(u, payload)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const id = String(payload.id || '');
+  if (!id) return send(res, req, 400, { code: -1, msg: 'id is required' });
+  pcResults.set(id, {
+    output: String(payload.output || '').slice(0, 20000),
+    exit: Number(payload.exit) || 0,
+    ts: Date.now(),
+  });
+  if (pcResults.size > 100) {
+    const first = pcResults.keys().next().value;
+    pcResults.delete(first);
+  }
+  return send(res, req, 200, { ok: true });
+}
+function handlePcResultGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  if (!pcCheckKey(u, null)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const segs = u.pathname.split('/');
+  const id = decodeURIComponent(segs[segs.length - 1] || '');
+  const r = pcResults.get(id);
+  if (!r) return send(res, req, 200, { ok: true, done: false });
+  pcResults.delete(id);
+  return send(res, req, 200, { ok: true, done: true, output: r.output, exit: r.exit });
 }
 
 /* ── Named login profiles (v1.5.79) ─────────────────────────────
@@ -382,6 +453,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (u.pathname === '/telemetry' && req.method === 'POST') return handleTelemetryPost(req, res);
     if (u.pathname === '/telemetry' && req.method === 'GET') return handleTelemetryGet(req, res, u);
+    if (u.pathname === '/api/pc/queue' && req.method === 'POST') return handlePcQueuePost(req, res, u);
+    if (u.pathname === '/api/pc/queue' && req.method === 'GET') return handlePcQueueGet(req, res, u);
+    if (u.pathname === '/api/pc/result' && req.method === 'POST') return handlePcResultPost(req, res, u);
+    if (u.pathname.startsWith('/api/pc/result/') && req.method === 'GET') return handlePcResultGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'GET') return handleProfileGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
     // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
