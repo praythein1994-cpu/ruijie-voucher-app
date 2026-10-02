@@ -1315,6 +1315,23 @@ button.set-row { cursor: pointer; }
 .set-row .segmented { flex: 1; margin: 0; min-width: 0; }
 .set-row.col { flex-direction: column; align-items: stretch; gap: 8px; }
 .set-row.col > .t { width: 100%; }
+/* ── v1.5.136: APP UPDATE action rows — phone and tablet layouts separated.
+   Phone-first (base): label on top, button full-width below on its own line,
+   so long labels ("Check for updates") never wrap into a chunky 2-line box.
+   Tablet keeps the compact side-by-side row. ── */
+#upd-card .set-row.upd-action { flex-wrap: wrap; }
+#upd-card .set-row.upd-action > .t { flex: 1 1 100%; min-width: 0; }
+#upd-card .set-row.upd-action .btn.small { flex: 1 1 100%; white-space: nowrap; }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) #upd-card .set-row.upd-action { flex-wrap: nowrap; }
+  html:not([data-layout="phone"]) #upd-card .set-row.upd-action > .t { flex: 1 1 auto; }
+  html:not([data-layout="phone"]) #upd-card .set-row.upd-action .btn.small { flex: 0 0 auto; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] #upd-card .set-row.upd-action { flex-wrap: nowrap; }
+html[data-layout="tablet"] #upd-card .set-row.upd-action > .t { flex: 1 1 auto; }
+html[data-layout="tablet"] #upd-card .set-row.upd-action .btn.small { flex: 0 0 auto; }
 .fld-stack { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .set-group .codetype-grid, .set-group .qty-grid { display: flex; gap: 8px; width: 100%; }
 .set-group .codetype { flex: 1; border: none; background: var(--fill-bg); border-radius: 10px; padding: 10px 6px; font-family: inherit; color: var(--label); cursor: pointer; display: flex; flex-direction: column; gap: 2px; align-items: center; }
