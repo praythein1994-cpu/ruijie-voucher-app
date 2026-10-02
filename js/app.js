@@ -1467,6 +1467,10 @@ function refreshSyncedUI(st2) {
     if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
     if (st2.btAutoConnect !== undefined && $('bt-autoconnect')) $('bt-autoconnect').checked = !!st2.btAutoConnect;
     if (st2.teleOn !== undefined && $('tele-on')) $('tele-on').checked = st2.teleOn !== false;
+    // v1.5.125: refresh device offline monitor UI
+    if (st2._monEnabled !== undefined && typeof refreshMonitorCard === 'function') {
+      try { refreshMonitorCard(); } catch (e) {}
+    }
   } catch (e) {}
 }
 function enterApp() {
@@ -6505,6 +6509,8 @@ function onMonitorToggle() {
     }
     window.RuijieBridge.monitorSetEnabled(on);
   } catch (e) {}
+  // v1.5.125: sync monitor setting to other phones
+  try { if (typeof SettingsSync !== 'undefined') SettingsSync.onLocalChange({ _monEnabled: on }); } catch (e) {}
   setTimeout(refreshMonitorCard, 400);
 }
 function onMonitorCheckNow() {
