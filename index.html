@@ -208,6 +208,13 @@
 
   <main id="main">
     <div id="ptr-indicator" class="ptr-indicator" aria-hidden="true"><svg class="ic spin"><use href="#i-refresh"/></svg></div>
+    <!-- v1.5.138: live update banner — tap jumps to Settings → App Update -->
+    <div id="upd-banner" class="upd-banner" hidden>
+      <span class="upd-banner-dot" aria-hidden="true"></span>
+      <span class="upd-banner-text" id="upd-banner-text"></span>
+      <svg class="ic sm"><use href="#i-chev-r"/></svg>
+      <button type="button" class="upd-banner-x" id="upd-banner-x" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
     <!-- VOUCHERS -->
     <section id="view-vouchers" class="view">
       <div class="large-title hidden" data-i18n="v.title">ဗောက်ချာများ</div>
@@ -494,9 +501,19 @@
           <div class="t"><div class="t-main" data-i18n="upd.auto">အော်တိုဒေါင်းလုပ်လုပ်မယ်</div><div class="sub" data-i18n="upd.autoSub">ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်</div></div>
           <label class="switch"><input type="checkbox" id="upd-auto"><span class="track"></span></label>
         </div>
-        <div class="set-row upd-action" id="upd-install-row" hidden>
-          <div class="t"><div class="t-main" data-i18n="upd.ready">ဗားရှင်းအသစ် အသင့်ဖြစ်ပြီ</div><div class="sub" id="upd-install-sub"></div></div>
-          <button type="button" class="btn small" id="upd-install-btn" data-i18n="upd.install">တပ်ဆင်မယ်</button>
+        <div class="upd-ready" id="upd-install-row" hidden>
+          <div class="upd-ready-head">
+            <span class="set-ico" style="--tile:#34C759"><svg class="ic"><use href="#i-refresh"/></svg></span>
+            <div class="t">
+              <div class="t-main" data-i18n="upd.readyTitle">UPDATE Ready</div>
+              <div class="sub" id="upd-ready-ver"></div>
+            </div>
+          </div>
+          <details class="upd-ready-details">
+            <summary><span data-i18n="upd.whatsNew">ဒီ update မှာပါမဲ့အချက်များ</span><svg class="ic"><use href="#i-chev"/></svg></summary>
+            <div class="upd-ready-notes" id="upd-ready-notes"></div>
+          </details>
+          <button type="button" class="btn primary big" id="upd-install-btn"><span data-i18n="upd.updateNow">Update Now</span></button>
         </div>
       </div>
 

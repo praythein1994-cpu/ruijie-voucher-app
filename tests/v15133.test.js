@@ -34,7 +34,10 @@ ok('waiting download resumes polling after restart',
   /updRefreshInstallUI\(\)[\s\S]*?'waiting'[\s\S]*?updPollDownload/.test(app));
 ok('html has upd-install-row', /id="upd-install-row"/.test(html));
 ok('html has upd-install-btn', /id="upd-install-btn"/.test(html));
-ok('html has upd-install-sub', /id="upd-install-sub"/.test(html));
+// v1.5.137: the old one-line sub was replaced by the UPDATE Ready card's
+// version line + expandable release notes.
+ok('html has UPDATE Ready version line (v1.5.137)', /id="upd-ready-ver"/.test(html));
+ok('html has expandable release notes (v1.5.137)', /id="upd-ready-notes"/.test(html));
 ok('install button wired in initUpdateSettings',
   /initUpdateSettings\(\)[\s\S]*?\$\('upd-install-btn'\)[\s\S]*?addEventListener\('click'/.test(app));
 ok('install click falls back gracefully when file is gone',

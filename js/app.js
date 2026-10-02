@@ -781,6 +781,12 @@ const I18N = {
   'upd.netErr': { my: 'စစ်လို့မရပါ — အင်တာနက်စစ်ပါ', en: "Couldn't check — verify internet" },
   'upd.ready': { my: 'ဗားရှင်းအသစ် အသင့်ဖြစ်ပြီ', en: 'New version ready' },
   'upd.readySub': { my: 'တပ်ဆင်ဖို့ အသင့်ဖြစ်နေပါပြီ', en: 'Ready to install' },
+  'upd.readyTitle': { my: 'UPDATE Ready', en: 'UPDATE Ready' },
+  'upd.whatsNew': { my: 'ဒီ update မှာပါမဲ့အချက်များ', en: "What's new in this update" },
+  'upd.updateNow': { my: 'Update Now', en: 'Update Now' },
+  'upd.noNotes': { my: 'အချက်အလက်မရှိပါ', en: 'No details available' },
+  'upd.bannerNew': { my: 'ဗားရှင်းအသစ် {v} ထွက်ပြီ — နှိပ်ပြီး ကြည့်မယ်', en: 'New version {v} is out — tap to view' },
+  'upd.bannerReady': { my: 'UPDATE Ready {v} — နှိပ်ပြီး တပ်ဆင်မယ်', en: 'UPDATE Ready {v} — tap to install' },
   'upd.gone': { my: 'ဒေါင်းလုပ်ဖိုင် မတွေ့တော့ပါ — ပြန်ဒေါင်းလုပ်ပေးပါ', en: 'Downloaded file not found — please download again' },
   'upd.notiTitle': { my: 'P Manager အပ်ဒိတ်', en: 'P Manager update' },
   'upd.notiText': { my: 'ဗားရှင်း {v} ဒေါင်းလုပ်ပြီးပြီ — တပ်ဆင်ဖို့ နှိပ်ပါ', en: 'Version {v} downloaded — tap to install' },
@@ -5531,7 +5537,10 @@ async function updLatestRelease() {
   const tag = String(j.tag_name || '').trim();
   const apk = (j.assets || []).find(a => /\.apk$/i.test(String(a.name || '')));
   if (!tag || !apk || !apk.browser_download_url) throw new Error('no-apk');
-  return { tag, name: String(apk.name || 'update.apk'), url: apk.browser_download_url };
+  /* v1.5.137: capture the release notes too — the UPDATE Ready card shows
+   * them in an expandable "what's new" section. */
+  return { tag, name: String(apk.name || 'update.apk'), url: apk.browser_download_url,
+           notes: String(j.body || '').trim() };
 }
 function updSetStatus(msg) {
   const el = $('upd-status');
@@ -5576,13 +5585,17 @@ function updRefreshInstallUI() {
   if (st === 'waiting') {
     // Download survived an app restart — resume watching it to completion.
     const p = updPendingLoad();
-    if (p && p.tag) updPollDownload(Number(p.id), (ok, id) => updOnDownloadDone({ tag: p.tag, name: p.name }, ok, id));
+    if (p && p.tag) updPollDownload(Number(p.id), (ok, id) => updOnDownloadDone({ tag: p.tag, name: p.name, notes: p.notes }, ok, id));
   }
   if (st === 'ready') {
     row.hidden = false;
-    const sub = $('upd-install-sub');
+    /* v1.5.137: UPDATE Ready card — version line + collapsed-by-default
+     * release notes (textContent only, never HTML). */
     const p = updPendingLoad();
-    if (sub) sub.textContent = (p && p.tag ? p.tag + ' — ' : '') + t('upd.readySub');
+    const ver = $('upd-ready-ver');
+    if (ver) ver.textContent = (p && p.tag) ? p.tag : '';
+    const notes = $('upd-ready-notes');
+    if (notes) notes.textContent = (p && p.notes) ? p.notes : t('upd.noNotes');
   } else {
     row.hidden = true;
   }
@@ -5591,9 +5604,10 @@ function updRefreshInstallUI() {
  * post a system notification, and offer immediate install. */
 function updOnDownloadDone(rel, ok, id) {
   if (ok) {
-    updPendingSave({ id, tag: rel.tag, name: rel.name });
+    updPendingSave({ id, tag: rel.tag, name: rel.name, notes: rel.notes || '' });
     updSetStatus(t('upd.downloaded'));
     updRefreshInstallUI();
+    updBannerShow(rel.tag, true); // v1.5.138: banner upgrades to UPDATE Ready
     try {
       const B2 = updBridge();
       if (B2 && B2.updateNotify) B2.updateNotify(t('upd.notiTitle'), tx('upd.notiText', { v: rel.tag }));
@@ -5646,19 +5660,19 @@ function updStartDownload(rel, silent) {
   let r = null;
   try { r = JSON.parse(B.updateDownload(rel.url, rel.name) || '{}'); } catch (e) {}
   if (!r || !r.ok) { if (!silent) toast(t('upd.failed'), true); return; }
-  updPendingSave({ id: r.id, tag: rel.tag, name: rel.name }); // v1.5.133: persist early so a restart can resume watching
+  updPendingSave({ id: r.id, tag: rel.tag, name: rel.name, notes: rel.notes || '' }); // v1.5.133: persist early so a restart can resume watching
   updSetStatus(tx('upd.downloading', { p: 0 }));
   updPollDownload(r.id, (ok, id) => updOnDownloadDone(rel, ok, id));
 }
 async function checkAppUpdate(manual) {
   const B = updBridge();
-  if (!B) { if (manual) toast(t('upd.apkOnly'), true); return; }
+  if (!B) { if (manual) toast(t('upd.apkOnly'), true); return null; }
   updRefreshInstallUI();
   // v1.5.133: never re-download what is already downloaded — offer install.
   if (updPendingState() === 'ready') {
     updSetStatus(t('upd.downloaded'));
     if (manual) toast(t('upd.downloaded'));
-    return;
+    return { state: 'ready' };
   }
   if (manual) updSetStatus(t('upd.checking'));
   try {
@@ -5666,20 +5680,108 @@ async function checkAppUpdate(manual) {
     const cur = updCurVersion();
     if (cmpVersions(rel.tag, cur.name) <= 0) {
       if (manual) { updSetStatus(t('upd.latest')); toast(t('upd.latest')); }
-      return;
+      return { state: 'latest' };
     }
     if (manual) {
       updSetStatus('');
       const yes = await iosConfirm(tx('upd.found', { v: rel.tag }), '', t('a.ok'), t('a.cancel'), false);
       if (yes) updStartDownload(rel, false);
-    } else {
-      // auto-download mode: fetch quietly in the background
-      updStartDownload(rel, true);
+      return { state: 'manual', tag: rel.tag };
     }
+    // auto-download mode: fetch quietly in the background
+    updStartDownload(rel, true);
+    return { state: 'started', tag: rel.tag }; // v1.5.138: watcher shows the banner
   } catch (e) {
     if (manual) { updSetStatus(''); toast(t('upd.netErr'), true); }
     else updSetStatus(t('upd.checkFail')); // v1.5.133: auto mode no longer fully silent
+    return null;
   }
+}
+/* ═══════════ v1.5.138: LIVE UPDATE BANNER + AUTO-DETECT ═══════════
+ * The app watches GitHub releases while it runs — a quiet check shortly
+ * after startup, every 30 min after that, and when the app returns to the
+ * foreground after a while. When a newer release appears a slim banner
+ * shows under the header; tapping it jumps to Settings → App Update.
+ * With auto-download on, the download still starts by itself and the
+ * banner upgrades to "UPDATE Ready" when it finishes. */
+function updBannerShow(tag, ready) {
+  const b = $('upd-banner');
+  if (!b) return;
+  // A dismissed "new version" stays hidden this session — but an update
+  // that is READY to install is always worth surfacing.
+  try {
+    if (!ready && sessionStorage.getItem('updBannerOff') === '1') return;
+  } catch (e) {}
+  const tel = $('upd-banner-text');
+  if (tel) tel.textContent = ready ? tx('upd.bannerReady', { v: tag }) : tx('upd.bannerNew', { v: tag });
+  b.hidden = false;
+}
+function updBannerHide() {
+  const b = $('upd-banner');
+  if (b) b.hidden = true;
+}
+function updBannerDismiss() {
+  try { sessionStorage.setItem('updBannerOff', '1'); } catch (e) {}
+  updBannerHide();
+}
+function updBannerGo() {
+  try { switchView('view-settings'); } catch (e) { return; }
+  setTimeout(() => {
+    const card = $('upd-card');
+    if (!card) return;
+    try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    card.classList.remove('upd-flash');
+    void card.offsetWidth; // restart the animation
+    card.classList.add('upd-flash');
+    setTimeout(() => card.classList.remove('upd-flash'), 1900);
+  }, 150);
+}
+/* Banner-only detection (auto-download toggle OFF): no download, just
+ * surface the new version. */
+async function updCheckBanner() {
+  if (!updBridge()) return;
+  if (updPendingState() === 'ready') {
+    const p = updPendingLoad();
+    updBannerShow(p && p.tag ? p.tag : '', true);
+    return;
+  }
+  const cur = updCurVersion();
+  if (!cur.name) return;
+  try {
+    const rel = await updLatestRelease();
+    if (cmpVersions(rel.tag, cur.name) > 0) updBannerShow(rel.tag, false);
+    else updBannerHide();
+  } catch (e) {}
+}
+let updWatchTimer = null;
+let updLastWatch = 0;
+const UPD_WATCH_MS = 30 * 60 * 1000; // re-check every 30 min while the app runs
+async function updWatchTick() {
+  updLastWatch = Date.now();
+  if (!updBridge()) return;
+  if (updPendingState() === 'ready') {
+    const p = updPendingLoad();
+    updBannerShow(p && p.tag ? p.tag : '', true);
+    return;
+  }
+  let r = null;
+  if (Store.load().updateAutoDl) {
+    try { r = await checkAppUpdate(false); } catch (e) { r = null; }
+  }
+  if (r && r.state === 'latest') { updBannerHide(); return; }
+  if (r && r.tag) { updBannerShow(r.tag, false); return; } // auto mode: downloading
+  updCheckBanner(); // toggle off (or check failed): banner-only detection
+}
+function updWatchStart() {
+  if (!updBridge()) return;
+  if (updWatchTimer) { clearInterval(updWatchTimer); updWatchTimer = null; }
+  setTimeout(() => { try { updWatchTick(); } catch (e) {} }, 8000);
+  updWatchTimer = setInterval(() => { try { updWatchTick(); } catch (e) {} }, UPD_WATCH_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - updLastWatch > UPD_WATCH_MS) {
+      try { updWatchTick(); } catch (e) {}
+    }
+  });
 }
 function initUpdateSettings() {
   const B = updBridge();
@@ -5707,10 +5809,14 @@ function initUpdateSettings() {
     else { updPendingClear(); updRefreshInstallUI(); toast(t('upd.gone'), true); }
   });
   updRefreshInstallUI(); // v1.5.133: show Install if an update is already downloaded
-  // auto-download on startup (quiet)
-  if (B && Store.load().updateAutoDl) {
-    setTimeout(() => { try { checkAppUpdate(false); } catch (e) {} }, 8000);
-  }
+  // v1.5.138: live update banner wiring
+  const bb = $('upd-banner');
+  if (bb) bb.addEventListener('click', () => updBannerGo());
+  const bx = $('upd-banner-x');
+  if (bx) bx.addEventListener('click', (e) => { e.stopPropagation(); updBannerDismiss(); });
+  // v1.5.138: auto-detect new releases while the app runs (banner always,
+  // background download only when the toggle is on)
+  if (B) updWatchStart();
 }
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;

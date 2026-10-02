@@ -1332,6 +1332,109 @@ button.set-row { cursor: pointer; }
 html[data-layout="tablet"] #upd-card .set-row.upd-action { flex-wrap: nowrap; }
 html[data-layout="tablet"] #upd-card .set-row.upd-action > .t { flex: 1 1 auto; }
 html[data-layout="tablet"] #upd-card .set-row.upd-action .btn.small { flex: 0 0 auto; }
+
+/* ── v1.5.137: UPDATE Ready card — changelog stays collapsed until tapped
+ * ("don't dump everything at once"). Phone-first base, tablet overrides below. */
+.upd-ready {
+  background: var(--fill-bg);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 10px;
+}
+.upd-ready-head { display: flex; align-items: center; gap: 12px; }
+.upd-ready-head .t { min-width: 0; }
+.upd-ready-head .t-main { font-weight: 700; font-size: 15px; }
+.upd-ready-details {
+  margin: 10px 0 12px;
+  background: rgba(127,127,127,.08);
+  border-radius: 12px;
+}
+.upd-ready-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  list-style: none;
+}
+.upd-ready-details summary::-webkit-details-marker { display: none; }
+.upd-ready-details summary .ic {
+  width: 16px; height: 16px;
+  flex: none;
+  transition: transform .2s ease;
+}
+.upd-ready-details[open] summary .ic { transform: rotate(180deg); }
+.upd-ready-notes {
+  padding: 0 12px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.upd-ready .btn.big { width: 100%; }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .upd-ready { padding: 18px; }
+  html:not([data-layout="phone"]) .upd-ready-notes { max-height: 240px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .upd-ready { padding: 18px; }
+html[data-layout="tablet"] .upd-ready-notes { max-height: 240px; }
+
+/* ── v1.5.138: live update banner — phone-first base, tablet overrides below.
+ * Slim tappable banner under the header; pulsing dot = "live" feel. */
+.upd-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(10,132,255,.35);
+}
+.upd-banner[hidden] { display: none; }
+.upd-banner-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #30D158; flex: none;
+  animation: updPulse 1.6s ease-in-out infinite;
+}
+@keyframes updPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.8); }
+}
+.upd-banner-text {
+  flex: 1; min-width: 0;
+  font-size: 13.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.upd-banner > .ic { flex: none; opacity: .9; }
+.upd-banner-x {
+  border: none; cursor: pointer; flex: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255,255,255,.22); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.upd-banner-x .ic { width: 12px; height: 12px; }
+/* Flash highlight on the App Update card when arriving from the banner */
+.upd-flash { animation: updFlash 1.8s ease; border-radius: 14px; }
+@keyframes updFlash {
+  0%, 100% { box-shadow: none; }
+  25%, 65% { box-shadow: 0 0 0 2.5px var(--blue); }
+}
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .upd-banner { margin-left: auto; margin-right: auto; max-width: 720px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .upd-banner { margin-left: auto; margin-right: auto; max-width: 720px; }
 .fld-stack { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .set-group .codetype-grid, .set-group .qty-grid { display: flex; gap: 8px; width: 100%; }
 .set-group .codetype { flex: 1; border: none; background: var(--fill-bg); border-radius: 10px; padding: 10px 6px; font-family: inherit; color: var(--label); cursor: pointer; display: flex; flex-direction: column; gap: 2px; align-items: center; }

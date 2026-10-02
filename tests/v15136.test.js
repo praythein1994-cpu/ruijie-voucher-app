@@ -12,7 +12,10 @@ const ok = (name, cond) => results.push([name, !!cond]);
 
 // Both action rows carry the phone/tablet hook class
 ok('check row has upd-action', /class="set-row upd-action"[\s\S]{0,200}?upd-check-btn/.test(html));
-ok('install row has upd-action', /class="set-row upd-action" id="upd-install-row"/.test(html));
+// v1.5.137 re-architected the install row into the UPDATE Ready card
+// (expandable changelog + Update Now); it no longer uses upd-action.
+ok('install row is now the UPDATE Ready card (v1.5.137)',
+  /class="upd-ready" id="upd-install-row"/.test(html));
 // The toggle row must NOT stack — switch stays inline on the same line
 ok('auto-download toggle row untouched',
   !/upd-action[\s\S]{0,300}?upd-auto/.test(html.split('upd-card')[1].split('upd-install-row')[0]));
