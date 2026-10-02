@@ -1467,6 +1467,10 @@ function refreshSyncedUI(st2) {
     if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
     if (st2.btAutoConnect !== undefined && $('bt-autoconnect')) $('bt-autoconnect').checked = !!st2.btAutoConnect;
     if (st2.teleOn !== undefined && $('tele-on')) $('tele-on').checked = st2.teleOn !== false;
+    // v1.5.126: refresh print layout/style (reload PS from Store)
+    if (st2.printStyle && typeof loadPrintStyle === 'function') {
+      try { loadPrintStyle(); } catch (e) {}
+    }
     // v1.5.125: refresh device offline monitor UI
     if (st2._monEnabled !== undefined && typeof refreshMonitorCard === 'function') {
       try { refreshMonitorCard(); } catch (e) {}
