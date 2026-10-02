@@ -133,6 +133,8 @@ const I18N = {
   'v.delExpiredConfirm': { my: 'သက်တမ်းကုန်ဗောက်ချာ {n} ခုကို ဖျက်မှာလား?', en: 'Delete {n} expired vouchers?' },
   'v.delExpiredNone': { my: 'သက်တမ်းကုန်ဗောက်ချာ မရှိပါ', en: 'No expired vouchers' },
   'v.delExpiredDone': { my: '{ok} ခု ဖျက်ပြီးပြီ', en: 'Deleted {ok}' },
+  'v.delExpiredPickDate': { my: 'ဘယ်ရက်ထိ သက်တမ်းကုန်တာကို ဖျက်မလဲ?', en: 'Delete vouchers expired through…' },
+  'v.delExpiredShowCount': { my: 'အရေအတွက် ကြည့်မယ်', en: 'Show count' },
   'v.reset': { my: 'Reset', en: 'Reset' },
   'v.resetConfirm': { my: 'ရွေးထားတဲ့ ဗောက်ချာ {n} ခုကို reset လုပ်မှာလား? (သုံးပြီးသားအချက်အလက် ပြန်စမယ်)', en: 'Reset {n} selected vouchers? (usage will be cleared)' },
   'v.resetNone': { my: 'ဗောက်ချာ ရွေးထားတာ မရှိပါ', en: 'No vouchers selected' },
@@ -260,6 +262,14 @@ const I18N = {
   'g.qty2': { my: 'ဗောက်ချာ အရေအတွက်', en: 'Number of Vouchers' },
   'g.customQty': { my: 'စိတ်ကြိုက် အရေအတွက်', en: 'Custom Quantity' },
   'g.btnPrint': { my: 'ထုတ်ပြီး ပရင့်မယ်', en: 'Generate & Print' },
+  'a.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'a.ok': { my: 'OK', en: 'OK' },
+  'a.delete': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'kick.kick': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
+  'block.block': { my: 'Block မယ်', en: 'Block' },
+  'block.unblock': { my: 'Unblock', en: 'Unblock' },
+  'unbind.unbind': { my: 'ဖြုတ်မယ်', en: 'Unbind' },
+  'confirm.signoutBtn': { my: 'ထွက်မယ်', en: 'Sign out' },
   'a.cancel': { my: 'မလုပ်တော့ပါ', en: 'Cancel' },
   'v.unknown': { my: 'အဟောင်း/မသိ', en: 'old/unknown' },
   'kick.title': { my: 'Client ဖြုတ်ချခြင်း', en: 'Client Disconnect' },
@@ -270,6 +280,8 @@ const I18N = {
   'kick.ssid': { my: 'Voucher SSID', en: 'Voucher SSID' },
   'kick.ssidPh': { my: 'ဥပမာ ShopWiFi', en: 'e.g. ShopWiFi' },
   'kick.ssidSub': { my: 'သံသယရှိ flag က ဒီ SSID ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် (မထည့်ရင် အားလုံးပြ)', en: 'Suspicious flag only shows for clients on this SSID (empty = all)' },
+  'kick.interval': { my: 'ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ', en: 'Check every N minutes' },
+  'v.delExpiredThrough': { my: 'ရက်စွဲ', en: 'Through' },
   'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
   'block.btn': { my: 'Block မယ်', en: 'Block' },
   'block.confirm': { my: 'ဒီ MAC ကို Block မလား? (ပြန်ချိတ်လို့မရတော့ပါ)', en: 'Block this MAC? (It will not be able to reconnect)' },
@@ -545,7 +557,6 @@ const I18N = {
   'sl.unknownPkg': { my: 'အမည်မသိ', en: 'Unknown' },
   'sl.dateNote': { my: 'ရက်စွဲအခြေခံ: ဗောက်ချာထုတ်လုပ်ချိန် (createTime) — သုံးပြီးချိန်က မိနစ်အရေအတွက်ဖြစ်လို့ ရက်စွဲအဖြစ် သုံးမရပါ။', en: 'Date basis: voucher creation time (usedTime is a duration in minutes, not a date).' },
   'sl.day1': { my: 'နောက်ဆုံး ၁ ရက်', en: 'Last 1 Day' },
-  'sl.today': { my: 'ဒီနေ့', en: 'Today' },
   'sl.yday': { my: 'မနေ့က', en: 'Yesterday' },
   'sl.day7': { my: 'နောက်ဆုံး ၇ ရက်', en: 'Last 7 Days' },
   'sl.day30': { my: 'နောက်ဆုံး ၃၀ ရက်', en: 'Last 30 Days' },
@@ -678,6 +689,9 @@ const I18N = {
   'mc.fNoAuth': { my: 'Portal မဝင်', en: 'No portal' },
   'mc.fUnknown': { my: 'အခြား', en: 'Other' },
   'mc.fBlocked': { my: 'Block ထားတယ်', en: 'Blocked' },
+  'mc.blockEmpty': { my: 'Block ထားတာ မရှိပါ', en: 'No blocked devices' },
+  'mc.blockLocal': { my: 'ဒီဖုန်း', en: 'This phone' },
+  'mc.blockPortal': { my: 'Portal', en: 'Portal' },
   'mc.flag.suspicious': { my: 'သံသယရှိ', en: 'Suspend' },
   'mc.flag.sticky': { my: 'ကုန်ပြီးသားဆက်ချိတ်နေ', en: 'Quota spent, still online' },
   'mc.flag.kicked': { my: 'ဖြုတ်ပြီး', en: 'Kicked' },
@@ -1442,10 +1456,10 @@ function enterApp() {
   const st = Store.load();
   if (st.printHeader) $('print-header').value = st.printHeader;
   if (st.printFooter) $('print-footer').value = st.printFooter;
-  if (st.printPaper) $('print-paper').value = st.printPaper;
+  if (st.printPaper && st.printPaper !== '80') $('print-paper').value = st.printPaper;
   if (st.printCopies) $('print-copies').value = st.printCopies;
-  // sync iOS segmented paper control with stored value
-  const pp = $('print-paper').value || '80';
+  // sync iOS segmented paper control with stored value (80mm removed — always 58mm)
+  const pp = ($('print-paper').value === '80' ? '58' : $('print-paper').value) || '58';
   document.querySelectorAll('#paper-seg button').forEach(b =>
     b.classList.toggle('active', b.dataset.paper === pp));
   loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; startupSync(); });
@@ -1453,6 +1467,20 @@ function enterApp() {
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
   loadAccountInfo();
+  // v1.5.120: pull synced settings from other phones (last-write-wins)
+  try {
+    if (typeof SettingsSync !== 'undefined') SettingsSync.pull().then(r => {
+      if (r && r.ok && r.applied) {
+        try {
+          const st2 = Store.load();
+          if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
+          if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
+          if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
+          if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
+        } catch (e) {}
+      }
+    });
+  } catch (e) {}
   // v1.5.52: one-shot startup SSO auto-login (saved creds + auto-login on,
   // no portal session -> open the login dialog once; it auto-submits).
   setTimeout(maybeSsoAutoLogin, 1200);
@@ -1738,6 +1766,7 @@ async function loadProjects() {
 
 function onProjectChange() {
   S.projectId = $('project-select').value;
+  S.portalBlockedMacs = null; // v1.5.117: deny-list belongs to the project
   Store.save({ projectId: S.projectId });
   syncGenUserGroup();
   syncMonitorConfig();
@@ -1967,7 +1996,7 @@ async function bulkDelete() {
   const stale = vs.length - fresh.length;
   if (!fresh.length) { toast(t('del.noNew')); return; }
   const skipTxt = stale ? tx('del.skipOld', { n: stale }) : '';
-  if (!confirm(tx('del.confirmBulkNew', { n: fresh.length, skip: skipTxt }))) return;
+  if (!(await iosConfirm(tx('del.confirmBulkNew', { n: fresh.length, skip: skipTxt }), '', t('a.delete'), t('a.cancel'), true))) return;
   let ok = 0, fail = 0;
   for (const v of fresh) {
     try { await Api.voucherDelete(S.projectId, v); ok++; }
@@ -1980,21 +2009,153 @@ async function bulkDelete() {
   loadVouchers();
 }
 
-/* ═══════════ v1.5.101: bulk Delete Expired Vouchers (Ruijie Cloud style) ═══════════
-   Deletes ALL expired vouchers (effective status '3') — no selection needed.
-   Unlike bulkDelete (session-generated only), this targets expired vouchers
-   regardless of provenance, matching the portal's "Delete Expired Vouchers". */
+/* ═══════════ v1.5.113: bulk Delete Expired Vouchers (portal-verified) ═══════════
+   Uses the REAL portal envelope (verified 2026-10-01 via Recorder):
+   POST /authconfig/group/{gid}/api/agent/write with
+   urlSuffix /macc3/batchDelete/voucher/{gid}, httpMethod DELETE,
+   bodyParam {expireTime}. One call deletes ALL expired — no per-voucher
+   loop. Replaces the v1.5.101 per-voucher SSO-bridge loop. */
+/* ── iOS Liquid Glass confirm dialog (v1.5.116) ──
+ * Replaces native confirm() — permanent design rule: iOS UI/UX only.
+ * Returns a Promise<boolean>. */
+function iosConfirm(title, msg, okText, cancelText, destructive) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'ios-alert-ov';
+    ov.innerHTML =
+      '<div class="ios-alert" role="alertdialog">' +
+        '<div class="ios-alert-body">' +
+          '<div class="ios-alert-title">' + esc(title) + '</div>' +
+          (msg ? '<div class="ios-alert-msg">' + esc(msg) + '</div>' : '') +
+        '</div>' +
+        '<div class="ios-alert-btns">' +
+          '<button class="ios-alert-btn" data-r="0">' + esc(cancelText || t('a.cancel')) + '</button>' +
+          '<button class="ios-alert-btn' + (destructive ? ' destructive' : '') + '" data-r="1">' + esc(okText || t('a.ok')) + '</button>' +
+        '</div>' +
+      '</div>';
+    const done = v => { ov.remove(); resolve(v); };
+    ov.querySelectorAll('.ios-alert-btn').forEach(b =>
+      b.addEventListener('click', () => done(b.dataset.r === '1')));
+    ov.addEventListener('click', e => { if (e.target === ov) done(false); });
+    document.body.appendChild(ov);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => ov.classList.add('open')));
+  });
+}
+
+/* ── Expired-delete cutoff date picker (v1.5.116) ──
+ * Returns 'YYYY-MM-DD' or null if the user cancels. */
+function pickExpireDate() {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'ios-sheet-ov';
+    const sheet = document.createElement('div');
+    sheet.className = 'ios-sheet';
+    sheet.setAttribute('role', 'dialog');
+    const today = (() => {
+      const d = new Date();
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    })();
+    sheet.innerHTML =
+      '<div class="sheet-handle"></div>' +
+      '<div class="ios-sheet-title">' + esc(t('v.delExpiredPickDate')) + '</div>' +
+      '<div style="padding:12px 16px"><input type="date" id="exp-date-cutoff" ' +
+      'value="' + today + '" max="' + today + '" ' +
+      'style="width:100%;font-size:17px;padding:10px;border-radius:10px;' +
+      'border:1px solid var(--separator);background:var(--bg)"></div>' +
+      '<div class="ios-sheet-opts"></div>';
+    const optsEl = sheet.querySelector('.ios-sheet-opts');
+    const ok = document.createElement('button');
+    ok.type = 'button';
+    ok.className = 'ios-sheet-opt active';
+    ok.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
+    ok.addEventListener('click', () => {
+      const v = sheet.querySelector('#exp-date-cutoff').value || null;
+      closeExpDateSheet();
+      resolve(v);
+    });
+    optsEl.appendChild(ok);
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'ios-sheet-cancel';
+    cancel.textContent = t('a.cancel');
+    cancel.addEventListener('click', () => {
+      closeExpDateSheet();
+      resolve(null);
+    });
+    sheet.appendChild(cancel);
+    ov.appendChild(sheet);
+    ov.addEventListener('click', e => {
+      if (e.target === ov) { closeExpDateSheet(); resolve(null); }
+    });
+    document.body.appendChild(ov);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => ov.classList.add('open')));
+  });
+}
+function closeExpDateSheet() {
+  const ov = document.querySelector('.ios-sheet-ov');
+  if (ov) ov.remove();
+}
+/** End of the picked day in local time — matches the portal's own cutoff
+ *  (captured expireTime 1789579799999 = 2026-09-16 23:59:59.999 +0630). */
+function endOfDayMs(ymd) {
+  const parts = String(ymd || '').split('-').map(Number);
+  if (parts.length !== 3 || parts.some(n => !isFinite(n))) return Date.now();
+  return new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999).getTime();
+}
+
 async function deleteExpiredVouchers() {
-  const expired = (S.vouchers || []).filter(v => vEffStatus(v) === '3');
-  if (!expired.length) { toast(t('v.delExpiredNone')); return; }
-  if (!confirm(tx('v.delExpiredConfirm', { n: expired.length }))) return;
-  let ok = 0, fail = 0;
-  for (const v of expired) {
-    try { await Api.voucherDelete(S.projectId, v); ok++; }
-    catch (e) { fail++; }
+  if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
+  // v1.5.116: the portal's expired-delete page lets the user pick a cutoff
+  // date — offer the same instead of always using "now".
+  const picked = await pickExpireDate();
+  if (!picked) return; // user cancelled
+  const expireTime = endOfDayMs(picked); // 23:59:59.999 local, like the portal
+  // Ask the portal how many are expired, for the confirm dialog.
+  let n = null;
+  try {
+    const cj = await Api.voucherExpireCountSso(Number(S.projectId), expireTime);
+    n = extractExpireCount(cj);
+  } catch (e) { /* fall through to local count */ }
+  if (n === null) {
+    n = (S.vouchers || []).filter(v => vEffStatus(v) === '3').length;
   }
-  toast(tx('v.delExpiredDone', { ok }) + (fail ? ` · ${fail} ✗` : ''));
+  if (!n) { toast(t('v.delExpiredNone')); return; }
+  const okDel = await iosConfirm(
+    tx('v.delExpiredConfirm', { n }),
+    t('v.delExpiredThrough') + ' ' + picked,
+    t('a.delete'), t('a.cancel'), true);
+  if (!okDel) return;
+  try {
+    await Api.voucherDeleteExpiredSso(Number(S.projectId), expireTime);
+    toast(tx('v.delExpiredDone', { ok: n }));
+  } catch (e) {
+    toast(String((e && e.message) || e || ''), true);
+    return;
+  }
   loadVouchers();
+}
+
+/** Pull the expired count out of the portal's getExpireVoucherCount reply.
+ *  Shape not yet seen in the wild — accept common wrappings, else null. */
+function extractExpireCount(j) {
+  if (j === null || j === undefined) return null;
+  if (typeof j === 'number' && isFinite(j)) return j;
+  if (typeof j !== 'object') return null;
+  const d = j.data;
+  if (typeof d === 'number' && isFinite(d)) return d;
+  if (d && typeof d === 'object') {
+    for (const k of ['count', 'total', 'expireCount', 'num']) {
+      if (typeof d[k] === 'number' && isFinite(d[k])) return d[k];
+    }
+  }
+  for (const k of ['count', 'total', 'expireCount', 'num']) {
+    if (typeof j[k] === 'number' && isFinite(j[k])) return j[k];
+  }
+  return null;
 }
 
 /* ═══════════ v1.5.101: Reset selected vouchers (Ruijie Cloud style) ═══════════
@@ -2007,7 +2168,7 @@ async function resetSelectedVouchers() {
   const uuids = bulkSelectedUuids();
   if (!uuids.length) { toast(t('v.resetNone')); return; }
   const vs = uuids.map(u => S.vouchers.find(x => x.uuid === u)).filter(Boolean);
-  if (!confirm(tx('v.resetConfirm', { n: vs.length }))) return;
+  if (!(await iosConfirm(tx('v.resetConfirm', { n: vs.length }), '', t('v.reset'), t('a.cancel'), true))) return;
   try {
     await Api.voucherResetMany(S.projectId, vs);
     toast(tx('v.resetDone', { ok: vs.length }));
@@ -3447,7 +3608,7 @@ async function moreAccounts() {
         <td><button class="btn danger-ghost" data-del="${esc(a.username || a.name || '')}" data-uuid="${esc(a.uuid || '')}">${t('ma.del')}</button></td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('ma.none')}</p>`;
     document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
-      if (!confirm(tx('del.confirm', { code: b.dataset.del }))) return;
+      if (!(await iosConfirm(tx('del.confirm', { code: b.dataset.del }), '', t('a.delete'), t('a.cancel'), true))) return;
       try { await Api.accountDelete(S.projectId, b.dataset.del); toast(t('del.done')); moreAccounts(); }
       catch (e) { toast(e.message, true); }
     }));
@@ -3480,7 +3641,7 @@ async function moreUserGroups() {
 async function deleteUserGroup(p) {
   if (!p) return;
   const name = pkgName(p);
-  if (!confirm(t('mg.confirmDel').replace('{name}', name))) return;
+  if (!(await iosConfirm(t('mg.confirmDel').replace('{name}', name), '', t('a.delete'), t('a.cancel'), true))) return;
   const ugId = pkgGroupId(p), profId = pkgProfileId(p);
   if (!ugId || !profId) { toast(t('mg.needIds'), true); return; }
   let tenantId = '';
@@ -3781,7 +3942,7 @@ async function moreDevices() {
    devSta.set devReboot envelope (APK gateway bridge); cloud rows use
    the SSO portal bridge as before. */
 async function rebootDevice(sn, name, isLocal) {
-  if (!confirm(tx('md.rebootConfirm', { name: name || sn }))) return;
+  if (!(await iosConfirm(tx('md.rebootConfirm', { name: name || sn }), '', t('md.reboot'), t('a.cancel'), true))) return;
   toast(t('md.rebooting'));
   try {
     if (isLocal) {
@@ -3852,8 +4013,8 @@ async function loadSsids() {
 }
 
 async function deleteSsid(ssidName) {
-  if (!confirm(t('wifi.confirmDel') + '\n' + ssidName)) return;
-  if (!confirm(ssidName + '\n' + t('wifi.confirmDel'))) return;
+  if (!(await iosConfirm(t('wifi.confirmDel'), ssidName, t('a.delete'), t('a.cancel'), true))) return;
+  if (!(await iosConfirm(ssidName, t('wifi.confirmDel'), t('a.delete'), t('a.cancel'), true))) return;
   try {
     await Api.ssidDeleteSso(S.projectId, ssidName);
     toast(t('wifi.deleted')); loadSsids();
@@ -3918,7 +4079,7 @@ function openSsidPassword(ssidName) {
   $('sp-cancel').addEventListener('click', loadSsids);
   $('sp-ok').addEventListener('click', async () => {
     const pw = $('sp-pw').value;
-    if (!confirm(t('wifi.confirmPw'))) return;
+    if (!(await iosConfirm(t('wifi.confirmPw'), '', t('a.ok'), t('a.cancel'), false))) return;
     try {
       await Api.ssidSetPasswordSso(S.projectId, ssidName, pw);
       toast(t('wifi.pwChanged')); loadSsids();
@@ -3970,7 +4131,7 @@ function openSsidSpeed(ssidName) {
   $('ss-ok').addEventListener('click', async () => {
     const u = parseFloat($('ss-up').value), d = parseFloat($('ss-down').value);
     if (!(u >= 0 && d >= 0) || !isFinite(u) || !isFinite(d)) { toast(t('wifi.badSpeed'), true); return; }
-    if (!confirm(tx('wifi.confirmSpeed', { ssid: ssidName, up: u, down: d }))) return;
+    if (!(await iosConfirm(tx('wifi.confirmSpeed', { ssid: ssidName, up: u, down: d }), '', t('a.ok'), t('a.cancel'), false))) return;
     try {
       await Api.ssidSetRatesSso(S.projectId, ssidName, u, d);
       toast(t('wifi.speedSaved')); loadSsids();
@@ -4066,7 +4227,7 @@ async function moreWebAuth() {
     renderRows();
   });
   $('wa-save').addEventListener('click', async () => {
-    if (!confirm(t('wa.confirm'))) return;
+    if (!(await iosConfirm(t('wa.confirm'), '', t('a.save'), t('a.cancel'), false))) return;
     syncRows();
     const c = S._waCfg;
     c.enable = $('wa-enable').checked ? '1' : '0';
@@ -4113,7 +4274,7 @@ async function moreWebAuth() {
     $('wg-proto').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
   });
   $('wg-save').addEventListener('click', async () => {
-    if (!confirm(t('wg.confirm'))) return;
+    if (!(await iosConfirm(t('wg.confirm'), '', t('a.save'), t('a.cancel'), false))) return;
     const g = S._waGlob;
     const act = $('wg-proto').querySelector('button.active');
     g.proto = act ? act.dataset.p : String(g.proto || 'http');
@@ -4176,7 +4337,7 @@ async function moreWebAuth() {
     renderMacs();
   });
   $('al-save').addEventListener('click', async () => {
-    if (!confirm(t('al.confirm'))) return;
+    if (!(await iosConfirm(t('al.confirm'), '', t('a.save'), t('a.cancel'), false))) return;
     try {
       await GwApi.allowlistMacSet(macs);
       toast(t('wa.saved'));
@@ -4797,23 +4958,70 @@ async function requestKick(c, opts) {
   try { if (mcCache) renderMcList(); } catch (e) { /* best-effort */ }
   return true;
 }
-function kickStickyClient(c) {
+async function kickStickyClient(c) {
   const mac = c && (c.mac || c.userMac);
   if (!mac) return;
   const v = (S.vouchers || []).find(x => vCode(x) === String((c && c.account) || '').trim());
   const w = kickRemainWarning(v);
-  if (!confirm(w || t('kick.confirm'))) return;
+  if (!(await iosConfirm(w || t('kick.confirm'), '', t('kick.kick'), t('a.cancel'), true))) return;
   requestKick(c, { auto: false });
 }
 /* ── Portal MAC block / unblock (manual, v1.5.95) ────────────────
- * Blocked state is tracked locally (Store.blockedMacs): the portal's
- * blocklist read is not yet captured, so a MAC the app blocked shows
- * "Unblock" and everything else shows "Block". */
+ * v1.5.115: blocked state = LOCAL list (Store.blockedMacs) UNION the
+ * portal's deny-list (S.portalBlockedMacs, fetched via SSO when online
+ * clients load). So a MAC blocked from ANY phone shows as blocked here.
+ * v1.5.117: the Blocked tab renders the DENY-LIST itself (getBlockedMacList),
+ * not a filter over online clients — a blocked MAC is denied by the portal
+ * MAC filter, so it never appears in the online list and the old filter
+ * design showed "Blocked (0)" forever. The portal READ
+ * (GET /homescene/mac_filter/{gid}) is portal-verified 2026-10-01;
+ * clientBlocklistSso never throws and returns null on any failure, in
+ * which case the local list stands alone. */
 function isMacBlocked(mac) {
   const h = normMac(mac);
   if (!h) return false;
   const list = (Store.load() || {}).blockedMacs || [];
-  return Array.isArray(list) && list.includes(h);
+  if (Array.isArray(list) && list.includes(h)) return true;
+  const pb = S.portalBlockedMacs;
+  return !!(pb && pb.has(h));
+}
+/** The shared Blocked list: local list UNION portal deny-list, deduped,
+ * normalized (bare uppercase hex), sorted. Pure-ish (reads Store + S). */
+function getBlockedMacList() {
+  const seen = new Set();
+  const out = [];
+  const push = m => {
+    const h = normMac(m);
+    if (h && h.length === 12 && !seen.has(h)) { seen.add(h); out.push(h); }
+  };
+  const st = Store.load() || {};
+  (Array.isArray(st.blockedMacs) ? st.blockedMacs : []).forEach(push);
+  const pb = S.portalBlockedMacs;
+  if (pb && typeof pb.forEach === 'function') pb.forEach(push);
+  out.sort();
+  return out;
+}
+/** Where a blocked MAC came from: 'local', 'portal', or 'both'. */
+function blockedMacSource(h) {
+  const st = Store.load() || {};
+  const local = Array.isArray(st.blockedMacs) && st.blockedMacs.map(normMac).includes(h);
+  const pb = S.portalBlockedMacs;
+  const portal = !!(pb && pb.has(h));
+  if (local && portal) return 'both';
+  if (portal) return 'portal';
+  return 'local';
+}
+/** Refresh the portal deny-list (best-effort, silent). */
+async function refreshPortalBlocklist() {
+  try {
+    if (!Api.ssoLoggedIn()) return;
+    const macs = await Api.clientBlocklistSso(Number(S.projectId));
+    if (Array.isArray(macs)) {
+      S.portalBlockedMacs = new Set(
+        macs.map(m => normMac(m)).filter(Boolean));
+      try { if (mcCache) renderMcList(); } catch (e) { /* best-effort */ }
+    }
+  } catch (e) { /* silent: local list stands alone */ }
 }
 function setMacBlocked(mac, blocked) {
   const h = normMac(mac);
@@ -4830,7 +5038,7 @@ async function blockClient(c) {
   const cm = colonMac(mac);
   if (!cm) { toast(t('kick.norecord'), true); return; }
   if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
-  if (!confirm(t('block.confirm'))) return;
+  if (!(await iosConfirm(t('block.confirm'), '', t('block.block'), t('a.cancel'), true))) return;
   try {
     await Api.clientBlockSso(Number(S.projectId), cm);
   } catch (e) {
@@ -4839,6 +5047,7 @@ async function blockClient(c) {
   }
   setMacBlocked(mac, true);
   toast(t('block.done'));
+  try { refreshPortalBlocklist(); } catch (e) { /* best-effort */ }
   closeIosPicker();
   openMcDetail(c);
 }
@@ -4847,7 +5056,7 @@ async function unblockClient(c) {
   const dm = dottedMac(mac);
   if (!dm) { toast(t('kick.norecord'), true); return; }
   if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
-  if (!confirm(t('unblock.confirm'))) return;
+  if (!(await iosConfirm(t('unblock.confirm'), '', t('block.unblock'), t('a.cancel'), false))) return;
   try {
     await Api.clientUnblockSso(Number(S.projectId), dm);
   } catch (e) {
@@ -4856,8 +5065,28 @@ async function unblockClient(c) {
   }
   setMacBlocked(mac, false);
   toast(t('unblock.done'));
+  try { refreshPortalBlocklist(); } catch (e) { /* best-effort */ }
   closeIosPicker();
   openMcDetail(c);
+}
+/* ── v1.5.117: unblock a bare MAC from the Blocked tab ──
+ * The MAC may not be online (usually isn't), so this takes the MAC itself
+ * rather than a client object. Mirrors unblockClient's SSO DELETE flow. */
+async function unblockMac(mac) {
+  const h = normMac(mac);
+  if (!h || h.length !== 12) return;
+  if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
+  if (!(await iosConfirm(t('unblock.confirm'), '', t('block.unblock'), t('a.cancel'), false))) return;
+  try {
+    await Api.clientUnblockSso(Number(S.projectId), dottedMac(h));
+  } catch (e) {
+    toast(String((e && e.message) || e || ''), true);
+    return;
+  }
+  setMacBlocked(h, false);
+  toast(t('unblock.done'));
+  try { await refreshPortalBlocklist(); } catch (e) { /* best-effort */ }
+  try { renderMcList(); } catch (e) { /* best-effort */ }
 }
 /* ── Background auto-kick (Android APK only, v1.5.66) ─────────
  * The Settings auto-kick toggle enables BOTH the in-app scan (while the
@@ -4911,6 +5140,24 @@ function onKickToggle() {
 }
 function initKickSettings() {
   const tg = $('kick-auto');
+  // v1.5.116: configurable auto-kick interval (native, min 15 min).
+  const iv = $('kick-interval');
+  if (iv) {
+    let cur = 15;
+    if (hasAutoKickBg()) {
+      try { cur = JSON.parse(window.RuijieBridge.autoKickInfo()).intervalMin || 15; } catch (e) {}
+    }
+    iv.value = cur;
+    iv.addEventListener('change', () => {
+      let m = Math.max(1, parseInt(iv.value, 10) || 15);
+      iv.value = m;
+      if (hasAutoKickBg()) {
+        try { window.RuijieBridge.autoKickSetInterval(m); } catch (e) {}
+      }
+      Store.save({ kickIntervalMin: m });
+      refreshKickStatus();
+    });
+  }
   if (tg) {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
@@ -5056,6 +5303,8 @@ async function moreClients() {
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
   renderMcList(); // rebuilds #mc-list innerHTML — the .mc-sync spinner goes with it
+  // v1.5.115: pull the portal deny-list so blocks from any phone show.
+  try { refreshPortalBlocklist(); } catch (e) { /* best-effort */ }
   // v1.5.62: auto-kick was defined but never wired up — run the scan now that
   // the list is on screen. Kicks mark rows locally (no refetch per kick).
   try { autoKickScan(list); } catch (e) { /* best-effort */ }
@@ -5113,8 +5362,10 @@ function renderMcList() {
   const counts = { all: list.length };
   CSTS.forEach(s => counts[s] = 0);
   sts.forEach(s => counts[s]++);
-  // v1.5.105: Blocked chip — counts clients whose MAC is in the local blocklist
-  const blockedCount = list.filter(c => isMacBlocked(mcFields(c, viaPortal, vmap).mac)).length;
+  // v1.5.105: Blocked chip — counts the deny-list itself (v1.5.117: local
+  // UNION portal). NOT a filter over online clients: a blocked MAC is
+  // denied by the portal filter, so it never appears in the online list.
+  const blockedCount = getBlockedMacList().length;
   const srcLine = `📡 ${esc(viaPortal ? t('ac.srcPortal') : t('ac.srcApi'))}${srcNote ? ' · ' + esc(srcNote) : ''}${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(S.clientsFetchedAt)) : ''}`; // v1.5.54: last-fetched
   const seg = (key, label, n) =>
     `<button type="button" class="${filter === key ? 'active' : ''}" data-mcf="${key}">${esc(label)} (${n})</button>`;
@@ -5170,11 +5421,39 @@ function shouldFlagSuspicious(st, viaPortal, ssid, c, vList) {
     : (Number(c.onlineTime) > 0 ? Date.now() - Number(c.onlineTime) : 0);
   return bytes > 50 * 1024 * 1024 || durMs > 2 * 3600 * 1000;
 }
+/* ── v1.5.117 · Blocked tab = the deny-list itself ──
+ * One row per blocked MAC (local ∪ portal), each with an Unblock action.
+ * A blocked MAC is denied by the portal MAC filter so it never shows in
+ * the online list — filtering online clients by blocked state always
+ * rendered "Blocked (0)". Search matches MAC hex substrings. */
+function renderBlockedCells(q) {
+  const nq = normMac(q || '');
+  let cells = '';
+  getBlockedMacList().forEach(h => {
+    if (nq && !h.includes(nq)) return;
+    const src = blockedMacSource(h);
+    const srcLabel = src === 'both' ? t('mc.blockLocal') + ' + ' + t('mc.blockPortal')
+      : src === 'portal' ? t('mc.blockPortal') : t('mc.blockLocal');
+    cells += `<div class="set-row mc-row" role="button" tabindex="0">` +
+      `<span class="set-ico mc-ico cst-blocked">${ic('lock', '')}</span>` +
+      `<div class="t"><div class="mc-top"><span class="t-main">${esc(colonMac(h))}</span></div>` +
+      `<div class="sub">${esc(srcLabel)}</div>` +
+      `<div class="mc-foot"><span></span><button type="button" class="mc-kick" data-unblock="${esc(h)}">${esc(t('block.unblock'))}</button></div>` +
+      `</div></div>`;
+  });
+  $('mc-cells').innerHTML =
+    cells ? `<div class="set-group mc-list">${cells}</div>` : `<p class="muted">${esc(t('mc.blockEmpty'))}</p>`;
+  document.querySelectorAll('#mc-cells [data-unblock]').forEach(b =>
+    b.addEventListener('click', () => unblockMac(b.dataset.unblock)));
+}
 /* v1.5.67: cells-only render — called by renderMcList and by the search box
    on every keystroke (no focus loss, no list wipe). */
 function renderMcCells() {
   const { list, viaPortal, vmap } = mcCache;
   const { filter, showNames, q } = mcCache;
+  // v1.5.117: the Blocked tab renders the deny-list itself (blocked MACs
+  // are never online), not a filter over online clients.
+  if (filter === 'blocked') return renderBlockedCells(q);
   const sts = list.map(c => clientStatusOf(mcFields(c, viaPortal, vmap).acct, vmap));
   /* v1.5.57: iOS client cells — status-tinted device icon tile, headline +
      sub-lines, status badge; replaces the 8-column desktop table. */
@@ -5189,10 +5468,8 @@ function renderMcCells() {
   // v1.5.76: heaviest transferrers get a top-talker flag (read-only signal).
   const topSet = topTalkerIdx(list, viaPortal);
   list.forEach((c, i) => {
-    // v1.5.105: 'blocked' filter — MAC in local blocklist (not a voucher status)
-    if (filter === 'blocked') {
-      if (!isMacBlocked(mcFields(c, viaPortal, vmap).mac)) return;
-    } else if (filter !== 'all' && sts[i] !== filter) return;
+    // (v1.5.117: 'blocked' filter is rendered by renderBlockedCells, not here)
+    if (filter !== 'all' && sts[i] !== filter) return;
     const f = mcFields(c, viaPortal, vmap);
     if (!mcMatchQ(f, q)) return;
     const st = sts[i];
@@ -6820,7 +7097,7 @@ function init() {
   $('modal-disconnect').addEventListener('click', async () => {
     if (!modalVoucher) return;
     const w = kickRemainWarning(modalVoucher);
-    if (!confirm(w || t('kick.confirm'))) return;
+    if (!(await iosConfirm(w || t('kick.confirm'), '', t('kick.kick'), t('a.cancel'), true))) return;
     const ok = await requestKick({ account: vCode(modalVoucher) }, { auto: false });
     if (ok) { modalVoucher = null; closeModal('modal'); loadVouchers(); }
   });
@@ -6842,7 +7119,7 @@ function init() {
       const list = await Api.voucherBindMacListSso(S.projectId, v, tenantName, '');
       if (!list || !list.length) { toast(t('unbind.none') || 'Bind ထားတဲ့ MAC မရှိပါ'); return; }
       const macs = list.map(x => x.mac).filter(Boolean).join(', ');
-      if (!confirm((t('unbind.confirm') || 'MAC unbind လုပ်မှာလား?') + '\n' + macs)) return;
+      if (!(await iosConfirm(t('unbind.confirm') || 'MAC unbind လုပ်မှာလား?', macs, t('unbind.unbind'), t('a.cancel'), true))) return;
       const recordList = list.map(x => x.recordUuid).filter(Boolean);
       const macList = list.map(x => x.mac).filter(Boolean);
       await Api.voucherUnbindMacSso(S.projectId, v, recordList, macList, '');
@@ -6965,8 +7242,8 @@ function init() {
       else ssoSilentReauth(); // dead session → silently re-authenticate
     }
   });
-  $('btn-disconnect').addEventListener('click', () => {
-    if (!confirm(t('confirm.signout'))) return;
+  $('btn-disconnect').addEventListener('click', async () => {
+    if (!(await iosConfirm(t('confirm.signout'), '', t('confirm.signoutBtn'), t('a.cancel'), true))) return;
     Api.clearCfg();
     location.reload();
   });
