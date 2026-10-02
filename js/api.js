@@ -1546,6 +1546,36 @@ const Api = {
     return j;
   },
 
+  /** Rename an SSID (WiFi name): GET full object, set new ssidName,
+   * PUT full object back. Portal route: PUT /conf/template/{id}/ssid/{ssid_id}
+   * with the FULL wirelessConfEntity — same pattern as password change
+   * (verified 2026-10-01 from the portal's own write flow). */
+  async ssidRenameSso(groupId, oldName, newName) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const name = String(newName || '').trim();
+    if (!name || name.length > 32) throw new Error('SSID_BADNAME');
+    const { tempId, list } = await this.ssidListSso(groupId);
+    const ssid = list.find(s => String(s.ssidName || '').toLowerCase() === String(oldName).toLowerCase());
+    if (!ssid) throw new Error('SSID မတွေ့ပါ: ' + oldName);
+    if (list.some(s => s !== ssid && String(s.ssidName || '').toLowerCase() === name.toLowerCase())) {
+      throw new Error('SSID_NAMEEXISTS');
+    }
+    const ssidId = ssid.id || ssid.ssidId;
+    if (!ssidId) throw new Error('SSID ID မရှိပါ');
+    // PUT the FULL object back, only the name changed (portal sends full config).
+    const obj = Object.assign({}, ssid);
+    obj.ssidName = name;
+    if (Array.isArray(obj.relatedRadio)) obj.relatedRadio = obj.relatedRadio.join(',');
+    if (!obj.authEntity) obj.authEntity = {};
+    const env = this.ssoSsidUpdateEnvelope(tempId, ssidId, obj);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('နာမည်ပြောင်းမရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
   /* ── Per-client speed limit on an SSID (Cloud webproxy, SSO session) ──
    * Wire format VERIFIED from the portal's own JS (docs/wifi-ratelimit-spec.md,
    * 2026-09-30): PUT /conf/template/{id}/ssid/{ssid_id} with the FULL
