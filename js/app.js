@@ -3993,6 +3993,27 @@ async function moreDevices() {
         else errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
       }
     });
+    // Cloud devices carry no IP from the portal — enrich from the gateway's
+    // neighbor/MAC table (best-effort; the gateway already reported these).
+    if (wantLocalMerge && results.length > types.length) {
+      try {
+        const gr = results[types.length];
+        const gwArr = (gr && gr.status === 'fulfilled' && Array.isArray(gr.value)) ? gr.value : [];
+        const macToIp = new Map();
+        gwArr.forEach(g => {
+          const m = normMac(g.mac || g.devMac || '');
+          const ip = String(g.ip || '').trim();
+          if (m && ip && !macToIp.has(m)) macToIp.set(m, ip);
+        });
+        if (macToIp.size) {
+          list.forEach(d => {
+            if (d.ip || d.deviceIp || d.ipAddress || d.mgmtIp) return;
+            const m = normMac(d.mac || d.deviceMac || '');
+            if (m && macToIp.has(m)) d.ip = macToIp.get(m);
+          });
+        }
+      } catch (e) {}
+    }
     // v1.5.53: dead session → queue a one-shot retry of this exact load and
     // silently re-authenticate. The retry fires on the next successful login;
     // genuine errors still render as before.
