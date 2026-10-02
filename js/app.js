@@ -327,6 +327,12 @@ const I18N = {
   'wifi.confirmSpeed': { my: '{ssid} အတွက် client တစ်ယောက်ချင်းစီ speed ကန့်သတ်ချက် — တင် {up} Mbps / ချ {down} Mbps သိမ်းမှာလား?', en: 'Set per-client caps for {ssid} — {up} Mbps up / {down} Mbps down?' },
   'wifi.speedSaved': { my: 'Speed limit သိမ်းပြီးပြီ', en: 'Speed limit saved' },
   'wifi.badSpeed': { my: 'Speed 0 သို့မဟုတ် အပေါင်းကိန်း ထည့်ပါ', en: 'Enter 0 or a positive number' },
+  'wifi.rename': { my: 'နာမည်ပြောင်းမယ်', en: 'Rename' },
+  'wifi.newName': { my: 'WiFi နာမည်အသစ်', en: 'New WiFi name' },
+  'wifi.nameChanged': { my: 'WiFi နာမည် ပြောင်းပြီးပြီ', en: 'WiFi name changed' },
+  'wifi.confirmRename': { my: '{old} → {new} နာမည်ပြောင်းမှာလား?', en: 'Rename {old} → {new}?' },
+  'wifi.badName': { my: 'နာမည် ထည့်ပါ (32 လုံးအထိ)', en: 'Enter a name (up to 32 chars)' },
+  'wifi.nameExists': { my: 'ဒီ နာမည် ရှိနေပြီးသား', en: 'This name is already in use' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
   'kick.warnQuota': { my: 'quota ကျန်သေးတယ်', en: 'quota remains' },
   'kick.warnTime': { my: 'အချိန်ကျန်သေးတယ်', en: 'time remains' },
@@ -3950,7 +3956,11 @@ async function moreDevices() {
           const ncliShow = ncli > 0 ? ncli : ncliLocal;
           const showCli = isApRow && sn && (ncliShow > 0 || !d.local);
           const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" data-aplocal="${d.local ? '1' : ''}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncliShow}</span></button>` : '';
-          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
+          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small>${(() => {
+            // v1.5.127: show gateway/device IP (portal /maint/devices/list carries `ip`)
+            const ip = d.ip || d.deviceIp || d.ipAddress || d.mgmtIp || '';
+            return ip ? `<br><small class="muted">${esc(t('mt.ip'))}: ${esc(ip)}</small>` : '';
+          })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
           <td>${rb}${cb}</td></tr>`;
@@ -4023,16 +4033,23 @@ async function loadSsids() {
       const hid = isHid ? ' (hidden)' : '';
       // 2026-10-01: per-client speed caps shown under the SSID name (full text, no truncation)
       const spd = fmtSsidSpeed(s);
+      // Ruijie Cloud WLAN list style: encryption · band · VLAN, then speed caps
+      const band = fmtSsidBand(s);
+      const vlan = (s.vlanId !== undefined && s.vlanId !== null && String(s.vlanId) !== '')
+        ? 'VLAN ' + esc(String(s.vlanId)) : '';
+      const sub = [enc, band, vlan, spd ? esc(spd) : ''].filter(Boolean).join(' · ');
       return `<div class="voucher-row ssid-row">
         <div class="ssid-info"><div class="ssid-name">${nm}${hid}</div>
-        <div class="muted small">${enc}${spd ? ' · ' + esc(spd) : ''}</div></div>
+        <div class="muted small">${sub}</div></div>
         <div class="ssid-actions">
+        <button class="btn sm" data-ssidrename="${esc(s.ssidName || '')}">${t('wifi.rename')}</button>
         <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}">${t('wifi.changePw')}</button>
         <button class="btn sm" data-ssidspeed="${esc(s.ssidName || '')}">${t('wifi.speed')}</button>
         <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}">${t('wifi.delete')}</button>
         </div>
       </div>`;
     }).join('');
+    body.querySelectorAll('[data-ssidrename]').forEach(b => b.addEventListener('click', () => openSsidRename(b.dataset.ssidrename)));
     body.querySelectorAll('[data-ssidpw]').forEach(b => b.addEventListener('click', () => openSsidPassword(b.dataset.ssidpw)));
     body.querySelectorAll('[data-ssidspeed]').forEach(b => b.addEventListener('click', () => openSsidSpeed(b.dataset.ssidspeed)));
     body.querySelectorAll('[data-ssiddel]').forEach(b => b.addEventListener('click', () => deleteSsid(b.dataset.ssiddel)));
@@ -4116,9 +4133,60 @@ function openSsidPassword(ssidName) {
   });
 }
 
+/* WiFi name rename editor — iOS card style like the password/speed editors.
+ * Renames via Api.ssidRenameSso (full-object PUT, only ssidName changed). */
+function openSsidRename(ssidName) {
+  if (!Api.ssoLoggedIn()) { toast(t('wifi.needSso')); return; }
+  const body = $('wifi-body');
+  body.innerHTML = `
+    <div class="card" style="padding:14px;max-width:420px">
+    <h3 style="margin:0 0 4px">${esc(t('wifi.rename'))}</h3>
+    <p class="muted small" style="margin:0 0 12px">${esc(ssidName)}</p>
+    <label class="fld"><span>${t('wifi.newName')}</span>
+      <input id="sr-name" maxlength="32" autocomplete="off" value="${esc(ssidName)}"></label>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="sr-ok">${t('wifi.save')}</button>
+      <button class="btn" id="sr-cancel">${t('wifi.cancel')}</button>
+    </div></div>`;
+  const inp = $('sr-name');
+  inp.focus();
+  inp.select();
+  $('sr-cancel').addEventListener('click', loadSsids);
+  $('sr-ok').addEventListener('click', async () => {
+    const nm = inp.value.trim();
+    if (!nm || nm.length > 32) { toast(t('wifi.badName'), true); return; }
+    if (nm === ssidName) { loadSsids(); return; }
+    if (!(await iosConfirm(tx('wifi.confirmRename', { old: ssidName, new: nm }), '', t('a.ok'), t('a.cancel'), false))) return;
+    try {
+      await Api.ssidRenameSso(S.projectId, ssidName, nm);
+      toast(t('wifi.nameChanged')); loadSsids();
+    } catch (e) {
+      const msg = String(e.message || e);
+      if (msg === 'SSID_BADNAME') toast(t('wifi.badName'), true);
+      else if (msg === 'SSID_NAMEEXISTS') toast(t('wifi.nameExists'), true);
+      else toast(msg, true);
+    }
+  });
+}
+
 /* 2026-10-01 (user): per-client speed limit editor for an SSID.
  * Shows the current per-client caps, edits in Mbps, saves via
  * Api.ssidSetRatesSso (full-object PUT, only upRate/downRate changed). */
+/* Ruijie Cloud WLAN list style: show the radio band an SSID broadcasts on.
+ * Portal field relatedRadio: '1' = 2.4G, '2' = 5G, '1,2' = both. */
+function fmtSsidBand(s) {
+  if (!s) return '';
+  let r = s.relatedRadio;
+  if (Array.isArray(r)) r = r.join(',');
+  r = String(r || '').replace(/\s+/g, '');
+  if (!r) return '';
+  const has1 = r.split(',').includes('1'), has2 = r.split(',').includes('2');
+  if (has1 && has2) return '2.4G/5G';
+  if (has1) return '2.4G';
+  if (has2) return '5G';
+  return '';
+}
+
 function fmtSsidSpeed(s) {
   if (!s) return '';
   const up = s.upRate, down = s.downRate;
