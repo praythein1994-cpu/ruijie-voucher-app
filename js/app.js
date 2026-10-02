@@ -132,6 +132,7 @@ const I18N = {
   'v.delExpired': { my: 'သက်တမ်းကုန်တွေ ဖျက်မယ်', en: 'Delete Expired Vouchers' },
   'v.delExpiredConfirm': { my: 'သက်တမ်းကုန်ဗောက်ချာ {n} ခုကို ဖျက်မှာလား?', en: 'Delete {n} expired vouchers?' },
   'v.delExpiredNone': { my: 'သက်တမ်းကုန်ဗောက်ချာ မရှိပါ', en: 'No expired vouchers' },
+  'v.delExpiredFound': { my: 'ခု တွေ့တယ်', en: 'vouchers found' },
   'v.delExpiredDone': { my: '{ok} ခု ဖျက်ပြီးပြီ', en: 'Deleted {ok}' },
   'v.delExpiredPickDate': { my: 'ဘယ်ရက်ထိ သက်တမ်းကုန်တာကို ဖျက်မလဲ?', en: 'Delete vouchers expired through…' },
   'v.delExpiredShowCount': { my: 'အရေအတွက် ကြည့်မယ်', en: 'Show count' },
@@ -2100,18 +2101,53 @@ function pickExpireDate() {
       'value="' + today + '" max="' + today + '" ' +
       'style="width:100%;font-size:17px;padding:10px;border-radius:10px;' +
       'border:1px solid var(--separator);background:var(--bg)"></div>' +
+      '<div id="exp-count-result" style="padding:0 16px;min-height:24px;font-size:15px"></div>' +
       '<div class="ios-sheet-opts"></div>';
     const optsEl = sheet.querySelector('.ios-sheet-opts');
-    const ok = document.createElement('button');
-    ok.type = 'button';
-    ok.className = 'ios-sheet-opt active';
-    ok.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
-    ok.addEventListener('click', () => {
+    const countBtn = document.createElement('button');
+    countBtn.type = 'button';
+    countBtn.className = 'ios-sheet-opt active';
+    countBtn.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
+    // v1.5.129: two-step - show count in dialog, then reveal Delete button
+    countBtn.addEventListener('click', async () => {
       const v = sheet.querySelector('#exp-date-cutoff').value || null;
-      closeExpDateSheet();
-      resolve(v);
+      if (!v) return;
+      const resultEl = sheet.querySelector('#exp-count-result');
+      countBtn.disabled = true;
+      resultEl.textContent = '…';
+      try {
+        const expireTime = endOfDayMs(v);
+        let n = null;
+        try {
+          const cj = await Api.voucherExpireCountSso(Number(S.projectId), expireTime);
+          n = extractExpireCount(cj);
+        } catch (e) {}
+        if (n === null) {
+          n = (S.vouchers || []).filter(x => vEffStatus(x) === '3').length;
+        }
+        if (!n) {
+          resultEl.textContent = t('v.delExpiredNone');
+          countBtn.disabled = false;
+          return;
+        }
+        resultEl.innerHTML = '<b>' + n + '</b> ' + esc(t('v.delExpiredFound'));
+        // Replace Show count with Delete button
+        optsEl.innerHTML = '';
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'ios-sheet-opt danger';
+        delBtn.innerHTML = '<span>' + esc(t('a.delete')) + ' (' + n + ')</span>';
+        delBtn.addEventListener('click', () => {
+          closeExpDateSheet();
+          resolve({ date: v, count: n, expireTime });
+        });
+        optsEl.appendChild(delBtn);
+      } catch (e) {
+        resultEl.textContent = String((e && e.message) || e || '');
+        countBtn.disabled = false;
+      }
     });
-    optsEl.appendChild(ok);
+    optsEl.appendChild(countBtn);
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.className = 'ios-sheet-cancel';
@@ -2144,24 +2180,13 @@ function endOfDayMs(ymd) {
 
 async function deleteExpiredVouchers() {
   if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
-  // v1.5.116: the portal's expired-delete page lets the user pick a cutoff
-  // date — offer the same instead of always using "now".
+  // v1.5.129: pickExpireDate now returns {date, count, expireTime} after two-step dialog
   const picked = await pickExpireDate();
   if (!picked) return; // user cancelled
-  const expireTime = endOfDayMs(picked); // 23:59:59.999 local, like the portal
-  // Ask the portal how many are expired, for the confirm dialog.
-  let n = null;
-  try {
-    const cj = await Api.voucherExpireCountSso(Number(S.projectId), expireTime);
-    n = extractExpireCount(cj);
-  } catch (e) { /* fall through to local count */ }
-  if (n === null) {
-    n = (S.vouchers || []).filter(v => vEffStatus(v) === '3').length;
-  }
-  if (!n) { toast(t('v.delExpiredNone')); return; }
+  const { date: pickedDate, count: n, expireTime } = picked;
   const okDel = await iosConfirm(
     tx('v.delExpiredConfirm', { n }),
-    t('v.delExpiredThrough') + ' ' + picked,
+    t('v.delExpiredThrough') + ' ' + pickedDate,
     t('a.delete'), t('a.cancel'), true);
   if (!okDel) return;
   try {
@@ -2260,6 +2285,8 @@ function openVoucherDetail(uuid) {
   $('modal-disconnect').classList.remove('hidden');
   // v1.5.86: MAC unbind button on voucher preview (user request)
   $('modal-unbind').classList.remove('hidden');
+  // v1.5.129: Reset button on voucher detail (user request, like Ruijie Cloud)
+  $('modal-reset').classList.remove('hidden');
   // v1.5.101: per-voucher delete REMOVED (user) — replaced by bulk Delete Expired Vouchers
   const wasOpen = !$('modal').classList.contains('hidden');
   $('modal').classList.remove('hidden');
@@ -2322,10 +2349,10 @@ function stopVoucherLive() {
 /* ═══════════ PACKAGES (user groups) ═══════════ */
 async function ensurePackages() {
   if (!S.projectId) return;
-  if (S.packages.length) { fillPackageSelects(); return; }
+  if (S.packages.length) { fillPackageSelects(); initGenPackageSave(); return; }
   try {
     S.packages = await Api.userGroupList(S.projectId);
-    fillPackageSelects();
+    fillPackageSelects(); initGenPackageSave();
   } catch (e) {
     toast(t('err.pkgList') + e.message, true);
   }
@@ -2352,8 +2379,29 @@ function fillPackageSelects() {
     const label = `${pkgName(p)} — ${fmtPeriod(p.timePeriod)} · ${fmtQuota(p.quota)}`;
     return `<option value="${esc(uid)}|${esc(pid)}">${esc(label)}</option>`;
   }).join('');
-  $('gen-package').innerHTML = opts || '<option value="">—</option>';
-  syncIosPickerBtn($('gen-package'));
+  const sel = $('gen-package');
+  sel.innerHTML = opts || '<option value="">—</option>';
+  // v1.5.129: restore last selected package
+  try {
+    const lastPkg = Store.load().lastGenPackage;
+    if (lastPkg) {
+      const opt = Array.from(sel.options).find(o => o.value === lastPkg);
+      if (opt) sel.value = lastPkg;
+    }
+  } catch (e) {}
+  syncIosPickerBtn(sel);
+}
+// v1.5.129: save package selection (attached once at init)
+function initGenPackageSave() {
+  try {
+    const sel = $('gen-package');
+    if (sel && !sel._pkgSaveInit) {
+      sel._pkgSaveInit = true;
+      sel.addEventListener('change', () => {
+        try { Store.save({ lastGenPackage: sel.value }); } catch (e) {}
+      });
+    }
+  } catch (e) {}
 }
 function selectedPackage(selId) {
   const sel = $(selId);
@@ -2579,7 +2627,7 @@ function ticketInnerHtml(item, st, style, preview) {
 }
 
 /* ═══════════ GENERATE ═══════════ */
-S.genOpts = { vlen: 8, vtype: 'alnum' };
+S.genOpts = { vlen: 7, vtype: 'numeric' };
 
 function genQty() {
   return Math.min(500, Math.max(1, Number($('gen-qty').value) || 1));
@@ -4044,14 +4092,12 @@ async function loadSsids() {
         <div class="ssid-actions">
         <button class="btn sm" data-ssidrename="${esc(s.ssidName || '')}">${t('wifi.rename')}</button>
         <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}">${t('wifi.changePw')}</button>
-        <button class="btn sm" data-ssidspeed="${esc(s.ssidName || '')}">${t('wifi.speed')}</button>
         <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}">${t('wifi.delete')}</button>
         </div>
       </div>`;
     }).join('');
     body.querySelectorAll('[data-ssidrename]').forEach(b => b.addEventListener('click', () => openSsidRename(b.dataset.ssidrename)));
     body.querySelectorAll('[data-ssidpw]').forEach(b => b.addEventListener('click', () => openSsidPassword(b.dataset.ssidpw)));
-    body.querySelectorAll('[data-ssidspeed]').forEach(b => b.addEventListener('click', () => openSsidSpeed(b.dataset.ssidspeed)));
     body.querySelectorAll('[data-ssiddel]').forEach(b => b.addEventListener('click', () => deleteSsid(b.dataset.ssiddel)));
   } catch (e) {
     body.innerHTML = `<p class="muted">Error: ${esc(e.message || e)}</p>`;
@@ -7254,6 +7300,25 @@ function init() {
       toast(t('unbind.done') || 'MAC unbind ပြီးပါပြီ');
     } catch (e) {
       toast((t('unbind.fail') || 'Unbind မရပါ: ') + (e.message || e));
+    }
+  });
+  // v1.5.129: Reset button in voucher detail (user request, like Ruijie Cloud)
+  $('modal-reset').addEventListener('click', async () => {
+    if (!modalVoucher) return;
+    const v = modalVoucher;
+    if (!(await iosConfirm(tx('v.resetConfirm', { n: 1 }), vCode(v), t('v.reset'), t('a.cancel'), true))) return;
+    try {
+      await Api.voucherReset(S.projectId, v);
+      // v1.5.129: optimistically clear usage so status updates immediately
+      try {
+        v.usedTime = 0; v.usedQuota = 0;
+        const sv = (S.vouchers || []).find(x => x.uuid === v.uuid);
+        if (sv) { sv.usedTime = 0; sv.usedQuota = 0; }
+      } catch (e) {}
+      toast(t('v.resetDone', { ok: 1 }));
+      modalVoucher = null; closeModal('modal'); loadVouchers();
+    } catch (e) {
+      toast(String((e && e.message) || e || ''), true);
     }
   });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
