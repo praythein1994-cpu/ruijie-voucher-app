@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.168'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.169'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -5329,8 +5329,9 @@ async function loadQoS() {
             <option value="">${esc(t('q.selApp'))}</option>
             ${(tree || []).map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('')}
           </select>
-          <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1">
+          <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1" autocomplete="off">
         </div>
+        <div id="q-app-suggest" style="display:none;max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin-top:4px;background:var(--card)"></div>
         <p class="muted small" style="margin-top:4px">${esc(t('q.nameHint'))}</p>
         ${tree ? '' : `
         <p class="muted small" id="q-tree-loading">${esc(t('q.treeLoading'))}</p>
@@ -5522,15 +5523,40 @@ async function loadQoS() {
       if (appId && !curApps.includes(appId)) { curApps.push(appId); renderApps(); }
       qsel.value = '';
     });
-    // Manual input Enter key (bound here too for when tree loads successfully)
+    // Manual input: autocomplete suggestions from app tree + Enter to add
     const qmi = $('q-app-manual');
+    const qsug = $('q-app-suggest');
     if (qmi && !qmi.dataset.bound) {
       qmi.dataset.bound = '1';
+      const hideSug = () => { if (qsug) qsug.style.display = 'none'; };
+      const showSug = () => {
+        if (!qsug) return;
+        const q = (qmi.value || '').trim().toLowerCase();
+        if (q.length < 2 || !tree || !tree.length) { hideSug(); return; }
+        const matches = tree.filter(x => x.name.toLowerCase().includes(q) && !curApps.includes(x.name)).slice(0, 8);
+        if (!matches.length) { hideSug(); return; }
+        qsug.innerHTML = matches.map((x, i) =>
+          `<div data-idx="${tree.indexOf(x)}" style="padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px">${esc(x.name)}</div>`
+        ).join('');
+        qsug.style.display = '';
+        qsug.querySelectorAll('div[data-idx]').forEach(el => {
+          el.addEventListener('click', () => {
+            const idx = Number(el.dataset.idx);
+            const entry = tree[idx];
+            const appId = entry.id || entry.name;
+            if (appId && !curApps.includes(appId)) { curApps.push(appId); renderApps(); }
+            qmi.value = ''; hideSug();
+          });
+        });
+      };
+      qmi.addEventListener('input', showSug);
+      qmi.addEventListener('focus', showSug);
+      qmi.addEventListener('blur', () => setTimeout(hideSug, 200));
       qmi.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           const v = (qmi.value || '').trim();
-          if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); qmi.value = ''; }
-        }
+          if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); qmi.value = ''; hideSug(); }
+        } else if (e.key === 'Escape') { hideSug(); }
       });
     }
     // v1.5.164: fallback binding handled by bindTreeFallback() above

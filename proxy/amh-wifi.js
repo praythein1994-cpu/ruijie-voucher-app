@@ -136,18 +136,33 @@ const AMH_FULL_CONF = {
   vlanId: 30,
   encryptionMode: 'wpa_wpa2-psk',
   encryptionModeDesc: 'WPA/WPA2-PSK',
-  upRate: 0, downRate: 0, wlanUpRate: 0, wlanDownRate: 0,
   qosEnable: 'false',
   wlanQosEnable: 'false',
   authEnable: 'false',
   bandSelectEnable: 'false',
   ppskEnable: 'false',
   usersLimit: 0,
+  roamEnable: 'false',
   xpressEnable: 'false',
   ftEnable: 0,
   okcEnable: 0,
   axMode: 'true',
+  beMode: 'true',
+  mlo: '0',
+  wirelessModeType: 'wifi7',
+  wm: '0',
+  vAuth: '0',
+  preset: '0',
+  compat: 'false',
   isApartment: 'false',
+  isGuest: 'true',
+  l2iso: 'false',
+  encryption: true,
+  randomPassword: false,
+  passwordRandom: false,
+  ssidNameRandom: false,
+  supportTmngt: true,
+  radiusServerAll: [],
 };
 
 async function setSsidPassword(newPassword) {
@@ -160,8 +175,59 @@ async function setSsidPassword(newPassword) {
   });
 }
 
+/* ── TEST SSID (AMH-TEST-HIDDEN, id 16537267) ────────────────────────── */
+/* Read-modify-write: fetch live config, change only the password. */
+async function getSsidConf(ssidId) {
+  const tok = await getToken();
+  const url = `${CLOUD}/service/api/open/v1/wifi?access_token=${encodeURIComponent(tok)}&group_id=${GROUP_ID}`;
+  const { json, status } = await httpsJson(url, 'GET', null);
+  if (!json || json.code !== 0) throw new Error('list failed: http=' + status + ' code=' + (json && json.code) + ' msg=' + (json && json.msg) + ' dataKeys=' + (json && json.data ? Object.keys(json.data).join(',') : 'none'));
+  const list = json.data && (json.data.list || json.data);
+  const arr = Array.isArray(list) ? list : [];
+  const ids = arr.map(s => String(s.ssidId || s.id)).join(',');
+  const found = arr.find(s => String(s.ssidId || s.id) === String(ssidId));
+  if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (group=' + GROUP_ID + ')');
+  return found;
+}
+
+async function setTestSsidPassword(newPassword) {
+  const TEST_SSID_ID = '16537267';
+  // Direct edit with known config (from creation: hidden, VLAN 30, WPA/WPA2-PSK)
+  // Same pattern as main setSsidPassword — no list needed
+  const entity = {
+    ssidName: 'AMH-TEST-HIDDEN',
+    ssidEncode: 'utf-8',
+    relatedRadio: '1,2',
+    enable: 'true',
+    ishidden: 'true',
+    fowardType: 'bridge',
+    vlanId: 30,
+    encryptionMode: 'wpa_wpa2-psk',
+    encryptionModeDesc: 'WPA/WPA2-PSK',
+    upRate: 0, downRate: 0, wlanUpRate: 0, wlanDownRate: 0,
+    qosEnable: 'false',
+    wlanQosEnable: 'false',
+    authEnable: 'false',
+    bandSelectEnable: 'false',
+    ppskEnable: 'false',
+    usersLimit: 0,
+    xpressEnable: 'false',
+    ftEnable: 0,
+    okcEnable: 0,
+    axMode: 'true',
+    isApartment: 'false',
+    password: newPassword,
+  };
+  return openApi('/service/api/open/v1/wifi', {
+    groupId: Number(GROUP_ID),
+    wifiGrpSsid: false,
+    ssidId: Number(TEST_SSID_ID),
+    wirelessConfEntity: entity,
+  });
+}
+
 /* ── tiny HTML page (MY/EN toggle) ─────────────────────────────────── */
-function pageHtml() {
+function pageHtml(ssidLabel, isTest) {
   const T = {
     my: {
       title: 'WiFi စကားဝှက် ချိန်းမယ်', sub: 'သင့်ရဲ့ WiFi စကားဝှက်ကို ဒီမှာ ချိန်းနိုင်ပါတယ်',
@@ -222,9 +288,15 @@ function apply(){
 }
 document.getElementById('langBtn').onclick=()=>{lang=lang==='my'?'en':'my';localStorage.setItem('amh-lang',lang);apply();};
 apply();
-fetch(location.pathname+'/info').then(r=>r.json()).then(d=>{
-  document.getElementById('ssidName').textContent=d.ok&&d.ssidName?d.ssidName:'—';
-}).catch(()=>{document.getElementById('ssidName').textContent='—';});
+const PAGE_SSID=${JSON.stringify(ssidLabel || '')};
+const PAGE_IS_TEST=${isTest ? 'true' : 'false'};
+if(PAGE_IS_TEST){
+  document.getElementById('ssidName').textContent=PAGE_SSID;
+}else{
+  fetch(location.pathname+'/info').then(r=>r.json()).then(d=>{
+    document.getElementById('ssidName').textContent=d.ok&&d.ssidName?d.ssidName:'—';
+  }).catch(()=>{document.getElementById('ssidName').textContent='—';});
+}
 const msg=document.getElementById('msg'),btn=document.getElementById('btn');
 btn.onclick=async()=>{
   const t=T[lang],a=document.getElementById('npw').value;
@@ -288,6 +360,34 @@ async function handle(req, res, u) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ ok: false, msg: String(e.message || e).slice(0, 200) }));
     }
+  }
+  // GET /amh-wifi/<token>/test -> test SSID password page
+  if (req.method === 'GET' && segs.length === 3 && segs[2] === 'test') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end(pageHtml('AMH-TEST-HIDDEN', true));
+  }
+  // POST /amh-wifi/<token>/test/set-password { newPassword }
+  if (req.method === 'POST' && segs.length === 4 && segs[2] === 'test' && segs[3] === 'set-password') {
+    if (!checkRate(ip, true)) { res.writeHead(429, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ ok: false, msg: 'rate limited' })); }
+    let body = '';
+    req.on('data', ch => { body += ch; if (body.length > 4096) req.destroy(); });
+    req.on('end', async () => {
+      try {
+        const d = JSON.parse(body || '{}');
+        const pw = String(d.newPassword || '');
+        if (!PW_RE.test(pw) || pw.length < PW_MIN || pw.length > PW_MAX) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, msg: 'invalid password format' }));
+        }
+        await setTestSsidPassword(pw);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ ok: false, msg: String(e.message || e).slice(0, 200) }));
+      }
+    });
+    return;
   }
   // POST /amh-wifi/<token>/set-password { newPassword }
   if (req.method === 'POST' && segs.length === 3 && segs[2] === 'set-password') {
