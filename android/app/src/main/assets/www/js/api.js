@@ -556,6 +556,15 @@ const GwApi = {
       const arr = (j && j.data) || [];
       const treeRes = Array.isArray(arr) ? arr[0] : {};
       const d = (treeRes && treeRes.data) || treeRes || {};
+      // v1.5.165: debug — store raw response info for diagnostics
+      try {
+        window._qosTreeDebug = {
+          hasData: !!j.data,
+          arrLen: Array.isArray(arr) ? arr.length : -1,
+          treeKeys: d && typeof d === 'object' ? Object.keys(d).slice(0, 10) : [],
+          treeCode: treeRes && treeRes.code,
+        };
+      } catch (_) {}
       const out = [];
       const seen = new Set();
       const addName = (n) => {

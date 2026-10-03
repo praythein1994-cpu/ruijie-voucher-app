@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.164'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.165'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -5228,6 +5228,14 @@ async function loadQoS() {
     let tree = null;
     // Bind fallback UI (manual entry + retry) — called when tree fails
     const bindTreeFallback = () => {
+      // v1.5.165: show debug info
+      try {
+        const dbg = window._qosTreeDebug;
+        const dbgEl = $('q-tree-debug');
+        if (dbg && dbgEl) {
+          dbgEl.textContent = 'Debug: ' + JSON.stringify(dbg);
+        }
+      } catch (_) {}
       const manualBtn = $('q-app-manual-add');
       if (manualBtn && !manualBtn.dataset.bound) {
         manualBtn.dataset.bound = '1';
@@ -5334,6 +5342,7 @@ async function loadQoS() {
         </div>
         <p class="muted small" style="margin-top:4px">${esc(t('q.nameHint'))}</p>
         <p class="muted small">${esc(t('q.noTree'))} <a href="#" id="q-tree-retry" style="color:var(--blue)">${esc(t('q.retry'))}</a>${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>
+        <p class="muted small" id="q-tree-debug" style="font-size:11px;word-break:break-all"></p>
         </div>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
