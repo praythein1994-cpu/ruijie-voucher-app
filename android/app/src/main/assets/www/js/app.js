@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.161'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.162'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -538,6 +538,8 @@ const I18N = {
   'q.selApp': { my: 'App ရွေး…', en: 'Select app…' },
   'q.noTree': { my: 'App list ရမရ — Gateway Capture နဲ့ စစ်ပါ', en: 'App list unavailable' },
   'q.manualApp': { my: 'App နာမည် ရိုက်ထည့်ပါ (ဥပမာ MobileLegends)', en: 'Type app name (e.g. MobileLegends)' },
+  'q.nameHint': { my: 'နာမည် အတိအကျ မှန်ရမယ် — space မပါ, စာလုံးအကြီးအသေး မှန်ရမယ်။ ဥပမာ: MobileLegends, PUBG', en: 'Name must match exactly — no spaces, case-sensitive. E.g.: MobileLegends, PUBG' },
+  'q.retry': { my: 'ပြန်ကြိုးစားမယ်', en: 'Retry' },
   'q.needAppId': { my: 'App Identification ဖွင့်မှ list ရမယ်။', en: 'Turn on App Identification to load the list.' },
   'q.pol': { my: 'Custom QoS Policy', en: 'Custom QoS Policy' },
   'q.add': { my: 'အသစ်', en: 'Add' },
@@ -5278,7 +5280,8 @@ async function loadQoS() {
           <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1">
           <button class="btn" id="q-app-manual-add">${ic('plus', 'sm')}</button>
         </div>
-        <p class="muted small">${esc(t('q.noTree'))}${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
+        <p class="muted small" style="margin-top:4px">${esc(t('q.nameHint'))}</p>
+        <p class="muted small">${esc(t('q.noTree'))} <a href="#" id="q-tree-retry" style="color:var(--blue)">${esc(t('q.retry'))}</a>${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
         </div>
@@ -5471,6 +5474,11 @@ async function loadQoS() {
       };
       manualBtn.addEventListener('click', doManualAdd);
       $('q-app-manual').addEventListener('keydown', (e) => { if (e.key === 'Enter') doManualAdd(); });
+    }
+    // v1.5.162: retry app tree load
+    const retryBtn = $('q-tree-retry');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', (e) => { e.preventDefault(); loadQoS(); });
     }
 
     $('q-app-save').addEventListener('click', async () => {

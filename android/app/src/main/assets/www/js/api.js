@@ -539,32 +539,58 @@ const GwApi = {
   /** Fetch the app signature tree for selection. Returns array of {name, apps:[...]} or null. */
   async qosAppTree() {
     return this._withAutoRelogin(async () => {
-      const body = {
-        method: 'devSta.get',
-        params: {
-          module: 'content_audit', noParse: false, async: null, remoteIp: false, device: 'pc',
-          data: { func: 'app_idy_get_app_tree' },
-        },
-      };
-      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
-      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
-      const d = (j && j.data) || {};
-      // Shape varies; normalize to [{name, apps:[names]}]
-      const out = [];
-      const walk = (node, prefix) => {
-        if (!node) return;
-        if (Array.isArray(node)) { node.forEach(n => walk(n, prefix)); return; }
-        const name = node.name || node.appName || node.label;
-        const children = node.children || node.sub || node.apps || node.list;
-        if (children && (Array.isArray(children) ? children.length : true)) {
-          if (name) out.push({ name: prefix ? prefix + ' / ' + name : name, node });
-          walk(children, prefix ? prefix + ' / ' + name : name);
-        } else if (name) {
-          out.push({ name: prefix ? prefix + ' / ' + name : name, leaf: true, id: node.id || node.appId || name });
-        }
-      };
-      try { walk(d.tree || d.list || d.apps || d, ''); } catch (_) {}
-      return out.length ? out : null;
+      // v1.5.162: try multiple variations — gateway response shape varies
+      const tries = [
+        { method: 'devSta.get', module: 'content_audit', data: { func: 'app_idy_get_app_tree' } },
+        { method: 'devConfig.get', module: 'content_audit', data: { func: 'app_idy_get_app_tree' } },
+      ];
+      let lastErr = null;
+      for (const t of tries) {
+        try {
+          const body = {
+            method: t.method,
+            params: {
+              module: t.module, noParse: false, async: null, remoteIp: false, device: 'pc',
+              data: t.data,
+            },
+          };
+          const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+          if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+          const d = (j && j.data) || {};
+          // Shape varies; normalize to [{name, apps:[names]}]
+          // Be extremely permissive — collect ANY string that looks like an app name
+          const out = [];
+          const seen = new Set();
+          const addName = (n) => {
+            if (typeof n !== 'string') return;
+            const s = n.trim();
+            if (s.length < 2 || s.length > 64) return;
+            if (seen.has(s)) return;
+            seen.add(s);
+            out.push({ name: s, leaf: true, id: s });
+          };
+          const walk = (node, depth) => {
+            if (!node || depth > 6) return;
+            if (typeof node === 'string') { addName(node); return; }
+            if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
+            if (typeof node === 'object') {
+              // Try common name fields
+              const nm = node.name || node.appName || node.label || node.app_name || node.title;
+              if (nm && typeof nm === 'string') addName(nm);
+              // Recurse into common children fields + any object/array values
+              for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree']) {
+                if (node[k]) walk(node[k], depth + 1);
+              }
+              // Also check appList arrays directly
+              if (Array.isArray(node.appList)) node.appList.forEach(addName);
+            }
+          };
+          try { walk(d, 0); } catch (_) {}
+          if (out.length >= 3) return out; // Need at least a few to be credible
+          lastErr = new Error('parsed ' + out.length + ' apps');
+        } catch (e) { lastErr = e; }
+      }
+      throw lastErr || new Error('app tree unavailable');
     });
   },
 
