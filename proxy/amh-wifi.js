@@ -237,7 +237,7 @@ btn.onclick=async()=>{
     const r=await fetch(location.pathname+'/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newPassword:a})});
     const d=await r.json();
     if(d.ok){msg.classList.add('ok');msg.textContent=t.ok;document.getElementById('npw').value='';document.getElementById('cpw').value='';}
-    else{msg.classList.add('err');msg.textContent=t.err;}
+    else{msg.classList.add('err');msg.textContent=t.err+(d.msg?' ('+d.msg+')':'');}
   }catch(e){msg.classList.add('err');msg.textContent=t.err;}
   btn.disabled=false;
 };
