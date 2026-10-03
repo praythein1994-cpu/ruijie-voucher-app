@@ -201,7 +201,6 @@ button:disabled{background:#475569;cursor:default}
 <h1 id="t_title"></h1><p class="sub" id="t_sub"></p>
 <div class="ssid"><div class="lbl" id="t_cur"></div><div class="val" id="ssidName">…</div></div>
 <label id="t_npw"></label><input type="password" id="npw" autocomplete="new-password">
-<label id="t_cpw"></label><input type="password" id="cpw" autocomplete="new-password">
 <div class="hint" id="t_hint"></div>
 <button id="btn"></button>
 <div class="msg" id="msg"></div>
@@ -215,7 +214,7 @@ function apply(){
   document.getElementById('t_sub').textContent=t.sub;
   document.getElementById('t_cur').textContent=t.cur;
   document.getElementById('t_npw').textContent=t.npw;
-  document.getElementById('t_cpw').textContent=t.cpw;
+  
   document.getElementById('t_hint').textContent=t.hint;
   document.getElementById('btn').textContent=t.btn;
   document.getElementById('langBtn').textContent=lang==='my'?'English':'မြန်မာ';
@@ -228,15 +227,15 @@ fetch(location.pathname+'/info').then(r=>r.json()).then(d=>{
 }).catch(()=>{document.getElementById('ssidName').textContent='—';});
 const msg=document.getElementById('msg'),btn=document.getElementById('btn');
 btn.onclick=async()=>{
-  const t=T[lang],a=document.getElementById('npw').value,b=document.getElementById('cpw').value;
+  const t=T[lang],a=document.getElementById('npw').value;
   msg.className='msg';msg.textContent='';
-  if(a!==b){msg.classList.add('err');msg.textContent=t.mismatch;return;}
+  
   if(!/^[a-zA-Z0-9@<=>[\\]!#$*().]{8,32}$/.test(a)){msg.classList.add('err');msg.textContent=t.bad;return;}
   btn.disabled=true;msg.textContent=t.wait;
   try{
     const r=await fetch(location.pathname+'/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newPassword:a})});
     const d=await r.json();
-    if(d.ok){msg.classList.add('ok');msg.textContent=t.ok;document.getElementById('npw').value='';document.getElementById('cpw').value='';}
+    if(d.ok){msg.classList.add('ok');msg.textContent=t.ok;document.getElementById('npw').value='';}
     else{msg.classList.add('err');msg.textContent=t.err+(d.msg?' ('+d.msg+')':'');}
   }catch(e){msg.classList.add('err');msg.textContent=t.err;}
   btn.disabled=false;

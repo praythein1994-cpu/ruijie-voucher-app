@@ -558,11 +558,16 @@ const GwApi = {
       const d = (treeRes && treeRes.data) || treeRes || {};
       // v1.5.165: debug — store raw response info for diagnostics
       try {
+        const grpSample = d && Array.isArray(d.grp_list) && d.grp_list.length > 0
+          ? JSON.stringify(d.grp_list[0]).slice(0, 200)
+          : null;
         window._qosTreeDebug = {
           hasData: !!j.data,
           arrLen: Array.isArray(arr) ? arr.length : -1,
           treeKeys: d && typeof d === 'object' ? Object.keys(d).slice(0, 10) : [],
           treeCode: treeRes && treeRes.code,
+          grpLen: d && Array.isArray(d.grp_list) ? d.grp_list.length : -1,
+          grpSample: grpSample,
         };
       } catch (_) {}
       const out = [];
@@ -582,7 +587,7 @@ const GwApi = {
         if (typeof node === 'object') {
           const nm = node.name || node.appName || node.label || node.app_name || node.title;
           if (nm && typeof nm === 'string') addName(nm);
-          for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree']) {
+          for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree', 'grp_list', 'group_list', 'app_list']) {
             if (node[k]) walk(node[k], depth + 1);
           }
           if (Array.isArray(node.appList)) node.appList.forEach(addName);
