@@ -330,6 +330,14 @@ public class GatewayRecorder {
         root.addView(progress, progLp);
 
         webView.setWebViewClient(new WebViewClient() {
+            // v1.5.149: gateway eWeb uses a self-signed cert — proceed anyway.
+            // (Local gateway only; the portal recorder keeps strict SSL.)
+            @Override
+            public void onReceivedSslError(WebView view,
+                                           android.webkit.SslErrorHandler handler,
+                                           android.net.http.SslError error) {
+                handler.proceed();
+            }
             @Override
             public void onPageStarted(WebView view, String url,
                                      android.graphics.Bitmap favicon) {
