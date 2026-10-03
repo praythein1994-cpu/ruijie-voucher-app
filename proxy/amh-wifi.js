@@ -251,8 +251,8 @@ function apply(){
 }
 document.getElementById('langBtn').onclick=()=>{lang=lang==='my'?'en':'my';localStorage.setItem('amh-lang',lang);apply();};
 apply();
-const PAGE_SSID='+(ssidLabel||'').replace(/'/g,"")+';
-const PAGE_IS_TEST=(isTest?'true':'false');
+const PAGE_SSID=${JSON.stringify(ssidLabel || '')};
+const PAGE_IS_TEST=${isTest ? 'true' : 'false'};
 if(PAGE_IS_TEST){
   document.getElementById('ssidName').textContent=PAGE_SSID;
 }else{
