@@ -2188,6 +2188,9 @@ html.ph-compact #mg-list table.data td:nth-child(5) { margin-left: auto; }
 html.ph-compact #mg-list .mg-delbtn .btn-t { display: none; }
 html.ph-compact #mg-list .mg-delbtn { padding: 8px; min-width: 40px; min-height: 40px; justify-content: center; }
 html.ph-compact #mg-list .mg-delbtn .ic { margin-right: 0; }
+html.ph-compact #mg-list .mg-editbtn .btn-t { display: none; }
+html.ph-compact #mg-list .mg-editbtn { padding: 8px; min-width: 40px; min-height: 40px; justify-content: center; }
+html.ph-compact #mg-list .mg-editbtn .ic { margin-right: 0; }
 /* SSID row actions — icon-only compact on phone, container can never overflow */
 html.ph-compact .ssid-row .ssid-actions { max-width: 100%; min-width: 0; }
 html.ph-compact .ssid-actions .btn-t { display: none; }

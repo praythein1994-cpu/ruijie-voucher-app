@@ -1950,6 +1950,16 @@ const Api = {
     return j2;
   },
 
+  /* ── User group EDIT (portal, SSO) · v1.5.146 ──
+   * NOT VERIFIED YET — the portal's edit envelope has not been captured.
+   * The UI (prefilled edit form) is complete; this throws until the real
+   * envelope is verified from a DevTools capture of the portal's Edit save
+   * (same as the add/delete flows were verified 2026-10-01).
+   * DO NOT guess the endpoint/method — a wrong write could corrupt groups. */
+  async userGroupEditSso(groupId, email, tenantId, ugId, authProfileId, fields) {
+    throw new Error('Edit API မစစ်ရသေးပါ — portal မှာ Edit နှိပ်ပြီး DevTools Network log ပို့ပေးပါ');
+  },
+
   /* ── Portal user group DELETE (Cloud webproxy, SSO session) · v1.5.96 ──
    * Verified 2026-10-01 from the user's DevTools capture of a real portal
    * group delete (Delete button -> portal confirm OK):

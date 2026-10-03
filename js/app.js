@@ -645,6 +645,7 @@ const I18N = {
   'mg.none': { my: 'မရှိပါ', en: 'None' },
   'mg.add': { my: 'အသစ်ထည့်မယ်', en: 'Add' },
   'mg.del': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'mg.edit': { my: 'ပြင်မယ်', en: 'Edit' },
   'mg.confirmDel': { my: '"{name}" group ကို ဖျက်မှာသေချာပါသလား? (ပြန်ယူလို့မရပါ)', en: 'Delete the "{name}" group? This cannot be undone.' },
   'mg.deleted': { my: 'Group ဖျက်ပြီးပါပြီ', en: 'Group deleted' },
   'mg.needIds': { my: 'Group ID မရပါ — list ပြန်ဖွင့်ကြည့်ပါ', en: 'Group ID unavailable — reopen the list' },
@@ -676,6 +677,7 @@ const I18N = {
   'ug.needName': { my: 'အမည်ထည့်ပေးပါ', en: 'Enter a name' },
   'ug.needLogin': { my: 'အရင် login ဝင်ပါ', en: 'Please log in first' },
   'ug.done': { my: 'User group ဖန်တီးပြီးပါပြီ', en: 'User group created' },
+  'ug.updated': { my: 'User group ပြင်ပြီးပါပြီ', en: 'User group updated' },
   'ug.devices': { my: 'တစ်ပြိုင်တည်း သုံးနိုင်မည့်စက်', en: 'Concurrent Devices' },
   'ug.bindMacFirst': { my: 'ပထမဆုံး သုံးစဉ်က MAC bind လုပ်မယ်', en: 'Bind MAC on first use' },
   'ug.bindMacTip': { my: 'ဖွင့်ထားရင် voucher ကို ပထမဆုံး အသုံးပြုတဲ့ စက်နဲ့ ချိတ်ထားမည်', en: 'When on, the voucher locks to the first device that uses it' },
@@ -4088,8 +4090,12 @@ async function moreUserGroups() {
       <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th><th></th></tr>
       ${S.packages.map((p, i) => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
         <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td>
-        <td><button class="btn danger sm mg-delbtn" data-mgdel="${i}" aria-label="${esc(t('mg.del'))}">${ic('trash', 'sm')}<span class="btn-t">${t('mg.del')}</span></button></td></tr>`).join('')}
+        <td><button class="btn sm mg-editbtn" data-mgedit="${i}" aria-label="${esc(t('mg.edit'))}">${ic('pencil', 'sm')}<span class="btn-t">${t('mg.edit')}</span></button>
+        <button class="btn danger sm mg-delbtn" data-mgdel="${i}" aria-label="${esc(t('mg.del'))}">${ic('trash', 'sm')}<span class="btn-t">${t('mg.del')}</span></button></td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('mg.none')}</p>`;
+    $('mg-list').querySelectorAll('[data-mgedit]').forEach(b => b.addEventListener('click', () => {
+      renderUserGroupForm(S.packages[Number(b.dataset.mgedit)]);
+    }));
     $('mg-list').querySelectorAll('[data-mgdel]').forEach(b => b.addEventListener('click', () => {
       deleteUserGroup(S.packages[Number(b.dataset.mgdel)]);
     }));
@@ -4127,7 +4133,12 @@ async function deleteUserGroup(p) {
  * rate limits = Kbps (256 = "256 Kbps"), noOfDevice = string ("3").
  * Inferred — verify on first test save: devices Unlimited -> "0" (portal
  * convention); Daily duration -> durationCtrlType 1 + timePeriodDaily. */
-function renderUserGroupForm() {
+function renderUserGroupForm(editP) {
+  const isEdit = !!(editP && typeof editP === 'object');
+  // Prefill from the existing group in edit mode; list fields mirror the
+  // portal's group record (quota=MB, timePeriod=minutes, rate=Kbps).
+  const pv = k => isEdit && editP[k] !== undefined && editP[k] !== null ? editP[k] : '';
+  const pNum = k => { const v = Number(pv(k)); return isFinite(v) ? v : 0; };
   const OPT = {
     devices: [['0', t('ug.unlimited')], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9']],
     duration: [['0', t('ug.unlimited')], ['30', '30 ' + t('ug.min')], ['60', '1 ' + t('ug.hr')], ['120', '2 ' + t('ug.hr')], ['1440', '1 ' + t('ug.day')], ['2880', '2 ' + t('ug.day')], ['10080', '1 ' + t('ug.wk')], ['20160', '2 ' + t('ug.wk')], ['custom', t('ug.custom')]],
@@ -4140,11 +4151,11 @@ function renderUserGroupForm() {
     opts.map(o => `<option value="${o[0]}">${esc(o[1])}</option>`).join('') + `</select></div>` +
     `<div class="ug-custom" id="ugc-${id}" hidden><input id="ugx-${id}" type="number" inputmode="numeric" min="0" placeholder="${esc(t('ug.customVal'))}"></div>`;
   $('mg-form').innerHTML = `<div class="ug-card">
-    <div class="ug-field"><span class="ug-lab">${esc(t('ug.name'))}</span>
-      <input id="ug-name" type="text" class="ug-input" placeholder="${esc(t('ug.namePh'))}"></div>
+    <div class="ug-field"><span class="ug-lab">${isEdit ? esc(t('mg.edit')) : ''} ${esc(t('ug.name'))}</span>
+      <input id="ug-name" type="text" class="ug-input" placeholder="${esc(t('ug.namePh'))}" value="${esc(isEdit ? pkgName(editP) : '')}"></div>
     ${pick('devices', OPT.devices, t('ug.devices'))}
     <div class="ug-row"><span class="ug-lab">${esc(t('ug.bindMacFirst'))} <span class="ug-q" title="${esc(t('ug.bindMacTip'))}">?</span></span>
-      <label class="switch"><input id="ug-bindmac" type="checkbox"><span class="track"></span></label></div>
+      <label class="switch"><input id="ug-bindmac" type="checkbox"${isEdit && Number(pv('bindMac')) ? ' checked' : ''}><span class="track"></span></label></div>
     <div class="ug-sect">${esc(t('ug.period'))}</div>
     <div class="segmented ug-seg" id="ug-pseg">
       <button type="button" class="active" data-p="total">${esc(t('ug.totalDur'))}</button>
@@ -4155,8 +4166,8 @@ function renderUserGroupForm() {
     ${pick('upspeed', OPT.speed, t('ug.upSpeed'))}
     ${pick('downspeed', OPT.speed, t('ug.downSpeed'))}
     <div class="ug-field"><span class="ug-lab">${esc(t('ug.price'))}</span>
-      <input id="ug-price" type="text" class="ug-input" inputmode="decimal" placeholder="${esc(t('ug.pricePh'))}"></div>
-    <button class="ug-save" id="ug-do">${esc(t('ug.save'))}</button>
+      <input id="ug-price" type="text" class="ug-input" inputmode="decimal" placeholder="${esc(t('ug.pricePh'))}" value="${esc(isEdit ? String(pv('price') || pv('packagePrice') || '') : '')}"></div>
+    <button class="ug-save" id="ug-do">${esc(isEdit ? t('mg.edit') : t('ug.save'))}</button>
     <button class="ug-cancel" id="ug-cancel">${esc(t('ug.cancel'))}</button>
   </div>`;
   // iOS bottom-sheet pickers + Custom inline inputs
@@ -4166,8 +4177,32 @@ function renderUserGroupForm() {
     enhanceIosPicker(s);
     s.addEventListener('change', () => { const c = $('ugc-' + id); if (c) c.hidden = s.value !== 'custom'; });
   });
+  // edit mode: prefill selects (matching option, else Custom + value)
+  if (isEdit) {
+    const setSel = (id, v) => {
+      const s = $('ug-' + id); if (!s) return;
+      const sv = String(v);
+      const has = Array.prototype.some.call(s.options, o => o.value === sv);
+      s.value = has ? sv : 'custom';
+      const c = $('ugc-' + id), x = $('ugx-' + id);
+      if (c) c.hidden = s.value !== 'custom';
+      if (x && s.value === 'custom') x.value = sv;
+      if (typeof s.refreshIosPicker === 'function') { try { s.refreshIosPicker(); } catch (e) {} }
+    };
+    setSel('devices', pv('noOfDevice') === '' ? '0' : pv('noOfDevice'));
+    const isDaily = Number(pv('durationCtrlType')) === 1 || (pNum('timePeriodDaily') > 0 && pNum('timePeriod') === 0);
+    const pseg = $('ug-pseg');
+    if (pseg) pseg.querySelectorAll('button').forEach(x => x.classList.toggle('active', (x.dataset.p === 'daily') === isDaily));
+    try { pseg.dataset.cur = isDaily ? 'daily' : 'total'; } catch (e) {}
+    setSel('duration', isDaily ? pNum('timePeriodDaily') : pNum('timePeriod'));
+    setSel('quota', pNum('quota') || pNum('flowQuota'));
+    setSel('upspeed', pNum('uploadRateLimit'));
+    setSel('downspeed', pNum('downloadRateLimit'));
+    window._ugEditPeriod = isDaily ? 'daily' : 'total';
+  }
   // segmented period type
-  let periodType = 'total';
+  let periodType = (isEdit && window._ugEditPeriod) ? window._ugEditPeriod : 'total';
+  try { delete window._ugEditPeriod; } catch (e) { window._ugEditPeriod = undefined; }
   $('ug-pseg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     periodType = b.dataset.p;
@@ -4208,10 +4243,21 @@ function renderUserGroupForm() {
     if (!email) { toast(t('ug.needLogin'), true); return; }
     $('ug-do').disabled = true;
     try {
-      await Api.userGroupAddSso(S.projectId, email, tenantId, fields);
-      toast(t('ug.done'));
-      $('mg-form').innerHTML = '';
-      moreUserGroups();
+      if (isEdit) {
+        const ugId = pkgGroupId(editP), profId = pkgProfileId(editP);
+        if (!ugId || !profId) { toast(t('mg.needIds'), true); }
+        else {
+          await Api.userGroupEditSso(S.projectId, email, tenantId, ugId, profId, fields);
+          toast(t('ug.updated'));
+          $('mg-form').innerHTML = '';
+          moreUserGroups();
+        }
+      } else {
+        await Api.userGroupAddSso(S.projectId, email, tenantId, fields);
+        toast(t('ug.done'));
+        $('mg-form').innerHTML = '';
+        moreUserGroups();
+      }
     } catch (e) { toast((e && e.message) || String(e), true); }
     $('ug-do').disabled = false;
   });
