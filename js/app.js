@@ -5236,17 +5236,15 @@ async function loadQoS() {
           dbgEl.textContent = 'Debug: ' + JSON.stringify(dbg);
         }
       } catch (_) {}
-      const manualBtn = $('q-app-manual-add');
-      if (manualBtn && !manualBtn.dataset.bound) {
-        manualBtn.dataset.bound = '1';
-        const doManualAdd = () => {
-          const inp = $('q-app-manual');
-          const v = (inp.value || '').trim();
-          if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); inp.value = ''; }
-        };
-        manualBtn.addEventListener('click', doManualAdd);
-        const mi = $('q-app-manual');
-        if (mi) mi.addEventListener('keydown', (e) => { if (e.key === 'Enter') doManualAdd(); });
+      const mi = $('q-app-manual');
+      if (mi && !mi.dataset.bound) {
+        mi.dataset.bound = '1';
+        mi.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const v = (mi.value || '').trim();
+            if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); mi.value = ''; }
+          }
+        });
       }
       const retryBtn = $('q-tree-retry');
       if (retryBtn && !retryBtn.dataset.bound) {
@@ -5331,15 +5329,13 @@ async function loadQoS() {
             <option value="">${esc(t('q.selApp'))}</option>
             ${(tree || []).map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('')}
           </select>
-          <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
+          <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1">
         </div>
+        <p class="muted small" style="margin-top:4px">${esc(t('q.nameHint'))}</p>
         ${tree ? '' : `
         <p class="muted small" id="q-tree-loading">${esc(t('q.treeLoading'))}</p>
         <div id="q-tree-fallback" style="display:none">
-        <div class="row" style="margin-top:8px">
-          <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1">
-          <button class="btn" id="q-app-manual-add">${ic('plus', 'sm')}</button>
-        </div>
+
         <p class="muted small" style="margin-top:4px">${esc(t('q.nameHint'))}</p>
         <p class="muted small">${esc(t('q.noTree'))} <a href="#" id="q-tree-retry" style="color:var(--blue)">${esc(t('q.retry'))}</a>${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>
         <p class="muted small" id="q-tree-debug" style="font-size:11px;word-break:break-all"></p>
@@ -5517,15 +5513,26 @@ async function loadQoS() {
 
     $('q-refresh').addEventListener('click', loadQoS);
 
-    $('q-app-addbtn').addEventListener('click', () => {
-      const sel = $('q-app-sel');
-      const vi = sel.value;
+    const qsel = $('q-app-sel');
+    if (qsel) qsel.addEventListener('change', () => {
+      const vi = qsel.value;
       if (vi === '' || !tree || !tree[Number(vi)]) return;
       const entry = tree[Number(vi)];
       const appId = entry.id || entry.name.split('/').pop().trim();
       if (appId && !curApps.includes(appId)) { curApps.push(appId); renderApps(); }
-      sel.value = '';
+      qsel.value = '';
     });
+    // Manual input Enter key (bound here too for when tree loads successfully)
+    const qmi = $('q-app-manual');
+    if (qmi && !qmi.dataset.bound) {
+      qmi.dataset.bound = '1';
+      qmi.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const v = (qmi.value || '').trim();
+          if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); qmi.value = ''; }
+        }
+      });
+    }
     // v1.5.164: fallback binding handled by bindTreeFallback() above
 
     $('q-app-save').addEventListener('click', async () => {
