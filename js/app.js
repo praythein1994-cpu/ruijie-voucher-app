@@ -537,6 +537,7 @@ const I18N = {
   'q.confirmAppId': { my: 'App Identification ပြောင်းမလား?', en: 'Change App Identification?' },
   'q.selApp': { my: 'App ရွေး…', en: 'Select app…' },
   'q.noTree': { my: 'App list ရမရ — Gateway Capture နဲ့ စစ်ပါ', en: 'App list unavailable' },
+  'q.needAppId': { my: 'App Identification ဖွင့်မှ list ရမယ်။', en: 'Turn on App Identification to load the list.' },
   'q.pol': { my: 'Custom QoS Policy', en: 'Custom QoS Policy' },
   'q.add': { my: 'အသစ်', en: 'Add' },
   'q.noPol': { my: 'Policy မရှိသေးဘူး', en: 'No policies yet' },
@@ -5270,7 +5271,7 @@ async function loadQoS() {
           </select>
           <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
         </div>
-        ${tree ? '' : `<p class="muted small">${esc(t('q.noTree'))}</p>`}
+        ${tree ? '' : `<p class="muted small">${esc(t('q.noTree'))}${curAppId === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
         </div>
@@ -5293,6 +5294,18 @@ async function loadQoS() {
     let curApps = [...apps];
     let curAppId = appIdOn;
     let curPols = JSON.parse(JSON.stringify(policies));
+
+    // v1.5.154: Kbps <-> Mbps conversion (gateway stores Kbps, UI shows Mbps)
+    const k2m = (k) => {
+      const n = Number(k);
+      if (!Number.isFinite(n)) return '';
+      const m = n / 1000;
+      return String(Number(m.toFixed(3)));
+    };
+    const m2k = (m) => {
+      const n = Number(m);
+      return Number.isFinite(n) ? String(Math.round(n * 1000)) : '';
+    };
 
     const renderApps = () => {
       const el = $('q-apps');
@@ -5317,8 +5330,8 @@ async function loadQoS() {
       el.innerHTML = curPols.map((p, i) => {
         const en = String(p.enable) === 'on';
         const nm = p.comment || p.policy_id || ('#' + i);
-        const upL = p.upRate || p.allUpRate || '—';
-        const dnL = p.downRate || p.allDownRate || '—';
+        const upL = k2m(p.upRate || p.allUpRate);
+        const dnL = k2m(p.downRate || p.allDownRate);
         return `<div class="row" style="justify-content:space-between;align-items:center;border-bottom:.5px solid var(--hairline);padding:8px 0">
           <div style="flex:1"><b>${esc(nm)}</b><br>
             <span class="muted small">↑ ${esc(String(upL))} ↓ ${esc(String(dnL))} · ${esc(p.ipRange || '')}</span></div>
@@ -5370,10 +5383,10 @@ async function loadQoS() {
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
         <div class="row" style="margin-top:8px">
-          <label style="flex:1">${esc(t('q.upLimit'))} (Kbps)<br>
-            <input type="number" id="pe-up" value="${esc(String(p.upRate || p.allUpRate || ''))}"></label>
-          <label style="flex:1">${esc(t('q.dnLimit'))} (Kbps)<br>
-            <input type="number" id="pe-dn" value="${esc(String(p.downRate || p.allDownRate || ''))}"></label>
+          <label style="flex:1">${esc(t('q.upLimit'))} (Mbps)<br>
+            <input type="number" id="pe-up" value="${esc(k2m(p.upRate || p.allUpRate))}" step="0.1" min="0"></label>
+          <label style="flex:1">${esc(t('q.dnLimit'))} (Mbps)<br>
+            <input type="number" id="pe-dn" value="${esc(k2m(p.downRate || p.allDownRate))}" step="0.1" min="0"></label>
         </div>
         <div class="row" style="margin-top:12px">
           <button class="btn primary" id="pe-save" style="flex:1">${t('q.save')}</button>
@@ -5392,8 +5405,9 @@ async function loadQoS() {
         } : p;
         np.comment = ov.querySelector('#pe-name').value.trim();
         np.ipRange = ov.querySelector('#pe-ip').value.trim();
-        const uv = ov.querySelector('#pe-up').value.trim();
-        const dv = ov.querySelector('#pe-dn').value.trim();
+        // v1.5.154: UI is Mbps, gateway stores Kbps — convert with m2k
+        const uv = m2k(ov.querySelector('#pe-up').value.trim());
+        const dv = m2k(ov.querySelector('#pe-dn').value.trim());
         if (uv) { np.upRate = uv; np.allUpRate = uv; np.upRateG = uv; np.allUpRateG = uv; }
         if (dv) { np.downRate = dv; np.allDownRate = dv; np.downRateG = dv; np.allDownRateG = dv; }
         if (isNew) curPols.push(np); else curPols[idx] = np;
