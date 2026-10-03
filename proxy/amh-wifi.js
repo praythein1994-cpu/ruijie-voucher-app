@@ -268,7 +268,7 @@ btn.onclick=async()=>{
   if(!/^[a-zA-Z0-9@<=>[\\]!#$*().]{8,32}$/.test(a)){msg.classList.add('err');msg.textContent=t.bad;return;}
   btn.disabled=true;msg.textContent=t.wait;
   try{
-    const r=await fetch(location.pathname+(PAGE_IS_TEST?'/test':'')+'/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newPassword:a})});
+    const r=await fetch(location.pathname+'/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newPassword:a})});
     const d=await r.json();
     if(d.ok){msg.classList.add('ok');msg.textContent=t.ok;document.getElementById('npw').value='';}
     else{msg.classList.add('err');msg.textContent=t.err+(d.msg?' ('+d.msg+')':'');}
