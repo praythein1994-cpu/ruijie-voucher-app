@@ -508,6 +508,8 @@ const I18N = {
   'fw.done': { my: 'ပြီးပါပြီ ✓', en: 'Done ✓' },
   'fw.needSso': { my: 'Ruijie အကောင့် login လိုပါတယ်', en: 'Ruijie login required' },
   'fw.confirm': { my: '{name} ကို {ver} တင်မှာလား? စက်ခနရပ်မည်။', en: 'Update {name} to {ver}? Device will restart.' },
+  'fw.avail': { my: 'အပ်ဒိတ်ရရှိနိုင်ပါတယ်', en: 'Update available' },
+  'fw.checkAgain': { my: 'ပြန်စစ်မယ်', en: 'Check again' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
   'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
@@ -4633,8 +4635,13 @@ function renderFwRows() {
   const el = $('fw-list');
   if (!el) return;
   const rows = S._fwRows || [];
-  el.innerHTML = `<div class="list">` + rows.map((x, i) => {
+  const expanded = S._fwExpanded || (S._fwExpanded = {});
+  el.innerHTML = `<div class="row" style="margin-bottom:8px"><button class="btn sm" id="fw-recheck">${ic('refresh', 'sm')}<span class="btn-t">${esc(t('fw.checkAgain'))}</span></button></div>`
+  + `<div class="list">` + rows.map((x, i) => {
     const st = (S._fwState || {})[x.sn] || { stage: 'idle' };
+    const isExp = !!expanded[x.sn];
+    // v1.5.146: the dot means something now — green = up to date, orange = update available
+    const dotCls = x.avail ? 's2' : 's1';
     const stageHtml =
       st.stage === 'sending' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.sending'))}</div>`
       : st.stage === 'updating' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.updating'))}</div>`
@@ -4642,19 +4649,33 @@ function renderFwRows() {
       : st.stage === 'done' ? `<div class="pkg" style="color:var(--green);font-weight:600">${esc(t('fw.done'))}</div>`
       : st.stage === 'error' ? `<div class="pkg" style="color:var(--red)">${esc(st.err || t('md.upFail'))}</div>`
       : '';
-    const verLine = x.cur
-      ? `${esc(t('fw.cur'))}: <b>${esc(x.cur)}</b>` + (x.avail ? ` → <b style="color:var(--blue)">${esc(x.avail.ver)}</b>` : ` · <span class="muted">${esc(t('fw.upToDate'))}</span>`)
-      : `<span class="muted">—</span>`;
+    const availBadge = x.avail ? ` <span class="fw-badge">${esc(t('fw.avail'))}</span>` : '';
+    const verHtml = x.cur
+      ? `<div class="pkg fw-ver" style="font-size:13px">${esc(t('fw.cur'))}: <b>${esc(x.cur)}</b></div>`
+        + (x.avail
+          ? `<div class="pkg fw-ver" style="font-size:13px">${esc(t('fw.new'))}: <b style="color:var(--blue)">${esc(x.avail.ver)}</b></div>`
+          : `<div class="pkg muted" style="font-size:12.5px">${esc(t('fw.upToDate'))} ✓</div>`)
+      : `<div class="pkg muted">—</div>`;
     const btn = (st.stage === 'idle' || st.stage === 'error') && x.avail
-      ? `<button class="btn sm primary" data-fwup="${i}">${ic('up', 'sm')}<span>${esc(t('fw.update'))}</span></button>` : '';
-    return `<div class="voucher-row fw-row"><span class="status-dot s2"></span>
-      <div class="voucher-meta"><div class="voucher-code" style="font-size:15px">${esc(x.name)}</div>
-      <div class="pkg muted small">${esc(x.sn)}${x.model ? ' · ' + esc(x.model) : ''}</div>
-      <div class="pkg" style="font-size:13px">${verLine}</div>${stageHtml}</div>
-      <div class="fw-actions">${btn}</div></div>`;
+      ? `<button class="btn sm primary fw-upbtn" data-fwup="${i}">${ic('up', 'sm')}<span>${esc(t('fw.update'))} → ${esc(x.avail.ver)}</span></button>` : '';
+    return `<div class="voucher-row fw-row${isExp ? ' fw-exp' : ''}" data-fwrow="${i}"><span class="status-dot ${dotCls}"></span>
+      <div class="voucher-meta"><div class="voucher-code" style="font-size:15px">${esc(x.name)}${availBadge}</div>
+      <div class="pkg muted small fw-ver">${esc(x.sn)}${x.model ? ' · ' + esc(x.model) : ''}</div>
+      ${verHtml}${stageHtml}</div>
+      <div class="fw-actions">${btn}<span class="fw-chev">${ic(isExp ? 'chev-up' : 'chev-down', 'sm')}</span></div></div>`;
   }).join('') + `</div>`;
+  const rc = $('fw-recheck');
+  if (rc) rc.addEventListener('click', () => { S._fwRows = null; moreFirmware(); });
   el.querySelectorAll('[data-fwup]').forEach(b =>
-    b.addEventListener('click', () => fwStartUpgrade(Number(b.dataset.fwup))));
+    b.addEventListener('click', e => { e.stopPropagation(); fwStartUpgrade(Number(b.dataset.fwup)); }));
+  // v1.5.146: tap a row to expand/collapse long text (full version strings)
+  el.querySelectorAll('[data-fwrow]').forEach(r =>
+    r.addEventListener('click', () => {
+      const x = (S._fwRows || [])[Number(r.dataset.fwrow)];
+      if (!x) return;
+      S._fwExpanded[x.sn] = !S._fwExpanded[x.sn];
+      renderFwRows();
+    }));
 }
 /* Trigger + honest stage tracking for one device. */
 async function fwStartUpgrade(idx) {
