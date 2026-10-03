@@ -3381,7 +3381,12 @@ function btRefresh() {
   // progress + last result
   try {
     const p = JSON.parse(B.btProgress() || '{}');
-    if (prEl) prEl.textContent = p.printing ? (p.message || '') : '';
+    if (prEl) {
+      const msg = p.printing ? (p.message || '') : '';
+      prEl.textContent = msg;
+      const row = $('bt-progress-row');
+      if (row) row.style.display = msg ? '' : 'none';
+    }
     const r = B.btLastResult();
     if (r && r !== 'null') {
       const res = JSON.parse(r);

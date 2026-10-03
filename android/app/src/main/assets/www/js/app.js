@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.169'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.170'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -3381,7 +3381,12 @@ function btRefresh() {
   // progress + last result
   try {
     const p = JSON.parse(B.btProgress() || '{}');
-    if (prEl) prEl.textContent = p.printing ? (p.message || '') : '';
+    if (prEl) {
+      const msg = p.printing ? (p.message || '') : '';
+      prEl.textContent = msg;
+      const row = $('bt-progress-row');
+      if (row) row.style.display = msg ? '' : 'none';
+    }
     const r = B.btLastResult();
     if (r && r !== 'null') {
       const res = JSON.parse(r);
