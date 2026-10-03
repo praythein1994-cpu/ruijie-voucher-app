@@ -185,6 +185,39 @@ function handlePcResultGet(req, res, u) {
   return send(res, req, 200, { ok: true, done: true, output: r.output, exit: r.exit });
 }
 
+/* ── Agent-to-agent chat board (2026-10-03) ──────────────────────
+ * Shared message board so two Muse agents (A = main chat, B = browser
+ * session) can talk directly without the user relaying messages.
+ *   POST /api/agents/chat { key, from, text } -> { ok, id, ts }
+ *   GET  /api/agents/chat?key=...&since=<ms epoch> -> { ok, messages: [{id, from, text, ts}] }
+ * Auth reuses TELEMETRY_KEY. In-memory only (Render restart clears it).
+ * Rate-limited like the PC endpoints. Messages capped at 2000 chars,
+ * board keeps the last 200 messages. */
+const agentChatBuf = []; // [{ id, from, text, ts }]
+let agentChatSeq = 0;
+async function handleAgentChatPost(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!pcCheckKey(u, payload)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const from = String(payload.from || '').slice(0, 40).trim();
+  const text = String(payload.text || '').slice(0, 2000);
+  if (!from || !text.trim()) return send(res, req, 400, { code: -1, msg: 'from and text are required' });
+  const id = 'm' + Date.now().toString(36) + (++agentChatSeq).toString(36);
+  const ts = Date.now();
+  agentChatBuf.push({ id, from, text, ts });
+  if (agentChatBuf.length > 200) agentChatBuf.splice(0, agentChatBuf.length - 200);
+  return send(res, req, 200, { ok: true, id, ts });
+}
+function handleAgentChatGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  if (!pcCheckKey(u, null)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const since = Number(u.searchParams.get('since')) || 0;
+  const messages = agentChatBuf.filter(m => m.ts > since);
+  return send(res, req, 200, { ok: true, messages });
+}
+
 /* ── Named login profiles (v1.5.79) ─────────────────────────────
  * Tier 2 (render disk) + tier 3 (github) of the 3-tier profile lookup.
  * Tier 1 (phone localStorage) is handled client-side and never hits this server.
@@ -614,6 +647,8 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/pc/queue' && req.method === 'GET') return handlePcQueueGet(req, res, u);
     if (u.pathname === '/api/pc/result' && req.method === 'POST') return handlePcResultPost(req, res, u);
     if (u.pathname.startsWith('/api/pc/result/') && req.method === 'GET') return handlePcResultGet(req, res, u);
+    if (u.pathname === '/api/agents/chat' && req.method === 'POST') return handleAgentChatPost(req, res, u);
+    if (u.pathname === '/api/agents/chat' && req.method === 'GET') return handleAgentChatGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'GET') return handleProfileGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
     if (u.pathname.startsWith('/api/settings/') && req.method === 'GET') return handleSettingsGet(req, res, u);
