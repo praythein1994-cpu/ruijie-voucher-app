@@ -539,66 +539,58 @@ const GwApi = {
   /** Fetch the app signature tree for selection. Returns array of {name, apps:[...]} or null. */
   async qosAppTree() {
     return this._withAutoRelogin(async () => {
-      // v1.5.162: try multiple variations — gateway response shape varies
-      const tries = [
-        { method: 'devSta.get', module: 'content_audit', data: { func: 'app_idy_get_app_tree' } },
-        { method: 'devConfig.get', module: 'content_audit', data: { func: 'app_idy_get_app_tree' } },
-      ];
-      let lastErr = null;
-      for (const t of tries) {
-        try {
-          const body = {
-            method: t.method,
-            params: {
-              module: t.module, noParse: false, async: null, remoteIp: false, device: 'pc',
-              data: t.data,
-            },
-          };
-          const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
-          if (gwAuthFailed(j)) throw new Error('Gateway session expired');
-          const d = (j && j.data) || {};
-          // Shape varies; normalize to [{name, apps:[names]}]
-          // Be extremely permissive — collect ANY string that looks like an app name
-          const out = [];
-          const seen = new Set();
-          const addName = (n) => {
-            if (typeof n !== 'string') return;
-            const s = n.trim();
-            if (s.length < 2 || s.length > 64) return;
-            if (seen.has(s)) return;
-            seen.add(s);
-            out.push({ name: s, leaf: true, id: s });
-          };
-          const walk = (node, depth) => {
-            if (!node || depth > 6) return;
-            if (typeof node === 'string') { addName(node); return; }
-            if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
-            if (typeof node === 'object') {
-              // Try common name fields
-              const nm = node.name || node.appName || node.label || node.app_name || node.title;
-              if (nm && typeof nm === 'string') addName(nm);
-              // Recurse into common children fields + any object/array values
-              for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree']) {
-                if (node[k]) walk(node[k], depth + 1);
-              }
-              // Also check appList arrays directly
-              if (Array.isArray(node.appList)) node.appList.forEach(addName);
-            }
-          };
-          try { walk(d, 0); } catch (_) {}
-          if (out.length >= 3) return out; // Need at least a few to be credible
-          lastErr = new Error('parsed ' + out.length + ' apps');
-        } catch (e) { lastErr = e; }
-      }
-      throw lastErr || new Error('app tree unavailable');
+      // v1.5.163: match gateway UI — cmdArr batch with appIcon (from capture 20261003-193202 [35])
+      const body = {
+        method: 'cmdArr',
+        params: {
+          device: 'pc',
+          params: [
+            { method: 'devSta.get', params: { module: 'content_audit', noParse: false, async: null, remoteIp: false, data: { func: 'app_idy_get_app_tree' } } },
+            { method: 'devConfig.get', params: { module: 'appIcon', noParse: false, async: null, remoteIp: false } },
+          ],
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      // cmdArr response: {code:0, data:[treeResult, iconResult]}
+      const arr = (j && j.data) || [];
+      const treeRes = Array.isArray(arr) ? arr[0] : {};
+      const d = (treeRes && treeRes.data) || treeRes || {};
+      const out = [];
+      const seen = new Set();
+      const addName = (n) => {
+        if (typeof n !== 'string') return;
+        const s = n.trim();
+        if (s.length < 2 || s.length > 64) return;
+        if (seen.has(s)) return;
+        seen.add(s);
+        out.push({ name: s, leaf: true, id: s });
+      };
+      const walk = (node, depth) => {
+        if (!node || depth > 6) return;
+        if (typeof node === 'string') { addName(node); return; }
+        if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
+        if (typeof node === 'object') {
+          const nm = node.name || node.appName || node.label || node.app_name || node.title;
+          if (nm && typeof nm === 'string') addName(nm);
+          for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree']) {
+            if (node[k]) walk(node[k], depth + 1);
+          }
+          if (Array.isArray(node.appList)) node.appList.forEach(addName);
+        }
+      };
+      try { walk(d, 0); } catch (_) {}
+      if (out.length >= 3) return out;
+      throw new Error('parsed ' + out.length + ' apps');
     });
   },
 
-  /** Read Custom QoS policies (flowctrl_udp). Returns {list:[...]} or null. */
+  /** Read Custom QoS policies (flowctrl_udp). Returns {list:[...]} or null.
+   * v1.5.163: use devSta.get (from capture 20261003-193202 [37]), not devConfig.get */
   async qosPolicyGet() {
     return this._withAutoRelogin(async () => {
       const body = {
-        method: 'devConfig.get',
+        method: 'devSta.get',
         params: { module: 'flowctrl_udp', noParse: false, async: null, remoteIp: false, device: 'pc' },
       };
       const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
