@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.158'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.160'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -537,6 +537,7 @@ const I18N = {
   'q.confirmAppId': { my: 'App Identification ပြောင်းမလား?', en: 'Change App Identification?' },
   'q.selApp': { my: 'App ရွေး…', en: 'Select app…' },
   'q.noTree': { my: 'App list ရမရ — Gateway Capture နဲ့ စစ်ပါ', en: 'App list unavailable' },
+  'q.manualApp': { my: 'App နာမည် ရိုက်ထည့်ပါ (ဥပမာ MobileLegends)', en: 'Type app name (e.g. MobileLegends)' },
   'q.needAppId': { my: 'App Identification ဖွင့်မှ list ရမယ်။', en: 'Turn on App Identification to load the list.' },
   'q.pol': { my: 'Custom QoS Policy', en: 'Custom QoS Policy' },
   'q.add': { my: 'အသစ်', en: 'Add' },
@@ -2111,7 +2112,10 @@ function initTabbarDrag() {
   }, { passive: true });
 }
 function anyModalOpen() {
-  return !!document.querySelector('.modal:not(.hidden)');
+  return !!document.querySelector('.modal:not(.hidden)') || !!document.querySelector('.ios-sheet-ov');
+}
+function closeAnySheet() {
+  document.querySelectorAll('.ios-sheet-ov').forEach(ov => ov.remove());
 }
 function closeAnyModal() {
   document.querySelectorAll('.modal:not(.hidden)').forEach(m => closeModal(m.id));
@@ -2126,6 +2130,7 @@ window.addEventListener('popstate', (e) => {
   if (anyModalOpen()) {
     const cur = S.currentView || 'view-vouchers';
     closeAnyModal();
+    closeAnySheet();
     // Restore the view entry that Back just popped, so the next Back
     // goes to the previous view instead of skipping one.
     try { history.pushState({ view: cur }, ''); } catch (err) {}
@@ -5265,7 +5270,12 @@ async function loadQoS() {
           </select>
           <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
         </div>
-        ${tree ? '' : `<p class="muted small">${esc(t('q.noTree'))}${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
+        ${tree ? '' : `
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1">
+          <button class="btn" id="q-app-manual-add">${ic('plus', 'sm')}</button>
+        </div>
+        <p class="muted small">${esc(t('q.noTree'))}${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
         </div>
@@ -5448,6 +5458,17 @@ async function loadQoS() {
       if (appId && !curApps.includes(appId)) { curApps.push(appId); renderApps(); }
       sel.value = '';
     });
+    // v1.5.159: manual app entry fallback when tree unavailable
+    const manualBtn = $('q-app-manual-add');
+    if (manualBtn) {
+      const doManualAdd = () => {
+        const inp = $('q-app-manual');
+        const v = (inp.value || '').trim();
+        if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); inp.value = ''; }
+      };
+      manualBtn.addEventListener('click', doManualAdd);
+      $('q-app-manual').addEventListener('keydown', (e) => { if (e.key === 'Enter') doManualAdd(); });
+    }
 
     $('q-app-save').addEventListener('click', async () => {
       if (!confirm(t('q.confirmApp'))) return;
