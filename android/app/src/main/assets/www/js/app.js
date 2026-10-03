@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.155'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.156'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -3434,11 +3434,6 @@ function initBtPrinter() {
   $('btn-bt-test').addEventListener('click', () => {
     const r = btCall(B => B.btTestPrint(nativePrintSettings(), $('print-header') ? $('print-header').value.trim() : ''));
     if (r) btRefreshSoon();
-  });
-  $('btn-bt-print').addEventListener('click', () => {
-    if (!S.queue.length) return toast(t('p.btNoQueue'), true);
-    const st = printSettings();
-    if (btPrintWithProgress(S.queue, st)) btRefreshSoon();
   });
 }
 
@@ -8936,7 +8931,6 @@ async function init() {
   $('btn-recent-print-all').addEventListener('click', () => doPrint(recentGenItems));
   $('btn-recent-queue-all').addEventListener('click', () => { recentGenItems.forEach(addToQueue); });
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
-  $('btn-print-test').addEventListener('click', () => doPrint([{ code: 'TEST-1234', pkg: t('tkt.test'), period: 60, quota: 1024 }]));
   $('btn-queue-print').addEventListener('click', () => doPrint(S.queue));
   $('btn-queue-clear').addEventListener('click', () => { S.queue = []; renderQueue(); });
 

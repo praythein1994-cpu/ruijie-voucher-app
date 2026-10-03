@@ -3435,11 +3435,6 @@ function initBtPrinter() {
     const r = btCall(B => B.btTestPrint(nativePrintSettings(), $('print-header') ? $('print-header').value.trim() : ''));
     if (r) btRefreshSoon();
   });
-  $('btn-bt-print').addEventListener('click', () => {
-    if (!S.queue.length) return toast(t('p.btNoQueue'), true);
-    const st = printSettings();
-    if (btPrintWithProgress(S.queue, st)) btRefreshSoon();
-  });
 }
 
 /* ── v1.5.56: print progress sheet (iOS style) ──
@@ -8936,7 +8931,6 @@ async function init() {
   $('btn-recent-print-all').addEventListener('click', () => doPrint(recentGenItems));
   $('btn-recent-queue-all').addEventListener('click', () => { recentGenItems.forEach(addToQueue); });
   $('btn-gen-queue-all').addEventListener('click', () => { genResultItems.forEach(addToQueue); });
-  $('btn-print-test').addEventListener('click', () => doPrint([{ code: 'TEST-1234', pkg: t('tkt.test'), period: 60, quota: 1024 }]));
   $('btn-queue-print').addEventListener('click', () => doPrint(S.queue));
   $('btn-queue-clear').addEventListener('click', () => { S.queue = []; renderQueue(); });
 
