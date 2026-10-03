@@ -165,8 +165,8 @@ async function setSsidPassword(newPassword) {
 async function getSsidConf(ssidId) {
   const tok = await getToken();
   const url = `${CLOUD}/service/api/open/v1/wifi?access_token=${encodeURIComponent(tok)}&group_id=${GROUP_ID}`;
-  const { json } = await httpsJson(url, 'GET', null);
-  if (!json || json.code !== 0) throw new Error('list failed: code=' + (json && json.code) + ' msg=' + (json && json.msg));
+  const { json, status } = await httpsJson(url, 'GET', null);
+  if (!json || json.code !== 0) throw new Error('list failed: http=' + status + ' code=' + (json && json.code) + ' msg=' + (json && json.msg) + ' dataKeys=' + (json && json.data ? Object.keys(json.data).join(',') : 'none'));
   const list = json.data && (json.data.list || json.data);
   const arr = Array.isArray(list) ? list : [];
   const ids = arr.map(s => String(s.ssidId || s.id)).join(',');
@@ -177,11 +177,32 @@ async function getSsidConf(ssidId) {
 
 async function setTestSsidPassword(newPassword) {
   const TEST_SSID_ID = '16537267';
-  const conf = await getSsidConf(TEST_SSID_ID);
-  // Build wirelessConfEntity from live config, replacing only password
-  const entity = { ...(conf.wirelessConfEntity || conf), password: newPassword };
-  // Ensure required fields exist
-  if (!entity.ssidName) entity.ssidName = conf.ssidName || 'AMH-TEST-HIDDEN';
+  // Direct edit with known config (from creation: hidden, VLAN 30, WPA/WPA2-PSK)
+  // Same pattern as main setSsidPassword — no list needed
+  const entity = {
+    ssidName: 'AMH-TEST-HIDDEN',
+    ssidEncode: 'utf-8',
+    relatedRadio: '1,2',
+    enable: 'true',
+    ishidden: 'true',
+    fowardType: 'bridge',
+    vlanId: 30,
+    encryptionMode: 'wpa_wpa2-psk',
+    encryptionModeDesc: 'WPA/WPA2-PSK',
+    upRate: 0, downRate: 0, wlanUpRate: 0, wlanDownRate: 0,
+    qosEnable: 'false',
+    wlanQosEnable: 'false',
+    authEnable: 'false',
+    bandSelectEnable: 'false',
+    ppskEnable: 'false',
+    usersLimit: 0,
+    xpressEnable: 'false',
+    ftEnable: 0,
+    okcEnable: 0,
+    axMode: 'true',
+    isApartment: 'false',
+    password: newPassword,
+  };
   return openApi('/service/api/open/v1/wifi', {
     groupId: Number(GROUP_ID),
     wifiGrpSsid: false,
