@@ -1951,13 +1951,47 @@ const Api = {
   },
 
   /* ── User group EDIT (portal, SSO) · v1.5.146 ──
-   * NOT VERIFIED YET — the portal's edit envelope has not been captured.
-   * The UI (prefilled edit form) is complete; this throws until the real
-   * envelope is verified from a DevTools capture of the portal's Edit save
-   * (same as the add/delete flows were verified 2026-10-01).
-   * DO NOT guess the endpoint/method — a wrong write could corrupt groups. */
-  async userGroupEditSso(groupId, email, tenantId, ugId, authProfileId, fields) {
-    throw new Error('Edit API မစစ်ရသေးပါ — portal မှာ Edit နှိပ်ပြီး DevTools Network log ပို့ပေးပါ');
+   * Verified 2026-10-03 from the user's DevTools capture of a real portal
+   * group edit (Edit -> Save on "Unlimited"), file
+   * workspace/user/files/portal-capture-20261003-081723.txt entry [99].
+   * Single step (unlike add/delete which are 2-step):
+   *   outer  POST .../webproxy/common/api?/intlSamProfile/update/{email}/{email}/{groupId}
+   *   inner  {"api":"/intlSamProfile/update/{email}/{email}/{groupId}","method":"POST",
+   *           "authParams":{"api":...,"method":"POST"},"module":"default",
+   *           "params":{...full profile object with edits...},
+   *           "querys":{"tenantId":341634,"group_id":6752877,"lang":"en","cloudType":"smb"}}
+   * The portal sends the FULL profile object (id, authProfileId, uuid,
+   * createTime, updateTime, originGroupName, ...) with edited fields
+   * overridden — no second usergroup/group call. We replicate that by
+   * spreading the original list record, then applying the form values. */
+  ssoUserGroupProfileUpdateEnvelope(email, groupId, params, tenantId) {
+    const e = encodeURIComponent(email || '');
+    const api = '/intlSamProfile/update/' + e + '/' + e + '/' + Number(groupId);
+    return {
+      api,
+      authParams: { api, method: 'POST' },
+      method: 'POST',
+      module: 'default',
+      params,
+      querys: { tenantId, group_id: Number(groupId), lang: 'en', cloudType: 'smb' },
+    };
+  },
+
+  /** Update a user group through the SSO session (single profile-update step).
+   * origRecord: the list item from userGroupList (preserves id/authProfileId/
+   * uuid/createTime/...). fields: edited form values (buildUserGroupParams shape). */
+  async userGroupEditSso(groupId, email, tenantId, origRecord, fields) {
+    if (!origRecord || typeof origRecord !== 'object') throw new Error('Group data မရပါ');
+    const params = Object.assign({}, origRecord, this.buildUserGroupParams(fields, groupId));
+    // The portal's edit params carry no UI-only keys; drop ours.
+    delete params.loading;
+    const env = this.ssoUserGroupProfileUpdateEnvelope(email, groupId, params, tenantId);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : 0;
+    if (c !== 0) {
+      throw new Error((j && (j.msg || j.message)) || ('Group ပြင်၍မရပါ (code ' + c + ')'));
+    }
+    return j;
   },
 
   /* ── Portal user group DELETE (Cloud webproxy, SSO session) · v1.5.96 ──

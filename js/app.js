@@ -4246,14 +4246,10 @@ function renderUserGroupForm(editP) {
     $('ug-do').disabled = true;
     try {
       if (isEdit) {
-        const ugId = pkgGroupId(editP), profId = pkgProfileId(editP);
-        if (!ugId || !profId) { toast(t('mg.needIds'), true); }
-        else {
-          await Api.userGroupEditSso(S.projectId, email, tenantId, ugId, profId, fields);
-          toast(t('ug.updated'));
-          $('mg-form').innerHTML = '';
-          moreUserGroups();
-        }
+        await Api.userGroupEditSso(S.projectId, email, tenantId, editP, fields);
+        toast(t('ug.updated'));
+        $('mg-form').innerHTML = '';
+        moreUserGroups();
       } else {
         await Api.userGroupAddSso(S.projectId, email, tenantId, fields);
         toast(t('ug.done'));
