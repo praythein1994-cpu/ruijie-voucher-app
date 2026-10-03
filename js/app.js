@@ -5255,15 +5255,15 @@ async function loadQoS() {
       }
     };
     // Start tree load in background — don't block page render
-    const treePromise = GwApi.qosAppTree().then(t => {
-      tree = t;
+    const treePromise = GwApi.qosAppTree().then(treeItems => {
+      tree = treeItems;
       const sel = $('q-app-sel');
       const loading = $('q-tree-loading');
       const fallback = $('q-tree-fallback');
-      if (t && t.length && sel) {
+      if (treeItems && treeItems.length && sel) {
         const cur = sel.value;
         sel.innerHTML = `<option value="">${esc(t('q.selApp'))}</option>` +
-          t.map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('');
+          treeItems.map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('');
         sel.value = cur;
         if (loading) loading.remove();
         if (fallback) fallback.remove();
@@ -5273,7 +5273,7 @@ async function loadQoS() {
         if (fallback) fallback.style.display = '';
         bindTreeFallback();
       }
-      return t;
+      return treeItems;
     }).catch(() => {
       const loading = $('q-tree-loading');
       const fallback = $('q-tree-fallback');
