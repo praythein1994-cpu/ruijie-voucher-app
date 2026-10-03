@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.160'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.161'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2408,7 +2408,10 @@ function renderVouchers() {
 function toggleBulkMode() {
   S.bulkMode = !S.bulkMode;
   $('voucher-list').classList.toggle('bulk-mode', S.bulkMode);
-  $('bulk-bar').classList.toggle('hidden', !S.bulkMode);
+  // v1.5.161: bulk delete/print inline in the actions row (1 row with Cancel)
+  const bi = $('bulk-inline');
+  if (bi) bi.style.display = S.bulkMode ? 'flex' : 'none';
+  $('btn-voucher-more').style.display = S.bulkMode ? 'none' : '';
   $('btn-bulk-select').querySelector('span').textContent = S.bulkMode ? t('a.cancel') : t('v.select');
   if (!S.bulkMode) {
     document.querySelectorAll('.bulk-check').forEach(cb => cb.classList.remove('on'));

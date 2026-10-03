@@ -292,16 +292,7 @@
         </div>
       </div>
       <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div id="voucher-fetched" class="muted small"></div></div>
-      <div class="row voucher-actions" style="justify-content:space-between;align-items:center;position:relative"><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button><button id="btn-voucher-more" class="btn small" aria-label="More">More</button><div id="voucher-more-menu" class="more-menu hidden"><button id="btn-del-expired"><svg class="ic sm"><use href="#i-trash"/></svg><span data-i18n="v.delExpired">သက်တမ်းကုန်တွေ ဖျက်မယ်</span></button><button id="btn-reset-selected"><svg class="ic sm"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button></div></div>
-      <div id="bulk-bar" class="bulk-bar premium hidden">
-        <button id="btn-bulk-delete" class="pdel-mini" disabled data-i18n-aria="v.bulkDelete">
-          <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
-          <b class="pdel-n" id="bulk-count">0</b>
-        </button>
-        <button id="btn-bulk-print" class="btn small pbtn-mini" disabled data-i18n-aria="v.bulkPrint">
-          <svg class="ic sm" aria-hidden="true"><use href="#i-printer"/></svg>
-        </button>
-      </div>
+      <div class="row voucher-actions" style="justify-content:space-between;align-items:center;position:relative"><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button><div class="row" id="bulk-inline" style="gap:8px;display:none;align-items:center"><button id="btn-bulk-delete" class="pdel-mini" disabled data-i18n-aria="v.bulkDelete"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><b class="pdel-n" id="bulk-count">0</b></button><button id="btn-bulk-print" class="btn small pbtn-mini" disabled data-i18n-aria="v.bulkPrint"><svg class="ic sm" aria-hidden="true"><use href="#i-printer"/></svg></button></div><button id="btn-voucher-more" class="btn small" aria-label="More">More</button><div id="voucher-more-menu" class="more-menu hidden"><button id="btn-del-expired"><svg class="ic sm"><use href="#i-trash"/></svg><span data-i18n="v.delExpired">သက်တမ်းကုန်တွေ ဖျက်မယ်</span></button><button id="btn-reset-selected"><svg class="ic sm"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button></div></div>
       <div id="voucher-list" class="list"></div>
       <div id="voucher-loading" class="loading hidden"></div>
     </section>

@@ -2408,7 +2408,10 @@ function renderVouchers() {
 function toggleBulkMode() {
   S.bulkMode = !S.bulkMode;
   $('voucher-list').classList.toggle('bulk-mode', S.bulkMode);
-  $('bulk-bar').classList.toggle('hidden', !S.bulkMode);
+  // v1.5.161: bulk delete/print inline in the actions row (1 row with Cancel)
+  const bi = $('bulk-inline');
+  if (bi) bi.style.display = S.bulkMode ? 'flex' : 'none';
+  $('btn-voucher-more').style.display = S.bulkMode ? 'none' : '';
   $('btn-bulk-select').querySelector('span').textContent = S.bulkMode ? t('a.cancel') : t('v.select');
   if (!S.bulkMode) {
     document.querySelectorAll('.bulk-check').forEach(cb => cb.classList.remove('on'));
