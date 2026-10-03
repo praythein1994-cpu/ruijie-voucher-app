@@ -199,8 +199,29 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   box-shadow: 0 32px 80px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
   position: relative; z-index: 1; color: #f1f5f9;
   margin-top: 36px;
-  animation: cardin .5s var(--spring);
+  /* v1.5.142: auto-expand morph (pill → card) replaces the old cardin entrance */
+  max-height: 1200px;
+  transition: max-height .65s var(--spring), border-radius .65s var(--spring), padding .65s var(--spring);
 }
+.connect-card.morph-collapsed {
+  max-height: 76px;
+  border-radius: 999px;
+  padding-top: 14px; padding-bottom: 14px;
+  overflow: hidden;
+}
+.connect-card.morph-open { overflow: hidden; } /* keep children clipped while blooming */
+.connect-card > * { transition: opacity .3s ease; }
+.connect-card.morph-collapsed > * { opacity: 0; transition: opacity .18s ease; }
+/* pill label shown only while collapsed (text set from JS via data-pill) */
+.connect-card::after {
+  content: attr(data-pill);
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: #fff; white-space: nowrap;
+  opacity: 0; transition: opacity .2s ease;
+  pointer-events: none;
+}
+.connect-card.morph-collapsed::after { opacity: 1; }
 /* floating glow orb above the card */
 .connect-card::before {
   content: ""; position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
@@ -209,9 +230,10 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
   box-shadow: 0 0 34px 8px rgba(47, 157, 255, .55), 0 8px 20px rgba(0, 0, 0, .4);
   animation: orbfloat 4s ease-in-out infinite alternate;
   pointer-events: none;
+  transition: opacity .3s ease; /* v1.5.142: orb fades while the card is a pill */
 }
+.connect-card.morph-collapsed::before { opacity: 0; }
 @keyframes orbfloat { to { transform: translateX(-50%) translateY(-9px); } }
-@keyframes cardin { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
 .connect-logo { display: none; }
 .connect-card h1 {
   text-align: center; margin: 12px 0 4px; font-size: 30px; font-weight: 800; letter-spacing: -.5px;
@@ -813,6 +835,9 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
   html:not([data-layout="phone"]) .modal-box { max-width: 640px; }
   html:not([data-layout="phone"]) #tabbar { max-width: 620px; left: 20px; right: 20px; }
   html:not([data-layout="phone"]) .connect-card { max-width: 440px; padding: 38px 32px; }
+  /* tablet: topbar action icons (search/refresh/printer) to the right, off the corner */
+  html:not([data-layout="phone"]) #btn-search { margin-left: auto; }
+  html:not([data-layout="phone"]) #topbar { padding-right: 28px; }
 }
 /* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
 html[data-layout="tablet"] .view { max-width: 980px; }
@@ -830,6 +855,9 @@ html[data-layout="tablet"] .stat .n { font-size: 24px; }
 html[data-layout="tablet"] .modal-box { max-width: 640px; }
 html[data-layout="tablet"] #tabbar { max-width: 620px; left: 20px; right: 20px; }
 html[data-layout="tablet"] .connect-card { max-width: 440px; padding: 38px 32px; }
+/* tablet: topbar action icons (search/refresh/printer) to the right, off the corner */
+html[data-layout="tablet"] #btn-search { margin-left: auto; }
+html[data-layout="tablet"] #topbar { padding-right: 28px; }
 
 @media (min-width: 1100px) {
   html:not([data-layout="phone"]) .view { max-width: 1180px; }
@@ -981,6 +1009,15 @@ html[data-layout="tablet"] .codetype-grid { gap: 12px; }
 .bt-dev:active { opacity: .6; }
 .bt-dev-name { font-weight: 600; font-size: 16px; }
 .bt-dev-mac { font-size: 13px; color: var(--gray); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* v1.5.131 — default-printer star button beside each device */
+.bt-dev-row { display: flex; gap: 8px; align-items: stretch; }
+.bt-dev-row .bt-dev { flex: 1; }
+.bt-dev-star {
+  border: none; border-radius: 12px; background: var(--fill-bg); color: var(--gray);
+  font-size: 20px; padding: 0 14px; cursor: pointer; font-family: inherit;
+}
+.bt-dev-star.on { color: #ff9f0a; }
+.bt-dev-star:active { opacity: .6; }
 
 /* ═══════════ v1.5.12 — live ticking indicator in voucher detail ═══════════ */
 .live-dot {
@@ -1300,6 +1337,172 @@ button.set-row { cursor: pointer; }
 .set-row .segmented { flex: 1; margin: 0; min-width: 0; }
 .set-row.col { flex-direction: column; align-items: stretch; gap: 8px; }
 .set-row.col > .t { width: 100%; }
+/* ── v1.5.136: APP UPDATE action rows — phone and tablet layouts separated.
+   Phone-first (base): label on top, button full-width below on its own line,
+   so long labels ("Check for updates") never wrap into a chunky 2-line box.
+   Tablet keeps the compact side-by-side row. ── */
+#upd-card .set-row.upd-action { flex-wrap: wrap; }
+#upd-card .set-row.upd-action > .t { flex: 1 1 100%; min-width: 0; }
+#upd-card .set-row.upd-action .btn.small { flex: 1 1 100%; white-space: nowrap; }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) #upd-card .set-row.upd-action { flex-wrap: nowrap; }
+  html:not([data-layout="phone"]) #upd-card .set-row.upd-action > .t { flex: 1 1 auto; }
+  html:not([data-layout="phone"]) #upd-card .set-row.upd-action .btn.small { flex: 0 0 auto; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] #upd-card .set-row.upd-action { flex-wrap: nowrap; }
+html[data-layout="tablet"] #upd-card .set-row.upd-action > .t { flex: 1 1 auto; }
+html[data-layout="tablet"] #upd-card .set-row.upd-action .btn.small { flex: 0 0 auto; }
+
+/* ── v1.5.137: UPDATE Ready card — changelog stays collapsed until tapped
+ * ("don't dump everything at once"). Phone-first base, tablet overrides below. */
+.upd-ready {
+  background: var(--fill-bg);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 10px;
+}
+.upd-ready-head { display: flex; align-items: center; gap: 12px; }
+.upd-ready-head .t { min-width: 0; }
+.upd-ready-head .t-main { font-weight: 700; font-size: 15px; }
+.upd-ready-details {
+  margin: 10px 0 12px;
+  background: rgba(127,127,127,.08);
+  border-radius: 12px;
+}
+.upd-ready-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  list-style: none;
+}
+.upd-ready-details summary::-webkit-details-marker { display: none; }
+.upd-ready-details summary .ic {
+  width: 16px; height: 16px;
+  flex: none;
+  transition: transform .2s ease;
+}
+.upd-ready-details[open] summary .ic { transform: rotate(180deg); }
+.upd-ready-notes {
+  padding: 0 12px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.upd-ready .btn.big { width: 100%; }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .upd-ready { padding: 18px; }
+  html:not([data-layout="phone"]) .upd-ready-notes { max-height: 240px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .upd-ready { padding: 18px; }
+html[data-layout="tablet"] .upd-ready-notes { max-height: 240px; }
+
+/* ── v1.5.138: live update banner — phone-first base, tablet overrides below.
+ * Slim tappable banner under the header; pulsing dot = "live" feel. */
+.upd-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(10,132,255,.35);
+}
+.upd-banner[hidden] { display: none; }
+.upd-banner-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #30D158; flex: none;
+  animation: updPulse 1.6s ease-in-out infinite;
+}
+@keyframes updPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.8); }
+}
+.upd-banner-text {
+  flex: 1; min-width: 0;
+  font-size: 13.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.upd-banner > .ic { flex: none; opacity: .9; }
+.upd-banner-x {
+  border: none; cursor: pointer; flex: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255,255,255,.22); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.upd-banner-x .ic { width: 12px; height: 12px; }
+/* Flash highlight on the App Update card when arriving from the banner */
+.upd-flash { animation: updFlash 1.8s ease; border-radius: 14px; }
+@keyframes updFlash {
+  0%, 100% { box-shadow: none; }
+  25%, 65% { box-shadow: 0 0 0 2.5px var(--blue); }
+}
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .upd-banner { margin-left: auto; margin-right: auto; max-width: 720px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .upd-banner { margin-left: auto; margin-right: auto; max-width: 720px; }
+
+/* ── v1.5.139: premium download ring — phone-first base, tablet overrides below. */
+.upd-dl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 14px 14px;
+}
+.upd-dl[hidden] { display: none; }
+.upd-ring { position: relative; width: 84px; height: 84px; }
+.upd-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.upd-ring-bg { fill: none; stroke: rgba(127,127,127,.18); stroke-width: 7; }
+.upd-ring-fg {
+  fill: none;
+  stroke: url(#updRingGrad);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 188.5;
+  stroke-dashoffset: 188.5;
+  transition: stroke-dashoffset .3s ease;
+}
+.upd-ring-fg.done { stroke: #30D158; }
+.upd-ring-icon {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #0A84FF;
+}
+.upd-ring-icon .ic { width: 30px; height: 30px; }
+.upd-ring-icon.done { color: #30D158; }
+.upd-dl-pct {
+  font-size: 12.5px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+  padding: 3px 10px; border-radius: 999px;
+  min-width: 52px; text-align: center;
+}
+.upd-dl-pct.done { background: #30D158; }
+.upd-dl-label { font-size: 13px; color: var(--gray); }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .upd-dl { flex-direction: row; justify-content: center; gap: 16px; }
+  html:not([data-layout="phone"]) .upd-ring { width: 96px; height: 96px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .upd-dl { flex-direction: row; justify-content: center; gap: 16px; }
+html[data-layout="tablet"] .upd-ring { width: 96px; height: 96px; }
 .fld-stack { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .set-group .codetype-grid, .set-group .qty-grid { display: flex; gap: 8px; width: 100%; }
 .set-group .codetype { flex: 1; border: none; background: var(--fill-bg); border-radius: 10px; padding: 10px 6px; font-family: inherit; color: var(--label); cursor: pointer; display: flex; flex-direction: column; gap: 2px; align-items: center; }
@@ -1455,6 +1658,131 @@ button.set-row { cursor: pointer; }
 .bulk-check .tick { display: none; font-size: 16px; font-weight: 700; color: #fff; line-height: 1; }
 .bulk-check.on { background: var(--blue); border-color: var(--blue); }
 .bulk-check.on .tick { display: block; }
+
+/* ── v1.5.141: premium bulk delete (video reference) — phone-first base,
+ * tablet overrides at the end. Purple selection + gradient delete bar,
+ * staggered row exit, success flash. */
+.bulk-check { transition: transform .15s ease, background .2s ease, border-color .2s ease; }
+.bulk-check.on {
+  background: linear-gradient(135deg, #7C5CFF, #5E5CE6);
+  border-color: transparent;
+  animation: tickpop .25s var(--spring);
+}
+@keyframes tickpop {
+  0% { transform: scale(.7); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.voucher-row { transition: background .2s ease, border-color .2s ease, opacity .35s ease, transform .35s ease; }
+.voucher-row.sel {
+  background: rgba(124, 92, 255, .12);
+  border-color: rgba(124, 92, 255, .55);
+}
+.voucher-row.leaving { opacity: 0; transform: translateX(60px) scale(.96); }
+/* premium delete bar */
+.bulk-bar.premium { background: none; box-shadow: none; padding: 0; }
+.pdel-bar {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+  border: none; cursor: pointer; color: #fff; text-align: left; font-family: inherit;
+  background: linear-gradient(135deg, #7C5CFF, #5E5CE6);
+  border-radius: 16px; padding: 10px 14px;
+  box-shadow: 0 8px 22px rgba(124, 92, 255, .4);
+  transition: transform .15s ease, opacity .2s ease;
+}
+.pdel-bar:disabled { background: var(--fill-bg); color: var(--gray); box-shadow: none; cursor: default; }
+.pdel-bar:not(:disabled):active { transform: scale(.98); }
+.pdel-ico {
+  width: 34px; height: 34px; border-radius: 10px; flex: none;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.pdel-bar:disabled .pdel-ico { background: rgba(127,127,127,.2); }
+.pdel-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pdel-t b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdel-t small { opacity: .85; font-size: 12px; }
+.pdel-go {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.pdel-bar.done { background: linear-gradient(135deg, #30D158, #1FA84A); }
+/* Tablet — Auto mode on wide screens */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .pdel-bar { padding: 12px 18px; }
+  html:not([data-layout="phone"]) .pdel-t b { font-size: 16px; }
+}
+/* Tablet — forced tablet layout */
+html[data-layout="tablet"] .pdel-bar { padding: 12px 18px; }
+html[data-layout="tablet"] .pdel-t b { font-size: 16px; }
+
+/* ── v1.5.145: compact icon-only bulk bar (user: the big purple box was ugly
+ * on phone; Delete/Print as icons, single Cancel lives in the top row) ── */
+.bulk-bar.premium { justify-content: flex-start; gap: 10px; }
+.pdel-mini {
+  position: relative; flex: none;
+  width: 46px; height: 46px; border-radius: 15px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #7C5CFF, #5E5CE6); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px rgba(124, 92, 255, .4);
+  transition: transform .15s ease, opacity .2s ease;
+  font-family: inherit;
+}
+.pdel-mini .ic { width: 22px; height: 22px; }
+.pdel-mini:disabled { background: var(--fill-bg); color: var(--gray); box-shadow: none; cursor: default; }
+.pdel-mini:not(:disabled):active { transform: scale(.93); }
+.pdel-mini.done { background: linear-gradient(135deg, #30D158, #1FA84A); }
+.pdel-n {
+  position: absolute; top: -7px; right: -7px;
+  min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px;
+  background: var(--red); color: #fff; font-size: 12px; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--bg); font-style: normal;
+}
+.pdel-mini:disabled .pdel-n { background: var(--gray); }
+.pbtn-mini { flex: none; width: 46px; height: 46px; padding: 0; justify-content: center; border-radius: 15px; }
+.pbtn-mini .ic { margin-right: 0; }
+
+/* ── v1.5.143: device lock screen + app device registry ── */
+#view-devlock {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; position: relative; overflow: hidden;
+  background: #04070f;
+}
+#view-devlock .connect-card { text-align: center; }
+#view-devlock h1 { font-size: 24px; }
+.devlock-idrow {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 14px 0 18px;
+}
+.devlock-idrow code {
+  font-size: 12px; color: #9fb3c8;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: 7px 10px;
+  max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ad-chip {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 9px; border-radius: 999px;
+}
+.ad-chip.allowed { background: rgba(48,209,88,.16); color: #30D158; }
+.ad-chip.pending { background: rgba(255,159,10,.16); color: #FF9F0A; }
+.ad-chip.blocked { background: rgba(255,69,58,.16); color: #FF453A; }
+.ad-id { font-size: 11px; color: var(--gray); }
+.ad-me {
+  display: inline-block; font-size: 11px; font-weight: 700; color: var(--blue);
+  background: rgba(10,132,255,.14); padding: 2px 9px; border-radius: 999px;
+}
+.ad-btns { display: flex; gap: 6px; flex: none; margin-left: auto; }
+.ad-stepper { display: flex; align-items: center; gap: 14px; flex: none; }
+.ad-stepper button {
+  width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--fill-bg); color: var(--blue); font-size: 20px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.ad-stepper button:active { opacity: .5; }
+.ad-stepper b { font-size: 17px; min-width: 28px; text-align: center; }
 
 /* ═══════════ v1.5.55 ═══════════ */
 
@@ -1836,6 +2164,69 @@ html[data-layout="tablet"] .voucher-row .chev { font-size: 15px; }
 /* v1.5.90: SSID password form — old-password input shrinks instead of truncating. */
 #sp-old { min-width: 0; }
 
+/* ── v1.5.145: phone-compact action buttons (user philosophy 2026-10-03) ──
+ * Phone: icon-only, compact — prettier than cramming full text.
+ * Tablet: full text buttons (default, .btn-t visible).
+ * Phone-first base under html.ph-compact; tablet keeps defaults. */
+/* User Groups table → compact cards on phone (same pattern as #md-list) */
+html.ph-compact #mg-list .wrap-scroll { overflow: visible; }
+html.ph-compact #mg-list .wrap-scroll > table.data { width: 100%; max-width: 100%; }
+html.ph-compact #mg-list table.data,
+html.ph-compact #mg-list table.data tbody { display: block; background: none; }
+html.ph-compact #mg-list table.data tr {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px;
+  background: var(--card); border-radius: 12px; padding: 10px 12px;
+  margin: 0 0 8px; box-shadow: var(--shadow-card);
+}
+html.ph-compact #mg-list table.data tr:first-child { display: none; } /* column headers */
+html.ph-compact #mg-list table.data td { display: block; border: none; padding: 0; min-width: 0; }
+html.ph-compact #mg-list table.data td:nth-child(1) { flex: 1 1 100%; font-size: 15px; font-weight: 600; }
+html.ph-compact #mg-list table.data td:nth-child(2),
+html.ph-compact #mg-list table.data td:nth-child(3),
+html.ph-compact #mg-list table.data td:nth-child(4) { font-size: 12.5px; color: var(--gray); }
+html.ph-compact #mg-list table.data td:nth-child(5) { margin-left: auto; }
+html.ph-compact #mg-list .mg-delbtn .btn-t { display: none; }
+html.ph-compact #mg-list .mg-delbtn { padding: 8px; min-width: 40px; min-height: 40px; justify-content: center; }
+html.ph-compact #mg-list .mg-delbtn .ic { margin-right: 0; }
+/* SSID row actions — icon-only compact on phone, container can never overflow */
+html.ph-compact .ssid-row .ssid-actions { max-width: 100%; min-width: 0; }
+html.ph-compact .ssid-actions .btn-t { display: none; }
+html.ph-compact .ssid-actions .btn { padding: 8px; min-width: 40px; min-height: 40px; justify-content: center; }
+html.ph-compact .ssid-actions .btn .ic { margin-right: 0; }
+
+/* ── v1.5.145: Firmware update screen ── */
+.fw-row { flex-wrap: wrap; row-gap: 8px; }
+.fw-row .voucher-meta { flex: 1 1 60%; min-width: 160px; }
+.fw-actions { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+/* Honest indeterminate progress — the portal reports no live %, so this
+ * animates activity (not a fake percentage). */
+.fw-prog {
+  height: 6px; border-radius: 3px; background: var(--fill-bg);
+  overflow: hidden; margin-top: 8px; position: relative;
+}
+.fw-bar {
+  position: absolute; top: 0; bottom: 0; width: 38%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue), #7C5CFF);
+  animation: fwslide 1.4s ease-in-out infinite;
+}
+@keyframes fwslide {
+  0% { left: -38%; }
+  100% { left: 100%; }
+}
+html.ph-compact .fw-actions { margin-left: 0; }
+html.ph-compact .fw-actions .btn { flex: 1; justify-content: center; }
+
+/* ── v1.5.145: Client History sharing flags ── */
+.mh-flag {
+  flex: none; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  padding: 4px 9px; border-radius: 20px;
+}
+.mh-flag.bad { background: rgba(255, 69, 58, .14); color: #FF453A; }
+.mh-flag.warn { background: rgba(255, 159, 10, .14); color: #FF9F0A; }
+.mh-flag.ok { background: rgba(48, 209, 88, .14); color: #30D158; }
+.mh-group { cursor: pointer; }
+.mh-group .chev { margin-left: 4px; }
+
 /* v1.5.93: Printer page — compact text & icons (user request). */
 #view-printer .fld-label { font-size: 13px; }
 #view-printer .section-title { font-size: 13px; }
@@ -1957,7 +2348,7 @@ html[data-theme="dark"] .ios-alert {
 }
 .ios-alert-body { padding: 18px 16px 14px; text-align: center; }
 .ios-alert-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
-.ios-alert-msg { font-size: 13px; opacity: .75; line-height: 1.4; }
+.ios-alert-msg { font-size: 13px; opacity: .75; line-height: 1.4; white-space: pre-wrap; } /* v1.5.140: multiline guide text */
 .ios-alert-btns { display: flex; border-top: .5px solid rgba(128,128,128,.35); }
 .ios-alert-btn {
   flex: 1; padding: 12px 8px; font-size: 17px; text-align: center;
@@ -1966,3 +2357,37 @@ html[data-theme="dark"] .ios-alert {
 .ios-alert-btn + .ios-alert-btn { border-left: .5px solid rgba(128,128,128,.35); }
 .ios-alert-btn.destructive { color: #FF3B30; }
 .ios-alert-btn:active { background: rgba(128,128,128,.12); }
+
+/* ═══════════ Owner PIN gate (v1.5.144) — phone-first ═══════════ */
+.pin-card { text-align: center; }
+.pin-card h1 { margin: 8px 0 2px; }
+.pin-field { position: relative; margin: 22px 0 10px; padding: 8px 0; }
+.pin-dots { display: flex; gap: 12px; justify-content: center; }
+.pin-dot {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 1.5px solid rgba(120, 120, 150, 0.45);
+  background: transparent;
+  transition: background 0.15s, transform 0.15s, border-color 0.15s;
+}
+.pin-dot.on { background: #0a84ff; border-color: #0a84ff; transform: scale(1.15); }
+#pin-input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; font-size: 16px; cursor: pointer;
+}
+.pin-card.shake { animation: pinshake 0.35s; }
+@keyframes pinshake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-5px); }
+}
+#pfn-pin-wrap label { display: block; margin: 10px 0; }
+/* tablet: roomier dots + card (auto on wide, forced via data-layout) */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) .pin-card { max-width: 430px; margin-left: auto; margin-right: auto; }
+  html:not([data-layout="phone"]) .pin-dots { gap: 16px; }
+  html:not([data-layout="phone"]) .pin-dot { width: 18px; height: 18px; }
+}
+html[data-layout="tablet"] .pin-card { max-width: 430px; margin-left: auto; margin-right: auto; }
+html[data-layout="tablet"] .pin-dots { gap: 16px; }
+html[data-layout="tablet"] .pin-dot { width: 18px; height: 18px; }

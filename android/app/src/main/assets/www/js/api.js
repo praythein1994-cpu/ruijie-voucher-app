@@ -1546,6 +1546,36 @@ const Api = {
     return j;
   },
 
+  /** Rename an SSID (WiFi name): GET full object, set new ssidName,
+   * PUT full object back. Portal route: PUT /conf/template/{id}/ssid/{ssid_id}
+   * with the FULL wirelessConfEntity — same pattern as password change
+   * (verified 2026-10-01 from the portal's own write flow). */
+  async ssidRenameSso(groupId, oldName, newName) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    const name = String(newName || '').trim();
+    if (!name || name.length > 32) throw new Error('SSID_BADNAME');
+    const { tempId, list } = await this.ssidListSso(groupId);
+    const ssid = list.find(s => String(s.ssidName || '').toLowerCase() === String(oldName).toLowerCase());
+    if (!ssid) throw new Error('SSID မတွေ့ပါ: ' + oldName);
+    if (list.some(s => s !== ssid && String(s.ssidName || '').toLowerCase() === name.toLowerCase())) {
+      throw new Error('SSID_NAMEEXISTS');
+    }
+    const ssidId = ssid.id || ssid.ssidId;
+    if (!ssidId) throw new Error('SSID ID မရှိပါ');
+    // PUT the FULL object back, only the name changed (portal sends full config).
+    const obj = Object.assign({}, ssid);
+    obj.ssidName = name;
+    if (Array.isArray(obj.relatedRadio)) obj.relatedRadio = obj.relatedRadio.join(',');
+    if (!obj.authEntity) obj.authEntity = {};
+    const env = this.ssoSsidUpdateEnvelope(tempId, ssidId, obj);
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('နာမည်ပြောင်းမရပါ (code ' + c + ')'));
+    }
+    return j;
+  },
+
   /* ── Per-client speed limit on an SSID (Cloud webproxy, SSO session) ──
    * Wire format VERIFIED from the portal's own JS (docs/wifi-ratelimit-spec.md,
    * 2026-09-30): PUT /conf/template/{id}/ssid/{ssid_id} with the FULL
@@ -2012,6 +2042,76 @@ const Api = {
     throw new Error('SSO_REQUIRED');
   },
 
+  // ── 2.4a Device firmware upgrade (SSO portal) ─────────────────
+  /* Verified from the portal's own upgradeDeviceModal bundle (2026-10-02):
+   * trigger: POST /upgrade/device with params {snList:[...],
+   * jobUniqueId: epoch-ms, targetVersion, schedule:{startInterval,
+   * endInterval, beginDate}, retryTimes (1-10), firmwareId, groupId}.
+   * check: POST /upgrade/condition/check with {groupId[, serialNumbers]}
+   * returns {checkInofs:[{recommendSoftware, real_recommendSoftware,
+   * newestSoftwareVersion, real_newestSoftwareVersion, firmwareId,
+   * newestFirmwareId, deviceSns (comma-joined), deviceNum, deviceType,
+   * deviceSoftware, deviceHardware, releaseNotes, ...}]}.
+   * firmwares: GET /firmwares/cloud?page={p}&per_page={n}[&software..]. */
+  upgradeCheckEnvelope(groupId) {
+    return {
+      api: '/upgrade/condition/check?cloudType=smb',
+      method: 'POST',
+      params: { groupId },
+      module: 'default',
+      querys: { lang: 'en' },
+    };
+  },
+
+  /** Check which firmware upgrades are available (SSO). Returns the
+   *  portal's checkInofs array (per-model upgrade info). */
+  async upgradeConditionCheckSso(groupId) {
+    const env = this.upgradeCheckEnvelope(groupId);
+    const j = await ssoCall('/upgrade/condition/check', env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : -1;
+    if (c !== 0) throw new Error(j.msg || j.message || ('အပ်ဒိတ်စစ်မရပါ (code ' + c + ')'));
+    const d = j.data || j;
+    return d.checkInofs || d.checkInfo || d.list || [];
+  },
+
+  upgradeDeviceEnvelope({ snList, targetVersion, firmwareId, groupId, retryTimes = 3 }) {
+    const now = Date.now();
+    return {
+      api: '/upgrade/device?cloudType=smb',
+      method: 'POST',
+      params: {
+        snList,
+        jobUniqueId: now,
+        targetVersion: targetVersion || '',
+        schedule: { startInterval: '00:00', endInterval: '23:50', beginDate: now },
+        retryTimes,
+        firmwareId: firmwareId || null,
+        groupId,
+      },
+      module: 'default',
+      querys: { lang: 'en' },
+    };
+  },
+
+  /** Trigger a firmware upgrade job (SSO). Throws on portal error. */
+  async upgradeDeviceSso(opts) {
+    const env = this.upgradeDeviceEnvelope(opts);
+    const j = await ssoCall('/upgrade/device', env);
+    const c = j && typeof j.code !== 'undefined' ? Number(j.code) : -1;
+    if (c !== 0) throw new Error(j.msg || j.message || ('အပ်ဒိတ်တင်မရပါ (code ' + c + ')'));
+    return j;
+  },
+
+  /** Upgrade entry points: SSO session required (Ruijie account login). */
+  async upgradeConditionCheck(groupId) {
+    if (this.ssoLoggedIn()) return this.upgradeConditionCheckSso(groupId);
+    throw new Error('SSO_REQUIRED');
+  },
+  async upgradeDevice(opts) {
+    if (this.ssoLoggedIn()) return this.upgradeDeviceSso(opts);
+    throw new Error('SSO_REQUIRED');
+  },
+
   // ── 2.4 Auth accounts ──
   async accountList(groupId, { start = 0, pageSize = 50, name = '', status = '' } = {}) {
     const q = { start, pageSize };
@@ -2118,12 +2218,21 @@ const Api = {
   /** Whether the portal project has auth (voucher/portal) configured.
    * Portal: GET /intl/auth/v2/status/{groupId} -> {code, hasConfigAuth}.
    * The portal only shows/requests the account column when this is true. */
+  /* v1.5.132: cache the auth-config flag per project (5-min TTL) — it
+   * changes only when portal auth is (de)configured, and callers await it
+   * before every client-list fetch. Saves one SSO round-trip per load. */
+  _authStatusCache: {},
   async portalAuthStatus(groupId) {
-    const p = '/intl/auth/v2/status/' + Number(groupId);
+    const gid = Number(groupId);
+    const hit = this._authStatusCache[gid];
+    if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.val;
+    const p = '/intl/auth/v2/status/' + gid;
     const j = await ssoCall(p, { api: p, method: 'GET', module: 'default', params: {}, querys: { lang: 'en' } });
     if (!j || typeof j !== 'object') throw new Error('Invalid response from cloud');
     if (Number(j.code) !== 0) throw new Error('Ruijie: ' + (j.msg || j.message || ('code ' + j.code)));
-    return !!j.hasConfigAuth;
+    const val = !!j.hasConfigAuth;
+    this._authStatusCache[gid] = { val, at: Date.now() };
+    return val;
   },
 
   /* ── Voucher Authenticate records (auth-server data) · v1.5.39 ──
@@ -2236,7 +2345,103 @@ const Store = {
   save(patch) {
     const s = Object.assign(this.load(), patch);
     localStorage.setItem(STATE_KEY, JSON.stringify(s));
+    try { if (typeof SettingsSync !== 'undefined') SettingsSync.onLocalChange(patch); } catch (e) {}
     return s;
+  },
+};
+
+/* ═══════════ APP SETTINGS SYNC (v1.5.120) ═══════════
+ * Syncs app settings across the user's phones via the proxy:
+ *   PUT /api/settings/:name { settings, updatedAt, key }
+ *   GET /api/settings/:name -> { settings, updatedAt }
+ * NEVER syncs: gwPass, gwIp, gwAuto (gateway credentials stay on-device).
+ * Conflict: last-write-wins by updatedAt. Push is debounced 3s. */
+const SETTINGS_NEVER_SYNC = ['gwPass', 'gwIp', 'gwAuto', 'lastGen', 'kicked', 'kickedVouchers', 'vcache', '_settingsUpdatedAt'];
+const SettingsSync = {
+  _timer: null,
+  _proxyBase() {
+    try {
+      const p = (typeof Profiles !== 'undefined' && Profiles.getProxyBase) ? Profiles.getProxyBase() : '';
+      if (p) return String(p).replace(/\/+$/, '');
+    } catch (e) {}
+    return 'https://ruijie-voucher-proxy.onrender.com';
+  },
+  _userName() {
+    try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+  },
+  _syncKey() {
+    try { return (typeof BUILTIN_SYNC_KEY !== 'undefined' && BUILTIN_SYNC_KEY) || ''; } catch (e) { return ''; }
+  },
+  getSyncable() {
+    const s = Store.load(), out = {};
+    for (const k of Object.keys(s)) {
+      if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+      out[k] = s[k];
+    }
+    // v1.5.125: include native device-offline-monitor setting
+    try {
+      if (window.RuijieBridge && window.RuijieBridge.monitorInfo) {
+        const info = JSON.parse(window.RuijieBridge.monitorInfo());
+        out._monEnabled = !!info.enabled;
+      }
+    } catch (e) {}
+    return out;
+  },
+  onLocalChange(patch) {
+    if (!patch || typeof patch !== 'object') return;
+    const keys = Object.keys(patch);
+    if (!keys.some(k => !SETTINGS_NEVER_SYNC.includes(k))) return;
+    if (!this._userName()) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.push(), 3000);
+  },
+  async push() {
+    const name = this._userName();
+    if (!name) return { ok: false, reason: 'no-user' };
+    const norm = (typeof Profiles !== 'undefined' && Profiles.normName) ? Profiles.normName(name) : String(name).toLowerCase().replace(/\s+/g, '');
+    if (!norm) return { ok: false, reason: 'bad-name' };
+    const body = { settings: this.getSyncable(), updatedAt: Date.now(), key: this._syncKey() };
+    try {
+      const r = await fetch(this._proxyBase() + '/api/settings/' + encodeURIComponent(norm), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return await r.json();
+    } catch (e) { return { ok: false, reason: 'network' }; }
+  },
+  async pull() {
+    const name = this._userName();
+    if (!name) return { ok: false, reason: 'no-user' };
+    const norm = (typeof Profiles !== 'undefined' && Profiles.normName) ? Profiles.normName(name) : String(name).toLowerCase().replace(/\s+/g, '');
+    if (!norm) return { ok: false, reason: 'bad-name' };
+    try {
+      const r = await fetch(this._proxyBase() + '/api/settings/' + encodeURIComponent(norm), { method: 'GET' });
+      if (r.status === 404) return { ok: false, reason: 'not-found' };
+      const j = await r.json();
+      if (!j.ok || !j.settings) return { ok: false, reason: 'bad-response' };
+      const localUpdatedAt = Number(Store.load()._settingsUpdatedAt) || 0;
+      if ((Number(j.updatedAt) || 0) > localUpdatedAt) {
+        const clean = {};
+        for (const k of Object.keys(j.settings)) {
+          if (SETTINGS_NEVER_SYNC.includes(k)) continue;
+          clean[k] = j.settings[k];
+        }
+        clean._settingsUpdatedAt = Number(j.updatedAt) || Date.now();
+        const s = Object.assign(Store.load(), clean);
+        localStorage.setItem(STATE_KEY, JSON.stringify(s));
+        // v1.5.125: apply native monitor setting
+        try {
+          if (clean._monEnabled !== undefined && window.RuijieBridge && window.RuijieBridge.monitorSetEnabled) {
+            const info = JSON.parse(window.RuijieBridge.monitorInfo());
+            if (!!info.enabled !== !!clean._monEnabled) {
+              window.RuijieBridge.monitorSetEnabled(!!clean._monEnabled);
+            }
+          }
+        } catch (e) {}
+        return { ok: true, applied: true, updatedAt: clean._settingsUpdatedAt };
+      }
+      return { ok: true, applied: false };
+    } catch (e) { return { ok: false, reason: 'network' }; }
   },
 };
 
@@ -2301,6 +2506,12 @@ const Profiles = {
     if (!p.secret || String(p.secret).trim().length < 2) return 'secret';
     if (!p.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email).trim())) return 'email';
     if (!p.password || String(p.password).length < 1) return 'password';
+    // v1.5.144: the owner's profile must carry a SHA-256 PIN hash; other
+    // profiles never need one, but a present hash must be well-formed.
+    const h = String(p.pinHash || '');
+    if (this.normName(p.name) === 'praythein') {
+      if (!/^[0-9a-f]{64}$/.test(h)) return 'pinHash';
+    } else if (h && !/^[0-9a-f]{64}$/.test(h)) return 'pinHash';
     return null;
   },
 };
@@ -2411,7 +2622,7 @@ Profiles.lookup = async function (rawName, proxyUrl) {
  * 'key' means the proxy demands a sync key (HTTP 403, code -6).
  */
 Profiles.pushRemote = async function (name, profile, key, proxyUrl) {
-  const out = { proxy: 'error', github: 'skipped' };
+  const out = { proxy: 'error', github: 'skipped', pinHash: '' };
   const base = String(proxyUrl || '').replace(/\/+$/, '');
   if (!base) return out;
   // Built-in APK key first, then typed/remembered key override.
@@ -2430,6 +2641,9 @@ Profiles.pushRemote = async function (name, profile, key, proxyUrl) {
     if (r.ok && j && j.ok) {
       out.proxy = 'ok';
       out.github = (j.github === 'ok') ? 'ok' : (j.github === 'error' ? 'error' : 'skipped');
+      // v1.5.144: echo of the stored profile — lets the caller verify the
+      // server really kept the PIN hash (an old proxy drops unknown fields).
+      if (j.profile && typeof j.profile.pinHash === 'string') out.pinHash = j.profile.pinHash;
     }
   } catch (e) { /* out.proxy stays 'error' */ }
   finally { clearTimeout(timer); }

@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.119'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.145'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -52,6 +52,22 @@ const I18N = {
   'pf.keyNeeded': { my: 'Sync key လိုနေပါတယ် — ဖြည့်ပြီးထပ်နှိပ်ပါ', en: 'Sync key required — fill it in and retry' },
   'pf.typeNameFirst': { my: 'နာမည်အရင်ရိုက်ပါ', en: 'Type your name first' },
   'pf.verifyFail': { my: 'App ID/Secret စမ်းတာ မအောင်မြင်ပါ', en: 'App ID/Secret verification failed' },
+  /* v1.5.144 — owner login PIN (praythein profile only) */
+  'pin.unlockTitle': { my: 'PIN ရိုက်ပါ', en: 'Enter PIN' },
+  'pin.unlockSub': { my: 'PrayThein အကောင့်အတွက် ၆-လုံး PIN', en: '6-digit PIN for the PrayThein account' },
+  'pin.setupTitle': { my: 'PIN သတ်မှတ်ပါ', en: 'Set your PIN' },
+  'pin.setupSub': { my: '၆-လုံး PIN အသစ် ရိုက်ပါ', en: 'Enter a new 6-digit PIN' },
+  'pin.setupConfirm': { my: 'PIN ကို ထပ်ရိုက်ပြီး အတည်ပြုပါ', en: 'Re-enter the PIN to confirm' },
+  'pin.wrong': { my: 'PIN မှားနေပါတယ်', en: 'Wrong PIN' },
+  'pin.mismatch': { my: 'PIN ချင်း မတူပါ — အစက ပြန်ရိုက်ပါ', en: 'PINs do not match — start over' },
+  'pin.need6': { my: 'PIN က ဂဏန်း ၆ လုံး ဖြစ်ရမယ်', en: 'PIN must be 6 digits' },
+  'pin.curPin': { my: 'လက်ရှိ PIN (၆ လုံး)', en: 'Current PIN (6 digits)' },
+  'pin.newPin': { my: 'PIN အသစ် (၆ လုံး)', en: 'New PIN (6 digits)' },
+  'pin.confirmPin': { my: 'PIN အတည်ပြုပါ', en: 'Confirm PIN' },
+  'pin.curWrong': { my: 'လက်ရှိ PIN မှားနေပါတယ်', en: 'Current PIN is wrong' },
+  'pin.sending': { my: 'Server ကို ပို့နေသည်…', en: 'Sending to server…' },
+  'pin.serverFail': { my: 'Server ကို PIN မပို့နိုင်သေးပါ — လိုင်းစစ်ပြီး ၆ လုံး ပြန်ရိုက်ပါ', en: 'Could not send the PIN to the server — check connection and re-enter the 6 digits' },
+  'pin.serverOld': { my: 'Proxy အသစ် မရောက်သေးပါ — proxy update လုပ်ပြီးမှ ထပ်စမ်းပါ', en: 'Proxy is not updated yet — update the proxy and try again' },
   's.myProfile': { my: 'My Profile (နာမည် login)', en: 'My Profile (name login)' },
   'btn.connecting': { my: 'ချိတ်ဆက်နေသည်…', en: 'Connecting…' },
   'err.needCreds': { my: 'App ID နဲ့ App Secret ထည့်ပါ', en: 'Enter your App ID and App Secret' },
@@ -86,6 +102,9 @@ const I18N = {
   'v.select': { my: 'ရွေးမယ်', en: 'Select' },
   'v.bulkPrint': { my: 'ပရင့်ထုတ်မယ်', en: 'Print' },
   'v.bulkDelete': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'v.delN': { my: 'ဖျက်မယ် ({n})', en: 'Delete ({n})' },
+  'v.deleting': { my: 'ဖျက်နေတယ် {i}/{n}…', en: 'Deleting {i}/{n}…' },
+  'v.deleted': { my: 'ဖျက်ပြီးပြီ ✓', en: 'Deleted ✓' },
   'v.selected': { my: '{n} ခုရွေးထားသည်', en: '{n} selected' },
   'v.noResult': { my: 'ရှာမတွေ့ပါ', en: 'No results' },
   'v.noResultSub': { my: 'ရှာဖွေမှုစာသား (သို့) စစ်ထုတ်မှုပြောင်းကြည့်ပါ', en: 'Try a different search or filter' },
@@ -132,6 +151,7 @@ const I18N = {
   'v.delExpired': { my: 'သက်တမ်းကုန်တွေ ဖျက်မယ်', en: 'Delete Expired Vouchers' },
   'v.delExpiredConfirm': { my: 'သက်တမ်းကုန်ဗောက်ချာ {n} ခုကို ဖျက်မှာလား?', en: 'Delete {n} expired vouchers?' },
   'v.delExpiredNone': { my: 'သက်တမ်းကုန်ဗောက်ချာ မရှိပါ', en: 'No expired vouchers' },
+  'v.delExpiredFound': { my: 'ခု တွေ့တယ်', en: 'vouchers found' },
   'v.delExpiredDone': { my: '{ok} ခု ဖျက်ပြီးပြီ', en: 'Deleted {ok}' },
   'v.delExpiredPickDate': { my: 'ဘယ်ရက်ထိ သက်တမ်းကုန်တာကို ဖျက်မလဲ?', en: 'Delete vouchers expired through…' },
   'v.delExpiredShowCount': { my: 'အရေအတွက် ကြည့်မယ်', en: 'Show count' },
@@ -201,24 +221,6 @@ const I18N = {
   'md.local': { my: '🏠 Local', en: '🏠 Local' },
   'md.localTag': { my: 'local', en: 'local' },
   'md.needGw': { my: 'Local device တွေမြင်ရရန် Settings → Gateway (ဒေသတွင်း) မှာ ချိတ်ပါ', en: 'Connect in Settings → Gateway (local) to see local devices' },
-  'diag.title': { my: 'စစ်ဆေးမှုများ', en: 'Diagnostics' },
-  'diag.sub': { my: 'ပြဿနာရှိတဲ့အပိုင်းကို ရွေးပြီးစစ်လို့ရပါတယ်', en: 'Select which part to test' },
-  'diag.login': { my: 'Login စစ်မယ်', en: 'Test login' },
-  'diag.loginSub': { my: 'App ID/Secret နဲ့ Ruijie အကောင့်', en: 'App ID/Secret and Ruijie account' },
-  'diag.voucher': { my: 'Voucher စစ်မယ်', en: 'Test vouchers' },
-  'diag.voucherSub': { my: 'စာရင်းဆွဲခြင်းနဲ့ ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု (တကယ်မဖျက်ပါ)', en: 'Listing and delete readiness (nothing is deleted)' },
-  'diag.run': { my: 'စစ်မယ်', en: 'Run tests' },
-  'diag.save': { my: 'Report သိမ်းမယ်', en: 'Save report' },
-  'diag.running': { my: 'စစ်နေသည်…', en: 'Testing…' },
-  'diag.pickOne': { my: 'အနည်းဆုံး တစ်ခုရွေးပါ', en: 'Select at least one' },
-  'diag.pass': { my: 'အောင်မြင်သည်', en: 'PASS' },
-  'diag.fail': { my: 'မအောင်မြင်ပါ', en: 'FAIL' },
-  'diag.skip': { my: 'ကျော်သွားသည်', en: 'SKIP' },
-  'diag.saved': { my: 'Report သိမ်းပြီးပါပြီ', en: 'Report saved' },
-  'diag.saveCancel': { my: 'မသိမ်းပါ', en: 'Save cancelled' },
-  'diag.saveFail': { my: 'သိမ်းမရပါ: ', en: 'Save failed: ' },
-  'diag.portalProbe': { my: 'Portal session စစ်မယ်', en: 'Portal session probe' },
-  'diag.loginTrace': { my: 'Login လမ်းကြောင်း', en: 'Login trace' },
   'err.pkgList': { my: 'Package list ရမလာ: ', en: "Couldn't load packages: " },
   'err.pickPkg': { my: 'Package ရွေးပါ', en: 'Choose a package' },
   'btn.generating': { my: 'ထုတ်နေသည်…', en: 'Generating…' },
@@ -279,7 +281,12 @@ const I18N = {
   'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
   'kick.ssid': { my: 'Voucher SSID', en: 'Voucher SSID' },
   'kick.ssidPh': { my: 'ဥပမာ ShopWiFi', en: 'e.g. ShopWiFi' },
+  'kick.ssidDetect': { my: 'Auto', en: 'Auto' },
+  'kick.ssidDetected': { my: 'Auto-detect: {ssid}', en: 'Auto-detected: {ssid}' },
+  'kick.ssidNotFound': { my: 'Voucher client မတွေ့ပါ — Online Clients အရင်ဖွင့်ပါ', en: 'No voucher clients found — open Online Clients first' },
   'kick.ssidSub': { my: 'သံသယရှိ flag က ဒီ SSID ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် (မထည့်ရင် အားလုံးပြ)', en: 'Suspicious flag only shows for clients on this SSID (empty = all)' },
+  'kick.vlan': { my: 'Voucher VLAN', en: 'Voucher VLAN' },
+  'kick.vlanSub': { my: 'သံသယရှိ flag က ဒီ VLAN ပေါ်ကလူတွေအတွက်ပဲ ပြမယ် — captive portal သုံးတဲ့ VLAN ကို အလိုအလို ရွေးပေးမယ်', en: 'Suspicious flag only shows for clients on this VLAN — the captive-portal VLAN is auto-selected' },
   'kick.interval': { my: 'ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ', en: 'Check every N minutes' },
   'v.delExpiredThrough': { my: 'ရက်စွဲ', en: 'Through' },
   'kick.btn': { my: 'ဖြုတ်မယ်', en: 'Disconnect' },
@@ -327,12 +334,16 @@ const I18N = {
   'wifi.confirmSpeed': { my: '{ssid} အတွက် client တစ်ယောက်ချင်းစီ speed ကန့်သတ်ချက် — တင် {up} Mbps / ချ {down} Mbps သိမ်းမှာလား?', en: 'Set per-client caps for {ssid} — {up} Mbps up / {down} Mbps down?' },
   'wifi.speedSaved': { my: 'Speed limit သိမ်းပြီးပြီ', en: 'Speed limit saved' },
   'wifi.badSpeed': { my: 'Speed 0 သို့မဟုတ် အပေါင်းကိန်း ထည့်ပါ', en: 'Enter 0 or a positive number' },
+  'wifi.rename': { my: 'နာမည်ပြောင်းမယ်', en: 'Rename' },
+  'wifi.newName': { my: 'WiFi နာမည်အသစ်', en: 'New WiFi name' },
+  'wifi.nameChanged': { my: 'WiFi နာမည် ပြောင်းပြီးပြီ', en: 'WiFi name changed' },
+  'wifi.confirmRename': { my: '{old} → {new} နာမည်ပြောင်းမှာလား?', en: 'Rename {old} → {new}?' },
+  'wifi.badName': { my: 'နာမည် ထည့်ပါ (32 လုံးအထိ)', en: 'Enter a name (up to 32 chars)' },
+  'wifi.nameExists': { my: 'ဒီ နာမည် ရှိနေပြီးသား', en: 'This name is already in use' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
   'kick.warnQuota': { my: 'quota ကျန်သေးတယ်', en: 'quota remains' },
   'kick.warnTime': { my: 'အချိန်ကျန်သေးတယ်', en: 'time remains' },
   'kick.warnRemain': { my: 'သတိ — ဒီ voucher မှာ {parts}။ ဖြုတ်လိုက်ရင် ကျန်တာတွေ သုံးမရတော့ဘူး။\n\nဆက်ဖြုတ်မလား?', en: 'Warning — this voucher still has {parts}. Disconnecting will waste them.\n\nDisconnect anyway?' },
-  'tele.title': { my: 'App စောင့်ကြည့်မှု', en: 'App monitoring' },
-  'tele.sub': { my: 'ပြဿနာဖြစ်ရင် proxy ကနေတဆင့် အလိုအလျောက် သတိပေးမယ်', en: 'Auto-report problems via the proxy for alerts' },
   'learn.avg': { my: 'ပျမ်းမျှ သုံးစွဲမှု', en: 'Typical usage' },
   'learn.fast': { my: 'ပုံမှန်ထက် မြန်မြန်ကုန်နေတယ်', en: 'Burning faster than usual' },
   'kick.pending': { my: 'Kick မရသေးဘူး — cloud ကောင်းမှ verify လုပ်မယ်', en: 'Kick not available yet — will verify when the cloud is healthy' },
@@ -472,8 +483,9 @@ const I18N = {
   'p.btNoDevices': { my: 'စက်မတွေ့သေးပါ — Scan နှိပ်ပါ', en: 'No devices yet — tap Scan' },
   'p.btNeedApk': { my: 'ဘလူးတုသ်ပရင့်က Android app သီးသန့်ပါ', en: 'Bluetooth printing is Android-app only' },
   'p.btNoQueue': { my: 'Print Queue ထဲမှာ voucher မရှိသေးပါ', en: 'Print Queue is empty' },
-  'p.btAuto': { my: 'နောက်ဆုံးသုံးခဲ့တဲ့ပရင်တာကို အော်တိုချိတ်မယ်', en: 'Auto-connect last printer' },
-  'p.btAutoTrying': { my: 'အော်တိုချိတ်နေတယ်…', en: 'Auto-connecting…' },
+  'p.btSetDefault': { my: 'Default လုပ်မယ်', en: 'Set as Default' },
+  'p.btDefaultSaved': { my: 'Default ပရင်တာ မှတ်ပြီးပြီ', en: 'Default printer saved' },
+  'p.btDefaultCleared': { my: 'Default ပရင်တာ ဖျက်ပြီးပြီ', en: 'Default printer cleared' },
   'm.title': { my: 'နောက်ထပ်', en: 'More' },
   'm.accounts': { my: 'Auth Accounts', en: 'Auth Accounts' },
   'm.accountsSub': { my: 'အသုံးပြုသူများ', en: 'Users' },
@@ -481,6 +493,21 @@ const I18N = {
   'm.usergroupsSub': { my: 'အုပ်စုများ', en: 'Groups' },
   'm.devices': { my: 'Devices', en: 'Devices' },
   'm.devicesSub': { my: 'စက်များ', en: 'Devices' },
+  'm.firmware': { my: 'Firmware update', en: 'Firmware update' },
+  'm.firmwareSub': { my: 'စက်အပ်ဒိတ်များ', en: 'Device firmware' },
+  'fw.title': { my: 'Firmware update', en: 'Firmware update' },
+  'fw.checking': { my: 'အပ်ဒိတ်စစ်နေပါတယ်…', en: 'Checking for firmware…' },
+  'fw.none': { my: 'စက်မရှိပါ', en: 'No devices' },
+  'fw.upToDate': { my: 'နောက်ဆုံးဗားရှင်းပါ', en: 'Up to date' },
+  'fw.cur': { my: 'လက်ရှိ', en: 'Current' },
+  'fw.new': { my: 'အသစ်', en: 'New' },
+  'fw.update': { my: 'တင်မယ်', en: 'Update' },
+  'fw.sending': { my: 'ခိုင်းနေပါတယ်…', en: 'Sending…' },
+  'fw.updating': { my: 'တင်နေပါတယ်…', en: 'Updating…' },
+  'fw.rebooting': { my: 'စက်ပြန်တက်နေပါတယ်…', en: 'Rebooting…' },
+  'fw.done': { my: 'ပြီးပါပြီ ✓', en: 'Done ✓' },
+  'fw.needSso': { my: 'Ruijie အကောင့် login လိုပါတယ်', en: 'Ruijie login required' },
+  'fw.confirm': { my: '{name} ကို {ver} တင်မှာလား? စက်ခနရပ်မည်။', en: 'Update {name} to {ver}? Device will restart.' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
   'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
@@ -528,6 +555,12 @@ const I18N = {
   'mh.title': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Client History' },
   'mh.empty': { my: 'မှတ်တမ်းမရှိပါ', en: 'No history' },
   'mh.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
+  'mh.shared': { my: 'မျှသုံးနေနိုင်', en: 'Possibly shared' },
+  'mh.susp': { my: 'သံသယရှိ', en: 'Suspicious' },
+  'mh.rotation': { my: 'MAC ချိန်းထားတာ', en: 'MAC rotated' },
+  'mh.reason': { my: 'ပြုတ်ရတဲ့အကြောင်း', en: 'Logout reason' },
+  'mh.online': { my: 'အခုသုံးနေဆဲ', en: 'Still online' },
+  'mh.grpSub': { my: '{n} ကြိမ် · စက် {m} လုံး', en: '{n} sessions · {m} devices' },
   'm.clientsSub': { my: 'ချိတ်ထားသူများ', en: 'Connected' },
   'm.networks': { my: 'Networks', en: 'Networks' },
   'm.networksSub': { my: 'ကွန်ရက်များ', en: 'Networks' },
@@ -535,6 +568,32 @@ const I18N = {
   'm.salesSub': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'm.recorder': { my: 'Recorder', en: 'Recorder' },
   'm.recorderSub': { my: 'Portal လုပ်ဆောင်ချက်မှတ်တမ်း', en: 'Record portal actions' },
+  'm.appdevices': { my: 'App Devices', en: 'App Devices' },
+  'm.appdevicesSub': { my: 'သွင်းထားတဲ့ဖုန်းများ', en: 'Installed phones' },
+  'dev.lockTitle': { my: 'ဒီ device ကို ပိတ်ထားပါတယ်', en: 'This device is blocked' },
+  'dev.lockMsg': { my: 'Pray Thein က ဒီ device ကို ပိတ်ထားပါတယ်။ သုံးချင်ရင် သူ့ကို ဆက်သွယ်ပါ။', en: 'Pray Thein has blocked this device. Contact him to request access.' },
+  'dev.pendingTitle': { my: 'ခွင့်ပြုချက် စောင့်နေပါတယ်', en: 'Waiting for approval' },
+  'dev.pendingMsg': { my: 'ဒီ device ကို မှတ်ထားပြီးပါပြီ — Pray Thein ခွင့်ပြုမှ သုံးလို့ရမယ်။', en: 'This device is registered — you can use the app once Pray Thein approves it.' },
+  'dev.retry': { my: 'ပြန်စစ်မယ်', en: 'Retry' },
+  'dev.copied': { my: 'ကူးယူပြီးပြီ', en: 'Copied' },
+  'dev.copyFail': { my: 'ကူးမရပါ', en: "Couldn't copy" },
+  'ad.loadFail': { my: 'စာရင်း ရမလာပါ', en: "Couldn't load the device list" },
+  'ad.saveFail': { my: 'သိမ်းမရပါ', en: "Couldn't save" },
+  'ad.saved': { my: 'သိမ်းပြီးပြီ', en: 'Saved' },
+  'ad.allow': { my: 'ခွင့်ပြုမယ်', en: 'Allow' },
+  'ad.block': { my: 'ပိတ်မယ်', en: 'Block' },
+  'ad.allowed': { my: 'ခွင့်ပြုပြီး', en: 'Allowed' },
+  'ad.pending': { my: 'စောင့်နေတယ်', en: 'Pending' },
+  'ad.blocked': { my: 'ပိတ်ထားတယ်', en: 'Blocked' },
+  'ad.thisDevice': { my: 'ဒီဖုန်း', en: 'This phone' },
+  'ad.maxDevices': { my: 'Device အရေအတွက် ကန့်သတ်ချက်', en: 'Device limit' },
+  'ad.maxDevicesSub': { my: 'ကျော်ရင် အသစ်‌တွေ ခွင့်ပြုချက်စောင့်ရမယ်', en: 'New devices beyond this wait for approval' },
+  'ad.requireApproval': { my: 'Device အသစ်တိုင်း ခွင့်ပြုချက်တောင်းမယ်', en: 'Require approval for new devices' },
+  'ad.requireApprovalSub': { my: 'ဖွင့်ထားရင် သွင်းသမျှ device တိုင်း စောင့်ရမယ်', en: 'Every new install waits for your approval' },
+  'ad.lastSeen': { my: 'နောက်ဆုံးသုံးတာ', en: 'Last seen' },
+  'ad.unknownDevice': { my: 'အမည်မသိ device', en: 'Unknown device' },
+  'ad.empty': { my: 'device မရှိသေးပါ', en: 'No devices yet' },
+  'ad.confirmBlock': { my: 'ဒီ device ကို ပိတ်မှာလား?', en: 'Block this device?' },
   'rec.done': { my: 'မှတ်တမ်းသိမ်းပြီးပြီ', en: 'Recording saved' },
   'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
@@ -650,6 +709,17 @@ const I18N = {
   'md.rebooting': { my: 'ပြန်လည်စတင်ခိုင်းနေပါသည်…', en: 'Sending reboot…' },
   'md.rebootOk': { my: 'ပြန်လည်စတင်ခိုင်းပြီးပါပြီ', en: 'Reboot command sent' },
   'md.rebootFail': { my: 'ပြန်ဖွင့်မရပါ', en: 'Reboot failed' },
+  'md.upgrade': { my: 'အပ်ဒိတ်တင်', en: 'Upgrade' },
+  'md.upCheck': { my: 'အပ်ဒိတ်စစ်နေပါသည်…', en: 'Checking for upgrades…' },
+  'md.upNone': { my: '{name} အတွက် အပ်ဒိတ်အသစ်မရှိပါ', en: 'No new firmware for {name}' },
+  'md.upCur': { my: 'လက်ရှိ', en: 'Current' },
+  'md.upNew': { my: 'အသစ်', en: 'New' },
+  'md.upRec': { my: 'အကြံပြု', en: 'Recommended' },
+  'md.upConfirm': { my: '{name} ကို {ver} တင်မှာလား? စက်ခနရပ်မည်။', en: 'Upgrade {name} to {ver}? The device will briefly go offline.' },
+  'md.upSending': { my: 'အပ်ဒိတ်ခိုင်းနေပါသည်…', en: 'Sending upgrade…' },
+  'md.upOk': { my: 'အပ်ဒိတ်ခိုင်းပြီးပါပြီ', en: 'Upgrade command sent' },
+  'md.upFail': { my: 'အပ်ဒိတ်တင်မရပါ', en: 'Upgrade failed' },
+  'md.upNeedSso': { my: 'အပ်ဒိတ်တင်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Upgrade needs Ruijie account login (Settings → Ruijie account)' },
   'md.total': { my: 'စုစုပေါင်း {n} လုံး', en: 'Total {n} devices' },
   'md.partial': { my: 'အချို့စက်များ မရသေးပါ', en: 'Some device types failed to load' },
   'md.needSsoHint': { my: 'Switch/Gateway အပြည့်အစုံမြင်ရရန် Settings မှာ Ruijie အကောင့်ဝင်ပါ', en: 'Log in to your Ruijie account in Settings to see Switch/Gateway' },
@@ -761,6 +831,34 @@ const I18N = {
   's.themeNeo': { my: 'Neumorphism', en: 'Neumorphism' },
   's.themeClay': { my: 'Claymorphism', en: 'Claymorphism' },
   's.language': { my: 'ဘာသာစကား', en: 'Language' },
+  'upd.title': { my: 'အပ်ဒိတ်', en: 'App Update' },
+  'upd.check': { my: 'အပ်ဒိတ်စစ်မယ်', en: 'Check for updates' },
+  'upd.auto': { my: 'အော်တိုဒေါင်းလုပ်လုပ်မယ်', en: 'Auto-download updates' },
+  'upd.autoSub': { my: 'ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်', en: 'Download new versions automatically' },
+  'upd.checking': { my: 'စစ်နေတယ်…', en: 'Checking…' },
+  'upd.latest': { my: 'နောက်ဆုံးဗားရှင်းပဲ', en: 'Already on the latest version' },
+  'upd.found': { my: 'ဗားရှင်းအသစ် {v} တွေ့ပြီ — ဒေါင်းလုပ်မလား?', en: 'New version {v} found — download?' },
+  'upd.downloading': { my: 'ဒေါင်းလုပ်နေတယ်… {p}%', en: 'Downloading… {p}%' },
+  'upd.downloaded': { my: 'ဒေါင်းလုပ်ပြီးပြီ — တပ်ဆင်မလား?', en: 'Download complete — install?' },
+  'upd.install': { my: 'တပ်ဆင်မယ်', en: 'Install' },
+  'upd.failed': { my: 'ဒေါင်းလုပ်မအောင်မြင်ပါ', en: 'Download failed' },
+  'upd.needPerm': { my: '"Install unknown apps" ခွင့်ပြုပေးပါ', en: 'Please allow "Install unknown apps"' },
+  'upd.apkOnly': { my: 'အပ်ဒိတ်က Android app သီးသန့်ပါ', en: 'In-app update is Android-app only' },
+  'upd.netErr': { my: 'စစ်လို့မရပါ — အင်တာနက်စစ်ပါ', en: "Couldn't check — verify internet" },
+  'upd.ready': { my: 'ဗားရှင်းအသစ် အသင့်ဖြစ်ပြီ', en: 'New version ready' },
+  'upd.readySub': { my: 'တပ်ဆင်ဖို့ အသင့်ဖြစ်နေပါပြီ', en: 'Ready to install' },
+  'upd.readyTitle': { my: 'UPDATE Ready', en: 'UPDATE Ready' },
+  'upd.whatsNew': { my: 'ဒီ update မှာပါမဲ့အချက်များ', en: "What's new in this update" },
+  'upd.updateNow': { my: 'Update Now', en: 'Update Now' },
+  'upd.noNotes': { my: 'အချက်အလက်မရှိပါ', en: 'No details available' },
+  'upd.bannerNew': { my: 'ဗားရှင်းအသစ် {v} ထွက်ပြီ — နှိပ်ပြီး ကြည့်မယ်', en: 'New version {v} is out — tap to view' },
+  'upd.bannerReady': { my: 'UPDATE Ready {v} — နှိပ်ပြီး တပ်ဆင်မယ်', en: 'UPDATE Ready {v} — tap to install' },
+  'upd.preTitle': { my: 'တပ်ဆင်ဖို့ အသင့်ဖြစ်ပြီ', en: 'Ready to install' },
+  'upd.preBody': { my: 'ခဏနေ system installer ပွင့်လာမယ်။\n\n1. Play Protect က "Unknown app" လို့ပြရင် → "Install anyway" ကိုနှိပ်ပါ\n2. Xiaomi security scan ပေါ်လာရင် → "Install" / "Continue" ကိုနှိပ်ပါ\n\nPlay Store ပြင်ပက သွင်းတဲ့ app တိုင်း ဒီလိုပဲမို့ ပုံမှန်ပါ။', en: 'The system installer will open now.\n\n1. If Play Protect shows "Unknown app" → tap "Install anyway"\n2. If Xiaomi shows a security scan → tap "Install" / "Continue"\n\nThis is normal for apps installed outside the Play Store.' },
+  'upd.gone': { my: 'ဒေါင်းလုပ်ဖိုင် မတွေ့တော့ပါ — ပြန်ဒေါင်းလုပ်ပေးပါ', en: 'Downloaded file not found — please download again' },
+  'upd.notiTitle': { my: 'P Manager အပ်ဒိတ်', en: 'P Manager update' },
+  'upd.notiText': { my: 'ဗားရှင်း {v} ဒေါင်းလုပ်ပြီးပြီ — တပ်ဆင်ဖို့ နှိပ်ပါ', en: 'Version {v} downloaded — tap to install' },
+  'upd.checkFail': { my: 'အပ်ဒိတ်စစ်မရပါ — နောက်မှ ထပ်စစ်မယ်', en: "Couldn't check for updates — will retry later" },
   's.layout': { my: 'အပြင်အဆင်', en: 'Layout' },
   's.layoutAuto': { my: 'အလိုအလျောက်', en: 'Auto' },
   's.layoutAutoSub': { my: 'စခရင်အရွယ်အစားအလိုက် ရွေးမယ်', en: 'Follow screen size' },
@@ -832,6 +930,7 @@ function applyLang() {
   const vv = $('app-version');
   if (vv) vv.textContent = tx('s.version', { v: APP_VERSION });
   renderVouchers();
+  if (S.bulkMode) updateBulkCount(); // v1.5.141: premium delete bar title follows language
   renderQueue();
   if (modalVoucher && !$('modal').classList.contains('hidden')) openVoucherDetail(modalVoucher.uuid);
   if (!$('preview-modal').classList.contains('hidden')) openPrintPreview();
@@ -1164,15 +1263,208 @@ const DEFAULT_PROXY = 'https://ruijie-voucher-proxy.onrender.com';
 
 /* 'create' | 'update' — which mode the profile form is in. */
 let profileFormMode = 'create';
+/** v1.5.144: pinHash of the profile being updated (never shown in the form). */
+let pfnExistingPinHash = '';
 /* Where the form's back/done button returns: 'gate' | 'app'. */
 let profileFormReturn = 'gate';
 
+/* ═══════════ v1.5.142: LOGIN AUTO-EXPAND MORPH ═══════════
+ * Video reference: the login card blooms from a small pill every time a
+ * login screen appears. The pill shows the primary action label (set via
+ * data-pill from i18n), holds ~300ms, then springs open; the glow orb
+ * fades back in as the card expands. */
+function playLoginMorph(card, pillKey) {
+  if (!card) return;
+  try { card.dataset.pill = t(pillKey); } catch (e) {}
+  card.classList.remove('morph-open');
+  card.classList.add('morph-collapsed');
+  void card.offsetWidth; // commit the collapsed state before animating
+  setTimeout(() => {
+    card.classList.remove('morph-collapsed');
+    card.classList.add('morph-open'); // clip children until fully bloomed
+    setTimeout(() => card.classList.remove('morph-open'), 750);
+  }, 300);
+}
 function showProfileGate() {
   profileFormReturn = 'gate';
   $('view-connect').classList.add('hidden');
   $('view-profile-new').classList.add('hidden');
+  pinHide(); // v1.5.144: never leave the PIN screen layered under the gate
   $('view-profile').classList.remove('hidden');
+  playLoginMorph(document.querySelector('#view-profile .connect-card'), 'pf.login'); // v1.5.142
   setTimeout(() => { try { $('pf-name').focus(); } catch (e) {} }, 50);
+}
+
+/* ═══════════ OWNER PIN GATE (v1.5.144) ═══════════
+ * The "praythein" profile is PIN-protected: 6 digits, stored as SHA-256 hex
+ * (profile.pinHash) across all 3 tiers. Other profiles skip this entirely.
+ * - unlock: profile already has a pinHash → must match to log in / to open
+ *   the profile form (the form pre-fills the real App ID/Secret).
+ * - setup: no pinHash yet → enter twice, then the hash MUST reach the server
+ *   (all tiers echo it back) before the login continues, so the same PIN
+ *   works after changing phones. A half-synced PIN is rolled back. */
+
+/** Compact pure-JS SHA-256 (fallback when WebCrypto is unavailable). */
+function sha256hex(str) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  let H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const bytes = new TextEncoder().encode(String(str));
+  const l = bytes.length;
+  const words = [];
+  for (let i = 0; i < l; i++) words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
+  words[l >> 2] |= 0x80 << (24 - (l % 4) * 8);
+  words[(((l + 8) >> 6) << 4) + 15] = l * 8;
+  const w = new Array(64);
+  for (let j = 0; j < words.length; j += 16) {
+    for (let i = 0; i < 16; i++) w[i] = words[j + i] | 0;
+    for (let i = 16; i < 64; i++) {
+      const x0 = w[i - 15], x1 = w[i - 2];
+      const s0 = ((x0 >>> 7) | (x0 << 25)) ^ ((x0 >>> 18) | (x0 << 14)) ^ (x0 >>> 3);
+      const s1 = ((x1 >>> 17) | (x1 << 15)) ^ ((x1 >>> 19) | (x1 << 13)) ^ (x1 >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const mj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + mj) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H = H.map((x, i) => (x + [a, b, c, d, e, f, g, h][i]) | 0);
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+/** SHA-256 hex of the typed PIN. WebCrypto first, pure-JS fallback.
+ *  Never throws — returns '' when hashing is impossible. */
+async function pinHash(pin) {
+  const s = String(pin || '');
+  try {
+    if (window.crypto && window.crypto.subtle) {
+      const d = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+      return Array.from(new Uint8Array(d)).map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+  } catch (e) { /* fall through to the pure-JS implementation */ }
+  try { return sha256hex(s); } catch (e) { return ''; }
+}
+
+let pinState = null;
+
+function pinHide() {
+  const v = $('view-pin');
+  if (v) v.classList.add('hidden');
+}
+
+/** Show the PIN screen. mode: 'unlock' | 'setup'. onOk(profile) continues. */
+function pinShow(mode, profile, onOk) {
+  for (const id of ['view-connect', 'view-profile', 'view-profile-new']) {
+    const el = $(id); if (el) el.classList.add('hidden');
+  }
+  const app = $('app'); if (app) app.classList.add('hidden');
+  $('view-pin').classList.remove('hidden');
+  pinState = { mode, profile, onOk, phase: mode === 'setup' ? 'new' : 'type', first: '' };
+  $('pin-title').textContent = t(mode === 'setup' ? 'pin.setupTitle' : 'pin.unlockTitle');
+  $('pin-sub').textContent = t(mode === 'setup' ? 'pin.setupSub' : 'pin.unlockSub');
+  $('pin-err').classList.add('hidden');
+  pinPaint('');
+  try { playLoginMorph(document.querySelector('#view-pin .pin-card'), mode === 'setup' ? 'pin.setupTitle' : 'pin.unlockTitle'); } catch (e) {}
+  const inp = $('pin-input');
+  inp.value = '';
+  setTimeout(() => { try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} } }, 60);
+}
+
+function pinPaint(digits) {
+  const dots = $('pin-dots').children;
+  for (let i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i < digits.length);
+}
+
+function pinFail(key) {
+  const errEl = $('pin-err');
+  errEl.textContent = t(key);
+  errEl.classList.remove('hidden');
+  const card = document.querySelector('#view-pin .pin-card');
+  if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  const inp = $('pin-input');
+  inp.value = '';
+  pinPaint('');
+  setTimeout(() => { try { inp.focus(); } catch (e) {} }, 400);
+}
+
+async function pinSubmit(digits) {
+  const st = pinState;
+  if (!st) return;
+  if (!/^\d{6}$/.test(digits)) { pinFail('pin.need6'); return; }
+  if (st.mode === 'unlock') {
+    const want = String(st.profile.pinHash || '').toLowerCase();
+    const got = await pinHash(digits);
+    if (got && got === want) {
+      const cb = st.onOk, prof = st.profile;
+      pinState = null; pinHide();
+      try { await cb(prof); }
+      catch (e) { showProfileGate(); showErr('profile-err', t('err.connectFail') + (e && e.message ? e.message : e)); }
+    } else pinFail('pin.wrong');
+    return;
+  }
+  // setup: two phases — new PIN, then confirm
+  const errEl = $('pin-err');
+  if (st.phase === 'new') {
+    st.first = digits;
+    st.phase = 'confirm';
+    $('pin-sub').textContent = t('pin.setupConfirm');
+    $('pin-input').value = '';
+    pinPaint('');
+    errEl.classList.add('hidden');
+    return;
+  }
+  if (digits !== st.first) {
+    st.phase = 'new'; st.first = '';
+    $('pin-sub').textContent = t('pin.setupSub');
+    pinFail('pin.mismatch');
+    return;
+  }
+  const hash = await pinHash(digits);
+  if (!/^[0-9a-f]{64}$/.test(hash || '')) { pinFail('pin.need6'); return; }
+  const key = Profiles.normName(st.profile.name);
+  const updated = { ...st.profile, name: key, pinHash: hash };
+  // strict: the PIN must reach the server (all tiers) before the login
+  // continues — otherwise a new phone would not know this PIN.
+  const inp = $('pin-input');
+  inp.disabled = true;
+  $('pin-sub').textContent = t('pin.sending');
+  let serverOk = false;
+  try {
+    const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+    let rkey = '';
+    try { rkey = localStorage.getItem('rv_profile_key') || ''; } catch (e) {}
+    // phone tier first (gates this device), then the server must echo the hash
+    try { Profiles.put(updated); } catch (e) {}
+    const res = await Profiles.pushRemote(key, updated, rkey, proxy);
+    serverOk = res.proxy === 'ok' && res.github === 'ok' &&
+      String(res.pinHash || '').toLowerCase() === hash;
+  } catch (e) { serverOk = false; }
+  inp.disabled = false;
+  if (!serverOk) {
+    // roll the phone tier back: a half-synced PIN is worse than none
+    try { Profiles.put(st.profile); } catch (e) {}
+    st.phase = 'new'; st.first = '';
+    $('pin-sub').textContent = t('pin.setupSub');
+    pinFail('pin.serverFail');
+    return;
+  }
+  const cb = st.onOk;
+  pinState = null; pinHide();
+  try { await cb(updated); }
+  catch (e) { showProfileGate(); showErr('profile-err', t('err.connectFail') + (e && e.message ? e.message : e)); }
 }
 
 async function doProfileLogin() {
@@ -1188,7 +1480,15 @@ async function doProfileLogin() {
   try {
     const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
     const res = await Profiles.lookup(name, proxy);
-    if (res.status === 'found') { await applyProfile(res.profile); return; }
+    if (res.status === 'found') {
+      // v1.5.144: the owner's profile is PIN-gated; other names log straight in
+      if (Profiles.normName(res.profile.name) === 'praythein') {
+        const hasPin = /^[0-9a-f]{64}$/i.test(String(res.profile.pinHash || ''));
+        pinShow(hasPin ? 'unlock' : 'setup', res.profile, (p) => applyProfile(p));
+        return;
+      }
+      await applyProfile(res.profile); return;
+    }
     if (res.status === 'error') return showErr(errId, t('pf.slowConn'));
     return showErr(errId, t('pf.notFound'));
   } catch (e) {
@@ -1252,6 +1552,7 @@ function openProfileForm(mode, presetName) {
   const tiersBox = $('profile-new-tiers');
   tiersBox.classList.add('hidden');
   tiersBox.innerHTML = '';
+  playLoginMorph(document.querySelector('#view-profile-new .connect-card'), 'pf.create'); // v1.5.142
   const errEl = $('profile-new-err');
   if (errEl) errEl.classList.add('hidden');
   // title + button per mode
@@ -1261,6 +1562,14 @@ function openProfileForm(mode, presetName) {
   // the sync-key field stays hidden unless the proxy demands a key
   $('pfn-key-wrap').classList.add('hidden');
   $('pfn-key').value = '';
+  // v1.5.144: PIN fields — visible only for the owner's profile
+  pfnExistingPinHash = '';
+  $('pfn-pin').value = '';
+  $('pfn-pin2').value = '';
+  $('pfn-curpin').value = '';
+  $('pfn-curpin-wrap').classList.add('hidden');
+  const isPrayForm = Profiles.normName(presetName || (mode === 'create' ? $('pfn-name').value : '')) === 'praythein';
+  $('pfn-pin-wrap').classList.toggle('hidden', !isPrayForm);
   if (!$('pfn-cloud').value) $('pfn-cloud').value = 'https://cloud-as.ruijienetworks.com';
   if (!$('pfn-proxy').value) $('pfn-proxy').value = (Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY;
   const nm = $('pfn-name');
@@ -1288,6 +1597,10 @@ async function fillProfileForm(name) {
   $('pfn-proxy').value = p.proxy || ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY);
   $('pfn-email').value = p.email || '';
   $('pfn-pass').value = p.password || '';
+  // v1.5.144: remember (don't display) the existing PIN hash; the current-PIN
+  // field appears only when one is set.
+  pfnExistingPinHash = /^[0-9a-f]{64}$/i.test(String(p.pinHash || '')) ? String(p.pinHash).toLowerCase() : '';
+  $('pfn-curpin-wrap').classList.toggle('hidden', !pfnExistingPinHash);
 }
 
 function showProfileNew() {
@@ -1300,6 +1613,21 @@ function showProfileUpdate() {
   const name = Profiles.normName($('pf-name').value);
   if (!name) { showErr('profile-err', t('pf.typeNameFirst')); return; }
   profileFormReturn = 'gate';
+  // v1.5.144: the owner's form pre-fills the real App ID/Secret, so opening
+  // it needs the PIN first (unless no PIN exists yet — the form then forces
+  // setting one on save).
+  if (name === 'praythein') {
+    const proxy = ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+    Profiles.lookup(name, proxy).then(res => {
+      const prof = res.status === 'found' ? res.profile : null;
+      if (prof && /^[0-9a-f]{64}$/i.test(String(prof.pinHash || ''))) {
+        pinShow('unlock', prof, () => openProfileForm('update', name));
+      } else {
+        openProfileForm('update', name);
+      }
+    });
+    return;
+  }
   openProfileForm('update', name);
 }
 
@@ -1340,6 +1668,25 @@ async function doProfileCreate() {
     email: $('pfn-email').value.trim(),
     password: $('pfn-pass').value,
   };
+  // v1.5.144: owner PIN — create requires a new 6-digit PIN; update keeps the
+  // existing one unless a new PIN is typed (changing it needs the current PIN).
+  if (Profiles.normName($('pfn-name').value) === 'praythein') {
+    const curPin = $('pfn-curpin').value.replace(/\D/g, '');
+    const newPin = $('pfn-pin').value.replace(/\D/g, '');
+    const newPin2 = $('pfn-pin2').value.replace(/\D/g, '');
+    const wantsNewPin = !isUpdate || !pfnExistingPinHash || newPin || newPin2;
+    let finalHash = isUpdate ? pfnExistingPinHash : '';
+    if (wantsNewPin) {
+      if (isUpdate && pfnExistingPinHash) {
+        if ((await pinHash(curPin)) !== pfnExistingPinHash) return showErr(errId, t('pin.curWrong'));
+      }
+      if (!/^\d{6}$/.test(newPin)) return showErr(errId, t('pin.need6'));
+      if (newPin !== newPin2) return showErr(errId, t('pin.mismatch'));
+      finalHash = await pinHash(newPin);
+      if (!/^[0-9a-f]{64}$/.test(finalHash || '')) return showErr(errId, t('pin.need6'));
+    }
+    p.pinHash = finalHash;
+  }
   const bad = Profiles.validate(p);
   if (bad) return showErr(errId, t('pf.needFields'));
   const btn = $('btn-profile-new-save');
@@ -1379,9 +1726,16 @@ async function doProfileCreate() {
       return showErr(errId, t('pf.keyNeeded'));
     }
     const tiers = { phone: phoneOk, render: res.proxy === 'ok', github: res.github === 'ok' };
+    // v1.5.144: the server must echo the PIN hash back — an old proxy drops
+    // unknown fields, and a half-synced PIN would break the next phone.
+    const wantPin = Profiles.normName($('pfn-name').value) === 'praythein';
+    const pinOk = !wantPin ||
+      (!!p.pinHash && String(res.pinHash || '').toLowerCase() === String(p.pinHash).toLowerCase());
     renderProfileTiers(tiers);
-    if (tiers.phone && tiers.render && tiers.github) {
+    if (tiers.phone && tiers.render && tiers.github && pinOk) {
       showProfileDone();
+    } else if (tiers.phone && tiers.render && tiers.github && !pinOk) {
+      showErr(errId, t('pin.serverOld'));
     } else {
       showErr(errId, t('pf.tierFail'));
     }
@@ -1445,6 +1799,41 @@ async function startupSync() {
 }
 
 /* ═══════════ APP SHELL ═══════════ */
+// v1.5.123: refresh all synced settings UI after a pull
+function refreshSyncedUI(st2) {
+  try {
+    if (!st2) st2 = Store.load();
+    if (st2.printHeader && $('print-header')) $('print-header').value = st2.printHeader;
+    if (st2.printFooter && $('print-footer')) $('print-footer').value = st2.printFooter;
+    if (st2.printPaper && $('print-paper')) $('print-paper').value = st2.printPaper;
+    if (st2.printCopies && $('print-copies')) $('print-copies').value = st2.printCopies;
+    if (st2.liveStats && typeof st2.liveStats === 'object') {
+      const le = $('live-enable');
+      if (le) le.checked = !!st2.liveStats.enabled;
+      if (typeof refreshLiveCard === 'function') refreshLiveCard();
+      document.querySelectorAll('#live-int-seg [data-live-int]').forEach(b => {
+        b.classList.toggle('active', +b.dataset.liveInt === +st2.liveStats.secs);
+      });
+    }
+    if (st2.kickAuto !== undefined && $('kick-auto')) $('kick-auto').checked = !!st2.kickAuto;
+    if (st2.kickIntervalMin !== undefined && $('kick-interval')) $('kick-interval').value = st2.kickIntervalMin;
+    if (st2.voucherVlan !== undefined && $('kick-vlan') && typeof ensureVlanOptions === 'function') {
+      try { ensureVlanOptions(); } catch (e) {}
+    }
+    if (st2.adDnsOn !== undefined && $('dns-adblock')) $('dns-adblock').checked = !!st2.adDnsOn;
+    if (st2.adDnsVlan !== undefined && $('dns-vlan')) $('dns-vlan').value = st2.adDnsVlan;
+    if (st2.teleOn !== undefined && $('tele-on')) $('tele-on').checked = st2.teleOn !== false;
+    if (st2.updateAutoDl !== undefined && $('upd-auto')) $('upd-auto').checked = !!st2.updateAutoDl;
+    // v1.5.126: refresh print layout/style (reload PS from Store)
+    if (st2.printStyle && typeof loadPrintStyle === 'function') {
+      try { loadPrintStyle(); } catch (e) {}
+    }
+    // v1.5.125: refresh device offline monitor UI
+    if (st2._monEnabled !== undefined && typeof refreshMonitorCard === 'function') {
+      try { refreshMonitorCard(); } catch (e) {}
+    }
+  } catch (e) {}
+}
 function enterApp() {
   /* User-requested: the app always starts in English. A manual language
    * switch still works for the session; the next startup is English again. */
@@ -1452,7 +1841,10 @@ function enterApp() {
   $('view-connect').classList.add('hidden');
   $('view-profile').classList.add('hidden');
   $('view-profile-new').classList.add('hidden');
+  devHideLock(); // v1.5.143: in case we arrived via the lock-screen retry
   $('app').classList.remove('hidden');
+  // v1.5.143: App Devices admin is visible to the owner profile only.
+  try { $('more-appdevices').hidden = !devIsAdmin(); } catch (e) {}
   const st = Store.load();
   if (st.printHeader) $('print-header').value = st.printHeader;
   if (st.printFooter) $('print-footer').value = st.printFooter;
@@ -1467,6 +1859,17 @@ function enterApp() {
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
   loadAccountInfo();
+  // v1.5.120: pull synced settings from other phones (last-write-wins)
+  const doSettingsPull = () => {
+    try {
+      if (typeof SettingsSync !== 'undefined') SettingsSync.pull().then(r => {
+        if (r && r.ok && r.applied) refreshSyncedUI(Store.load());
+      });
+    } catch (e) {}
+  };
+  doSettingsPull();
+  // v1.5.121: periodic settings pull every 60s + manual sync button
+  setInterval(doSettingsPull, 60000);
   // v1.5.52: one-shot startup SSO auto-login (saved creds + auto-login on,
   // no portal session -> open the login dialog once; it auto-submits).
   setTimeout(maybeSsoAutoLogin, 1200);
@@ -1784,6 +2187,13 @@ async function loadVouchers(opts) {
     if (gen !== S._voucherGen) return; // superseded — discard
     S.vouchers = all;
     S.vouchersFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
+    // v1.5.132: share the code→voucher map with Online Clients so the
+    // client list doesn't re-fetch ALL vouchers on every load.
+    try {
+      const m = new Map();
+      for (const v of all) { const c = vCode(v); if (c && !m.has(c)) m.set(c, v); }
+      _acVMap = m; _acVMapPid = Number(S.projectId);
+    } catch (e) { /* map is best-effort */ }
     // newest first
     S.vouchers.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
     try { for (const v of S.vouchers) Learn.record(v); } catch (e) { /* learning is best-effort */ }
@@ -1932,13 +2342,17 @@ function renderVouchers() {
       // v1.5.54: in bulk mode, row tap toggles the checkmark (v1.5.101: custom ✓, not native checkbox)
       if (e.target.closest('.bulk-check')) return; // let checkmark handle itself
       const cb = r.querySelector('.bulk-check');
-      if (cb) { cb.classList.toggle('on'); updateBulkCount(); }
+      // v1.5.141: premium selection — the whole row highlights purple
+      if (cb) { cb.classList.toggle('on'); r.classList.toggle('sel', cb.classList.contains('on')); updateBulkCount(); }
       return;
     }
     openVoucherDetail(r.dataset.uuid);
   }));
   el.querySelectorAll('.bulk-check').forEach(cb => cb.addEventListener('click', e => {
-    e.stopPropagation(); cb.classList.toggle('on'); updateBulkCount();
+    e.stopPropagation(); cb.classList.toggle('on');
+    const r = cb.closest('.voucher-row'); // v1.5.141: row highlight follows the check
+    if (r) r.classList.toggle('sel', cb.classList.contains('on'));
+    updateBulkCount();
   }));
 }
 
@@ -1950,6 +2364,7 @@ function toggleBulkMode() {
   $('btn-bulk-select').querySelector('span').textContent = S.bulkMode ? t('a.cancel') : t('v.select');
   if (!S.bulkMode) {
     document.querySelectorAll('.bulk-check').forEach(cb => cb.classList.remove('on'));
+    document.querySelectorAll('.voucher-row.sel').forEach(r => r.classList.remove('sel')); // v1.5.141
   }
   updateBulkCount();
 }
@@ -1958,9 +2373,18 @@ function bulkSelectedUuids() {
 }
 function updateBulkCount() {
   const n = bulkSelectedUuids().length;
-  $('bulk-count').textContent = tx('v.selected', { n });
-  $('btn-bulk-print').disabled = !n;
-  $('btn-bulk-delete').disabled = !n;
+  const bc = $('bulk-count');
+  if (bc) bc.textContent = n; // v1.5.145: compact badge shows the count only
+  const dt = $('bulk-del-title'); // v1.5.141: premium bar title (tablet layout only)
+  if (dt) dt.textContent = n ? tx('v.delN', { n }) : t('v.bulkDelete');
+  const bar = $('btn-bulk-delete');
+  if (bar) {
+    bar.classList.remove('done');
+    bar.setAttribute('aria-label', n ? tx('v.delN', { n }) : t('v.bulkDelete'));
+  }
+  const pb = $('btn-bulk-print');
+  if (pb) pb.disabled = !n;
+  if (bar) bar.disabled = !n;
 }
 async function bulkPrint() {
   const uuids = bulkSelectedUuids();
@@ -1983,16 +2407,26 @@ async function bulkDelete() {
   if (!fresh.length) { toast(t('del.noNew')); return; }
   const skipTxt = stale ? tx('del.skipOld', { n: stale }) : '';
   if (!(await iosConfirm(tx('del.confirmBulkNew', { n: fresh.length, skip: skipTxt }), '', t('a.delete'), t('a.cancel'), true))) return;
+  // v1.5.141: premium exit — selected rows fly out staggered, the bar shows progress
+  const bar = $('btn-bulk-delete');
+  const delTitle = $('bulk-del-title');
+  fresh.forEach((v, i) => {
+    const row = document.querySelector('.voucher-row[data-uuid="' + v.uuid + '"]');
+    if (row) setTimeout(() => row.classList.add('leaving'), i * 70);
+  });
   let ok = 0, fail = 0;
   for (const v of fresh) {
+    if (delTitle) delTitle.textContent = tx('v.deleting', { i: ok + fail + 1, n: fresh.length });
     try { await Api.voucherDelete(S.projectId, v); ok++; }
     catch (e) { fail++; }
   }
   // Remove successfully deleted codes from the session set
   try { fresh.forEach(v => S.sessionGenCodes.delete(vCode(v))); } catch (e) {}
+  // v1.5.141: success flash on the bar, then exit bulk mode + reload
+  if (bar) { bar.classList.add('done'); bar.disabled = false; }
+  if (delTitle) delTitle.textContent = t('v.deleted');
   toast(`${ok} ✓${fail ? ` · ${fail} ✗` : ''}${stale ? ` · ${stale} ⏭` : ''}`);
-  toggleBulkMode();
-  loadVouchers();
+  setTimeout(() => { toggleBulkMode(); loadVouchers(); }, 900);
 }
 
 /* ═══════════ v1.5.113: bulk Delete Expired Vouchers (portal-verified) ═══════════
@@ -2051,18 +2485,67 @@ function pickExpireDate() {
       'value="' + today + '" max="' + today + '" ' +
       'style="width:100%;font-size:17px;padding:10px;border-radius:10px;' +
       'border:1px solid var(--separator);background:var(--bg)"></div>' +
+      '<div id="exp-count-result" style="padding:0 16px;min-height:24px;font-size:15px"></div>' +
       '<div class="ios-sheet-opts"></div>';
     const optsEl = sheet.querySelector('.ios-sheet-opts');
-    const ok = document.createElement('button');
-    ok.type = 'button';
-    ok.className = 'ios-sheet-opt active';
-    ok.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
-    ok.addEventListener('click', () => {
+    const countBtn = document.createElement('button');
+    countBtn.type = 'button';
+    countBtn.className = 'ios-sheet-opt active';
+    countBtn.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
+    // v1.5.130: reset to Show count when date changes
+    const dateInput = sheet.querySelector('#exp-date-cutoff');
+    const resetToCount = () => {
+      optsEl.innerHTML = '';
+      optsEl.appendChild(countBtn);
+      countBtn.disabled = false;
+      sheet.querySelector('#exp-count-result').textContent = '';
+    };
+    dateInput.addEventListener('change', resetToCount);
+    // v1.5.129: two-step - show count in dialog, then reveal Delete button
+    countBtn.addEventListener('click', async () => {
       const v = sheet.querySelector('#exp-date-cutoff').value || null;
-      closeExpDateSheet();
-      resolve(v);
+      if (!v) return;
+      const resultEl = sheet.querySelector('#exp-count-result');
+      countBtn.disabled = true;
+      resultEl.textContent = '…';
+      try {
+        const expireTime = endOfDayMs(v);
+        let n = null;
+        try {
+          const cj = await Api.voucherExpireCountSso(Number(S.projectId), expireTime);
+          n = extractExpireCount(cj);
+        } catch (e) {}
+        if (n === null) {
+          // v1.5.130: filter by expiry date <= selected date, not just status
+          n = (S.vouchers || []).filter(x => {
+            if (vEffStatus(x) !== '3') return false;
+            const exp = Number(x.expiryTime) || 0;
+            return !exp || exp <= expireTime;
+          }).length;
+        }
+        if (!n) {
+          resultEl.textContent = t('v.delExpiredNone');
+          countBtn.disabled = false;
+          return;
+        }
+        resultEl.innerHTML = '<b>' + n + '</b> ' + esc(t('v.delExpiredFound'));
+        // Replace Show count with Delete button
+        optsEl.innerHTML = '';
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'ios-sheet-opt danger';
+        delBtn.innerHTML = '<span>' + esc(t('a.delete')) + ' (' + n + ')</span>';
+        delBtn.addEventListener('click', () => {
+          closeExpDateSheet();
+          resolve({ date: v, count: n, expireTime });
+        });
+        optsEl.appendChild(delBtn);
+      } catch (e) {
+        resultEl.textContent = String((e && e.message) || e || '');
+        countBtn.disabled = false;
+      }
     });
-    optsEl.appendChild(ok);
+    optsEl.appendChild(countBtn);
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.className = 'ios-sheet-cancel';
@@ -2095,24 +2578,13 @@ function endOfDayMs(ymd) {
 
 async function deleteExpiredVouchers() {
   if (!Api.ssoLoggedIn()) { toast(t('ac.needSso'), true); return; }
-  // v1.5.116: the portal's expired-delete page lets the user pick a cutoff
-  // date — offer the same instead of always using "now".
+  // v1.5.129: pickExpireDate now returns {date, count, expireTime} after two-step dialog
   const picked = await pickExpireDate();
   if (!picked) return; // user cancelled
-  const expireTime = endOfDayMs(picked); // 23:59:59.999 local, like the portal
-  // Ask the portal how many are expired, for the confirm dialog.
-  let n = null;
-  try {
-    const cj = await Api.voucherExpireCountSso(Number(S.projectId), expireTime);
-    n = extractExpireCount(cj);
-  } catch (e) { /* fall through to local count */ }
-  if (n === null) {
-    n = (S.vouchers || []).filter(v => vEffStatus(v) === '3').length;
-  }
-  if (!n) { toast(t('v.delExpiredNone')); return; }
+  const { date: pickedDate, count: n, expireTime } = picked;
   const okDel = await iosConfirm(
     tx('v.delExpiredConfirm', { n }),
-    t('v.delExpiredThrough') + ' ' + picked,
+    t('v.delExpiredThrough') + ' ' + pickedDate,
     t('a.delete'), t('a.cancel'), true);
   if (!okDel) return;
   try {
@@ -2211,6 +2683,8 @@ function openVoucherDetail(uuid) {
   $('modal-disconnect').classList.remove('hidden');
   // v1.5.86: MAC unbind button on voucher preview (user request)
   $('modal-unbind').classList.remove('hidden');
+  // v1.5.129: Reset button on voucher detail (user request, like Ruijie Cloud)
+  $('modal-reset').classList.remove('hidden');
   // v1.5.101: per-voucher delete REMOVED (user) — replaced by bulk Delete Expired Vouchers
   const wasOpen = !$('modal').classList.contains('hidden');
   $('modal').classList.remove('hidden');
@@ -2241,10 +2715,12 @@ function startVoucherLive(v) {
   const poll = async () => {
     if (!liveBase) return;
     try {
-      const fresh = await Api.voucherListAll(S.projectId);
-      if (!liveBase || !fresh) return;
-      S.vouchers = fresh;
-      const fv = fresh.find(x => x.uuid === liveBase.uuid);
+      // v1.5.132: was voucherListAll (EVERY voucher, every 45s) just to
+      // refresh ONE voucher's live stats. One page is enough — the modal
+      // only needs this voucher; the list itself has its own 60s refresher.
+      const { list } = await Api.voucherListPage(S.projectId, 0, 200);
+      const fv = (list || []).find(x => x.uuid === liveBase.uuid);
+      if (!liveBase || !fv) return;
       if (fv && modalVoucher && modalVoucher.uuid === liveBase.uuid) {
         Object.assign(modalVoucher, { usedTime: fv.usedTime, usedQuota: fv.usedQuota, status: fv.status, expiryTime: fv.expiryTime });
         liveBase.usedTimeMin = Number(fv.usedTime) || 0;
@@ -2273,10 +2749,10 @@ function stopVoucherLive() {
 /* ═══════════ PACKAGES (user groups) ═══════════ */
 async function ensurePackages() {
   if (!S.projectId) return;
-  if (S.packages.length) { fillPackageSelects(); return; }
+  if (S.packages.length) { fillPackageSelects(); initGenPackageSave(); return; }
   try {
     S.packages = await Api.userGroupList(S.projectId);
-    fillPackageSelects();
+    fillPackageSelects(); initGenPackageSave();
   } catch (e) {
     toast(t('err.pkgList') + e.message, true);
   }
@@ -2303,8 +2779,29 @@ function fillPackageSelects() {
     const label = `${pkgName(p)} — ${fmtPeriod(p.timePeriod)} · ${fmtQuota(p.quota)}`;
     return `<option value="${esc(uid)}|${esc(pid)}">${esc(label)}</option>`;
   }).join('');
-  $('gen-package').innerHTML = opts || '<option value="">—</option>';
-  syncIosPickerBtn($('gen-package'));
+  const sel = $('gen-package');
+  sel.innerHTML = opts || '<option value="">—</option>';
+  // v1.5.129: restore last selected package
+  try {
+    const lastPkg = Store.load().lastGenPackage;
+    if (lastPkg) {
+      const opt = Array.from(sel.options).find(o => o.value === lastPkg);
+      if (opt) sel.value = lastPkg;
+    }
+  } catch (e) {}
+  syncIosPickerBtn(sel);
+}
+// v1.5.129: save package selection (attached once at init)
+function initGenPackageSave() {
+  try {
+    const sel = $('gen-package');
+    if (sel && !sel._pkgSaveInit) {
+      sel._pkgSaveInit = true;
+      sel.addEventListener('change', () => {
+        try { Store.save({ lastGenPackage: sel.value }); } catch (e) {}
+      });
+    }
+  } catch (e) {}
 }
 function selectedPackage(selId) {
   const sel = $(selId);
@@ -2530,7 +3027,7 @@ function ticketInnerHtml(item, st, style, preview) {
 }
 
 /* ═══════════ GENERATE ═══════════ */
-S.genOpts = { vlen: 8, vtype: 'alnum' };
+S.genOpts = { vlen: 7, vtype: 'numeric' };
 
 function genQty() {
   return Math.min(500, Math.max(1, Number($('gen-qty').value) || 1));
@@ -2810,13 +3307,23 @@ function btRefresh() {
   // devices
   let devs = [];
   try { devs = JSON.parse(B.btDevices() || '[]'); } catch (e) {}
-  devEl.innerHTML = devs.length ? devs.map((d, i) =>
-    `<button class="bt-dev" data-i="${i}"><span class="bt-dev-name">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}</span><span class="bt-dev-mac">${esc(d.address)}</span></button>`
-  ).join('') : `<p class="muted">${t('p.btNoDevices')}</p>`;
-  devEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const d = devs[Number(b.dataset.i)];
+  const defAddr = state.defaultPrinterAddress || null;
+  devEl.innerHTML = devs.length ? devs.map((d, i) => {
+    const isDef = !!(defAddr && d.address === defAddr);
+    return `<div class="bt-dev-row"><button class="bt-dev" data-connect="${i}"><span class="bt-dev-name">${esc(d.name || d.address)}${d.paired ? ' ✓' : ''}${isDef ? ' ★' : ''}</span><span class="bt-dev-mac">${esc(d.address)}</span></button>` +
+      `<button class="bt-dev-star${isDef ? ' on' : ''}" data-default="${i}" title="${esc(t('p.btSetDefault'))}">★</button></div>`;
+  }).join('') : `<p class="muted">${t('p.btNoDevices')}</p>`;
+  devEl.querySelectorAll('[data-connect]').forEach(b => b.addEventListener('click', () => {
+    const d = devs[Number(b.dataset.connect)];
     btCall(B2 => B2.btConnect(d.address));
     setTimeout(btRefresh, 800);
+  }));
+  devEl.querySelectorAll('[data-default]').forEach(b => b.addEventListener('click', () => {
+    const d = devs[Number(b.dataset.default)];
+    const isDef = !!(defAddr && d.address === defAddr);
+    btCall(B2 => isDef ? B2.btClearDefault() : B2.btSetDefault(d.address));
+    toast(t(isDef ? 'p.btDefaultCleared' : 'p.btDefaultSaved'));
+    setTimeout(btRefresh, 600);
   }));
   // progress + last result
   try {
@@ -2875,38 +3382,7 @@ function btPollStart() {
 }
 function btPollStop() { if (btTimer) { clearInterval(btTimer); btTimer = null; } }
 
-/** Auto-connect to the last used printer (APK only). quiet=true skips toasts. */
-function btAutoConnect(quiet) {
-  const B = btBridge();
-  if (!B || !B.btAutoConnect) return;
-  let r = null;
-  try { r = JSON.parse(B.btAutoConnect() || '{}'); } catch (e) { return; }
-  if (!r) return;
-  if (r.ok) {
-    const prEl = $('bt-progress');
-    if (prEl) prEl.textContent = t('p.btAutoTrying') + (r.name ? ' ' + r.name : '');
-    btRefreshSoon(); setTimeout(btRefresh, 3000);
-  } else if (!quiet && r.message) {
-    toast(r.message, true);
-  }
-}
-
 function initBtPrinter() {
-  // auto-connect preference (persisted) — also drives native auto-reconnect
-  // after unexpected loss (printer power cycle). Explicit disconnect never reconnects.
-  const acBox = $('bt-autoconnect');
-  const syncAutoReconnect = () => {
-    try { btCall(B => (B.btSetAutoReconnect ? B.btSetAutoReconnect(!!acBox.checked) : null)); } catch (e) {}
-  };
-  if (acBox) {
-    acBox.checked = !!Store.load().btAutoConnect;
-    syncAutoReconnect();
-    acBox.addEventListener('change', () => {
-      Store.save({ btAutoConnect: acBox.checked });
-      syncAutoReconnect();
-      if (acBox.checked) btAutoConnect(true);
-    });
-  }
   $('btn-bt-scan').addEventListener('click', () => {
     const r = btCall(B => B.btScan());
     if (r) { try { if (!JSON.parse(r).ok) toast(JSON.parse(r).message, true); } catch (e) {} }
@@ -3612,7 +4088,7 @@ async function moreUserGroups() {
       <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th><th></th></tr>
       ${S.packages.map((p, i) => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
         <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td>
-        <td><button class="btn danger sm" data-mgdel="${i}">${t('mg.del')}</button></td></tr>`).join('')}
+        <td><button class="btn danger sm mg-delbtn" data-mgdel="${i}" aria-label="${esc(t('mg.del'))}">${ic('trash', 'sm')}<span class="btn-t">${t('mg.del')}</span></button></td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('mg.none')}</p>`;
     $('mg-list').querySelectorAll('[data-mgdel]').forEach(b => b.addEventListener('click', () => {
       deleteUserGroup(S.packages[Number(b.dataset.mgdel)]);
@@ -3846,6 +4322,27 @@ async function moreDevices() {
         else errs.push(types[i] + ': ' + ((r.reason && r.reason.message) || r.reason || 'error'));
       }
     });
+    // Cloud devices carry no IP from the portal — enrich from the gateway's
+    // neighbor/MAC table (best-effort; the gateway already reported these).
+    if (wantLocalMerge && results.length > types.length) {
+      try {
+        const gr = results[types.length];
+        const gwArr = (gr && gr.status === 'fulfilled' && Array.isArray(gr.value)) ? gr.value : [];
+        const macToIp = new Map();
+        gwArr.forEach(g => {
+          const m = normMac(g.mac || g.devMac || '');
+          const ip = String(g.ip || '').trim();
+          if (m && ip && !macToIp.has(m)) macToIp.set(m, ip);
+        });
+        if (macToIp.size) {
+          list.forEach(d => {
+            if (d.ip || d.deviceIp || d.ipAddress || d.mgmtIp) return;
+            const m = normMac(d.mac || d.deviceMac || '');
+            if (m && macToIp.has(m)) d.ip = macToIp.get(m);
+          });
+        }
+      } catch (e) {}
+    }
     // v1.5.53: dead session → queue a one-shot retry of this exact load and
     // silently re-authenticate. The retry fires on the next successful login;
     // genuine errors still render as before.
@@ -3887,6 +4384,8 @@ async function moreDevices() {
           // v1.5.78: local reboot wire format verified (devSta.set devReboot) —
           // local rows get the reboot button too (gateway bridge, APK).
           const rb = sn ? `<button class="btn" data-reboot="${esc(sn)}" data-name="${esc(nm)}" data-local="${d.local ? '1' : ''}">${ic('refresh', 'sm')}<span>${t('md.reboot')}</span></button>` : '';
+          // v1.5.145: firmware upgrade moved to More → Firmware update
+          // (dedicated screen); device rows keep Reboot only.
           // v1.5.22: per-AP client count badge → tap opens that AP's client list.
           // v1.5.24: WR (home router, e.g. EW3200GX-PRO in AP mode) counts too.
           // v1.5.29: gateway-local APs (incl. China-version APs invisible to
@@ -3907,7 +4406,13 @@ async function moreDevices() {
           const ncliShow = ncli > 0 ? ncli : ncliLocal;
           const showCli = isApRow && sn && (ncliShow > 0 || !d.local);
           const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" data-aplocal="${d.local ? '1' : ''}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncliShow}</span></button>` : '';
-          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small></td>
+          return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small>${(() => {
+            // Cloud device list carries the management IP as `localIp`
+            // (verified from the portal's own device-list JS bundle);
+            // `cpeIp` is the egress IP. Gateway-local rows use `ip`.
+            const ip = d.localIp || d.ip || d.deviceIp || d.ipAddress || d.mgmtIp || '';
+            return ip ? `<br><small class="muted">${esc(t('mt.ip'))}: ${esc(ip)}</small>` : '';
+          })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
           <td>${rb}${cb}</td></tr>`;
@@ -3941,6 +4446,207 @@ async function rebootDevice(sn, name, isLocal) {
     toast(t('md.rebootOk'));
   } catch (e) { toast(e.message || t('md.rebootFail'), true); }
   if (S.moreFn === moreDevices) moreDevices();
+}
+
+/* ── Device firmware upgrade (v1.5.131 SSO portal) ──
+   Per-device flow, verified against the portal's own upgradeDeviceModal
+   bundle: POST /upgrade/condition/check {groupId} returns checkInofs
+   (per-model: deviceSns comma-joined, deviceSoftware, recommendSoftware,
+   real_recommendSoftware, newestSoftwareVersion, real_newestSoftwareVersion,
+   firmwareId, newestFirmwareId, releaseNotes); POST /upgrade/device
+   {snList, jobUniqueId, targetVersion, schedule, retryTimes, firmwareId,
+   groupId} starts the job. Cloud rows only (needs SSO login). */
+async function upgradeDeviceFlow(sn, name) {
+  if (!Api.ssoLoggedIn()) { toast(t('md.upNeedSso'), true); return; }
+  const gid = Number(S.projectId) || 0;
+  if (!gid) { toast(t('md.upFail'), true); return; }
+  toast(t('md.upCheck'));
+  let infos;
+  try {
+    infos = await Api.upgradeConditionCheck(gid);
+  } catch (e) { toast(e.message || t('md.upFail'), true); return; }
+  const info = (infos || []).find(x =>
+    String(x.deviceSns || '').split(',').some(s => s.trim() === sn));
+  const cur = info ? (info.deviceSoftware || info.softwareVersion || '') : '';
+  const rec = info ? (info.real_recommendSoftware || info.recommendSoftware || '') : '';
+  const newest = info ? (info.real_newestSoftwareVersion || info.newestSoftwareVersion || '') : '';
+  const opts = [];
+  if (rec && rec !== cur) opts.push({ ver: rec, fid: info.firmwareId || null, rec: true });
+  if (newest && newest !== cur && newest !== rec) opts.push({ ver: newest, fid: info.newestFirmwareId || null, rec: false });
+  if (!opts.length) { toast(tx('md.upNone', { name: name || sn })); return; }
+  const pick = await pickUpgradeVersion(name || sn, cur, opts, info);
+  if (!pick) return;
+  if (!(await iosConfirm(tx('md.upConfirm', { name: name || sn, ver: pick.ver }), '', t('md.upgrade'), t('a.cancel'), true))) return;
+  toast(t('md.upSending'));
+  try {
+    await Api.upgradeDevice({ snList: [sn], targetVersion: pick.ver, firmwareId: pick.fid, groupId: gid, retryTimes: 3 });
+    toast(t('md.upOk'));
+  } catch (e) { toast(e.message || t('md.upFail'), true); }
+}
+
+/* Firmware version picker (bottom sheet). Returns {ver, fid} or null. */
+function pickUpgradeVersion(name, cur, opts, info) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'ios-sheet-ov';
+    const sheet = document.createElement('div');
+    sheet.className = 'ios-sheet';
+    sheet.setAttribute('role', 'dialog');
+    const notes = info ? (info.newestReleaseNotes || info.releaseNotes || '') : '';
+    sheet.innerHTML =
+      '<div class="sheet-handle"></div>' +
+      '<div class="ios-sheet-title">' + esc(name) + '</div>' +
+      '<div style="padding:0 16px 8px;font-size:15px">' +
+        esc(t('md.upCur')) + ': <b>' + esc(cur || '—') + '</b></div>' +
+      (notes ? '<div style="padding:0 16px 8px;font-size:13px;color:var(--secondary)">' +
+        esc(String(notes).slice(0, 300)) + '</div>' : '') +
+      '<div class="ios-sheet-opts"></div>';
+    const optsEl = sheet.querySelector('.ios-sheet-opts');
+    const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+    opts.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ios-sheet-opt' + (i === 0 ? ' active' : '');
+      b.innerHTML = '<span>' + esc(t('md.upNew')) + ': <b>' + esc(o.ver) + '</b>' +
+        (o.rec ? ' <small class="muted">· ' + esc(t('md.upRec')) + '</small>' : '') + '</span>';
+      b.addEventListener('click', () => { close(); resolve(o); });
+      optsEl.appendChild(b);
+    });
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'ios-sheet-opt';
+    cancel.innerHTML = '<span>' + esc(t('a.cancel')) + '</span>';
+    cancel.addEventListener('click', () => { close(); resolve(null); });
+    optsEl.appendChild(cancel);
+    const onKey = e => { if (e.key === 'Escape') { close(); resolve(null); } };
+    document.addEventListener('keydown', onKey);
+    ov.appendChild(sheet);
+    ov.addEventListener('click', e => { if (e.target === ov) { close(); resolve(null); } });
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('open')));
+  });
+}
+
+/* ── Firmware update · dedicated More screen (v1.5.145) ──
+ * Moved out of the Devices rows per user request. Per-device rows show
+ * current vs available firmware; tapping Update reuses the verified
+ * upgradeDeviceFlow trigger. Progress is HONEST: the portal API reports
+ * no live percentage, so the row shows real observed stages
+ * (sending → updating → rebooting → done) with an indeterminate
+ * animation — never a fake 1–100% bar. Completion is confirmed by
+ * re-checking /upgrade/condition/check for the new version. */
+async function moreFirmware() {
+  S.moreFn = moreFirmware;
+  moreShell(`${ic('up', 'sm')} ${esc(t('fw.title'))}`, `<div id="fw-list"><p class="muted">${t('more.loading')}</p></div>`);
+  if (!Api.ssoLoggedIn()) {
+    $('fw-list').innerHTML = `<p class="err">${esc(t('fw.needSso'))}</p>`;
+    return;
+  }
+  $('fw-list').innerHTML = `<p class="muted">${esc(t('fw.checking'))}</p>`;
+  try {
+    const gid = Number(S.projectId) || 0;
+    if (!gid) throw new Error(t('fw.needSso'));
+    const [devRes, infos] = await Promise.all([
+      Api.deviceListSso(gid, '', 1, 100).catch(() => null),
+      Api.upgradeConditionCheck(gid),
+    ]);
+    const devs = (devRes && (devRes.list || devRes.data || devRes)) || [];
+    const infoBySn = new Map();
+    for (const info of infos || []) {
+      for (const sn of String(info.deviceSns || '').split(',')) {
+        const k = sn.trim();
+        if (k) infoBySn.set(k, info);
+      }
+    }
+    const rows = (Array.isArray(devs) ? devs : []).map(d => {
+      const sn = String(d.serialNumber || d.sn || '');
+      if (!sn) return null;
+      const info = infoBySn.get(sn) || null;
+      const cur = info ? (info.deviceSoftware || info.softwareVersion || '') : '';
+      const rec = info ? (info.real_recommendSoftware || info.recommendSoftware || '') : '';
+      const newest = info ? (info.real_newestSoftwareVersion || info.newestSoftwareVersion || '') : '';
+      const avail = (rec && rec !== cur) ? { ver: rec, fid: info.firmwareId || null }
+        : (newest && newest !== cur && newest !== rec) ? { ver: newest, fid: info.newestFirmwareId || null } : null;
+      return {
+        sn,
+        name: d.aliasName || d.alias || d.deviceAliasName || d.name || sn,
+        model: d.productClass || d.model || d.productModel || '',
+        cur, avail,
+        fid: avail ? avail.fid : null,
+      };
+    }).filter(Boolean);
+    S._fwRows = rows;
+    if (!S._fwState) S._fwState = {};
+    if (!rows.length) { $('fw-list').innerHTML = `<p class="muted">${esc(t('fw.none'))}</p>`; return; }
+    renderFwRows();
+  } catch (e) {
+    $('fw-list').innerHTML = `<p class="err">${esc(e.message || String(e))}</p>`;
+  }
+}
+function renderFwRows() {
+  const el = $('fw-list');
+  if (!el) return;
+  const rows = S._fwRows || [];
+  el.innerHTML = `<div class="list">` + rows.map((x, i) => {
+    const st = (S._fwState || {})[x.sn] || { stage: 'idle' };
+    const stageHtml =
+      st.stage === 'sending' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.sending'))}</div>`
+      : st.stage === 'updating' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.updating'))}</div>`
+      : st.stage === 'rebooting' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.rebooting'))}</div>`
+      : st.stage === 'done' ? `<div class="pkg" style="color:var(--green);font-weight:600">${esc(t('fw.done'))}</div>`
+      : st.stage === 'error' ? `<div class="pkg" style="color:var(--red)">${esc(st.err || t('md.upFail'))}</div>`
+      : '';
+    const verLine = x.cur
+      ? `${esc(t('fw.cur'))}: <b>${esc(x.cur)}</b>` + (x.avail ? ` → <b style="color:var(--blue)">${esc(x.avail.ver)}</b>` : ` · <span class="muted">${esc(t('fw.upToDate'))}</span>`)
+      : `<span class="muted">—</span>`;
+    const btn = (st.stage === 'idle' || st.stage === 'error') && x.avail
+      ? `<button class="btn sm primary" data-fwup="${i}">${ic('up', 'sm')}<span>${esc(t('fw.update'))}</span></button>` : '';
+    return `<div class="voucher-row fw-row"><span class="status-dot s2"></span>
+      <div class="voucher-meta"><div class="voucher-code" style="font-size:15px">${esc(x.name)}</div>
+      <div class="pkg muted small">${esc(x.sn)}${x.model ? ' · ' + esc(x.model) : ''}</div>
+      <div class="pkg" style="font-size:13px">${verLine}</div>${stageHtml}</div>
+      <div class="fw-actions">${btn}</div></div>`;
+  }).join('') + `</div>`;
+  el.querySelectorAll('[data-fwup]').forEach(b =>
+    b.addEventListener('click', () => fwStartUpgrade(Number(b.dataset.fwup))));
+}
+/* Trigger + honest stage tracking for one device. */
+async function fwStartUpgrade(idx) {
+  const x = (S._fwRows || [])[idx];
+  if (!x || !x.avail) return;
+  if (!(await iosConfirm(tx('fw.confirm', { name: x.name, ver: x.avail.ver }), '', t('fw.update'), t('a.cancel'), true))) return;
+  const gid = Number(S.projectId) || 0;
+  const st = S._fwState[x.sn] = { stage: 'sending' };
+  renderFwRows();
+  try {
+    await Api.upgradeDevice({ snList: [x.sn], targetVersion: x.avail.ver, firmwareId: x.fid, groupId: gid, retryTimes: 3 });
+  } catch (e) {
+    st.stage = 'error'; st.err = e.message || String(e);
+    renderFwRows();
+    return;
+  }
+  st.stage = 'updating';
+  renderFwRows();
+  // Poll for real completion: the device's reported version becomes the target.
+  // Offline (no info) mid-upgrade → rebooting stage. 20 min cap, 45 s interval.
+  const deadline = Date.now() + 20 * 60 * 1000;
+  for (;;) {
+    await new Promise(r => setTimeout(r, 45000));
+    if (Date.now() > deadline) break;
+    try {
+      const infos = await Api.upgradeConditionCheck(gid);
+      const info = (infos || []).find(y =>
+        String(y.deviceSns || '').split(',').some(s => s.trim() === x.sn));
+      if (!info) { st.stage = 'rebooting'; }
+      else {
+        const cur = info.deviceSoftware || info.softwareVersion || '';
+        if (cur && cur === x.avail.ver) { st.stage = 'done'; break; }
+        st.stage = st.stage === 'rebooting' ? 'updating' : st.stage;
+      }
+    } catch (e) { /* keep polling on transient errors */ }
+    renderFwRows();
+  }
+  renderFwRows();
 }
 
 /* ── Flow Table traffic view (More → Traffic) · v1.5.78 ──
@@ -3980,18 +4686,23 @@ async function loadSsids() {
       const hid = isHid ? ' (hidden)' : '';
       // 2026-10-01: per-client speed caps shown under the SSID name (full text, no truncation)
       const spd = fmtSsidSpeed(s);
+      // Ruijie Cloud WLAN list style: encryption · band · VLAN, then speed caps
+      const band = fmtSsidBand(s);
+      const vlan = (s.vlanId !== undefined && s.vlanId !== null && String(s.vlanId) !== '')
+        ? 'VLAN ' + esc(String(s.vlanId)) : '';
+      const sub = [enc, band, vlan, spd ? esc(spd) : ''].filter(Boolean).join(' · ');
       return `<div class="voucher-row ssid-row">
         <div class="ssid-info"><div class="ssid-name">${nm}${hid}</div>
-        <div class="muted small">${enc}${spd ? ' · ' + esc(spd) : ''}</div></div>
+        <div class="muted small">${sub}</div></div>
         <div class="ssid-actions">
-        <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}">${t('wifi.changePw')}</button>
-        <button class="btn sm" data-ssidspeed="${esc(s.ssidName || '')}">${t('wifi.speed')}</button>
-        <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}">${t('wifi.delete')}</button>
+        <button class="btn sm" data-ssidrename="${esc(s.ssidName || '')}" aria-label="${esc(t('wifi.rename'))}">${ic('pencil', 'sm')}<span class="btn-t">${t('wifi.rename')}</span></button>
+        <button class="btn sm" data-ssidpw="${esc(s.ssidName || '')}" aria-label="${esc(t('wifi.changePw'))}">${ic('lock', 'sm')}<span class="btn-t">${t('wifi.changePw')}</span></button>
+        <button class="btn sm danger" data-ssiddel="${esc(s.ssidName || '')}" aria-label="${esc(t('wifi.delete'))}">${ic('trash', 'sm')}<span class="btn-t">${t('wifi.delete')}</span></button>
         </div>
       </div>`;
     }).join('');
+    body.querySelectorAll('[data-ssidrename]').forEach(b => b.addEventListener('click', () => openSsidRename(b.dataset.ssidrename)));
     body.querySelectorAll('[data-ssidpw]').forEach(b => b.addEventListener('click', () => openSsidPassword(b.dataset.ssidpw)));
-    body.querySelectorAll('[data-ssidspeed]').forEach(b => b.addEventListener('click', () => openSsidSpeed(b.dataset.ssidspeed)));
     body.querySelectorAll('[data-ssiddel]').forEach(b => b.addEventListener('click', () => deleteSsid(b.dataset.ssiddel)));
   } catch (e) {
     body.innerHTML = `<p class="muted">Error: ${esc(e.message || e)}</p>`;
@@ -4073,9 +4784,60 @@ function openSsidPassword(ssidName) {
   });
 }
 
+/* WiFi name rename editor — iOS card style like the password/speed editors.
+ * Renames via Api.ssidRenameSso (full-object PUT, only ssidName changed). */
+function openSsidRename(ssidName) {
+  if (!Api.ssoLoggedIn()) { toast(t('wifi.needSso')); return; }
+  const body = $('wifi-body');
+  body.innerHTML = `
+    <div class="card" style="padding:14px;max-width:420px">
+    <h3 style="margin:0 0 4px">${esc(t('wifi.rename'))}</h3>
+    <p class="muted small" style="margin:0 0 12px">${esc(ssidName)}</p>
+    <label class="fld"><span>${t('wifi.newName')}</span>
+      <input id="sr-name" maxlength="32" autocomplete="off" value="${esc(ssidName)}"></label>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="sr-ok">${t('wifi.save')}</button>
+      <button class="btn" id="sr-cancel">${t('wifi.cancel')}</button>
+    </div></div>`;
+  const inp = $('sr-name');
+  inp.focus();
+  inp.select();
+  $('sr-cancel').addEventListener('click', loadSsids);
+  $('sr-ok').addEventListener('click', async () => {
+    const nm = inp.value.trim();
+    if (!nm || nm.length > 32) { toast(t('wifi.badName'), true); return; }
+    if (nm === ssidName) { loadSsids(); return; }
+    if (!(await iosConfirm(tx('wifi.confirmRename', { old: ssidName, new: nm }), '', t('a.ok'), t('a.cancel'), false))) return;
+    try {
+      await Api.ssidRenameSso(S.projectId, ssidName, nm);
+      toast(t('wifi.nameChanged')); loadSsids();
+    } catch (e) {
+      const msg = String(e.message || e);
+      if (msg === 'SSID_BADNAME') toast(t('wifi.badName'), true);
+      else if (msg === 'SSID_NAMEEXISTS') toast(t('wifi.nameExists'), true);
+      else toast(msg, true);
+    }
+  });
+}
+
 /* 2026-10-01 (user): per-client speed limit editor for an SSID.
  * Shows the current per-client caps, edits in Mbps, saves via
  * Api.ssidSetRatesSso (full-object PUT, only upRate/downRate changed). */
+/* Ruijie Cloud WLAN list style: show the radio band an SSID broadcasts on.
+ * Portal field relatedRadio: '1' = 2.4G, '2' = 5G, '1,2' = both. */
+function fmtSsidBand(s) {
+  if (!s) return '';
+  let r = s.relatedRadio;
+  if (Array.isArray(r)) r = r.join(',');
+  r = String(r || '').replace(/\s+/g, '');
+  if (!r) return '';
+  const has1 = r.split(',').includes('1'), has2 = r.split(',').includes('2');
+  if (has1 && has2) return '2.4G/5G';
+  if (has1) return '2.4G';
+  if (has2) return '5G';
+  return '';
+}
+
 function fmtSsidSpeed(s) {
   if (!s) return '';
   const up = s.upRate, down = s.downRate;
@@ -5148,16 +5910,55 @@ function initKickSettings() {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
   }
-  // fix7: voucher SSID for scoping the "suspicious" flag
-  const si = $('kick-ssid');
-  if (si) {
-    si.value = Store.load().voucherSsid || '';
-    si.addEventListener('change', () => {
-      Store.save({ voucherSsid: si.value.trim() });
+  // voucher VLAN for scoping the "suspicious" flag — picked from the
+  // Ruijie Cloud WLAN list; the captive-portal VLAN is auto-selected.
+  const vs = $('kick-vlan');
+  if (vs) {
+    enhanceIosPicker(vs);
+    vs.addEventListener('change', () => {
+      Store.save({ voucherVlan: vs.value });
       renderMcList();
     });
+    ensureVlanOptions();
   }
   refreshKickStatus();
+}
+/* Populate the Voucher VLAN picker from the Ruijie Cloud WLAN list.
+ * Auto-selects the captive-portal VLAN when the user hasn't chosen one. */
+async function ensureVlanOptions() {
+  const sel = $('kick-vlan');
+  if (!sel) return;
+  let list = S.ssidList || [];
+  if (!list.length && S.projectId && Api.ssoLoggedIn()) {
+    try { list = (await Api.ssidListSso(S.projectId)).list || []; S.ssidList = list; }
+    catch (e) { list = []; }
+  }
+  const seen = new Map();
+  list.forEach(s => {
+    const v = String(s && s.vlanId !== undefined && s.vlanId !== null ? s.vlanId : '').trim();
+    if (!v || seen.has(v)) return;
+    seen.set(v, s.ssidName || '');
+  });
+  const det = detectVoucherVlan(list);
+  let cur = voucherVlan(Store.load());
+  if (!cur) {
+    // migrate: previously typed SSID -> its VLAN from the WLAN list
+    const oldSsid = String(Store.load().voucherSsid || '').trim().toLowerCase();
+    if (oldSsid) {
+      const hit = list.find(s => String(s.ssidName || '').trim().toLowerCase() === oldSsid);
+      const hv = hit ? String(hit.vlanId !== undefined && hit.vlanId !== null ? hit.vlanId : '').trim() : '';
+      if (hv) cur = hv;
+    }
+  }
+  if (!cur && det) { cur = det; }
+  if (cur) { try { Store.save({ voucherVlan: cur }); } catch (e) {} }
+  const opts = Array.from(seen.entries()).map(([v, nm]) =>
+    `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>VLAN ${esc(v)}` +
+    `${nm ? ' — ' + esc(nm) : ''}${v === det ? ' (captive portal)' : ''}</option>`).join('');
+  sel.innerHTML = (cur && !seen.has(cur)
+    ? `<option value="${esc(cur)}" selected>VLAN ${esc(cur)}</option>` : '') +
+    (opts || `<option value="">—</option>`);
+  try { syncIosPickerBtn(sel); } catch (e) {}
 }
 // v1.5.75: monitoring toggle (Settings → စစ်ဆေးမှုများ)
 function initTeleSettings() {
@@ -5169,6 +5970,579 @@ function initTeleSettings() {
       if (tg.checked) { Tele.log('monitor.on', 'monitoring enabled'); Tele.flush(); }
     });
   }
+}
+
+/* ═══════════ IN-APP UPDATE (APK only) ═══════════
+ * Version source: GitHub releases/latest for ruijie-voucher-app.
+ * - "Check for updates" button: manual check -> confirm -> DownloadManager
+ *   download -> prompt install.
+ * - Auto-download toggle (updateAutoDl, synced): on startup, quietly check;
+ *   a newer release downloads in the background and toasts "tap to install".
+ * Web build never needs this (GitHub Pages serves the latest instantly). */
+const UPD_REPO = 'praythein1994-cpu/ruijie-voucher-app';
+function updBridge() {
+  const B = window.RuijieBridge;
+  return (B && B.appVersion) ? B : null;
+}
+function updCurVersion() {
+  try {
+    const v = JSON.parse(updBridge().appVersion() || '{}');
+    return { name: String(v.versionName || ''), code: Number(v.versionCode) || 0 };
+  } catch (e) { return { name: '', code: 0 }; }
+}
+function cmpVersions(a, b) {
+  const pa = String(a || '').replace(/^[vV]/, '').split('.').map(x => Number(x) || 0);
+  const pb = String(b || '').replace(/^[vV]/, '').split('.').map(x => Number(x) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+async function updLatestRelease() {
+  const r = await fetch('https://api.github.com/repos/' + UPD_REPO + '/releases/latest', {
+    headers: { 'Accept': 'application/vnd.github+json' },
+  });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  const tag = String(j.tag_name || '').trim();
+  const apk = (j.assets || []).find(a => /\.apk$/i.test(String(a.name || '')));
+  if (!tag || !apk || !apk.browser_download_url) throw new Error('no-apk');
+  /* v1.5.137: capture the release notes too — the UPDATE Ready card shows
+   * them in an expandable "what's new" section. */
+  return { tag, name: String(apk.name || 'update.apk'), url: apk.browser_download_url,
+           notes: String(j.body || '').trim() };
+}
+function updSetStatus(msg) {
+  const el = $('upd-status');
+  if (el) el.textContent = msg || '';
+}
+/* v1.5.133: persistent "ready to install" state. The downloaded APK's
+ * DownloadManager id is kept in raw localStorage (device-local, never
+ * synced) so the Install button survives dialog dismissal and app
+ * restarts — previously the only install path was a one-time dialog. */
+function updPendingLoad() {
+  try { return JSON.parse(localStorage.getItem('updPending') || 'null'); } catch (e) { return null; }
+}
+function updPendingSave(p) {
+  try { localStorage.setItem('updPending', JSON.stringify(p)); } catch (e) {}
+}
+function updPendingClear() {
+  try { localStorage.removeItem('updPending'); } catch (e) {}
+}
+/* 'ready'   = APK on disk and newer than the current build
+ * 'waiting' = download still in progress (e.g. survived an app restart)
+ * 'gone'    = stale record (already installed / file missing / failed)
+ * 'none'    = nothing pending */
+function updPendingState() {
+  const p = updPendingLoad();
+  if (!p || !p.id) return 'none';
+  const cur = updCurVersion();
+  if (p.tag && cmpVersions(p.tag, cur.name) <= 0) return 'gone'; // already installed
+  const B = updBridge();
+  if (!B) return 'none';
+  let q = null;
+  try { q = JSON.parse(B.updateQuery(Number(p.id)) || '{}'); } catch (e) {}
+  if (!q) return 'none';
+  if (q.status === 'success') return 'ready';
+  if (q.status === 'running' || q.status === 'paused' || q.status === 'pending') return 'waiting';
+  return 'gone';
+}
+function updRefreshInstallUI() {
+  const row = $('upd-install-row');
+  if (!row) return;
+  const st = updPendingState();
+  if (st === 'gone') updPendingClear();
+  if (st === 'waiting') {
+    // Download survived an app restart — resume watching it to completion.
+    const p = updPendingLoad();
+    updDlShow(p && p.tag ? p.tag : ''); // v1.5.139: ring visible if user opens Settings mid-download
+    if (p && p.tag) updPollDownload(Number(p.id), (ok, id) => updOnDownloadDone({ tag: p.tag, name: p.name, notes: p.notes }, ok, id));
+  } else {
+    updDlHide(); // v1.5.139: no download running — ring stays out of the way
+  }
+  if (st === 'ready') {
+    row.hidden = false;
+    /* v1.5.137: UPDATE Ready card — version line + collapsed-by-default
+     * release notes (textContent only, never HTML). */
+    const p = updPendingLoad();
+    const ver = $('upd-ready-ver');
+    if (ver) ver.textContent = (p && p.tag) ? p.tag : '';
+    const notes = $('upd-ready-notes');
+    if (notes) notes.textContent = (p && p.notes) ? p.notes : t('upd.noNotes');
+  } else {
+    row.hidden = true;
+  }
+}
+/* Shared download-completion handler: persist, show the Install button,
+ * post a system notification, and offer immediate install. */
+function updOnDownloadDone(rel, ok, id) {
+  if (ok) {
+    updPendingSave({ id, tag: rel.tag, name: rel.name, notes: rel.notes || '' });
+    updSetStatus(t('upd.downloaded'));
+    updRefreshInstallUI();
+    updBannerShow(rel.tag, true); // v1.5.138: banner upgrades to UPDATE Ready
+    updDlDone(); // v1.5.139: ring celebrates, then the UPDATE Ready card takes over
+    try {
+      const B2 = updBridge();
+      if (B2 && B2.updateNotify) B2.updateNotify(t('upd.notiTitle'), tx('upd.notiText', { v: rel.tag }));
+    } catch (e) {}
+    // v1.5.144: no immediate install prompt here — the UPDATE Ready card
+    // (with its Update Now button + v1.5.140 pre-install guide) is the flow.
+  } else {
+    updPendingClear();
+    updRefreshInstallUI();
+    updDlHide(); // v1.5.139
+    updSetStatus('');
+    toast(t('upd.failed'), true);
+  }
+}
+let updPollTimer = null;
+function updPollDownload(id, onDone) {
+  if (updPollTimer) clearInterval(updPollTimer);
+  updPollTimer = setInterval(() => {
+    let q = null;
+    try { q = JSON.parse(updBridge().updateQuery(Number(id)) || '{}'); } catch (e) {}
+    if (!q) return;
+    if (q.status === 'success') {
+      clearInterval(updPollTimer); updPollTimer = null;
+      if (onDone) onDone(true, id);
+    } else if (q.status === 'failed' || q.status === 'error' || q.status === 'unknown') {
+      clearInterval(updPollTimer); updPollTimer = null;
+      if (onDone) onDone(false, id);
+    } else {
+      const p = q.total > 0 ? Math.round(100 * q.soFar / q.total) : 0;
+      updSetStatus(tx('upd.downloading', { p }));
+      updDlProgress(p); // v1.5.139: premium ring follows the download
+    }
+  }, 1000);
+}
+async function updInstallApk(id) {
+  const B = updBridge();
+  if (!B) return;
+  try {
+    if (!B.updateCanInstall()) {
+      toast(t('upd.needPerm'), true);
+      try { B.updateOpenInstallSettings(); } catch (e) {}
+      return;
+    }
+  } catch (e) {}
+  let r = null;
+  try { r = JSON.parse(B.updateInstall(Number(id)) || '{}'); } catch (e) {}
+  if (r && r.ok === false && r.message) toast(r.message, true);
+}
+function updStartDownload(rel, silent) {
+  const B = updBridge();
+  if (!B) return;
+  let r = null;
+  try { r = JSON.parse(B.updateDownload(rel.url, rel.name) || '{}'); } catch (e) {}
+  if (!r || !r.ok) { if (!silent) toast(t('upd.failed'), true); return; }
+  updPendingSave({ id: r.id, tag: rel.tag, name: rel.name, notes: rel.notes || '' }); // v1.5.133: persist early so a restart can resume watching
+  updDlShow(rel.tag); // v1.5.139: premium progress ring
+  updSetStatus(tx('upd.downloading', { p: 0 }));
+  updPollDownload(r.id, (ok, id) => updOnDownloadDone(rel, ok, id));
+}
+async function checkAppUpdate(manual) {
+  const B = updBridge();
+  if (!B) { if (manual) toast(t('upd.apkOnly'), true); return null; }
+  updRefreshInstallUI();
+  // v1.5.133: never re-download what is already downloaded — offer install.
+  if (updPendingState() === 'ready') {
+    updSetStatus(t('upd.downloaded'));
+    if (manual) toast(t('upd.downloaded'));
+    return { state: 'ready' };
+  }
+  if (manual) updSetStatus(t('upd.checking'));
+  try {
+    const rel = await updLatestRelease();
+    const cur = updCurVersion();
+    if (cmpVersions(rel.tag, cur.name) <= 0) {
+      if (manual) { updSetStatus(t('upd.latest')); toast(t('upd.latest')); }
+      return { state: 'latest' };
+    }
+    if (manual) {
+      updSetStatus('');
+      const yes = await iosConfirm(tx('upd.found', { v: rel.tag }), '', t('a.ok'), t('a.cancel'), false);
+      if (yes) updStartDownload(rel, false);
+      return { state: 'manual', tag: rel.tag };
+    }
+    // auto-download mode: fetch quietly in the background
+    updStartDownload(rel, true);
+    return { state: 'started', tag: rel.tag }; // v1.5.138: watcher shows the banner
+  } catch (e) {
+    if (manual) { updSetStatus(''); toast(t('upd.netErr'), true); }
+    else updSetStatus(t('upd.checkFail')); // v1.5.133: auto mode no longer fully silent
+    return null;
+  }
+}
+/* ═══════════ v1.5.138: LIVE UPDATE BANNER + AUTO-DETECT ═══════════
+ * The app watches GitHub releases while it runs — a quiet check shortly
+ * after startup, every 30 min after that, and when the app returns to the
+ * foreground after a while. When a newer release appears a slim banner
+ * shows under the header; tapping it jumps to Settings → App Update.
+ * With auto-download on, the download still starts by itself and the
+ * banner upgrades to "UPDATE Ready" when it finishes. */
+function updBannerShow(tag, ready) {
+  const b = $('upd-banner');
+  if (!b) return;
+  // A dismissed "new version" stays hidden this session — but an update
+  // that is READY to install is always worth surfacing.
+  try {
+    if (!ready && sessionStorage.getItem('updBannerOff') === '1') return;
+  } catch (e) {}
+  const tel = $('upd-banner-text');
+  if (tel) tel.textContent = ready ? tx('upd.bannerReady', { v: tag }) : tx('upd.bannerNew', { v: tag });
+  b.hidden = false;
+}
+function updBannerHide() {
+  const b = $('upd-banner');
+  if (b) b.hidden = true;
+}
+function updBannerDismiss() {
+  try { sessionStorage.setItem('updBannerOff', '1'); } catch (e) {}
+  updBannerHide();
+}
+function updBannerGo() {
+  try { switchView('view-settings'); } catch (e) { return; }
+  setTimeout(() => {
+    const card = $('upd-card');
+    if (!card) return;
+    try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    card.classList.remove('upd-flash');
+    void card.offsetWidth; // restart the animation
+    card.classList.add('upd-flash');
+    setTimeout(() => card.classList.remove('upd-flash'), 1900);
+  }, 150);
+}
+/* Banner-only detection (auto-download toggle OFF): no download, just
+ * surface the new version. */
+async function updCheckBanner() {
+  if (!updBridge()) return;
+  if (updPendingState() === 'ready') {
+    const p = updPendingLoad();
+    updBannerShow(p && p.tag ? p.tag : '', true);
+    return;
+  }
+  const cur = updCurVersion();
+  if (!cur.name) return;
+  try {
+    const rel = await updLatestRelease();
+    if (cmpVersions(rel.tag, cur.name) > 0) updBannerShow(rel.tag, false);
+    else updBannerHide();
+  } catch (e) {}
+}
+let updWatchTimer = null;
+let updLastWatch = 0;
+const UPD_WATCH_MS = 30 * 60 * 1000; // re-check every 30 min while the app runs
+async function updWatchTick() {
+  updLastWatch = Date.now();
+  if (!updBridge()) return;
+  if (updPendingState() === 'ready') {
+    const p = updPendingLoad();
+    updBannerShow(p && p.tag ? p.tag : '', true);
+    return;
+  }
+  let r = null;
+  if (Store.load().updateAutoDl) {
+    try { r = await checkAppUpdate(false); } catch (e) { r = null; }
+  }
+  if (r && r.state === 'latest') { updBannerHide(); return; }
+  if (r && r.tag) { updBannerShow(r.tag, false); return; } // auto mode: downloading
+  updCheckBanner(); // toggle off (or check failed): banner-only detection
+}
+function updWatchStart() {
+  if (!updBridge()) return;
+  if (updWatchTimer) { clearInterval(updWatchTimer); updWatchTimer = null; }
+  setTimeout(() => { try { updWatchTick(); } catch (e) {} }, 8000);
+  updWatchTimer = setInterval(() => { try { updWatchTick(); } catch (e) {} }, UPD_WATCH_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - updLastWatch > UPD_WATCH_MS) {
+      try { updWatchTick(); } catch (e) {}
+    }
+  });
+}
+/* ═══════════ v1.5.139: PREMIUM DOWNLOAD RING ═══════════
+ * Circular progress ring (video reference): fills as the APK downloads,
+ * % pill below, green check on completion. Shown in Settings → App Update
+ * while a download runs — manual or auto. */
+const UPD_RING_C = 188.5; // 2πr, r = 30
+function updDlShow(tag) {
+  const w = $('upd-dl');
+  if (!w) return;
+  w.hidden = false;
+  const fg = $('upd-ring-fg');
+  if (fg) { fg.classList.remove('done'); fg.style.strokeDashoffset = UPD_RING_C; }
+  const ic = $('upd-ring-icon');
+  if (ic) {
+    ic.classList.remove('done');
+    ic.innerHTML = '<svg class="ic" style="transform:rotate(180deg)"><use href="#i-up"/></svg>';
+  }
+  const pct = $('upd-dl-pct');
+  if (pct) { pct.classList.remove('done'); pct.textContent = '0%'; }
+  const lb = $('upd-dl-label');
+  if (lb) lb.textContent = tag || '';
+}
+function updDlProgress(p) {
+  const pct = $('upd-dl-pct');
+  if (pct) pct.textContent = Math.round(p) + '%';
+  const fg = $('upd-ring-fg');
+  if (fg) fg.style.strokeDashoffset = UPD_RING_C * (1 - Math.min(100, Math.max(0, p)) / 100);
+}
+function updDlDone() {
+  const w0 = $('upd-dl');
+  if (w0) w0.hidden = false; // re-show for the celebration even if a refresh hid it
+  updDlProgress(100);
+  const fg = $('upd-ring-fg');
+  if (fg) fg.classList.add('done');
+  const ic = $('upd-ring-icon');
+  if (ic) {
+    ic.classList.add('done');
+    ic.innerHTML = '<svg class="ic"><use href="#i-check"/></svg>';
+  }
+  const pct = $('upd-dl-pct');
+  if (pct) pct.classList.add('done');
+  setTimeout(() => updDlHide(), 1600); // celebrate, then the UPDATE Ready card takes over
+}
+function updDlHide() {
+  const w = $('upd-dl');
+  if (w) w.hidden = true;
+}
+/* ═══════════ v1.5.143: DEVICE INSTALL CONTROL ═══════════
+ * The owner (Pray Thein) sees which devices installed the app, caps the
+ * device count, can require approval for new installs, and blocks unknown
+ * devices — More → App Devices (admin profile only).
+ * Enforcement: a startup gate + a 30-min re-check while the app runs.
+ * Offline: fail-open, except a cached 'blocked' status (fail-closed). */
+const DEV_ADMIN = 'praythein';
+function devProxyBase() {
+  return ((Api.cfg && Api.cfg.proxy) || DEFAULT_PROXY).replace(/\/+$/, '');
+}
+function devGetInfo() {
+  // Native bridge (APK): stable per-app ANDROID_ID + real model info.
+  try {
+    const B = window.RuijieBridge;
+    if (B && B.deviceInfo) {
+      const o = JSON.parse(B.deviceInfo() || '{}');
+      if (o && o.id) return {
+        id: String(o.id), model: String(o.model || ''),
+        manufacturer: String(o.manufacturer || ''), android: String(o.android || ''),
+        src: 'native',
+      };
+    }
+  } catch (e) {}
+  // Web / old APK fallback: persisted random UUID.
+  let id = null;
+  try { id = localStorage.getItem('devUuid'); } catch (e) {}
+  if (!id) {
+    id = 'web-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    try { localStorage.setItem('devUuid', id); } catch (e) {}
+  }
+  return { id, model: '', manufacturer: '', android: '', src: 'web' };
+}
+function devMyId() { return devGetInfo().id; }
+function devIsAdmin() {
+  try {
+    return String(localStorage.getItem('rv_profile_name') || '').toLowerCase().replace(/\s+/g, '') === DEV_ADMIN;
+  } catch (e) { return false; }
+}
+function devAdminProfile() {
+  try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+}
+function devLastProfile() {
+  try { return localStorage.getItem('rv_profile_name') || ''; } catch (e) { return ''; }
+}
+async function devRegister() {
+  const info = devGetInfo();
+  const cur = updCurVersion();
+  const r = await fetch(devProxyBase() + '/api/devices/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      deviceId: info.id, model: info.model, manufacturer: info.manufacturer,
+      android: info.android, appVersion: cur.name || '', profile: devLastProfile(), src: info.src,
+    }),
+  });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  if (!j || !j.ok || !j.status) throw new Error('bad response');
+  return j.status;
+}
+function devCacheGet() {
+  try { return localStorage.getItem('devStatus') || ''; } catch (e) { return ''; }
+}
+function devCacheSet(s) {
+  try { localStorage.setItem('devStatus', s); } catch (e) {}
+}
+/* Startup gate — returns true when the app may start. */
+async function devStartupGate() {
+  const info = devGetInfo();
+  const cached = devCacheGet();
+  if (cached === 'blocked') { devShowLock(info, 'blocked'); return false; }
+  try {
+    const st = await devRegister();
+    devCacheSet(st);
+    if (st === 'blocked') { devShowLock(info, 'blocked'); return false; }
+    if (st === 'pending') { devShowLock(info, 'pending'); return false; }
+    devHideLock();
+    return true;
+  } catch (e) {
+    if (cached === 'pending') { devShowLock(info, 'pending'); return false; }
+    return true; // offline / proxy down: fail open for unknown devices
+  }
+}
+function devShowLock(info, kind) {
+  const scr = $('view-devlock');
+  if (!scr) return;
+  const title = $('devlock-title'), msg = $('devlock-msg'), idEl = $('devlock-id');
+  if (title) title.textContent = t(kind === 'blocked' ? 'dev.lockTitle' : 'dev.pendingTitle');
+  if (msg) msg.textContent = t(kind === 'blocked' ? 'dev.lockMsg' : 'dev.pendingMsg');
+  if (idEl) idEl.textContent = info.id;
+  ['view-connect', 'view-profile', 'view-profile-new', 'app'].forEach(id => {
+    const el = $(id); if (el) el.classList.add('hidden');
+  });
+  scr.classList.remove('hidden');
+}
+function devHideLock() {
+  const scr = $('view-devlock');
+  if (scr) scr.classList.add('hidden');
+}
+/* Re-check every 30 min while the app runs — a device blocked mid-session
+ * gets locked out without needing a restart. */
+let devCheckTimer = null;
+function devWatchStart() {
+  if (devCheckTimer) clearInterval(devCheckTimer);
+  devCheckTimer = setInterval(async () => {
+    try {
+      const st = await devRegister();
+      devCacheSet(st);
+      if (st === 'blocked' || st === 'pending') devShowLock(devGetInfo(), st);
+    } catch (e) {}
+  }, 30 * 60 * 1000);
+}
+/* ── Admin: More → App Devices ── */
+async function adApi(path, opts) {
+  const r = await fetch(devProxyBase() + path, opts);
+  const j = await r.json().catch(() => null);
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.msg) || ('http ' + r.status));
+  return j;
+}
+function adFmtDate(ts) {
+  try { return ts ? new Date(ts).toLocaleString() : '—'; } catch (e) { return '—'; }
+}
+async function moreAppDevices() {
+  S.moreFn = moreAppDevices;
+  moreShell(`${ic('lock', 'sm')} ${esc(t('m.appdevices'))}`,
+    `<div class="set-group" id="ad-cfg"></div><div class="set-group" id="ad-list"><p class="muted" style="padding:12px 16px">${esc(t('more.loading'))}</p></div>`);
+  await adRender();
+}
+async function adRender() {
+  const listBox = $('ad-list'), cfgBox = $('ad-cfg');
+  if (!listBox || !cfgBox) return;
+  let j;
+  try {
+    j = await adApi('/api/devices/list?profile=' + encodeURIComponent(devAdminProfile()));
+  } catch (e) {
+    cfgBox.innerHTML = '';
+    listBox.innerHTML = `<p class="err" style="padding:12px 16px">${esc(t('ad.loadFail'))}</p>`;
+    return;
+  }
+  const cfg = j.config || { maxDevices: 10, requireApproval: false };
+  const myId = devMyId();
+  let maxN = cfg.maxDevices;
+  cfgBox.innerHTML =
+    `<div class="set-row"><div class="t"><div class="t-main">${esc(t('ad.maxDevices'))}</div>` +
+    `<div class="sub">${esc(t('ad.maxDevicesSub'))}</div></div>` +
+    `<div class="ad-stepper"><button type="button" id="ad-max-dec">−</button><b id="ad-max-n">${maxN}</b><button type="button" id="ad-max-inc">+</button></div></div>` +
+    `<div class="set-row"><div class="t"><div class="t-main">${esc(t('ad.requireApproval'))}</div>` +
+    `<div class="sub">${esc(t('ad.requireApprovalSub'))}</div></div>` +
+    `<label class="switch"><input type="checkbox" id="ad-approval"${cfg.requireApproval ? ' checked' : ''}><span class="track"></span></label></div>`;
+  const pushCfg = async () => {
+    try {
+      await adApi('/api/devices/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: devAdminProfile(), maxDevices: maxN, requireApproval: $('ad-approval').checked }),
+      });
+    } catch (e) { toast(t('ad.saveFail'), true); adRender(); }
+  };
+  const setMax = v => { maxN = Math.min(100, Math.max(1, v)); $('ad-max-n').textContent = maxN; };
+  $('ad-max-dec').addEventListener('click', () => { setMax(maxN - 1); pushCfg(); });
+  $('ad-max-inc').addEventListener('click', () => { setMax(maxN + 1); pushCfg(); });
+  $('ad-approval').addEventListener('change', pushCfg);
+  const rows = (j.devices || []).map(d => {
+    const st = d.status || 'allowed';
+    const chipKey = st === 'blocked' ? 'ad.blocked' : st === 'pending' ? 'ad.pending' : 'ad.allowed';
+    const isMe = d.id === myId;
+    const name = [d.manufacturer, d.model].filter(Boolean).join(' ') || t('ad.unknownDevice');
+    const sub = [d.android ? 'Android ' + d.android : '', d.appVersion ? 'v' + d.appVersion : '', d.profile || '']
+      .filter(Boolean).join(' · ');
+    const actBtn = st === 'blocked'
+      ? `<button type="button" class="btn small" data-ad="allow" data-id="${esc(d.id)}">${esc(t('ad.allow'))}</button>`
+      : (st === 'pending'
+        ? `<button type="button" class="btn small primary" data-ad="allow" data-id="${esc(d.id)}">${esc(t('ad.allow'))}</button>`
+        : '') +
+        (st !== 'blocked'
+          ? `<button type="button" class="btn small danger-ghost" data-ad="block" data-id="${esc(d.id)}"${isMe ? ' disabled' : ''}>${esc(t('ad.block'))}</button>`
+          : '');
+    return `<div class="set-row"><div class="t"><div class="t-main">${esc(name)}${isMe ? ` <span class="ad-me">${esc(t('ad.thisDevice'))}</span>` : ''}</div>` +
+      (sub ? `<div class="sub">${esc(sub)}</div>` : '') +
+      `<div class="sub">${esc(t('ad.lastSeen'))}: ${esc(adFmtDate(d.lastSeen))}</div>` +
+      `<div class="sub"><span class="ad-chip ${st}">${esc(t(chipKey))}</span> <code class="ad-id">${esc(String(d.id).slice(0, 14))}…</code></div></div>` +
+      `<div class="ad-btns">${actBtn}</div></div>`;
+  }).join('');
+  listBox.innerHTML = rows || `<p class="muted" style="padding:12px 16px">${esc(t('ad.empty'))}</p>`;
+  listBox.querySelectorAll('[data-ad]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.id, act = b.dataset.ad;
+    if (act === 'block' && !(await iosConfirm(t('ad.confirmBlock'), '', t('ad.block'), t('a.cancel'), true))) return;
+    b.disabled = true;
+    try {
+      await adApi('/api/devices/set', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, status: act === 'block' ? 'blocked' : 'allowed', by: myId }),
+      });
+      toast(t('ad.saved'));
+    } catch (e) { toast(t('ad.saveFail'), true); }
+    adRender();
+  }));
+}
+function initUpdateSettings() {
+  const B = updBridge();
+  const card = $('upd-card');
+  if (card && !B) card.style.display = 'none'; // web build: no updater needed
+  const tg = $('upd-auto');
+  if (tg) {
+    tg.checked = !!Store.load().updateAutoDl;
+    tg.addEventListener('change', () => {
+      Store.save({ updateAutoDl: tg.checked });
+      if (tg.checked) {
+        // v1.5.133: ask for the notification permission so the
+        // "update downloaded" alert can actually appear.
+        try { const B3 = updBridge(); if (B3 && B3.updateNotifRequest) B3.updateNotifRequest(); } catch (e) {}
+        checkAppUpdate(false); // check right away when enabled
+      }
+    });
+  }
+  const btn = $('upd-check-btn');
+  if (btn) btn.addEventListener('click', () => checkAppUpdate(true));
+  const ibtn = $('upd-install-btn');
+  if (ibtn) ibtn.addEventListener('click', async () => {
+    const p = updPendingLoad();
+    if (!(p && updPendingState() === 'ready')) {
+      updPendingClear(); updRefreshInstallUI(); toast(t('upd.gone'), true); return;
+    }
+    // v1.5.140: pre-install guide — Play Protect / MIUI screens are explained
+    // before the system installer opens (they cannot be bypassed by code).
+    const go = await iosConfirm(t('upd.preTitle'), t('upd.preBody'), t('upd.install'), t('a.cancel'), false);
+    if (go) updInstallApk(Number(p.id));
+  });
+  updRefreshInstallUI(); // v1.5.133: show Install if an update is already downloaded
+  // v1.5.138: live update banner wiring
+  const bb = $('upd-banner');
+  if (bb) bb.addEventListener('click', () => updBannerGo());
+  const bx = $('upd-banner-x');
+  if (bx) bx.addEventListener('click', (e) => { e.stopPropagation(); updBannerDismiss(); });
+  // v1.5.138: auto-detect new releases while the app runs (banner always,
+  // background download only when the toggle is on)
+  if (B) updWatchStart();
 }
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
@@ -5226,7 +6600,10 @@ async function moreClients() {
     }
   }
   let vmap = new Map();
-  try { vmap = await apClientVoucherMap(pid, true); } catch (e) { /* voucher enrichment optional */ }
+  // v1.5.132: never force a full voucher re-fetch here — reuse the cached
+  // map (populated by the Voucher page or a previous client load). Forcing
+  // made every Online Clients open as slow as loading all vouchers.
+  try { vmap = await apClientVoucherMap(pid, false); } catch (e) { /* voucher enrichment optional */ }
   // v1.5.56: merge China/local-AP clients from the gateway's own STA list.
   // The portal snapshot only covers Cloud-managed APs, so STAs on
   // China/local APs never appear in it. The gateway sees them on the LAN —
@@ -5238,12 +6615,15 @@ async function moreClients() {
   let gwMerged = 0;
   try {
     if (typeof GwApi !== 'undefined' && GwApi.loggedIn()) {
-      const stas = await GwApi.staList();
+      // v1.5.132: independent calls — run in parallel, not sequentially.
+      const [stas, devs] = await Promise.all([
+        GwApi.staList().catch(() => null),
+        GwApi.deviceList().catch(() => null),
+      ]);
       if (stas && stas.length) {
         const seen = new Set((list || []).map(c => normMac(c.mac || c.userMac || c.staMac)));
         let apNames = {};
         try {
-          const devs = await GwApi.deviceList();
           (devs || []).forEach(d => { if (d.serialNumber) apNames[String(d.serialNumber)] = d.name || d.deviceName || String(d.serialNumber); });
         } catch (e) { /* AP names best-effort */ }
         const vc = getVoucherCache();
@@ -5299,6 +6679,67 @@ async function moreClients() {
 /* ═══════════ v1.5.54: client auth history ═══════════
    Uses the verified /samTransfer/userauthlogs/bypage endpoint (portal SSO).
    Shows recent login/logout records: voucher account, MAC, login/logout time. */
+/* ── v1.5.145: Client History grouped by voucher ──
+ * One row per voucher code; tap for that voucher's full session list.
+ * Sharing estimate per voucher from MAC + IP + time overlap:
+ *   shared     — 2+ MACs with overlapping sessions (strong signal)
+ *   suspicious — 2+ MACs, no overlap, different IPs (ambiguous)
+ *   rotation   — 2+ MACs but same IP (likely one device, MAC randomized)
+ *   none       — single MAC
+ * Pure helpers (groupHistoryByVoucher, historyShareFlag, mapLogoutReason)
+ * are unit-testable; mapLogoutReason matches keywords and NEVER hides
+ * the raw portal value (unknown reasons fall back to raw). */
+function groupHistoryByVoucher(records) {
+  const map = new Map();
+  for (const r of records || []) {
+    const acct = String((r && r.account) || '—');
+    if (!map.has(acct)) map.set(acct, { account: acct, sessions: [] });
+    map.get(acct).sessions.push(r);
+  }
+  const groups = [...map.values()];
+  for (const g of groups) {
+    g.sessions.sort((a, b) => Number(b.loginTimes || 0) - Number(a.loginTimes || 0));
+    g.macs = [...new Set(g.sessions.map(s => normMac(s.userMac)).filter(Boolean))];
+    g.lastSeen = g.sessions.reduce((m, s) => Math.max(m, Number(s.loginTimes || 0)), 0);
+    g.flag = historyShareFlag(g.sessions);
+  }
+  groups.sort((a, b) => b.lastSeen - a.lastSeen);
+  return groups;
+}
+function historyShareFlag(sessions) {
+  const macs = [...new Set(sessions.map(s => normMac(s.userMac)).filter(Boolean))];
+  if (macs.length < 2) return 'none';
+  const ivs = sessions.map(s => ({
+    mac: normMac(s.userMac),
+    start: Number(s.loginTimes || 0),
+    end: Number(s.logoutTimes || 0) || Date.now(),
+  })).filter(x => x.mac && x.start > 0);
+  for (let i = 0; i < ivs.length; i++) {
+    for (let j = i + 1; j < ivs.length; j++) {
+      if (ivs[i].mac === ivs[j].mac) continue;
+      if (ivs[i].start < ivs[j].end && ivs[j].start < ivs[i].end) return 'shared';
+    }
+  }
+  const ips = [...new Set(sessions.map(s => String(s.userIp || '').trim()).filter(Boolean))];
+  if (ips.length <= 1) return 'rotation';
+  return 'suspicious';
+}
+/* Keyword map of portal logout reasons → Burmese/English.
+ * The portal's exact vocabulary was never captured, so this matches
+ * keywords case-insensitively; anything unknown returns the RAW value. */
+function mapLogoutReason(raw) {
+  const r = String(raw || '').trim();
+  if (!r) return '—';
+  const k = r.toLowerCase();
+  const my = LANG !== 'en';
+  if (/(kick|admin|manual|force)/.test(k)) return my ? 'ဖြုတ်ချခံရတာ' : 'Kicked by admin';
+  if (/idle/.test(k)) return my ? 'မသုံးပဲကြာလို့ ပြုတ်သွားတာ' : 'Idle timeout';
+  if (/(quota|flow|data|traffic|limit|usage)/.test(k)) return my ? 'Data ကုန်လို့ ပြုတ်သွားတာ' : 'Quota used up';
+  if (/(timeout|expire|session|lease)/.test(k)) return my ? 'အချိန်ကုန်လို့ ပြုတ်သွားတာ' : 'Session timeout';
+  if (/re-?auth/.test(k)) return my ? 'ပြန်ဝင်ခိုင်းလို့ ပြုတ်သွားတာ' : 'Re-authentication';
+  if (/(nas|disconnect|network|ap |roam)/.test(k)) return my ? 'လိုင်းပြတ်သွားတာ' : 'Connection lost';
+  return r;
+}
 async function moreHistory() {
   S.moreFn = moreHistory;
   moreShell(`${ic('clock', 'sm')} ${esc(t('mh.title'))}`, `<div id="mh-list"><p class="muted">${t('more.loading')}</p></div>`);
@@ -5308,27 +6749,61 @@ async function moreHistory() {
   }
   try {
     const list = await Api.portalAuthLogs(Number(S.projectId)) || [];
-    if (!list.length) {
-      $('mh-list').innerHTML = `<p class="muted">${esc(t('mh.empty'))}</p>`;
-      return;
-    }
-    // Newest first by login time
-    list.sort((a, b) => Number(b.loginTimes || 0) - Number(a.loginTimes || 0));
-    $('mh-list').innerHTML =
-      `<p class="muted small">${list.length} records${S.clientsFetchedAt ? ' · ' + esc(t('v.updated')) + ' ' + esc(fmtTime(Date.now())) : ''}</p>` +
-      `<div class="list">` + list.slice(0, 100).map(r => {
-        const acct = esc(r.account || '—');
-        const mac = esc(r.userMac || '');
-        const login = fmtDate(r.loginTimes);
-        const logout = r.logoutTimes ? fmtDate(r.logoutTimes) : '—';
-        const reason = r.logoutReason ? ` <small class="muted">· ${esc(r.logoutReason)}</small>` : '';
-        return `<div class="voucher-row"><span class="status-dot s2"></span>
-          <div class="voucher-meta"><div class="voucher-code">${acct}</div>
-          <div class="pkg">${mac} · ${esc(login)} → ${esc(logout)}${reason}</div></div></div>`;
-      }).join('') + `</div>`;
+    S._histGroups = groupHistoryByVoucher(list);
+    S._histTotal = list.length;
+    renderHistoryGroups();
   } catch (e) {
     $('mh-list').innerHTML = `<p class="err">${esc(e.message || String(e))}</p>`;
   }
+}
+function renderHistoryGroups() {
+  const groups = S._histGroups || [];
+  if (!groups.length) {
+    $('mh-list').innerHTML = `<p class="muted">${esc(t('mh.empty'))}</p>`;
+    return;
+  }
+  $('mh-list').innerHTML =
+    `<p class="muted small">${groups.length} vouchers · ${S._histTotal || ''} records</p>` +
+    `<div class="list">` + groups.map((g, i) => {
+      const flag = g.flag === 'shared'
+        ? `<span class="mh-flag bad">🔴 ${esc(t('mh.shared'))}</span>`
+        : g.flag === 'suspicious'
+          ? `<span class="mh-flag warn">🟡 ${esc(t('mh.susp'))}</span>`
+          : g.flag === 'rotation'
+            ? `<span class="mh-flag ok">🟢 ${esc(t('mh.rotation'))}</span>` : '';
+      return `<div class="voucher-row mh-group" data-mhg="${i}" role="button" tabindex="0">
+        <span class="status-dot s2"></span>
+        <div class="voucher-meta"><div class="voucher-code">${esc(g.account)}</div>
+        <div class="pkg">${esc(tx('mh.grpSub', { n: g.sessions.length, m: g.macs.length }))} · ${esc(fmtDate(g.lastSeen))}</div></div>
+        ${flag}<span class="chev">›</span></div>`;
+    }).join('') + `</div>`;
+  $('mh-list').querySelectorAll('[data-mhg]').forEach(el => {
+    const open = () => openHistoryDetail(Number(el.dataset.mhg));
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+  });
+}
+/* Per-voucher session detail (drill-down; system back walks moreStack). */
+function openHistoryDetail(idx) {
+  const g = (S._histGroups || [])[idx];
+  if (!g) return;
+  S.moreFn = () => openHistoryDetail(idx);
+  moreShell(`${ic('ticket', 'sm')} ${esc(g.account)}`,
+    `<p class="muted small">${esc(tx('mh.grpSub', { n: g.sessions.length, m: g.macs.length }))}</p>` +
+    `<div class="list">` + g.sessions.map(s => {
+      const mac = esc(s.userMac || '—');
+      const ip = esc(s.userIp || '—');
+      const login = esc(fmtDate(s.loginTimes));
+      const logout = s.logoutTimes ? esc(fmtDate(s.logoutTimes)) : esc(t('mh.online'));
+      const mapped = mapLogoutReason(s.logoutReason);
+      const reason = esc(mapped);
+      const raw = (s.logoutReason && mapped !== String(s.logoutReason).trim())
+        ? ` <small class="muted">(${esc(String(s.logoutReason))})</small>` : '';
+      return `<div class="voucher-row"><span class="status-dot s2"></span>
+        <div class="voucher-meta"><div class="voucher-code" style="font-size:14px">${mac}</div>
+        <div class="pkg">${ip} · ${login} → ${logout}</div>
+        <div class="pkg">${esc(t('mh.reason'))}: ${reason}${raw}</div></div></div>`;
+    }).join('') + `</div>`);
 }
 
 /* v1.5.67: Online Clients search — voucher code, IP, or MAC. A MAC typed
@@ -5381,26 +6856,45 @@ function renderMcList() {
   const qi = $('mc-q');
   if (qi) qi.addEventListener('input', () => { mcCache.q = qi.value; renderMcCells(); });
 }
-/* fix7: voucher-SSID-scoped "suspicious" flag. Pure and unit-testable.
- * voucherSsidList(store) — Settings "Voucher SSID" (comma-separated) ->
- * lowercased name list; empty = not configured.
- * isVoucherSsid(ssid, list) — true when not configured (backwards
- * compatible: flag everywhere) or the client's SSID matches.
- * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the SSID
+/* fix7: voucher-VLAN-scoped "suspicious" flag. Pure and unit-testable.
+ * voucherVlan(store) — Settings "Voucher VLAN" -> '20' or '';
+ * empty = not configured.
+ * isVoucherVlan(vlan, cfg) — true when not configured (backwards
+ * compatible: flag everywhere) or the client's VLAN matches.
+ * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the VLAN
  * scope: noauth + viaPortal + heavy usage + on the voucher SSID. */
-function voucherSsidList(store) {
-  const raw = String((store && store.voucherSsid) || '').trim();
-  if (!raw) return [];
-  return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+/* ── Voucher-VLAN-scoped "suspicious" flag ──
+ * The voucher network is identified by its captive-portal VLAN (Ruijie
+ * Cloud WLAN list) — no WiFi name needed.
+ * voucherVlan(store) — Settings "Voucher VLAN" -> '20' or ''; empty = not
+ *   configured.
+ * isVoucherVlan(vlan, cfg) — true when not configured (backwards
+ *   compatible: flag everywhere) or the client's VLAN matches.
+ * detectVoucherVlan(ssidList) — the VLAN of the SSID with captive portal
+ *   (authEnable) from the Ruijie Cloud WLAN list; '' when none.
+ * shouldFlagSuspicious(...) — the full v1.5.53 condition plus the VLAN
+ *   scope: noauth + viaPortal + heavy usage + on the voucher VLAN. */
+function voucherVlan(store) {
+  return String((store && store.voucherVlan) || '').trim();
 }
-function isVoucherSsid(ssid, list) {
-  if (!list || !list.length) return true;
-  const s = String(ssid || '').trim().toLowerCase();
-  return !!s && list.indexOf(s) >= 0;
+function isVoucherVlan(vlan, cfg) {
+  if (!cfg) return true;
+  const v = String(vlan || '').trim();
+  return !!v && v === String(cfg).trim();
 }
-function shouldFlagSuspicious(st, viaPortal, ssid, c, vList) {
+function detectVoucherVlan(ssidList) {
+  for (const s of (ssidList || [])) {
+    if (!s) continue;
+    const ae = s.authEnable === true || String(s.authEnable).toLowerCase() === 'true';
+    if (!ae) continue;
+    const v = String(s.vlanId !== undefined && s.vlanId !== null ? s.vlanId : '').trim();
+    if (v) return v;
+  }
+  return '';
+}
+function shouldFlagSuspicious(st, viaPortal, vlan, c, vVlan) {
   if (st !== 'noauth' || !viaPortal) return false;
-  if (!isVoucherSsid(ssid, vList)) return false;
+  if (!isVoucherVlan(vlan, vVlan)) return false;
   c = c || {};
   const bytes = Number(c.flowUpDown) || 0;
   const durMs = Number(c.activeSec) > 0 ? Number(c.activeSec) * 1000
@@ -5464,14 +6958,14 @@ function renderMcCells() {
     //   usage (traffic or long session) — worth a review, not a verdict.
     // "sticky": voucher quota exhausted (datalimit/timeup) yet the client
     //   is still in the online list — the AP didn't disconnect it.
-    // fix7: the suspicious flag only makes sense on the voucher SSID.
-    // Clients on other SSIDs (Home/AMH — WPA password) are legitimate by
+    // fix7: the suspicious flag only makes sense on the voucher VLAN.
+    // Clients on other VLANs (Home/AMH — WPA password) are legitimate by
     // definition: they entered the WiFi password, no voucher needed.
-    // The voucher SSID name(s) come from Settings (comma-separated);
-    // empty = flag everywhere (backwards compatible).
-    const vSsidList = voucherSsidList(Store.load());
+    // The voucher VLAN comes from Settings (Ruijie Cloud captive-portal
+    // VLAN); empty = flag everywhere (backwards compatible).
+    const vVlan = voucherVlan(Store.load());
     const flags = [];
-    if (shouldFlagSuspicious(st, viaPortal, f.ssid, c, vSsidList)) flags.push('suspicious');
+    if (shouldFlagSuspicious(st, viaPortal, f.vlan, c, vVlan)) flags.push('suspicious');
     if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
     // v1.5.76: line-quality flags — weak signal / heavy talker / packet
     // loss. Read-only signals from verified fields; never accusatory.
@@ -5552,6 +7046,17 @@ async function voucherLastUsedTs(acct) {
   if (!a) return 0;
   const now = Date.now();
   if (!mcLastUsedCache || now - mcLastUsedCache.at > 15 * 60 * 1000) {
+    // v1.5.128: ensure SSO login before fetching auth logs
+    try {
+      if (typeof Api !== 'undefined' && Api.ssoLoggedIn && !Api.ssoLoggedIn()) {
+        if (window.RuijieBridge && window.RuijieBridge.ssoLoginSilent) {
+          await new Promise((resolve) => {
+            try { window.RuijieBridge.ssoLoginSilent(); } catch (e) {}
+            setTimeout(resolve, 3000);
+          });
+        }
+      }
+    } catch (e) {}
     const logs = await Api.portalAuthLogs(Number(S.projectId));
     mcLastUsedCache = { at: now, map: lastUsedMap(logs) };
   }
@@ -5585,8 +7090,8 @@ function openMcDetail(idx) {
   const sec = s => `<div class="kv-sec">${esc(s)}</div>`;
   const grp = inner => inner ? `<div class="kv-group">${inner}</div>` : '';
   const flags = [];
-  // fix7: suspicious flag only on the voucher SSID (see list renderer above)
-  if (shouldFlagSuspicious(st, viaPortal, f.ssid, c, voucherSsidList(Store.load()))) flags.push('suspicious');
+  // fix7: suspicious flag only on the voucher VLAN (see list renderer above)
+  if (shouldFlagSuspicious(st, viaPortal, f.vlan, c, voucherVlan(Store.load()))) flags.push('suspicious');
   if (st === 'datalimit' || st === 'timeup') flags.push('sticky');
   // v1.5.62: kicked mark in the detail sheet too.
   const kts2 = kickedAt(f.mac);
@@ -6470,6 +7975,8 @@ function onMonitorToggle() {
     }
     window.RuijieBridge.monitorSetEnabled(on);
   } catch (e) {}
+  // v1.5.125: sync monitor setting to other phones
+  try { if (typeof SettingsSync !== 'undefined') SettingsSync.onLocalChange({ _monEnabled: on }); } catch (e) {}
   setTimeout(refreshMonitorCard, 400);
 }
 function onMonitorCheckNow() {
@@ -6678,196 +8185,6 @@ async function onAdDnsVlanChange() {
   refreshDnsCard();
 }
 
-/* ═══════════ DIAGNOSTICS (Settings → စစ်ဆေးမှုများ) ═══════════
- * Login tests and voucher tests run separately (user picks which part
- * is broken). Read-only: nothing is created, deleted or changed.
- * The report is saved as .txt through the Android system file picker
- * (SAF), so the user chooses where it goes. */
-const Diag = { results: [], running: false };
-
-function diagAdd(section, name, status, detail) {
-  Diag.results.push({ section, name, status, detail: String(detail || '') });
-  renderDiagResults();
-}
-function diagStatusBadge(s) {
-  const label = s === 'pass' ? t('diag.pass') : s === 'fail' ? t('diag.fail') : t('diag.skip');
-  const color = s === 'pass' ? '#16a34a' : s === 'fail' ? '#dc2626' : '#9ca3af';
-  const icon = s === 'pass' ? '✓' : s === 'fail' ? '✗' : '–';
-  return `<span style="display:inline-block;min-width:86px;text-align:center;font-size:12px;font-weight:700;color:#fff;background:${color};border-radius:20px;padding:3px 10px;margin-right:8px">${icon} ${esc(label)}</span>`;
-}
-function renderDiagResults() {
-  const box = $('diag-results');
-  if (!box) return;
-  const pad = $('diag-results-pad');
-  if (!Diag.results.length) { box.innerHTML = ''; if (pad) pad.classList.add('hidden'); return; }
-  if (pad) pad.classList.remove('hidden');
-  box.innerHTML = Diag.results.map(r =>
-    `<div style="display:flex;align-items:flex-start;gap:4px;padding:8px 0;border-top:1px solid var(--hair, #eee)">`
-    + `<div style="flex-shrink:0;padding-top:1px">${diagStatusBadge(r.status)}</div>`
-    + `<div style="min-width:0"><div style="font-weight:600;font-size:13px">${esc(r.name)}</div>`
-    + (r.detail ? `<div class="muted small" style="word-break:break-word">${esc(r.detail)}</div>` : '')
-    + `</div></div>`
-  ).join('');
-}
-async function runDiagnostics() {
-  if (Diag.running) return;
-  const doLogin = $('diag-login') && $('diag-login').checked;
-  const doVoucher = $('diag-voucher') && $('diag-voucher').checked;
-  if (!doLogin && !doVoucher) { toast(t('diag.pickOne'), true); return; }
-  Diag.running = true;
-  Diag.results = [];
-  renderDiagResults();
-  const runBtn = $('btn-diag-run'), saveBtn = $('btn-diag-save');
-  runBtn.disabled = true;
-  runBtn.querySelector('span').textContent = t('diag.running');
-  saveBtn.classList.add('hidden');
-
-  if (doLogin) {
-    // L1 — Open API auth (App ID/Secret)
-    try {
-      await Api.testConnection();
-      diagAdd('login', 'App ID / App Secret', 'pass', t('toast.connected'));
-    } catch (e) { diagAdd('login', 'App ID / App Secret', 'fail', e.message); }
-    // L2/L3 — SSO (Android only)
-    if (hasSso()) {
-      let loggedIn = false;
-      try { loggedIn = Api.ssoLoggedIn(); } catch (e) { /* ignore */ }
-      diagAdd('login', 'Ruijie အကောင့် (SSO cookie)', loggedIn ? 'pass' : 'fail',
-        loggedIn ? t('sso.connected') : t('sso.notConnected'));
-      try {
-        const info = JSON.parse(window.RuijieBridge.diagCookieInfo());
-        const parts = [];
-        for (const u of Object.keys(info)) {
-          const host = u.replace('https://', '');
-          const names = info[u] || [];
-          parts.push(host + ': ' + (names.length ? names.join(', ') : '—'));
-        }
-        diagAdd('login', 'SSO cookie domains', 'pass', parts.join('  |  '));
-      } catch (e) { diagAdd('login', 'SSO cookie domains', 'fail', e.message); }
-      // L4 — portal session probe: delete envelope for a voucher code that
-      // cannot exist. The portal checks the session first, so "not login"
-      // means the portal session is missing; any other answer means the
-      // session is alive (the fake voucher is simply not found). Nothing
-      // real is deleted.
-      try {
-        const env = Api.ssoDeleteEnvelope('PROBE000', '00000000-0000-0000-0000-000000000000', S.projectId || 1);
-        const res = JSON.parse(window.RuijieBridge.portalProbe(JSON.stringify(env)));
-        if (res.error) diagAdd('login', t('diag.portalProbe'), 'fail', res.error);
-        else if (res.notLogin) diagAdd('login', t('diag.portalProbe'), 'fail',
-          'portal: "not login" — portal session မရှိသေးပါ (ထွက်ပြီး ပြန် login လုပ်ပါ)'
-          + (res.sentCookies ? ' · sent: ' + res.sentCookies : ''));
-        else diagAdd('login', t('diag.portalProbe'), 'pass',
-          'portal session ok · HTTP ' + res.http + ' (ကုဒ်အတုမို့ မတွေ့တာ ပုံမှန်ပါ)'
-          + (res.sentCookies ? ' · sent: ' + res.sentCookies : ''));
-      } catch (e) { diagAdd('login', t('diag.portalProbe'), 'fail', e.message); }
-      // L5 — login trace: proves whether the portal SSO handshake completed
-      try {
-        const tr = JSON.parse(window.RuijieBridge.diagLoginTrace());
-        const urls = tr.urls || [];
-        const tail = urls.slice(-3).map(u => u.replace(/^https?:\/\//, '')).join(' → ');
-        diagAdd('login', t('diag.loginTrace'), tr.result === 'success' ? 'pass' : 'skip',
-          'result=' + tr.result + (tr.at ? ' · ' + tr.at : '') + ' · steps=' + urls.length + (tail ? ' · ' + tail : ''));
-      } catch (e) { diagAdd('login', t('diag.loginTrace'), 'fail', e.message); }
-    } else {
-      diagAdd('login', 'Ruijie အကောင့် (SSO)', 'skip', t('sso.onlyAndroid'));
-    }
-  }
-
-  if (doVoucher) {
-    // V1 — voucher list (read-only, first page)
-    if (S.projectId) {
-      try {
-        const { count, list } = await Api.voucherListPage(S.projectId, 0, 5);
-        const sample = (list[0] && (list[0].voucherCode || list[0].codeNo)) || '';
-        diagAdd('voucher', 'Voucher စာရင်း', 'pass',
-          'count=' + count + (sample ? ', sample=' + sample : ''));
-      } catch (e) { diagAdd('voucher', 'Voucher စာရင်း', 'fail', e.message); }
-    } else {
-      diagAdd('voucher', 'Voucher စာရင်း', 'skip', 'project not selected');
-    }
-    // V2 — delete readiness: LOCAL check only, no request is sent
-    try {
-      const ssoOk = hasSso() && Api.ssoLoggedIn();
-      const env = Api.ssoDeleteEnvelope('TESTCODE', 'TEST-UUID', S.projectId || 1);
-      const shapeOk = env.api === '/intlSamVoucher/v2/delete'
-        && env.authParams && env.authParams.method === 'DELETE'
-        && env.method === 'DELETE' && env.module === 'default'
-        && env.params && env.params[0] && env.params[0].voucherCode === 'TESTCODE'
-        && env.querys && env.querys.ids === 'TEST-UUID' && env.querys.lang === 'en';
-      if (ssoOk && shapeOk) diagAdd('voucher', 'ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု', 'pass', 'SSO ok · envelope ok (တကယ်မဖျက်ပါ)');
-      else diagAdd('voucher', 'ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု', 'fail',
-        [!ssoOk ? t('sso.notConnected') : '', !shapeOk ? 'envelope shape' : ''].filter(Boolean).join(' · '));
-    } catch (e) { diagAdd('voucher', 'ဖျက်ဖို့အဆင်သင့်ဖြစ်မှု', 'fail', e.message); }
-  }
-
-  saveBtn.classList.remove('hidden');
-  runBtn.disabled = false;
-  runBtn.querySelector('span').textContent = t('diag.run');
-  Diag.running = false;
-}
-function diagReportText() {
-  const L = [];
-  L.push('Ruijie Voucher App — Diagnostic Report');
-  L.push('Date: ' + new Date().toLocaleString());
-  L.push('App version: ' + APP_VERSION + ' (Android APK)');
-  try { L.push('Project: ' + (S.projectId || '—')); } catch (e) { /* ignore */ }
-  L.push('');
-  let sec = '';
-  for (const r of Diag.results) {
-    const s = r.section === 'login' ? 'Login' : 'Voucher';
-    if (s !== sec) { sec = s; L.push('[' + s + ']'); }
-    L.push('  ' + r.status.toUpperCase() + ' — ' + r.name + (r.detail ? ': ' + r.detail : ''));
-  }
-  L.push('');
-  L.push('Note: nothing real was created, deleted or changed.');
-  L.push('The portal session probe uses a voucher code that cannot exist,');
-  L.push('so it deletes nothing — it only checks whether the portal');
-  L.push('session is alive.');
-  // Full login trace (URLs only, no credentials)
-  try {
-    if (window.RuijieBridge && window.RuijieBridge.diagLoginTrace) {
-      const tr = JSON.parse(window.RuijieBridge.diagLoginTrace());
-      if (tr.urls && tr.urls.length) {
-        L.push('');
-        L.push('[Login trace] result=' + tr.result + (tr.at ? ' at ' + tr.at : ''));
-        tr.urls.forEach((u, i) => L.push('  ' + (i + 1) + '. ' + u));
-      }
-    }
-  } catch (e) { /* ignore */ }
-  return L.join('\n');
-}
-function diagB64(s) {
-  return btoa(unescape(encodeURIComponent(s)));
-}
-function saveDiagReport() {
-  if (!Diag.results.length) return;
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  const fname = 'ruijie-diagnostic-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
-    + '-' + p(d.getHours()) + p(d.getMinutes()) + '.txt';
-  const b64 = diagB64(diagReportText());
-  if (window.RuijieBridge && window.RuijieBridge.diagSaveReport) {
-    // Android: system file picker — the user chooses where the .txt goes.
-    try { window.RuijieBridge.diagSaveReport(fname, b64); }
-    catch (e) { toast(t('diag.saveFail') + e.message, true); }
-  } else {
-    // Web fallback: direct download.
-    const blob = new Blob([diagReportText()], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-    toast(t('diag.saved'));
-  }
-}
-// Native file-picker result → toast. Registered once at startup.
-window._diagEvent = function (name) {
-  if (name === 'saved') toast(t('diag.saved'));
-  else if (name === 'cancel') toast(t('diag.saveCancel'));
-  else toast(t('diag.saveFail'), true);
-};
 async function loadAccountInfo() {
   try {
     let info = null;
@@ -6970,7 +8287,7 @@ function initPullToRefresh() {
 }
 
 /* ═══════════ INIT ═══════════ */
-function init() {
+async function init() {
   if (init._done) return; // guard against double script evaluation
   init._done = true;
   Tele.load(); Learn.load(); // v1.5.75: monitoring queue + usage learning
@@ -6990,6 +8307,7 @@ function init() {
   initIosPickers();   // v1.5.55: bottom-sheet pickers for project/usergroup/package
   initKickSettings(); // v1.5.55: kick toggle + status
   initTeleSettings(); // v1.5.75: monitoring toggle
+  initUpdateSettings(); // in-app update: check + auto-download toggle
   initTabbarDrag();   // v1.5.55: press-drag along the tabbar to switch pages
 
   // password peek toggles
@@ -7007,14 +8325,50 @@ function init() {
   $('btn-profile-manual').addEventListener('click', () => {
     $('view-profile').classList.add('hidden');
     $('view-connect').classList.remove('hidden');
+    playLoginMorph(document.querySelector('#view-connect .connect-card'), 'connect.btn'); // v1.5.142
   });
   // v1.5.79: manual connect screen → back to the profile login gate
   $('btn-connect-back').addEventListener('click', e => { e.preventDefault(); showProfileGate(); });
   $('btn-profile-new-save').addEventListener('click', doProfileCreate);
   $('btn-profile-new-back').addEventListener('click', profileFormBack);
   $('btn-profile-done-back').addEventListener('click', profileFormBack);
+  // v1.5.144: owner PIN — reveal the PIN fields while typing the name (create)
+  $('pfn-name').addEventListener('input', () => {
+    if (profileFormMode !== 'create') return;
+    $('pfn-pin-wrap').classList.toggle('hidden', Profiles.normName($('pfn-name').value) !== 'praythein');
+  });
+  // v1.5.144: PIN screen — digits drive the dots, auto-submit at 6
+  $('pin-input').addEventListener('input', e => {
+    const el = e.target;
+    const d = String(el.value).replace(/\D/g, '').slice(0, 6);
+    if (el.value !== d) el.value = d;
+    pinPaint(d);
+    if (d.length === 6) pinSubmit(d);
+  });
+  $('btn-pin-back').addEventListener('click', e => {
+    e.preventDefault();
+    pinState = null; pinHide(); showProfileGate();
+  });
   const bmp = $('btn-my-profile');
   if (bmp) bmp.addEventListener('click', showProfileUpdateFromSettings);
+  // v1.5.121: manual settings sync button
+  const bss = $('btn-sync-settings');
+  if (bss) bss.addEventListener('click', async () => {
+    const st = $('sync-status');
+    try {
+      if (st) st.textContent = 'Syncing…';
+      // v1.5.124: pull FIRST (get other phone's changes), then push (send our changes)
+      const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
+      if (pullR.ok && pullR.applied && typeof refreshSyncedUI === 'function') {
+        try { refreshSyncedUI(Store.load()); } catch (e) {}
+      }
+      const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
+      if (st) {
+        if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
+        else st.textContent = '✗ ' + (pullR.reason || pushR.reason || 'failed');
+      }
+    } catch (e) { if (st) st.textContent = '✗ error'; }
+  });
   document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view)));
   $('project-select').addEventListener('change', onProjectChange);
 
@@ -7059,7 +8413,6 @@ function init() {
   $('btn-bulk-select').addEventListener('click', toggleBulkMode);
   $('btn-bulk-print').addEventListener('click', bulkPrint);
   $('btn-bulk-delete').addEventListener('click', bulkDelete);
-  $('btn-bulk-cancel').addEventListener('click', toggleBulkMode);
   // v1.5.101: voucher More menu (Delete Expired Vouchers, Reset)
   $('btn-voucher-more').addEventListener('click', e => { e.stopPropagation(); toggleVoucherMore(); });
   document.addEventListener('click', e => {
@@ -7112,6 +8465,25 @@ function init() {
       toast(t('unbind.done') || 'MAC unbind ပြီးပါပြီ');
     } catch (e) {
       toast((t('unbind.fail') || 'Unbind မရပါ: ') + (e.message || e));
+    }
+  });
+  // v1.5.129: Reset button in voucher detail (user request, like Ruijie Cloud)
+  $('modal-reset').addEventListener('click', async () => {
+    if (!modalVoucher) return;
+    const v = modalVoucher;
+    if (!(await iosConfirm(tx('v.resetConfirm', { n: 1 }), vCode(v), t('v.reset'), t('a.cancel'), true))) return;
+    try {
+      await Api.voucherReset(S.projectId, v);
+      // v1.5.129: optimistically clear usage so status updates immediately
+      try {
+        v.usedTime = 0; v.usedQuota = 0;
+        const sv = (S.vouchers || []).find(x => x.uuid === v.uuid);
+        if (sv) { sv.usedTime = 0; sv.usedQuota = 0; }
+      } catch (e) {}
+      toast(t('v.resetDone', { ok: 1 }));
+      modalVoucher = null; closeModal('modal'); loadVouchers();
+    } catch (e) {
+      toast(String((e && e.message) || e || ''), true);
     }
   });
   $('modal-queue').addEventListener('click', () => { if (modalVoucher) addToQueue({ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }); });
@@ -7169,8 +8541,10 @@ function init() {
   // bluetooth thermal printer (printer-v1 engine, APK only)
   initBtPrinter();
   btPollStart();
-  // auto-connect to the last used printer if the user enabled it
-  if (Store.load().btAutoConnect) setTimeout(() => btAutoConnect(true), 2000);
+  // v1.5.135: V1-style auto-connect — one silent attempt to the default
+  // (else last-used) printer at startup. No toggle, no retry, no backoff.
+  // Native also retries on Bluetooth-on / discovery / ACL events.
+  setTimeout(() => { try { btCall(B => B.btAutoConnect()); } catch (e) {} }, 2000);
   wireTypoModal();
   $('btn-print-layout').addEventListener('click', openLayoutModal);
   $('btn-print-typo').addEventListener('click', openTypoModal);
@@ -7180,6 +8554,7 @@ function init() {
     if (k === 'accounts') moreAccounts();
     else if (k === 'usergroups') moreUserGroups();
     else if (k === 'devices') moreDevices();
+    else if (k === 'firmware') moreFirmware(); // v1.5.145: dedicated firmware screen
     else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
@@ -7188,6 +8563,7 @@ function init() {
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
   else if (k === 'recorder') startNetworkRecorder(); // v1.5.106: portal network recorder
+  else if (k === 'appdevices') moreAppDevices(); // v1.5.143: app install device registry (admin)
   }));
 
   $('btn-save-settings').addEventListener('click', saveSettings);
@@ -7209,8 +8585,6 @@ function init() {
   $('btn-gw').addEventListener('click', onGwButton);
   const _ad = $('dns-adblock'); if (_ad) _ad.addEventListener('change', onAdDnsToggle); // v1.5.77
   const _adv = $('dns-vlan'); if (_adv) _adv.addEventListener('change', onAdDnsVlanChange); // v1.5.84
-  $('btn-diag-run').addEventListener('click', runDiagnostics);
-  $('btn-diag-save').addEventListener('click', saveDiagReport);
   // SSO login/logout events from the native dialog
   document.addEventListener('ruijie-sso', (e) => {
     refreshSsoCard();
@@ -7237,13 +8611,43 @@ function init() {
   applyLang();
 
   Api.loadCfg();
+  // v1.5.143: device install control — wire the lock screen buttons once.
+  const dr = $('devlock-retry');
+  if (dr) dr.addEventListener('click', async () => {
+    dr.disabled = true;
+    try {
+      if (await devStartupGate()) {
+        if (Api.cfg && Api.cfg.appid) enterApp();
+        else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
+      }
+    } finally { dr.disabled = false; }
+  });
+  const dc = $('devlock-copy');
+  if (dc) dc.addEventListener('click', () => {
+    const idtxt = ($('devlock-id') && $('devlock-id').textContent) || '';
+    const done = () => toast(t('dev.copied'));
+    const fail = () => toast(t('dev.copyFail'), true);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(idtxt).then(done, fail);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = idtxt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { fail(); }
+      ta.remove();
+    }
+  });
   // Login stays clean: proxy has a working default and is editable in Settings.
   // Show the login proxy field only on web when no proxy is saved yet (it is required there).
   const pf = $('cfg-proxy');
   const needProxyField = !hasBridge() && !(Api.cfg && Api.cfg.proxy);
   if (pf && pf.closest('label')) pf.closest('label').style.display = needProxyField ? '' : 'none';
-  if (Api.cfg && Api.cfg.appid) enterApp();
-  else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
+  // v1.5.143: device gate runs before anything else; the 30-min watcher
+  // re-checks while the app runs.
+  devWatchStart();
+  if (await devStartupGate()) {
+    if (Api.cfg && Api.cfg.appid) enterApp();
+    else showProfileGate(); // v1.5.79: named profile login (manual connect via link)
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
