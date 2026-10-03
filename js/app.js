@@ -570,6 +570,8 @@ const I18N = {
   'm.salesSub': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'm.recorder': { my: 'Recorder', en: 'Recorder' },
   'm.recorderSub': { my: 'Portal လုပ်ဆောင်ချက်မှတ်တမ်း', en: 'Record portal actions' },
+  'm.gwrecorder': { my: 'Gateway Capture', en: 'Gateway Capture' },
+  'm.gwrecorderSub': { my: 'Gateway API ဖမ်းယူမှု', en: 'Capture gateway API calls' },
   'm.appdevices': { my: 'App Devices', en: 'App Devices' },
   'm.appdevicesSub': { my: 'သွင်းထားတဲ့ဖုန်းများ', en: 'Installed phones' },
   'dev.lockTitle': { my: 'ဒီ device ကို ပိတ်ထားပါတယ်', en: 'This device is blocked' },
@@ -7791,6 +7793,28 @@ function startNetworkRecorder() {
   }
 }
 
+/* v1.5.147: Gateway network recorder — opens the gateway eWeb in a WebView,
+ * user logs in manually, performs actions, taps Stop. Captured API calls
+ * are saved as a .txt file + share sheet.
+ * v1.5.148: passes the gateway IP from Settings (phone may use a different
+ * IP than the PC's 100.88.200.103). */
+function startGatewayRecorder() {
+  if (window.RuijieBridge && window.RuijieBridge.startGatewayRecorder) {
+    window._gwRecEvent = function(name, count) {
+      if (name === 'done') toast(t('rec.done') + ' (' + count + ')');
+    };
+    let gwUrl = 'https://100.88.200.103';
+    try {
+      const s = Store.load();
+      const ip = String(s.gwIp || '100.88.200.103').trim() || '100.88.200.103';
+      gwUrl = 'https://' + ip;
+    } catch (_) {}
+    window.RuijieBridge.startGatewayRecorder(gwUrl);
+  } else {
+    toast('Gateway Capture: native bridge မရှိ');
+  }
+}
+
 async function moreSales() {
   const todayStr = new Date().toISOString().slice(0, 10);
   S.moreFn = moreSales;
@@ -8626,6 +8650,7 @@ async function init() {
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
   else if (k === 'recorder') startNetworkRecorder(); // v1.5.106: portal network recorder
+  else if (k === 'gwrecorder') startGatewayRecorder(); // v1.5.147: gateway network recorder
   else if (k === 'appdevices') moreAppDevices(); // v1.5.143: app install device registry (admin)
   }));
 

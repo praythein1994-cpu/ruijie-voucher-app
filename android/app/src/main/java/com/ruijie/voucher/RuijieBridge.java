@@ -535,15 +535,23 @@ public class RuijieBridge {
 
     /** v1.5.147: Open the gateway network recorder. The user logs in to the
      * gateway eWeb manually inside the recorder, performs actions, then taps
-     * Stop. Result events go to window._gwRecEvent(name, detail). */
+     * Stop. Result events go to window._gwRecEvent(name, detail).
+     * v1.5.148: gwUrl is the gateway base URL from app settings (the phone
+     * may reach the gateway on a different IP than the PC). */
     @JavascriptInterface
-    public void startGatewayRecorder() {
+    public void startGatewayRecorder(String gwUrl) {
         activity.runOnUiThread(() -> {
-            GatewayRecorder.show(activity,
+            GatewayRecorder.show(activity, gwUrl,
                     (filePath, count) -> webView.post(() -> webView.evaluateJavascript(
                             "window._gwRecEvent&&window._gwRecEvent('done'," +
                                     count + ")", null)));
         });
+    }
+
+    /** Backwards-compat overload (defaults to 100.88.200.103). */
+    @JavascriptInterface
+    public void startGatewayRecorder() {
+        startGatewayRecorder("https://100.88.200.103");
     }
 
     /** fix1: silent SSO login for app entry — the dialog is hidden (window
