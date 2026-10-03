@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.154'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.155'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2535,20 +2535,14 @@ function pickExpireDate() {
     countBtn.type = 'button';
     countBtn.className = 'ios-sheet-opt active';
     countBtn.innerHTML = '<span>' + esc(t('v.delExpiredShowCount')) + '</span>';
-    // v1.5.130: reset to Show count when date changes
+    // v1.5.155: auto-show count when date changes (no need to tap Show count)
     const dateInput = sheet.querySelector('#exp-date-cutoff');
-    const resetToCount = () => {
-      optsEl.innerHTML = '';
-      optsEl.appendChild(countBtn);
-      countBtn.disabled = false;
-      sheet.querySelector('#exp-count-result').textContent = '';
-    };
-    dateInput.addEventListener('change', resetToCount);
-    // v1.5.129: two-step - show count in dialog, then reveal Delete button
-    countBtn.addEventListener('click', async () => {
+    const doCount = async () => {
       const v = sheet.querySelector('#exp-date-cutoff').value || null;
       if (!v) return;
       const resultEl = sheet.querySelector('#exp-count-result');
+      optsEl.innerHTML = '';
+      optsEl.appendChild(countBtn);
       countBtn.disabled = true;
       resultEl.textContent = '…';
       try {
@@ -2587,7 +2581,10 @@ function pickExpireDate() {
         resultEl.textContent = String((e && e.message) || e || '');
         countBtn.disabled = false;
       }
-    });
+    };
+    dateInput.addEventListener('change', doCount);
+    // v1.5.129: two-step - show count in dialog, then reveal Delete button
+    countBtn.addEventListener('click', doCount);
     optsEl.appendChild(countBtn);
     const cancel = document.createElement('button');
     cancel.type = 'button';
@@ -2605,6 +2602,8 @@ function pickExpireDate() {
     document.body.appendChild(ov);
     requestAnimationFrame(() =>
       requestAnimationFrame(() => ov.classList.add('open')));
+    // v1.5.155: auto-show count on open with default date
+    setTimeout(() => { try { doCount(); } catch (e) {} }, 300);
   });
 }
 function closeExpDateSheet() {
