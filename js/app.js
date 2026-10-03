@@ -539,6 +539,7 @@ const I18N = {
   'q.noTree': { my: 'App list ရမရ — Gateway Capture နဲ့ စစ်ပါ', en: 'App list unavailable' },
   'q.manualApp': { my: 'App နာမည် ရိုက်ထည့်ပါ (ဥပမာ MobileLegends)', en: 'Type app name (e.g. MobileLegends)' },
   'q.nameHint': { my: 'နာမည် အတိအကျ မှန်ရမယ် — space မပါ, စာလုံးအကြီးအသေး မှန်ရမယ်။ ဥပမာ: MobileLegends, PUBG', en: 'Name must match exactly — no spaces, case-sensitive. E.g.: MobileLegends, PUBG' },
+  'q.treeLoading': { my: 'App list တင်နေတယ်…', en: 'Loading app list…' },
   'q.retry': { my: 'ပြန်ကြိုးစားမယ်', en: 'Retry' },
   'q.needAppId': { my: 'App Identification ဖွင့်မှ list ရမယ်။', en: 'Turn on App Identification to load the list.' },
   'q.pol': { my: 'Custom QoS Policy', en: 'Custom QoS Policy' },
@@ -5217,13 +5218,62 @@ async function loadQoS() {
   if (!body) return;
   body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
   try {
-    const [qos, app, func, pol, tree] = await Promise.all([
+    // v1.5.164: load fast data first, app tree lazy in background
+    const [qos, app, func, pol] = await Promise.all([
       GwApi.qosGet().catch(() => null),
       GwApi.qosAppGet().catch(() => null),
       GwApi.funcStatus().catch(() => null),
       GwApi.qosPolicyGet().catch(() => null),
-      GwApi.qosAppTree().catch(() => null),
     ]);
+    let tree = null;
+    // Bind fallback UI (manual entry + retry) — called when tree fails
+    const bindTreeFallback = () => {
+      const manualBtn = $('q-app-manual-add');
+      if (manualBtn && !manualBtn.dataset.bound) {
+        manualBtn.dataset.bound = '1';
+        const doManualAdd = () => {
+          const inp = $('q-app-manual');
+          const v = (inp.value || '').trim();
+          if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); inp.value = ''; }
+        };
+        manualBtn.addEventListener('click', doManualAdd);
+        const mi = $('q-app-manual');
+        if (mi) mi.addEventListener('keydown', (e) => { if (e.key === 'Enter') doManualAdd(); });
+      }
+      const retryBtn = $('q-tree-retry');
+      if (retryBtn && !retryBtn.dataset.bound) {
+        retryBtn.dataset.bound = '1';
+        retryBtn.addEventListener('click', (e) => { e.preventDefault(); loadQoS(); });
+      }
+    };
+    // Start tree load in background — don't block page render
+    const treePromise = GwApi.qosAppTree().then(t => {
+      tree = t;
+      const sel = $('q-app-sel');
+      const loading = $('q-tree-loading');
+      const fallback = $('q-tree-fallback');
+      if (t && t.length && sel) {
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">${esc(t('q.selApp'))}</option>` +
+          t.map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('');
+        sel.value = cur;
+        if (loading) loading.remove();
+        if (fallback) fallback.remove();
+      } else {
+        // Tree failed — show fallback
+        if (loading) loading.remove();
+        if (fallback) fallback.style.display = '';
+        bindTreeFallback();
+      }
+      return t;
+    }).catch(() => {
+      const loading = $('q-tree-loading');
+      const fallback = $('q-tree-fallback');
+      if (loading) loading.remove();
+      if (fallback) fallback.style.display = '';
+      bindTreeFallback();
+      return null;
+    });
     const smartOn = qos && qos.tcSwitch === 'on';
     const up = (qos && qos.uploadBand) || '';
     const down = (qos && qos.downloadBand) || '';
@@ -5276,12 +5326,15 @@ async function loadQoS() {
           <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
         </div>
         ${tree ? '' : `
+        <p class="muted small" id="q-tree-loading">${esc(t('q.treeLoading'))}</p>
+        <div id="q-tree-fallback" style="display:none">
         <div class="row" style="margin-top:8px">
           <input type="text" id="q-app-manual" placeholder="${esc(t('q.manualApp'))}" style="flex:1">
           <button class="btn" id="q-app-manual-add">${ic('plus', 'sm')}</button>
         </div>
         <p class="muted small" style="margin-top:4px">${esc(t('q.nameHint'))}</p>
-        <p class="muted small">${esc(t('q.noTree'))} <a href="#" id="q-tree-retry" style="color:var(--blue)">${esc(t('q.retry'))}</a>${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
+        <p class="muted small">${esc(t('q.noTree'))} <a href="#" id="q-tree-retry" style="color:var(--blue)">${esc(t('q.retry'))}</a>${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>
+        </div>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
         </div>
@@ -5464,22 +5517,7 @@ async function loadQoS() {
       if (appId && !curApps.includes(appId)) { curApps.push(appId); renderApps(); }
       sel.value = '';
     });
-    // v1.5.159: manual app entry fallback when tree unavailable
-    const manualBtn = $('q-app-manual-add');
-    if (manualBtn) {
-      const doManualAdd = () => {
-        const inp = $('q-app-manual');
-        const v = (inp.value || '').trim();
-        if (v && !curApps.includes(v)) { curApps.push(v); renderApps(); inp.value = ''; }
-      };
-      manualBtn.addEventListener('click', doManualAdd);
-      $('q-app-manual').addEventListener('keydown', (e) => { if (e.key === 'Enter') doManualAdd(); });
-    }
-    // v1.5.162: retry app tree load
-    const retryBtn = $('q-tree-retry');
-    if (retryBtn) {
-      retryBtn.addEventListener('click', (e) => { e.preventDefault(); loadQoS(); });
-    }
+    // v1.5.164: fallback binding handled by bindTreeFallback() above
 
     $('q-app-save').addEventListener('click', async () => {
       if (!confirm(t('q.confirmApp'))) return;
