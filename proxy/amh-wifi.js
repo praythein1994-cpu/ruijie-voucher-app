@@ -166,11 +166,12 @@ async function getSsidConf(ssidId) {
   const tok = await getToken();
   const url = `${CLOUD}/service/api/open/v1/wifi?access_token=${encodeURIComponent(tok)}&group_id=${GROUP_ID}`;
   const { json } = await httpsJson(url, 'GET', null);
-  if (!json || json.code !== 0) throw new Error('list failed');
+  if (!json || json.code !== 0) throw new Error('list failed: code=' + (json && json.code) + ' msg=' + (json && json.msg));
   const list = json.data && (json.data.list || json.data);
   const arr = Array.isArray(list) ? list : [];
+  const ids = arr.map(s => String(s.ssidId || s.id)).join(',');
   const found = arr.find(s => String(s.ssidId || s.id) === String(ssidId));
-  if (!found) throw new Error('SSID not found: ' + ssidId);
+  if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (group=' + GROUP_ID + ')');
   return found;
 }
 
