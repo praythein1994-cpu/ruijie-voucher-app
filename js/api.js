@@ -520,6 +520,84 @@ const GwApi = {
     });
   },
 
+  /** Write full Application Group List (key/suppression/normal). groups: [{appGrp, name, appList}]. */
+  async qosAppSetAll(groups) {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.update',
+        params: {
+          module: 'flowctrl_app', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: { list: groups },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return j && j.code === 0;
+    });
+  },
+
+  /** Fetch the app signature tree for selection. Returns array of {name, apps:[...]} or null. */
+  async qosAppTree() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: {
+          module: 'content_audit', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: { func: 'app_idy_get_app_tree' },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const d = (j && j.data) || {};
+      // Shape varies; normalize to [{name, apps:[names]}]
+      const out = [];
+      const walk = (node, prefix) => {
+        if (!node) return;
+        if (Array.isArray(node)) { node.forEach(n => walk(n, prefix)); return; }
+        const name = node.name || node.appName || node.label;
+        const children = node.children || node.sub || node.apps || node.list;
+        if (children && (Array.isArray(children) ? children.length : true)) {
+          if (name) out.push({ name: prefix ? prefix + ' / ' + name : name, node });
+          walk(children, prefix ? prefix + ' / ' + name : name);
+        } else if (name) {
+          out.push({ name: prefix ? prefix + ' / ' + name : name, leaf: true, id: node.id || node.appId || name });
+        }
+      };
+      try { walk(d.tree || d.list || d.apps || d, ''); } catch (_) {}
+      return out.length ? out : null;
+    });
+  },
+
+  /** Read Custom QoS policies (flowctrl_udp). Returns {list:[...]} or null. */
+  async qosPolicyGet() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.get',
+        params: { module: 'flowctrl_udp', noParse: false, async: null, remoteIp: false, device: 'pc' },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const d = (j && j.data) || {};
+      return { list: Array.isArray(d.list) ? d.list : [], raw: d };
+    });
+  },
+
+  /** Write full Custom QoS policy list. Returns true on success. */
+  async qosPolicySet(list) {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.update',
+        params: {
+          module: 'flowctrl_udp', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: { list: list },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return j && j.code === 0;
+    });
+  },
+
   /** Toggle a funcmgr feature (e.g. "app_identify"). on: boolean. Returns true on success. */
   async funcToggle(funcName, on) {
     return this._withAutoRelogin(async () => {

@@ -535,6 +535,19 @@ const I18N = {
   'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
   'q.confirmApp': { my: 'Key Group သိမ်းမလား?', en: 'Save Key Group?' },
   'q.confirmAppId': { my: 'App Identification ပြောင်းမလား?', en: 'Change App Identification?' },
+  'q.selApp': { my: 'App ရွေး…', en: 'Select app…' },
+  'q.noTree': { my: 'App list ရမရ — Gateway Capture နဲ့ စစ်ပါ', en: 'App list unavailable' },
+  'q.pol': { my: 'Custom QoS Policy', en: 'Custom QoS Policy' },
+  'q.add': { my: 'အသစ်', en: 'Add' },
+  'q.noPol': { my: 'Policy မရှိသေးဘူး', en: 'No policies yet' },
+  'q.confirmDel': { my: 'ဒီ policy ဖျက်မလား?', en: 'Delete this policy?' },
+  'q.addPol': { my: 'Policy အသစ်', en: 'New Policy' },
+  'q.editPol': { my: 'Policy ပြင်', en: 'Edit Policy' },
+  'q.polName': { my: 'Policy နာမည်', en: 'Policy Name' },
+  'q.polIp': { my: 'IP / IP Range', en: 'IP / IP Range' },
+  'q.upLimit': { my: 'Uplink Limit', en: 'Uplink Limit' },
+  'q.dnLimit': { my: 'Downlink Limit', en: 'Downlink Limit' },
+  'q.cancel': { my: 'မလုပ်တော့', en: 'Cancel' },
   'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
   'm.webauthSub': { my: 'ဝင်ရောက်ခွင့်စီမံခန့်ခွဲမှု', en: 'Portal config' },
   'wa.title': { my: 'Web Authentication', en: 'Web Authentication' },
@@ -5199,15 +5212,18 @@ async function loadQoS() {
   if (!body) return;
   body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
   try {
-    const [qos, app, func] = await Promise.all([
+    const [qos, app, func, pol, tree] = await Promise.all([
       GwApi.qosGet().catch(() => null),
       GwApi.qosAppGet().catch(() => null),
       GwApi.funcStatus().catch(() => null),
+      GwApi.qosPolicyGet().catch(() => null),
+      GwApi.qosAppTree().catch(() => null),
     ]);
     const smartOn = qos && qos.tcSwitch === 'on';
     const up = (qos && qos.uploadBand) || '';
     const down = (qos && qos.downloadBand) || '';
     const apps = (app && app.appList) || [];
+    const policies = (pol && pol.list) || [];
     // funcmgr status shape varies; try common paths
     let appIdOn = null;
     try {
@@ -5248,12 +5264,23 @@ async function loadQoS() {
         <p class="muted small">${esc(t('q.keygrpHint'))}</p>
         <div id="q-apps" style="margin:8px 0"></div>
         <div class="row">
-          <input type="text" id="q-app-add" placeholder="${esc(t('q.appPh'))}" style="flex:1">
+          <select id="q-app-sel" style="flex:1">
+            <option value="">${esc(t('q.selApp'))}</option>
+            ${(tree || []).map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('')}
+          </select>
           <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
         </div>
+        ${tree ? '' : `<p class="muted small">${esc(t('q.noTree'))}</p>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
         </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <b>${esc(t('q.pol'))}</b>
+          <button class="btn" id="q-pol-add">${ic('plus', 'sm')}<span>${t('q.add')}</span></button>
+        </div>
+        <div id="q-pols" style="margin-top:8px"></div>
       </div>
       <div class="card" style="margin-top:12px">
         <div class="row" style="justify-content:space-between;align-items:center">
@@ -5265,6 +5292,7 @@ async function loadQoS() {
     let curSmart = smartOn;
     let curApps = [...apps];
     let curAppId = appIdOn;
+    let curPols = JSON.parse(JSON.stringify(policies));
 
     const renderApps = () => {
       const el = $('q-apps');
@@ -5278,6 +5306,108 @@ async function loadQoS() {
       }));
     };
     renderApps();
+
+    const renderPols = () => {
+      const el = $('q-pols');
+      if (!el) return;
+      if (!curPols.length) {
+        el.innerHTML = `<p class="muted small">${t('q.noPol')}</p>`;
+        return;
+      }
+      el.innerHTML = curPols.map((p, i) => {
+        const en = String(p.enable) === 'on';
+        const nm = p.comment || p.policy_id || ('#' + i);
+        const upL = p.upRate || p.allUpRate || '—';
+        const dnL = p.downRate || p.allDownRate || '—';
+        return `<div class="row" style="justify-content:space-between;align-items:center;border-bottom:.5px solid var(--hairline);padding:8px 0">
+          <div style="flex:1"><b>${esc(nm)}</b><br>
+            <span class="muted small">↑ ${esc(String(upL))} ↓ ${esc(String(dnL))} · ${esc(p.ipRange || '')}</span></div>
+          <button class="btn ${en ? 'btn-on' : ''}" data-pt="${i}" style="min-width:64px">${en ? t('q.on') : t('q.off')}</button>
+          <button class="btn" data-pe="${i}">${ic('pencil', 'sm')}</button>
+          <button class="btn" data-pd="${i}">${ic('trash', 'sm')}</button>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('[data-pt]').forEach(b => b.addEventListener('click', async () => {
+        const i = Number(b.dataset.pt);
+        curPols[i].enable = String(curPols[i].enable) === 'on' ? 'off' : 'on';
+        toast(t('q.saving'));
+        try {
+          const ok = await GwApi.qosPolicySet(curPols);
+          toast(ok ? t('q.saved') : t('q.fail'));
+          if (ok) renderPols();
+        } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+      }));
+      el.querySelectorAll('[data-pd]').forEach(b => b.addEventListener('click', async () => {
+        const i = Number(b.dataset.pd);
+        if (!confirm(t('q.confirmDel'))) return;
+        curPols.splice(i, 1);
+        toast(t('q.saving'));
+        try {
+          const ok = await GwApi.qosPolicySet(curPols);
+          toast(ok ? t('q.saved') : t('q.fail'));
+          if (ok) renderPols();
+        } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+      }));
+      el.querySelectorAll('[data-pe]').forEach(b => b.addEventListener('click', () => {
+        openPolEditor(Number(b.dataset.pe));
+      }));
+    };
+    renderPols();
+
+    const openPolEditor = (idx) => {
+      const isNew = idx === -1;
+      const p = isNew ? {
+        comment: '', ipRange: '', enable: 'on',
+        upRate: '20000', allUpRate: '20000', downRate: '20000', allDownRate: '20000',
+        mode: 'share', intf: 'br-wan', tcPri: '1',
+      } : JSON.parse(JSON.stringify(curPols[idx]));
+      const ov = document.createElement('div');
+      ov.className = 'modal'; ov.style.display = 'flex';
+      ov.innerHTML = `<div class="modal-box" style="max-width:440px">
+        <b>${esc(isNew ? t('q.addPol') : t('q.editPol'))}</b>
+        <label style="display:block;margin-top:10px">${esc(t('q.polName'))}<br>
+          <input type="text" id="pe-name" value="${esc(p.comment || '')}" style="width:100%"></label>
+        <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
+          <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
+        <div class="row" style="margin-top:8px">
+          <label style="flex:1">${esc(t('q.upLimit'))} (Kbps)<br>
+            <input type="number" id="pe-up" value="${esc(String(p.upRate || p.allUpRate || ''))}"></label>
+          <label style="flex:1">${esc(t('q.dnLimit'))} (Kbps)<br>
+            <input type="number" id="pe-dn" value="${esc(String(p.downRate || p.allDownRate || ''))}"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="pe-save" style="flex:1">${t('q.save')}</button>
+          <button class="btn" id="pe-cancel" style="flex:1">${t('q.cancel')}</button>
+        </div>
+      </div>`;
+      document.body.appendChild(ov);
+      ov.querySelector('#pe-cancel').addEventListener('click', () => ov.remove());
+      ov.querySelector('#pe-save').addEventListener('click', async () => {
+        const np = isNew ? {
+          policy_id: '10', ip_group: 'fc_rule_' + Date.now(),
+          type: 'macc_cst', mode: 'share', intf: 'br-wan', tcPri: '1',
+          tr_effective: '1', tr_group: '所有时段', wholeWan: '0',
+          idyc_version: 'V3', effective: '-1', appList: [],
+          user_group_list: [], vlanList: [], tr_range: [], intfGrpList: [],
+        } : p;
+        np.comment = ov.querySelector('#pe-name').value.trim();
+        np.ipRange = ov.querySelector('#pe-ip').value.trim();
+        const uv = ov.querySelector('#pe-up').value.trim();
+        const dv = ov.querySelector('#pe-dn').value.trim();
+        if (uv) { np.upRate = uv; np.allUpRate = uv; np.upRateG = uv; np.allUpRateG = uv; }
+        if (dv) { np.downRate = dv; np.allDownRate = dv; np.downRateG = dv; np.allDownRateG = dv; }
+        if (isNew) curPols.push(np); else curPols[idx] = np;
+        ov.remove();
+        toast(t('q.saving'));
+        try {
+          const ok = await GwApi.qosPolicySet(curPols);
+          toast(ok ? t('q.saved') : t('q.fail'));
+          if (ok) renderPols();
+        } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+      });
+    };
+
+    $('q-pol-add').addEventListener('click', () => openPolEditor(-1));
 
     $('q-smart-tgl').addEventListener('click', async () => {
       const to = !curSmart;
@@ -5302,8 +5432,13 @@ async function loadQoS() {
     $('q-refresh').addEventListener('click', loadQoS);
 
     $('q-app-addbtn').addEventListener('click', () => {
-      const v = $('q-app-add').value.trim();
-      if (v && !curApps.includes(v)) { curApps.push(v); $('q-app-add').value = ''; renderApps(); }
+      const sel = $('q-app-sel');
+      const vi = sel.value;
+      if (vi === '' || !tree || !tree[Number(vi)]) return;
+      const entry = tree[Number(vi)];
+      const appId = entry.id || entry.name.split('/').pop().trim();
+      if (appId && !curApps.includes(appId)) { curApps.push(appId); renderApps(); }
+      sel.value = '';
     });
 
     $('q-app-save').addEventListener('click', async () => {
