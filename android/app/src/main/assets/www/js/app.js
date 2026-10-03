@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.145'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.147'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -508,6 +508,8 @@ const I18N = {
   'fw.done': { my: 'ပြီးပါပြီ ✓', en: 'Done ✓' },
   'fw.needSso': { my: 'Ruijie အကောင့် login လိုပါတယ်', en: 'Ruijie login required' },
   'fw.confirm': { my: '{name} ကို {ver} တင်မှာလား? စက်ခနရပ်မည်။', en: 'Update {name} to {ver}? Device will restart.' },
+  'fw.avail': { my: 'အပ်ဒိတ်ရရှိနိုင်ပါတယ်', en: 'Update available' },
+  'fw.checkAgain': { my: 'ပြန်စစ်မယ်', en: 'Check again' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
   'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
@@ -645,6 +647,7 @@ const I18N = {
   'mg.none': { my: 'မရှိပါ', en: 'None' },
   'mg.add': { my: 'အသစ်ထည့်မယ်', en: 'Add' },
   'mg.del': { my: 'ဖျက်မယ်', en: 'Delete' },
+  'mg.edit': { my: 'ပြင်မယ်', en: 'Edit' },
   'mg.confirmDel': { my: '"{name}" group ကို ဖျက်မှာသေချာပါသလား? (ပြန်ယူလို့မရပါ)', en: 'Delete the "{name}" group? This cannot be undone.' },
   'mg.deleted': { my: 'Group ဖျက်ပြီးပါပြီ', en: 'Group deleted' },
   'mg.needIds': { my: 'Group ID မရပါ — list ပြန်ဖွင့်ကြည့်ပါ', en: 'Group ID unavailable — reopen the list' },
@@ -676,6 +679,7 @@ const I18N = {
   'ug.needName': { my: 'အမည်ထည့်ပေးပါ', en: 'Enter a name' },
   'ug.needLogin': { my: 'အရင် login ဝင်ပါ', en: 'Please log in first' },
   'ug.done': { my: 'User group ဖန်တီးပြီးပါပြီ', en: 'User group created' },
+  'ug.updated': { my: 'User group ပြင်ပြီးပါပြီ', en: 'User group updated' },
   'ug.devices': { my: 'တစ်ပြိုင်တည်း သုံးနိုင်မည့်စက်', en: 'Concurrent Devices' },
   'ug.bindMacFirst': { my: 'ပထမဆုံး သုံးစဉ်က MAC bind လုပ်မယ်', en: 'Bind MAC on first use' },
   'ug.bindMacTip': { my: 'ဖွင့်ထားရင် voucher ကို ပထမဆုံး အသုံးပြုတဲ့ စက်နဲ့ ချိတ်ထားမည်', en: 'When on, the voucher locks to the first device that uses it' },
@@ -4088,8 +4092,12 @@ async function moreUserGroups() {
       <tr><th>${t('mg.name')}</th><th>${t('mg.validity')}</th><th>${t('mg.data')}</th><th>${t('mg.price')}</th><th></th></tr>
       ${S.packages.map((p, i) => `<tr><td>${esc(pkgName(p))}</td><td>${esc(fmtPeriod(p.timePeriod))}</td>
         <td>${esc(fmtQuota(p.quota || p.flowQuota))}</td><td>${esc(p.price || p.packagePrice || '—')}</td>
-        <td><button class="btn danger sm mg-delbtn" data-mgdel="${i}" aria-label="${esc(t('mg.del'))}">${ic('trash', 'sm')}<span class="btn-t">${t('mg.del')}</span></button></td></tr>`).join('')}
+        <td><button class="btn sm mg-editbtn" data-mgedit="${i}" aria-label="${esc(t('mg.edit'))}">${ic('pencil', 'sm')}<span class="btn-t">${t('mg.edit')}</span></button>
+        <button class="btn danger sm mg-delbtn" data-mgdel="${i}" aria-label="${esc(t('mg.del'))}">${ic('trash', 'sm')}<span class="btn-t">${t('mg.del')}</span></button></td></tr>`).join('')}
       </table></div>` : `<p class="muted">${t('mg.none')}</p>`;
+    $('mg-list').querySelectorAll('[data-mgedit]').forEach(b => b.addEventListener('click', () => {
+      renderUserGroupForm(S.packages[Number(b.dataset.mgedit)]);
+    }));
     $('mg-list').querySelectorAll('[data-mgdel]').forEach(b => b.addEventListener('click', () => {
       deleteUserGroup(S.packages[Number(b.dataset.mgdel)]);
     }));
@@ -4127,7 +4135,12 @@ async function deleteUserGroup(p) {
  * rate limits = Kbps (256 = "256 Kbps"), noOfDevice = string ("3").
  * Inferred — verify on first test save: devices Unlimited -> "0" (portal
  * convention); Daily duration -> durationCtrlType 1 + timePeriodDaily. */
-function renderUserGroupForm() {
+function renderUserGroupForm(editP) {
+  const isEdit = !!(editP && typeof editP === 'object');
+  // Prefill from the existing group in edit mode; list fields mirror the
+  // portal's group record (quota=MB, timePeriod=minutes, rate=Kbps).
+  const pv = k => isEdit && editP[k] !== undefined && editP[k] !== null ? editP[k] : '';
+  const pNum = k => { const v = Number(pv(k)); return isFinite(v) ? v : 0; };
   const OPT = {
     devices: [['0', t('ug.unlimited')], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7'], ['8', '8'], ['9', '9']],
     duration: [['0', t('ug.unlimited')], ['30', '30 ' + t('ug.min')], ['60', '1 ' + t('ug.hr')], ['120', '2 ' + t('ug.hr')], ['1440', '1 ' + t('ug.day')], ['2880', '2 ' + t('ug.day')], ['10080', '1 ' + t('ug.wk')], ['20160', '2 ' + t('ug.wk')], ['custom', t('ug.custom')]],
@@ -4140,11 +4153,11 @@ function renderUserGroupForm() {
     opts.map(o => `<option value="${o[0]}">${esc(o[1])}</option>`).join('') + `</select></div>` +
     `<div class="ug-custom" id="ugc-${id}" hidden><input id="ugx-${id}" type="number" inputmode="numeric" min="0" placeholder="${esc(t('ug.customVal'))}"></div>`;
   $('mg-form').innerHTML = `<div class="ug-card">
-    <div class="ug-field"><span class="ug-lab">${esc(t('ug.name'))}</span>
-      <input id="ug-name" type="text" class="ug-input" placeholder="${esc(t('ug.namePh'))}"></div>
+    <div class="ug-field"><span class="ug-lab">${isEdit ? esc(t('mg.edit')) : ''} ${esc(t('ug.name'))}</span>
+      <input id="ug-name" type="text" class="ug-input" placeholder="${esc(t('ug.namePh'))}" value="${esc(isEdit ? pkgName(editP) : '')}"></div>
     ${pick('devices', OPT.devices, t('ug.devices'))}
     <div class="ug-row"><span class="ug-lab">${esc(t('ug.bindMacFirst'))} <span class="ug-q" title="${esc(t('ug.bindMacTip'))}">?</span></span>
-      <label class="switch"><input id="ug-bindmac" type="checkbox"><span class="track"></span></label></div>
+      <label class="switch"><input id="ug-bindmac" type="checkbox"${isEdit && Number(pv('bindMac')) ? ' checked' : ''}><span class="track"></span></label></div>
     <div class="ug-sect">${esc(t('ug.period'))}</div>
     <div class="segmented ug-seg" id="ug-pseg">
       <button type="button" class="active" data-p="total">${esc(t('ug.totalDur'))}</button>
@@ -4155,8 +4168,8 @@ function renderUserGroupForm() {
     ${pick('upspeed', OPT.speed, t('ug.upSpeed'))}
     ${pick('downspeed', OPT.speed, t('ug.downSpeed'))}
     <div class="ug-field"><span class="ug-lab">${esc(t('ug.price'))}</span>
-      <input id="ug-price" type="text" class="ug-input" inputmode="decimal" placeholder="${esc(t('ug.pricePh'))}"></div>
-    <button class="ug-save" id="ug-do">${esc(t('ug.save'))}</button>
+      <input id="ug-price" type="text" class="ug-input" inputmode="decimal" placeholder="${esc(t('ug.pricePh'))}" value="${esc(isEdit ? String(pv('price') || pv('packagePrice') || '') : '')}"></div>
+    <button class="ug-save" id="ug-do">${esc(isEdit ? t('mg.edit') : t('ug.save'))}</button>
     <button class="ug-cancel" id="ug-cancel">${esc(t('ug.cancel'))}</button>
   </div>`;
   // iOS bottom-sheet pickers + Custom inline inputs
@@ -4166,8 +4179,32 @@ function renderUserGroupForm() {
     enhanceIosPicker(s);
     s.addEventListener('change', () => { const c = $('ugc-' + id); if (c) c.hidden = s.value !== 'custom'; });
   });
+  // edit mode: prefill selects (matching option, else Custom + value)
+  if (isEdit) {
+    const setSel = (id, v) => {
+      const s = $('ug-' + id); if (!s) return;
+      const sv = String(v);
+      const has = Array.prototype.some.call(s.options, o => o.value === sv);
+      s.value = has ? sv : 'custom';
+      const c = $('ugc-' + id), x = $('ugx-' + id);
+      if (c) c.hidden = s.value !== 'custom';
+      if (x && s.value === 'custom') x.value = sv;
+      if (typeof s.refreshIosPicker === 'function') { try { s.refreshIosPicker(); } catch (e) {} }
+    };
+    setSel('devices', pv('noOfDevice') === '' ? '0' : pv('noOfDevice'));
+    const isDaily = Number(pv('durationCtrlType')) === 1 || (pNum('timePeriodDaily') > 0 && pNum('timePeriod') === 0);
+    const pseg = $('ug-pseg');
+    if (pseg) pseg.querySelectorAll('button').forEach(x => x.classList.toggle('active', (x.dataset.p === 'daily') === isDaily));
+    try { pseg.dataset.cur = isDaily ? 'daily' : 'total'; } catch (e) {}
+    setSel('duration', isDaily ? pNum('timePeriodDaily') : pNum('timePeriod'));
+    setSel('quota', pNum('quota') || pNum('flowQuota'));
+    setSel('upspeed', pNum('uploadRateLimit'));
+    setSel('downspeed', pNum('downloadRateLimit'));
+    window._ugEditPeriod = isDaily ? 'daily' : 'total';
+  }
   // segmented period type
-  let periodType = 'total';
+  let periodType = (isEdit && window._ugEditPeriod) ? window._ugEditPeriod : 'total';
+  try { delete window._ugEditPeriod; } catch (e) { window._ugEditPeriod = undefined; }
   $('ug-pseg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     periodType = b.dataset.p;
@@ -4208,10 +4245,17 @@ function renderUserGroupForm() {
     if (!email) { toast(t('ug.needLogin'), true); return; }
     $('ug-do').disabled = true;
     try {
-      await Api.userGroupAddSso(S.projectId, email, tenantId, fields);
-      toast(t('ug.done'));
-      $('mg-form').innerHTML = '';
-      moreUserGroups();
+      if (isEdit) {
+        await Api.userGroupEditSso(S.projectId, email, tenantId, editP, fields);
+        toast(t('ug.updated'));
+        $('mg-form').innerHTML = '';
+        moreUserGroups();
+      } else {
+        await Api.userGroupAddSso(S.projectId, email, tenantId, fields);
+        toast(t('ug.done'));
+        $('mg-form').innerHTML = '';
+        moreUserGroups();
+      }
     } catch (e) { toast((e && e.message) || String(e), true); }
     $('ug-do').disabled = false;
   });
@@ -4587,8 +4631,13 @@ function renderFwRows() {
   const el = $('fw-list');
   if (!el) return;
   const rows = S._fwRows || [];
-  el.innerHTML = `<div class="list">` + rows.map((x, i) => {
+  const expanded = S._fwExpanded || (S._fwExpanded = {});
+  el.innerHTML = `<div class="row" style="margin-bottom:8px"><button class="btn sm" id="fw-recheck">${ic('refresh', 'sm')}<span class="btn-t">${esc(t('fw.checkAgain'))}</span></button></div>`
+  + `<div class="list">` + rows.map((x, i) => {
     const st = (S._fwState || {})[x.sn] || { stage: 'idle' };
+    const isExp = !!expanded[x.sn];
+    // v1.5.146: the dot means something now — green = up to date, orange = update available
+    const dotCls = x.avail ? 's2' : 's1';
     const stageHtml =
       st.stage === 'sending' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.sending'))}</div>`
       : st.stage === 'updating' ? `<div class="fw-prog"><div class="fw-bar"></div></div><div class="pkg muted">${esc(t('fw.updating'))}</div>`
@@ -4596,19 +4645,33 @@ function renderFwRows() {
       : st.stage === 'done' ? `<div class="pkg" style="color:var(--green);font-weight:600">${esc(t('fw.done'))}</div>`
       : st.stage === 'error' ? `<div class="pkg" style="color:var(--red)">${esc(st.err || t('md.upFail'))}</div>`
       : '';
-    const verLine = x.cur
-      ? `${esc(t('fw.cur'))}: <b>${esc(x.cur)}</b>` + (x.avail ? ` → <b style="color:var(--blue)">${esc(x.avail.ver)}</b>` : ` · <span class="muted">${esc(t('fw.upToDate'))}</span>`)
-      : `<span class="muted">—</span>`;
+    const availBadge = x.avail ? ` <span class="fw-badge">${esc(t('fw.avail'))}</span>` : '';
+    const verHtml = x.cur
+      ? `<div class="pkg fw-ver" style="font-size:13px">${esc(t('fw.cur'))}: <b>${esc(x.cur)}</b></div>`
+        + (x.avail
+          ? `<div class="pkg fw-ver" style="font-size:13px">${esc(t('fw.new'))}: <b style="color:var(--blue)">${esc(x.avail.ver)}</b></div>`
+          : `<div class="pkg muted" style="font-size:12.5px">${esc(t('fw.upToDate'))} ✓</div>`)
+      : `<div class="pkg muted">—</div>`;
     const btn = (st.stage === 'idle' || st.stage === 'error') && x.avail
-      ? `<button class="btn sm primary" data-fwup="${i}">${ic('up', 'sm')}<span>${esc(t('fw.update'))}</span></button>` : '';
-    return `<div class="voucher-row fw-row"><span class="status-dot s2"></span>
-      <div class="voucher-meta"><div class="voucher-code" style="font-size:15px">${esc(x.name)}</div>
-      <div class="pkg muted small">${esc(x.sn)}${x.model ? ' · ' + esc(x.model) : ''}</div>
-      <div class="pkg" style="font-size:13px">${verLine}</div>${stageHtml}</div>
-      <div class="fw-actions">${btn}</div></div>`;
+      ? `<button class="btn sm primary fw-upbtn" data-fwup="${i}">${ic('up', 'sm')}<span>${esc(t('fw.update'))} → ${esc(x.avail.ver)}</span></button>` : '';
+    return `<div class="voucher-row fw-row${isExp ? ' fw-exp' : ''}" data-fwrow="${i}"><span class="status-dot ${dotCls}"></span>
+      <div class="voucher-meta"><div class="voucher-code" style="font-size:15px">${esc(x.name)}${availBadge}</div>
+      <div class="pkg muted small fw-ver">${esc(x.sn)}${x.model ? ' · ' + esc(x.model) : ''}</div>
+      ${verHtml}${stageHtml}</div>
+      <div class="fw-actions">${btn}<span class="fw-chev">${ic(isExp ? 'chev-up' : 'chev-down', 'sm')}</span></div></div>`;
   }).join('') + `</div>`;
+  const rc = $('fw-recheck');
+  if (rc) rc.addEventListener('click', () => { S._fwRows = null; moreFirmware(); });
   el.querySelectorAll('[data-fwup]').forEach(b =>
-    b.addEventListener('click', () => fwStartUpgrade(Number(b.dataset.fwup))));
+    b.addEventListener('click', e => { e.stopPropagation(); fwStartUpgrade(Number(b.dataset.fwup)); }));
+  // v1.5.146: tap a row to expand/collapse long text (full version strings)
+  el.querySelectorAll('[data-fwrow]').forEach(r =>
+    r.addEventListener('click', () => {
+      const x = (S._fwRows || [])[Number(r.dataset.fwrow)];
+      if (!x) return;
+      S._fwExpanded[x.sn] = !S._fwExpanded[x.sn];
+      renderFwRows();
+    }));
 }
 /* Trigger + honest stage tracking for one device. */
 async function fwStartUpgrade(idx) {

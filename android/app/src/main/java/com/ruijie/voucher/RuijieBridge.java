@@ -503,8 +503,7 @@ public class RuijieBridge {
 
     /** Open the portal network recorder. Result events go to window._recEvent(name, detail). */
     @JavascriptInterface
-    public void startPortalRecorder() {
-        activity.runOnUiThread(() -> {
+    public void startPortalRecorder() {        activity.runOnUiThread(() -> {
             // v1.5.110: ALWAYS run the proven SSO login dialog first.
             // isLoggedIn() only checks cookie presence — a stale session
             // still returns true and /macc5/ then 403s. The SSO dialog
@@ -532,6 +531,19 @@ public class RuijieBridge {
                 (filePath, count) -> webView.post(() -> webView.evaluateJavascript(
                         "window._recEvent&&window._recEvent('done'," +
                                 count + ")", null)));
+    }
+
+    /** v1.5.147: Open the gateway network recorder. The user logs in to the
+     * gateway eWeb manually inside the recorder, performs actions, then taps
+     * Stop. Result events go to window._gwRecEvent(name, detail). */
+    @JavascriptInterface
+    public void startGatewayRecorder() {
+        activity.runOnUiThread(() -> {
+            GatewayRecorder.show(activity,
+                    (filePath, count) -> webView.post(() -> webView.evaluateJavascript(
+                            "window._gwRecEvent&&window._gwRecEvent('done'," +
+                                    count + ")", null)));
+        });
     }
 
     /** fix1: silent SSO login for app entry — the dialog is hidden (window
