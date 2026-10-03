@@ -11,6 +11,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.io.IOException;
@@ -134,6 +136,50 @@ public class BluetoothPrinterManager {
 
     // Manual tap-to-connect only (V1 style) — no auto-connect, no backoff.
     private volatile boolean userInitiatedDisconnect = false;
+
+    /* v1.5.146: auto-reconnect with backoff after an UNEXPECTED disconnect
+     * (e.g. printer power-cycled). Powering the printer back on fires no ACL
+     * event and no scan may be running, so without this nothing reconnects.
+     * Attempts: 5s, 10s, 20s, 40s, then every 60s, up to 30 tries (~28 min).
+     * Stops on: connected, user disconnect, Bluetooth off, cleanup. */
+    private final Handler reconnectHandler = new Handler(Looper.getMainLooper());
+    private volatile int reconnectAttempt = 0;
+    /* True while doConnect() does its pre-connect teardown: that internal
+     * disconnectInternal() must not cancel or reschedule the retry loop. */
+    private volatile boolean suppressReconnect = false;
+    private final Runnable reconnectRunnable = new Runnable() {
+        @Override public void run() {
+            if (userInitiatedDisconnect) { reconnectAttempt = 0; return; }
+            if (STATE_CONNECTED.equals(connState)) { reconnectAttempt = 0; return; }
+            if (STATE_CONNECTING.equals(connState)) {
+                reconnectHandler.postDelayed(this, 10000);
+                return;
+            }
+            if (!isBluetoothEnabled()) { reconnectAttempt = 0; return; }
+            String addr = getDefaultPrinterAddress();
+            if (addr == null || addr.isEmpty()) addr = getLastPrinterAddress();
+            if (addr == null || addr.isEmpty()) { reconnectAttempt = 0; return; }
+            reconnectAttempt++;
+            if (reconnectAttempt > 30) {
+                Log.i(TAG, "Auto-reconnect gave up after 30 attempts");
+                reconnectAttempt = 0;
+                return;
+            }
+            Log.i(TAG, "Auto-reconnect attempt " + reconnectAttempt + " to " + addr);
+            autoConnectDefault();
+            long delayMs = reconnectAttempt == 1 ? 5000 : reconnectAttempt == 2 ? 10000
+                    : reconnectAttempt == 3 ? 20000 : reconnectAttempt == 4 ? 40000 : 60000;
+            reconnectHandler.postDelayed(this, delayMs);
+        }
+    };
+    private void scheduleReconnect() {
+        cancelReconnect();
+        reconnectHandler.postDelayed(reconnectRunnable, 3000);
+    }
+    private void cancelReconnect() {
+        reconnectHandler.removeCallbacks(reconnectRunnable);
+        reconnectAttempt = 0;
+    }
 
     public BluetoothPrinterManager(Context context) {
         this.appContext = context.getApplicationContext();
@@ -413,7 +459,9 @@ public class BluetoothPrinterManager {
 
     @SuppressLint("MissingPermission")
     private void doConnect(String address, boolean quiet) {
-        disconnectInternal();
+        // v1.5.146: the pre-connect teardown must not disturb the retry loop.
+        suppressReconnect = true;
+        try { disconnectInternal(); } finally { suppressReconnect = false; }
         if (!isBluetoothEnabled()) {
             if (quiet) { quietFail(); return; }
             setState(STATE_ERROR, null, null, "Bluetooth is turned off. Please turn on Bluetooth.");
@@ -514,6 +562,11 @@ public class BluetoothPrinterManager {
         if (!STATE_DISCONNECTED.equals(connState)) {
             setState(STATE_DISCONNECTED, null, null, null);
         }
+        // v1.5.146: unexpected loss → retry with backoff (printer may power
+        // back on); explicit user disconnect → never retry. The pre-connect
+        // teardown inside doConnect() leaves the loop untouched.
+        if (userInitiatedDisconnect || suppressReconnect) cancelReconnect();
+        else scheduleReconnect();
     }
 
     /** Explicit user disconnect: never auto-reconnect afterwards. */
