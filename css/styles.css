@@ -2409,3 +2409,22 @@ html[data-theme="dark"] .ios-alert {
 html[data-layout="tablet"] .pin-card { max-width: 430px; margin-left: auto; margin-right: auto; }
 html[data-layout="tablet"] .pin-dots { gap: 16px; }
 html[data-layout="tablet"] .pin-dot { width: 18px; height: 18px; }
+
+/* v1.5.151: More menu 2-column on tablet — 10 left / 10 right style.
+ * Phone stays single column. Auto on wide + forced tablet. */
+@media (min-width: 768px) {
+  html:not([data-layout="phone"]) #more-menu.menu-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px;
+    align-items: start;
+  }
+  html:not([data-layout="phone"]) #more-menu .menu-item {
+    border-bottom: .5px solid var(--hairline);
+  }
+}
+html[data-layout="tablet"] #more-menu.menu-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px;
+  align-items: start;
+}
+html[data-layout="tablet"] #more-menu .menu-item {
+  border-bottom: .5px solid var(--hairline);
+}
