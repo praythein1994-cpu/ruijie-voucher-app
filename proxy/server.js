@@ -662,6 +662,15 @@ const server = http.createServer(async (req, res) => {
     // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
     // server-side portal CAS login, only the VLAN-30 SSID can be changed.
     if (u.pathname.startsWith('/amh-wifi/')) return AmhWifi.handle(req, res, u);
+    // Team chat UI (A-B-C-D + User group chat)
+    if (u.pathname === '/team-chat' && req.method === 'GET') {
+      try {
+        let html = fs.readFileSync(path.join(__dirname, 'team-chat.html'), 'utf8');
+        html = html.replace(/__CHAT_KEY__/g, process.env.TELEMETRY_KEY || '');
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        return res.end(html);
+      } catch (e) { return send(res, req, 500, { code: -9, msg: 'chat page missing' }); }
+    }
     return send(res, req, 404, { code: -5, msg: 'Not found' });
   } catch (e) {
     return send(res, req, 500, { code: -9, msg: 'Proxy error: ' + String(e.message || e) });

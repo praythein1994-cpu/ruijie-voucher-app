@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Team Chat — A B C D</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;height:100dvh;display:flex;flex-direction:column}
+header{background:#075e54;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+header .avatars{display:flex}
+header .av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;border:2px solid #075e54;margin-left:-8px}
+header .av:first-child{margin-left:0}
+.av-A{background:#e91e63}.av-B{background:#3f51b5}.av-C{background:#009688}.av-D{background:#ff9800}.av-User{background:#607d8b}
+header .title{font-size:16px;font-weight:600}
+header .sub{font-size:12px;opacity:.8}
+#msgs{flex:1;overflow-y:auto;padding:12px 8px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:85%;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.45;word-wrap:break-word;white-space:pre-wrap}
+.msg .who{font-size:11px;font-weight:700;margin-bottom:2px;opacity:.75}
+.msg .ts{font-size:10px;opacity:.5;margin-top:4px;text-align:right}
+.msg.User{align-self:flex-end;background:#dcf8c6;border-bottom-right-radius:4px}
+.msg.A,.msg.B,.msg.C,.msg.D{align-self:flex-start;background:#fff;border-bottom-left-radius:4px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.msg.A .who{color:#e91e63}.msg.B .who{color:#3f51b5}.msg.C .who{color:#009688}.msg.D .who{color:#ff9800}.msg.User .who{color:#2e7d32}
+.sys{align-self:center;background:#fff3cd;color:#856404;font-size:12px;padding:6px 12px;border-radius:12px;max-width:90%;text-align:center}
+#bar{display:flex;gap:8px;padding:10px;background:#f0f2f5;position:sticky;bottom:0}
+#inp{flex:1;border:none;border-radius:24px;padding:12px 16px;font-size:15px;outline:none;background:#fff}
+#send{border:none;background:#075e54;color:#fff;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;flex-shrink:0}
+#send:disabled{opacity:.5}
+#status{text-align:center;font-size:11px;color:#888;padding:4px}
+</style>
+</head>
+<body>
+<header>
+<div class="avatars"><div class="av av-A">A</div><div class="av av-B">B</div><div class="av av-C">C</div><div class="av av-D">D</div></div>
+<div><div class="title">Team Chat</div><div class="sub" id="online">A · B · C · D</div></div>
+</header>
+<div id="msgs"></div>
+<div id="status"></div>
+<div id="bar">
+<input id="inp" placeholder="စာရိုက်ပါ..." autocomplete="off">
+<button id="send">➤</button>
+</div>
+<script>
+const KEY="__CHAT_KEY__";
+const API="https://ruijie-voucher-proxy.onrender.com/api/agents/chat";
+let lastTs=0, known=new Set();
+const msgs=document.getElementById('msgs'), inp=document.getElementById('inp'), send=document.getElementById('send'), status=document.getElementById('status');
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function tstr(ts){const d=new Date(ts);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')}
+function add(m){
+  if(known.has(m.id))return; known.add(m.id);
+  const d=document.createElement('div');
+  d.className='msg '+esc(m.from);
+  d.innerHTML='<div class="who">'+esc(m.from)+'</div>'+esc(m.text)+'<div class="ts">'+tstr(m.ts)+'</div>';
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+  if(m.ts>lastTs)lastTs=m.ts;
+}
+async function poll(){
+  try{
+    const r=await fetch(API+'?key='+KEY+'&since=0');
+    const j=await r.json();
+    if(j.ok){ j.messages.forEach(add); status.textContent='✓ '+j.messages.length+' messages'; }
+  }catch(e){ status.textContent='⚠ connection issue'; }
+}
+async function sendMsg(){
+  const t=inp.value.trim(); if(!t)return;
+  inp.value=''; send.disabled=true;
+  try{
+    await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:KEY,from:'User',text:t})});
+    poll();
+  }catch(e){ status.textContent='⚠ send failed'; }
+  send.disabled=false; inp.focus();
+}
+send.onclick=sendMsg;
+inp.onkeydown=e=>{if(e.key==='Enter')sendMsg()};
+setInterval(poll,5000);
+poll();
+</script>
+</body>
+</html>
