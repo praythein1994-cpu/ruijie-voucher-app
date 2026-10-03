@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.157'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.158'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -5265,7 +5265,7 @@ async function loadQoS() {
           </select>
           <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
         </div>
-        ${tree ? '' : `<p class="muted small">${esc(t('q.noTree'))}${curAppId === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
+        ${tree ? '' : `<p class="muted small">${esc(t('q.noTree'))}${appIdOn === false ? ' ' + esc(t('q.needAppId')) : ''}</p>`}
         <div class="row" style="margin-top:10px">
           <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
         </div>
