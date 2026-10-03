@@ -823,11 +823,12 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
   html:not([data-layout="phone"]) #main { padding-left: 22px; padding-right: 22px; }
   html:not([data-layout="phone"]) .toolbar { margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px; }
   html:not([data-layout="phone"]) .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
-  /* voucher list becomes a 2-column card grid */
-  html:not([data-layout="phone"]) #voucher-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: none; box-shadow: none; overflow: visible; }
-  html:not([data-layout="phone"]) .voucher-row { background: var(--card); border-radius: var(--radius); border-bottom: none; box-shadow: var(--shadow-card); }
+  /* v1.5.157: tablet voucher list = 1 column full-width rows (user: 2-col was cramped) */
+  html:not([data-layout="phone"]) #voucher-list { display: block; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden; }
+  html:not([data-layout="phone"]) .voucher-row { background: transparent; border-radius: 0; border-bottom: .5px solid var(--hairline); box-shadow: none; }
+  html:not([data-layout="phone"]) .voucher-row:last-child { border-bottom: none; }
   html:not([data-layout="phone"]) #voucher-list .empty, html:not([data-layout="phone"]) #voucher-list .skel {
-    grid-column: 1 / -1; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
+    background: transparent; border-radius: 0; box-shadow: none;
   }
   html:not([data-layout="phone"]) .stat-grid { gap: 12px; }
   html:not([data-layout="phone"]) .stat { padding: 14px 6px 12px; }
@@ -844,10 +845,12 @@ html[data-layout="tablet"] .view { max-width: 980px; }
 html[data-layout="tablet"] #main { padding-left: 22px; padding-right: 22px; }
 html[data-layout="tablet"] .toolbar { margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px; }
 html[data-layout="tablet"] .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
-html[data-layout="tablet"] #voucher-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: none; box-shadow: none; overflow: visible; }
-html[data-layout="tablet"] .voucher-row { background: var(--card); border-radius: var(--radius); border-bottom: none; box-shadow: var(--shadow-card); }
+/* v1.5.157: tablet voucher list = 1 column full-width rows (user: 2-col was cramped) */
+html[data-layout="tablet"] #voucher-list { display: block; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden; }
+html[data-layout="tablet"] .voucher-row { background: transparent; border-radius: 0; border-bottom: .5px solid var(--hairline); box-shadow: none; }
+html[data-layout="tablet"] .voucher-row:last-child { border-bottom: none; }
 html[data-layout="tablet"] #voucher-list .empty, html[data-layout="tablet"] #voucher-list .skel {
-  grid-column: 1 / -1; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
+  background: transparent; border-radius: 0; box-shadow: none;
 }
 html[data-layout="tablet"] .stat-grid { gap: 12px; }
 html[data-layout="tablet"] .stat { padding: 14px 6px 12px; }

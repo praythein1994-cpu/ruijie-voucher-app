@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.156'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.157'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
