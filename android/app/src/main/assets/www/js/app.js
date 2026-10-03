@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.152'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.153'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -6604,7 +6604,7 @@ async function updCheckBanner() {
 }
 let updWatchTimer = null;
 let updLastWatch = 0;
-const UPD_WATCH_MS = 30 * 60 * 1000; // re-check every 30 min while the app runs
+const UPD_WATCH_MS = 60 * 60 * 1000; // v1.5.153: re-check every 1 hour while the app runs (user request)
 async function updWatchTick() {
   updLastWatch = Date.now();
   if (!updBridge()) return;

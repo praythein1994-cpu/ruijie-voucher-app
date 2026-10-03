@@ -6604,7 +6604,7 @@ async function updCheckBanner() {
 }
 let updWatchTimer = null;
 let updLastWatch = 0;
-const UPD_WATCH_MS = 30 * 60 * 1000; // re-check every 30 min while the app runs
+const UPD_WATCH_MS = 60 * 60 * 1000; // v1.5.153: re-check every 1 hour while the app runs (user request)
 async function updWatchTick() {
   updLastWatch = Date.now();
   if (!updBridge()) return;
