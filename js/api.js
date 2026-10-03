@@ -434,6 +434,128 @@ const GwApi = {
     return { count: Number.isFinite(count) ? count : arr.length, flows: arr };
   },
 
+  /* ── QoS management (v1.5.150) — VERIFIED from user's Gateway Capture
+   * 2026-10-03 (gateway-capture-20261003-175108.txt, -175334.txt).
+   * Smart QoS: devConfig.set module "flowctrl".
+   * Key Group (App Priority): devConfig.update module "flowctrl_app".
+   * App features: devConfig.update module "funcmgr" cmd "ctlSta". */
+
+  /** Read Smart QoS config. Returns {tcSwitch, uploadBand, downloadBand} or null. */
+  async qosGet() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.get',
+        params: { module: 'flowctrl', noParse: false, async: null, remoteIp: false, device: 'pc' },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const d = (j && j.data) || {};
+      const list = Array.isArray(d.list) ? d.list : [];
+      const wan = list[0] || {};
+      return {
+        tcSwitch: d.tcSwitch || 'off',
+        uploadBand: wan.uploadBand || '',
+        downloadBand: wan.downloadBand || '',
+        raw: d,
+      };
+    });
+  },
+
+  /** Write Smart QoS config. tcSwitch: "on"|"off". Returns true on success. */
+  async qosSet(tcSwitch, uploadBand, downloadBand) {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.set',
+        params: {
+          module: 'flowctrl', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: {
+            tcSwitch: tcSwitch ? 'on' : 'off',
+            p2pSwtich: 'off',
+            wanNum: '1',
+            list: [{
+              downloadBand: String(downloadBand),
+              enable: 'on',
+              ifname: 'br-wan',
+              uploadBand: String(uploadBand),
+            }],
+            version: '1.0.0',
+          },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return j && j.code === 0;
+    });
+  },
+
+  /** Read Application Priority Key Group. Returns {appList:[...]} or null. */
+  async qosAppGet() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: { module: 'flowctrl_app', noParse: false, async: null, remoteIp: false, device: 'pc' },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const d = (j && j.data) || {};
+      const list = Array.isArray(d.list) ? d.list : [];
+      const key = list.find(x => x.appGrp === 'key') || list[0] || {};
+      return { appList: Array.isArray(key.appList) ? key.appList : [], raw: d };
+    });
+  },
+
+  /** Write Application Priority Key Group app list. Returns true on success. */
+  async qosAppSet(appList) {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.update',
+        params: {
+          module: 'flowctrl_app', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: { list: [{ appGrp: 'key', name: '关键通道', appList: appList }] },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return j && j.code === 0;
+    });
+  },
+
+  /** Toggle a funcmgr feature (e.g. "app_identify"). on: boolean. Returns true on success. */
+  async funcToggle(funcName, on) {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devConfig.update',
+        params: {
+          module: 'funcmgr', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: {
+            cmd: 'ctlSta',
+            data: { funcName: [funcName], switch: on ? '1' : '0' },
+            callSource: 'front',
+          },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return j && j.code === 0;
+    });
+  },
+
+  /** Read funcmgr status for all functions. Returns {funcName: "1"|"0"} map or null. */
+  async funcStatus() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: {
+          module: 'funcmgr', noParse: false, async: null, remoteIp: false, device: 'pc',
+          data: { cmd: 'getSta', data: { funcName: ['all'] } },
+        },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      return (j && j.data) || null;
+    });
+  },
+
   /**
    * Gateway-local wireless client (STA) list, v1.5.29.
    * v1.5.96: the gateway's OWN Online Clients page (/admin/home_online)

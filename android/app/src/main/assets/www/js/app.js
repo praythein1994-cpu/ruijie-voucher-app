@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.149'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.150'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -512,6 +512,29 @@ const I18N = {
   'fw.checkAgain': { my: 'ပြန်စစ်မယ်', en: 'Check again' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
+  'm.qos': { my: 'QoS', en: 'QoS' },
+  'm.qosSub': { my: 'ဂိမ်းလိုင်းဦးစားပေး', en: 'Gaming priority' },
+  'q.title': { my: 'QoS — ဂိမ်းဦးစားပေး', en: 'QoS — Gaming Priority' },
+  'q.smart': { my: 'Smart QoS', en: 'Smart QoS' },
+  'q.on': { my: 'ဖွင့်', en: 'ON' },
+  'q.off': { my: 'ပိတ်', en: 'OFF' },
+  'q.up': { my: 'Uplink', en: 'Uplink' },
+  'q.down': { my: 'Downlink', en: 'Downlink' },
+  'q.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'q.refresh': { my: 'ပြန်ဖတ်', en: 'Refresh' },
+  'q.saving': { my: 'သိမ်းနေတယ်…', en: 'Saving…' },
+  'q.saved': { my: 'သိမ်းပြီးပြီ ✓', en: 'Saved ✓' },
+  'q.fail': { my: 'မအောင်မြင်ဘူး', en: 'Failed' },
+  'q.smartHint': { my: 'Smart QoS ဖွင့်ထားရင် manual speed limit တွေ အလုပ်မလုပ်ဘူး။ Portal group limit တွေက ဆက်အလုပ်လုပ်တယ်။', en: 'When Smart QoS is on, manual speed limits are inactive. Portal group limits still apply.' },
+  'q.keygrp': { my: 'Key Group (အမြင့်ဆုံးဦးစားပေး)', en: 'Key Group (highest priority)' },
+  'q.keygrpHint': { my: 'ဒီ app တွေရဲ့ traffic ကို အမြဲဦးစားပေးမယ်', en: 'Traffic from these apps is always prioritized' },
+  'q.appPh': { my: 'App နာမည် (ဥပမာ MobileLegends)', en: 'App name (e.g. MobileLegends)' },
+  'q.noApps': { my: 'App မရှိသေးဘူး', en: 'No apps yet' },
+  'q.appid': { my: 'App Identification', en: 'App Identification' },
+  'q.appidHint': { my: 'DPI — memory 9MB သုံးတယ်။ Gateway offline သွားရင် ပိတ်လိုက်။', en: 'DPI — uses 9MB memory. Turn off if gateway goes offline.' },
+  'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
+  'q.confirmApp': { my: 'Key Group သိမ်းမလား?', en: 'Save Key Group?' },
+  'q.confirmAppId': { my: 'App Identification ပြောင်းမလား?', en: 'Change App Identification?' },
   'm.webauth': { my: 'Web Auth', en: 'Web Auth' },
   'm.webauthSub': { my: 'ဝင်ရောက်ခွင့်စီမံခန့်ခွဲမှု', en: 'Portal config' },
   'wa.title': { my: 'Web Authentication', en: 'Web Authentication' },
@@ -5159,6 +5182,154 @@ async function moreWebAuth() {
   });
 }
 
+/* ── QoS management (More → QoS) · v1.5.150 ──
+ * VERIFIED APIs from user's Gateway Capture 2026-10-03.
+ * Smart QoS toggle + bandwidth, Application Priority Key Group,
+ * App Identification toggle. */
+async function moreQoS() {
+  S.moreFn = moreQoS;
+  moreShell(`${ic('signal', 'sm')} ${esc(t('q.title'))}`, `
+    ${GwApi.loggedIn() ? '' : `<p class="muted small">${t('md.needGw')}</p>`}
+    <div id="q-body"><p class="muted">${t('more.loading')}</p></div>`);
+  if (GwApi.loggedIn()) loadQoS();
+}
+
+async function loadQoS() {
+  const body = $('q-body');
+  if (!body) return;
+  body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
+  try {
+    const [qos, app, func] = await Promise.all([
+      GwApi.qosGet().catch(() => null),
+      GwApi.qosAppGet().catch(() => null),
+      GwApi.funcStatus().catch(() => null),
+    ]);
+    const smartOn = qos && qos.tcSwitch === 'on';
+    const up = (qos && qos.uploadBand) || '';
+    const down = (qos && qos.downloadBand) || '';
+    const apps = (app && app.appList) || [];
+    // funcmgr status shape varies; try common paths
+    let appIdOn = null;
+    try {
+      const f = func || {};
+      const arr = f.list || f.data || f.funcList || [];
+      if (Array.isArray(arr)) {
+        const hit = arr.find(x => (x.funcName || x.name) === 'app_identify');
+        if (hit) appIdOn = String(hit.switch || hit.status || hit.enable) === '1';
+      } else if (typeof f === 'object') {
+        for (const k of Object.keys(f)) {
+          const v = f[k];
+          if (k === 'app_identify' || (v && (v.funcName === 'app_identify'))) {
+            appIdOn = String(v.switch ?? v.status ?? v) === '1';
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+
+    body.innerHTML = `
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <b>${esc(t('q.smart'))}</b>
+          <button class="btn ${smartOn ? 'btn-on' : ''}" id="q-smart-tgl" style="min-width:88px">${smartOn ? t('q.on') : t('q.off')}</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label style="flex:1">${esc(t('q.up'))} (Mbps)<br><input type="number" id="q-up" value="${esc(up)}" min="1" max="1000" inputmode="numeric"></label>
+          <label style="flex:1">${esc(t('q.down'))} (Mbps)<br><input type="number" id="q-down" value="${esc(down)}" min="1" max="1000" inputmode="numeric"></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="q-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
+          <button class="btn" id="q-refresh">${ic('refresh', 'sm')}<span>${t('q.refresh')}</span></button>
+        </div>
+        <p class="muted small" style="margin-top:8px">${esc(t('q.smartHint'))}</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <b>${esc(t('q.keygrp'))}</b>
+        <p class="muted small">${esc(t('q.keygrpHint'))}</p>
+        <div id="q-apps" style="margin:8px 0"></div>
+        <div class="row">
+          <input type="text" id="q-app-add" placeholder="${esc(t('q.appPh'))}" style="flex:1">
+          <button class="btn" id="q-app-addbtn">${ic('plus', 'sm')}</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="q-app-save">${ic('check', 'sm')}<span>${t('q.save')}</span></button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div><b>${esc(t('q.appid'))}</b><br><span class="muted small">${esc(t('q.appidHint'))}</span></div>
+          <button class="btn ${appIdOn ? 'btn-on' : ''}" id="q-appid-tgl" style="min-width:88px">${appIdOn === null ? '—' : (appIdOn ? t('q.on') : t('q.off'))}</button>
+        </div>
+      </div>`;
+
+    let curSmart = smartOn;
+    let curApps = [...apps];
+    let curAppId = appIdOn;
+
+    const renderApps = () => {
+      const el = $('q-apps');
+      if (!el) return;
+      el.innerHTML = curApps.map((a, i) =>
+        `<span class="chip" style="margin:2px">${esc(a)} <b data-ai="${i}" style="cursor:pointer">×</b></span>`
+      ).join('') || `<span class="muted small">${t('q.noApps')}</span>`;
+      el.querySelectorAll('[data-ai]').forEach(x => x.addEventListener('click', () => {
+        curApps.splice(Number(x.dataset.ai), 1);
+        renderApps();
+      }));
+    };
+    renderApps();
+
+    $('q-smart-tgl').addEventListener('click', async () => {
+      const to = !curSmart;
+      if (!confirm(t('q.confirmSmart'))) return;
+      toast(t('q.saving'));
+      try {
+        const ok = await GwApi.qosSet(to, $('q-up').value || up || '15', $('q-down').value || down || '150');
+        if (ok) { curSmart = to; toast(t('q.saved')); loadQoS(); }
+        else toast(t('q.fail'));
+      } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+    });
+
+    $('q-save').addEventListener('click', async () => {
+      toast(t('q.saving'));
+      try {
+        const ok = await GwApi.qosSet(curSmart, $('q-up').value || '15', $('q-down').value || '150');
+        toast(ok ? t('q.saved') : t('q.fail'));
+        if (ok) loadQoS();
+      } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+    });
+
+    $('q-refresh').addEventListener('click', loadQoS);
+
+    $('q-app-addbtn').addEventListener('click', () => {
+      const v = $('q-app-add').value.trim();
+      if (v && !curApps.includes(v)) { curApps.push(v); $('q-app-add').value = ''; renderApps(); }
+    });
+
+    $('q-app-save').addEventListener('click', async () => {
+      if (!confirm(t('q.confirmApp'))) return;
+      toast(t('q.saving'));
+      try {
+        const ok = await GwApi.qosAppSet(curApps);
+        toast(ok ? t('q.saved') : t('q.fail'));
+      } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+    });
+
+    $('q-appid-tgl').addEventListener('click', async () => {
+      const to = !(curAppId === true);
+      if (!confirm(t('q.confirmAppId'))) return;
+      toast(t('q.saving'));
+      try {
+        const ok = await GwApi.funcToggle('app_identify', to);
+        if (ok) { curAppId = to; toast(t('q.saved')); loadQoS(); }
+        else toast(t('q.fail'));
+      } catch (e) { toast(t('q.fail') + ': ' + e.message); }
+    });
+  } catch (e) {
+    body.innerHTML = `<p class="muted">⚠️ ${esc(e.message)}</p>`;
+  }
+}
+
 async function moreTraffic() {
   S.moreFn = moreTraffic;
   moreShell(`${ic('chart', 'sm')} ${esc(t('mt.title'))}`, `
@@ -8643,6 +8814,7 @@ async function init() {
     else if (k === 'devices') moreDevices();
     else if (k === 'firmware') moreFirmware(); // v1.5.145: dedicated firmware screen
     else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
+    else if (k === 'qos') moreQoS(); // v1.5.150: QoS management (verified APIs)
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
