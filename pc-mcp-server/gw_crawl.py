@@ -54,18 +54,30 @@ with sync_playwright() as p:
             return False
         pwd.fill(PASSWORD)
         time.sleep(1)
-        # Robust click: use evaluate to click the VISIBLE "Log In" button
-        clicked = page.evaluate("""() => {
-            for (const b of document.querySelectorAll('button[type="submit"]')) {
-                if (b.offsetParent !== null && b.innerText.trim() === 'Log In') {
-                    b.click(); return true;
+        # Step 1: accept the agreement (required in fresh sessions)
+        page.evaluate("""() => {
+            const els = document.querySelectorAll('*');
+            for (const el of els) {
+                if (el.children.length <= 1 && el.innerText) {
+                    const t = el.innerText.trim();
+                    if (t.indexOf('I have read and agreed') === 0) { el.click(); break; }
                 }
             }
-            // fallback: first visible submit button
-            for (const b of document.querySelectorAll('button[type="submit"]')) {
-                if (b.offsetParent !== null) { b.click(); return true; }
+            const cb = document.querySelector('input[type="checkbox"]');
+            if (cb && !cb.checked) cb.click();
+        }""")
+        time.sleep(1)
+        # Step 2: click the visible Log In button (fuzzy match)
+        clicked = page.evaluate("""() => {
+            const btns = [...document.querySelectorAll('button')];
+            for (const b of btns) {
+                const t = (b.innerText || '').trim();
+                if (t.indexOf('Log In') >= 0 && b.offsetParent !== null) { b.click(); return t; }
             }
-            return false;
+            for (const b of btns) {
+                if (b.offsetParent !== null && b.type === 'submit') { b.click(); return b.innerText.trim(); }
+            }
+            return 'none';
         }""")
         print("login clicked: %s" % clicked, flush=True)
         time.sleep(8)
