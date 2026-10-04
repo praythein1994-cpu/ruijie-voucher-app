@@ -92,18 +92,31 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
 Write-Host "== 3. javac =="
 New-Item -ItemType Directory -Force -Path "$BuildTmp/classes" | Out-Null
-$javaFiles = (Get-ChildItem -Recurse "$AppDir/java" -Filter "*.java").FullName + (Get-ChildItem -Recurse "$BuildTmp/gen" -Filter "*.java").FullName
+$javaFiles = @()
+$javaFiles += (Get-ChildItem -Recurse "$AppDir/java" -Filter "*.java" -ErrorAction SilentlyContinue).FullName
+$javaFiles += (Get-ChildItem -Recurse "$BuildTmp/gen" -Filter "*.java" -ErrorAction SilentlyContinue).FullName
+$javaFiles = $javaFiles | Where-Object { $_ }
+Write-Host "Found $($javaFiles.Count) Java files"
+if ($javaFiles.Count -eq 0) { Write-Host "ERROR: No Java files found!" -ForegroundColor Red; exit 1 }
 & javac -encoding UTF-8 -source 8 -target 8 -nowarn `
     -classpath "$Platform/android.jar" `
     -d "$BuildTmp/classes" `
     $javaFiles
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: javac failed with exit code $LASTEXITCODE" -ForegroundColor Red; exit 1 }
+$classCount = (Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class" -ErrorAction SilentlyContinue).Count
+Write-Host "Compiled $classCount class files"
+if ($classCount -eq 0) { Write-Host "ERROR: No class files produced!" -ForegroundColor Red; exit 1 }
 
 Write-Host "== 4. d8 (dex) =="
 New-Item -ItemType Directory -Force -Path "$BuildTmp/dex" | Out-Null
-$classFiles = (Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class").FullName
+$classFiles = (Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class" -ErrorAction SilentlyContinue).FullName | Where-Object { $_ }
+Write-Host "Dexing $($classFiles.Count) class files"
 & "$BT/d8" --lib "$Platform/android.jar" --min-api 24 `
     --output "$BuildTmp/dex" `
     $classFiles
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: d8 failed with exit code $LASTEXITCODE" -ForegroundColor Red; exit 1 }
+if (-not (Test-Path "$BuildTmp/dex/classes.dex")) { Write-Host "ERROR: classes.dex not created!" -ForegroundColor Red; exit 1 }
+Write-Host "classes.dex created"
 
 Write-Host "== 5. Add classes.dex =="
 $apkPath = "$OutDir/base.apk"
