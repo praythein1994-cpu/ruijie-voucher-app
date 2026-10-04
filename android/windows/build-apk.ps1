@@ -114,9 +114,11 @@ $classFiles = @(Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class" -Er
 Write-Host "Dexing $($classFiles.Count) class files"
 $d8bat = "$BT/d8.bat"
 if (-not (Test-Path $d8bat)) { $d8bat = "$BT/d8" }
-# Build argument array explicitly to avoid PowerShell native-command array issues
-$d8args = @('--lib', "$Platform/android.jar", '--min-api', '24', '--output', $dexOut) + $classFiles
-& $d8bat @d8args
+# v1.5.174-fix: use argfile to avoid Windows command-line length limit
+$argFile = "$BuildTmp/d8-args.txt"
+$argLines = @('--lib', "$Platform/android.jar", '--min-api', '24', '--output', $dexOut) + $classFiles
+$argLines | Out-File -FilePath $argFile -Encoding ASCII
+& $d8bat "@$argFile"
 if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: d8 failed with exit code $LASTEXITCODE" -ForegroundColor Red; exit 1 }
 if (-not (Test-Path "$BuildTmp/dex/classes.dex")) { Write-Host "ERROR: classes.dex not created!" -ForegroundColor Red; exit 1 }
 Write-Host "classes.dex created"
