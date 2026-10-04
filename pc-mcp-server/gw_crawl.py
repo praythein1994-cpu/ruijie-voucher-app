@@ -44,17 +44,30 @@ with sync_playwright() as p:
 
     def login():
         page.goto(GATEWAY_URL, wait_until="domcontentloaded", timeout=20000)
-        time.sleep(3)
+        try:
+            page.wait_for_selector('input[type="password"]', timeout=15000)
+        except Exception:
+            return False
+        time.sleep(2)
         pwd = page.query_selector('input[type="password"]')
         if not pwd:
             return False
         pwd.fill(PASSWORD)
         time.sleep(1)
-        btn = page.query_selector('button[type="submit"], .login-btn')
-        if btn:
-            btn.click()
-        else:
-            pwd.press("Enter")
+        # Robust click: use evaluate to click the VISIBLE "Log In" button
+        clicked = page.evaluate("""() => {
+            for (const b of document.querySelectorAll('button[type="submit"]')) {
+                if (b.offsetParent !== null && b.innerText.trim() === 'Log In') {
+                    b.click(); return true;
+                }
+            }
+            // fallback: first visible submit button
+            for (const b of document.querySelectorAll('button[type="submit"]')) {
+                if (b.offsetParent !== null) { b.click(); return true; }
+            }
+            return false;
+        }""")
+        print("login clicked: %s" % clicked, flush=True)
         time.sleep(8)
         return bool(re.search(r';stok=[a-f0-9]+', page.url))
 
