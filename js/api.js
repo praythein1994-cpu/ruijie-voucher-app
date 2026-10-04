@@ -461,24 +461,37 @@ const GwApi = {
     });
   },
 
-  /** Write Smart QoS config. tcSwitch: "on"|"off". Returns true on success. */
-  async qosSet(tcSwitch, uploadBand, downloadBand) {
+  /** Write Smart QoS config. tcSwitch: "on"|"off". Returns true on success.
+   * v1.5.171: accepts the last-read gateway state (raw) and merges — fields
+   * the UI doesn't edit (p2p switch, wan count, extra WAN entries) are
+   * preserved so a concurrent change from the other phone isn't clobbered.
+   * The gateway is the source of truth; callers should pass fresh raw. */
+  async qosSet(tcSwitch, uploadBand, downloadBand, raw) {
     return this._withAutoRelogin(async () => {
+      const r = (raw && typeof raw === 'object') ? raw : {};
+      const upB = String(uploadBand);
+      const dnB = String(downloadBand);
+      // Preserve every WAN entry the gateway reported, applying the new
+      // bands to each (UI exposes a single up/down pair).
+      const rawList = Array.isArray(r.list) ? r.list : [];
+      const list = rawList.length
+        ? rawList.map(w => ({ ...w, uploadBand: upB, downloadBand: dnB }))
+        : [{
+            downloadBand: dnB,
+            enable: 'on',
+            ifname: 'br-wan',
+            uploadBand: upB,
+          }];
       const body = {
         method: 'devConfig.set',
         params: {
           module: 'flowctrl', noParse: false, async: null, remoteIp: false, device: 'pc',
           data: {
             tcSwitch: tcSwitch ? 'on' : 'off',
-            p2pSwtich: 'off',
-            wanNum: '1',
-            list: [{
-              downloadBand: String(downloadBand),
-              enable: 'on',
-              ifname: 'br-wan',
-              uploadBand: String(uploadBand),
-            }],
-            version: '1.0.0',
+            p2pSwtich: r.p2pSwtich || 'off',
+            wanNum: r.wanNum || '1',
+            list,
+            version: r.version || '1.0.0',
           },
         },
       };
@@ -586,10 +599,8 @@ const GwApi = {
         if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
         if (typeof node === 'object') {
           const nm = node.name || node.appName || node.label || node.app_name || node.title;
-          // v1.5.167: only add LEAF apps (empty/missing app_list) — not category names
-          const kids = node.app_list || node.children || node.sub || node.apps || node.list || node.items;
-          const isLeaf = !kids || (Array.isArray(kids) && kids.length === 0);
-          if (nm && typeof nm === 'string' && isLeaf) addName(nm);
+          // v1.5.171: include ALL named nodes (parents like PUBG too) — match Gateway search behavior
+          if (nm && typeof nm === 'string') addName(nm);
           for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree', 'grp_list', 'group_list', 'app_list']) {
             if (node[k]) walk(node[k], depth + 1);
           }
@@ -597,6 +608,8 @@ const GwApi = {
         }
       };
       try { walk(d, 0); } catch (_) {}
+      // v1.5.171: sort A-Z (case-insensitive) so the app list is alphabetical
+      out.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
       if (out.length >= 3) return out;
       throw new Error('parsed ' + out.length + ' apps');
     });

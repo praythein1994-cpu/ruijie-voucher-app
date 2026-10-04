@@ -129,17 +129,14 @@ input:focus, select:focus { outline: none; box-shadow: 0 0 0 2.5px var(--blue); 
 }
 .input-wrap input { padding-right: 44px; }
 input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appearance: none; }
-.search-wrap { position: relative; }
-.search-wrap input { padding-right: 40px; border-radius: 12px; }
-.search-wrap .clear {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  border: none; background: var(--gray); color: #fff; font-size: 12px; cursor: pointer;
-  width: 22px; height: 22px; border-radius: 50%; display: none; align-items: center; justify-content: center;
-  padding: 0;
+.search-wrap { position: relative; display: flex; gap: 8px; align-items: center; }
+.search-wrap input { padding-right: 12px; border-radius: 12px; flex: 1; }
+.search-wrap #search-clear {
+  display: none; flex: none; white-space: nowrap;
 }
-.search-wrap.has-text .clear { display: flex; }
-/* ✕ always visible while the bar is open, so the bar can always be closed */
-.toolbar-row .search-wrap.open .clear { display: flex; }
+.search-wrap.has-text #search-clear { display: inline-flex; }
+/* cancel always visible while the bar is open, so the bar can always be closed */
+.toolbar-row .search-wrap.open #search-clear { display: inline-flex; }
 
 /* iOS toggle switch */
 .switch { position: relative; width: 51px; height: 31px; flex: none; }
@@ -813,7 +810,6 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
 }
 @keyframes searchin { from { opacity: 0; transform: translateX(16px) scale(.97); } to { opacity: 1; transform: none; } }
 .toolbar-row .search-wrap input { margin-top: 6px; }
-.search-wrap .clear .ic.sm { width: 12px; height: 12px; }
 
 /* ── Tablet / large-phone landscape layouts ── */
 .grid-2 { display: grid; gap: 14px; }
@@ -1205,7 +1201,116 @@ html[data-layout="tablet"] .codetype-grid { gap: 12px; }
 [data-theme="clay"] .modal-box { border-radius: 30px 30px 0 0; border: 3px solid rgba(255,255,255,.7); border-bottom: none; }
 [data-theme="clay"] table.data { border: 3px solid rgba(255,255,255,.7); }
 [data-theme="clay"] .stepper { border: 2.5px solid #E2E8F2; border-radius: 18px; box-shadow: inset 3px 3px 7px rgba(163,177,198,.3); }
-[data-theme="clay"] details.advanced { border: 2.5px solid #E2E8F2; border-radius: 18px; }
+[data-theme="apple"] details.advanced { border: 2.5px solid #E2E8F2; border-radius: 18px; }
+
+/* ═══════════ Apple theme (v1.5.171) — Apple's design system ═══════════
+   Tokens from getdesign.md Apple DESIGN.md analysis:
+   - Single Action Blue accent #0066cc, focus #0071e3
+   - Ink #1d1d1f (not pure black), canvas #ffffff, parchment #f5f5f7
+   - Pills (9999px) for actions, 18px cards, 8px utility radius
+   - NO shadows on chrome/cards/buttons, NO gradients
+   - SF Pro typography: headlines 600 w/ negative letter-spacing, body 17px/400 */
+[data-theme="apple"] {
+  --blue: #0066cc; --green: #34C759; --red: #FF3B30; --orange: #FF9500;
+  --yellow: #FFCC00; --purple: #AF52DE;
+  --bg: #F5F5F7; --fill-bg: #FFFFFF; --card: #FFFFFF;
+  --label: #1D1D1F; --label-2: #3A3A3C; --gray: #8E8E93;
+  --separator: #E0E0E0; --hairline: #F0F0F0;
+  --radius: 18px; --radius-s: 10px;
+  --shadow-card: none;
+  --shadow-pop: 0 8px 30px rgba(0,0,0,.12);
+}
+[data-theme="apple"] body {
+  background: #F5F5F7;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  color: #1D1D1F;
+  letter-spacing: -0.24px;
+}
+[data-theme="apple"] h1, [data-theme="apple"] h2, [data-theme="apple"] h3,
+[data-theme="apple"] .page-title, [data-theme="apple"] .section-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 600; letter-spacing: -0.37px; color: #1D1D1F;
+}
+[data-theme="apple"] .card, [data-theme="apple"] .list, [data-theme="apple"] .stat {
+  background: #FFFFFF; border: none; border-radius: 18px;
+  box-shadow: none;
+}
+[data-theme="apple"] .voucher-row { border-bottom: .5px solid #F0F0F0; }
+[data-theme="apple"] .voucher-row:active { background: #F5F5F7; }
+[data-theme="apple"] input, [data-theme="apple"] select, [data-theme="apple"] textarea {
+  background: #FFFFFF; border: .5px solid #E0E0E0; border-radius: 10px;
+  color: #1D1D1F; font-size: 17px;
+}
+[data-theme="apple"] input:focus, [data-theme="apple"] select:focus, [data-theme="apple"] textarea:focus {
+  border-color: #0071E3; outline: none;
+  box-shadow: 0 0 0 2px rgba(0,113,227,.25);
+}
+[data-theme="apple"] input::placeholder { color: #8E8E93; }
+[data-theme="apple"] #project-select { background-color: #FFFFFF; color: #1D1D1F; border-radius: 10px; }
+[data-theme="apple"] #project-select option { color: #1D1D1F; background: #fff; }
+/* Apple: blue pill primary, scale press state, 2px focus ring */
+[data-theme="apple"] .btn.primary {
+  background: #0066CC; color: #FFFFFF;
+  border-radius: 9999px; border: none; box-shadow: none;
+  font-weight: 400; letter-spacing: -0.22px;
+  min-height: 44px; padding: 11px 22px;
+}
+[data-theme="apple"] .btn.primary:active { transform: scale(.95); background: #0066CC; opacity: 1; box-shadow: none; }
+[data-theme="apple"] .btn.primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #0071E3; }
+[data-theme="apple"] .btn:not(.primary) {
+  border-radius: 9999px; box-shadow: none;
+  min-height: 44px;
+}
+[data-theme="apple"] .btn.danger { background: #FF3B30; color: #fff; border-radius: 9999px; box-shadow: none; }
+[data-theme="apple"] .btn.danger:active { transform: scale(.95); opacity: 1; box-shadow: none; }
+[data-theme="apple"] .chip {
+  background: #FFFFFF; border: .5px solid #E0E0E0; color: #1D1D1F;
+  border-radius: 9999px; box-shadow: none;
+  min-height: 44px;
+}
+[data-theme="apple"] .chip:active { transform: scale(.96); box-shadow: none; }
+[data-theme="apple"] .chip.active {
+  background: #0066CC; border-color: #0066CC; color: #FFFFFF; box-shadow: none;
+}
+/* iOS tabbar: frosted white, hairline top border */
+[data-theme="apple"] #tabbar {
+  background: rgba(255,255,255,.86);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: none; border-top: .5px solid #E0E0E0; border-radius: 0;
+  box-shadow: none;
+}
+[data-theme="apple"] .tab { color: #8E8E93; }
+[data-theme="apple"] .tab.active { color: #0066CC; }
+[data-theme="apple"] #topbar { background: rgba(255,255,255,.86); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-bottom: .5px solid #E0E0E0; }
+[data-theme="apple"] .toolbar { background: #FFFFFF; border-bottom: .5px solid #F0F0F0; }
+[data-theme="apple"] .tool-btn {
+  background: #FFFFFF; border: .5px solid #E0E0E0; color: #1D1D1F;
+  border-radius: 10px; box-shadow: none; min-height: 44px;
+}
+[data-theme="apple"] .tool-btn:active { transform: scale(.95); opacity: 1; box-shadow: none; background: #F5F5F7; }
+/* iOS segmented control */
+[data-theme="apple"] .segmented { background: #EFEFF0; border: none; border-radius: 10px; box-shadow: none; padding: 2px; }
+[data-theme="apple"] .segmented button { color: #1D1D1F; border-radius: 8px; min-height: 40px; }
+[data-theme="apple"] .segmented button.active { background: #FFFFFF; color: #1D1D1F; box-shadow: 0 1px 4px rgba(0,0,0,.12); font-weight: 600; }
+[data-theme="apple"] .switch .track { background: #E0E0E0; box-shadow: none; }
+[data-theme="apple"] .switch input:checked + .track { background: #34C759; }
+[data-theme="apple"] .modal-box { background: #FFFFFF; border-radius: 18px; border: none; box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+[data-theme="apple"] .modal-actions { background: transparent; }
+[data-theme="apple"] table.data { background: #FFFFFF; border: none; border-radius: 18px; box-shadow: none; }
+[data-theme="apple"] table.data th { color: #8E8E93; font-weight: 600; font-size: 13px; letter-spacing: -0.08px; }
+[data-theme="apple"] details.advanced { background: #FFFFFF; border: none; border-radius: 18px; box-shadow: none; }
+[data-theme="apple"] .stepper { background: #EFEFF0; border: none; border-radius: 10px; box-shadow: none; }
+[data-theme="apple"] .stepper button { border-radius: 8px; min-width: 44px; min-height: 44px; }
+[data-theme="apple"] a { color: #0066CC; }
+[data-theme="apple"] .set-group { background: #FFFFFF; box-shadow: none; border-radius: 18px; }
+[data-theme="apple"] .set-group .set-row { border-bottom-color: #F0F0F0; color: #1D1D1F; }
+[data-theme="apple"] .set-chev { color: #C7C7CC; }
+/* v1.5.171: Apple theme keeps the frosted icon tile but flat (no gradient/shadow) */
+[data-theme="apple"] .set-ico {
+  background: rgba(0,102,204,.1); border: none; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-radius: 8px;
+}
 
 /* ═══════════ Settings · iOS grouped list (v1.5.50) ═══════════ */
 .set-group {
@@ -1498,6 +1603,18 @@ html[data-layout="tablet"] .upd-banner { margin-left: auto; margin-right: auto; 
 }
 .upd-dl-pct.done { background: #30D158; }
 .upd-dl-label { font-size: 13px; color: var(--gray); }
+/* GlassVPN-style updater (v1.5.171) */
+.upd-ver-row { padding: 4px 0 8px; }
+.upd-avail { border-top: 1px solid var(--hairline); padding: 12px 0 4px; }
+.upd-avail[hidden] { display: none; }
+.upd-avail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.upd-dl-link { background: none; border: none; color: #0A84FF; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.upd-dl-link:active { opacity: .6; }
+.upd-avail-notes { margin-top: 10px; font-size: 14px; color: var(--ink2); white-space: pre-wrap; }
+.upd-bar-wrap { padding: 12px 0 4px; }
+.upd-bar-wrap[hidden] { display: none; }
+.upd-bar { margin-top: 8px; height: 6px; border-radius: 3px; background: var(--fill2); overflow: hidden; }
+.upd-bar-fill { height: 100%; border-radius: 3px; background: #0A84FF; transition: width .2s; }
 /* Tablet — Auto mode on wide screens */
 @media (min-width: 768px) {
   html:not([data-layout="phone"]) .upd-dl { flex-direction: row; justify-content: center; gap: 16px; }
@@ -2431,3 +2548,24 @@ html[data-layout="tablet"] #more-menu.menu-grid {
 html[data-layout="tablet"] #more-menu .menu-item {
   border-bottom: .5px solid var(--hairline);
 }
+
+/* ── Overview dashboard (More → Overview): Traffic Ranking + Newly Connected Clients ──
+ * Phone-first stacked; .grid-2 already goes 2-column on tablet. */
+.ov-panel { min-width: 0; }
+.ov-rank { padding: 10px 0; border-bottom: .5px solid var(--hairline); }
+.ov-rank:last-child { border-bottom: none; }
+.ov-rank-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ov-rank-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-rank-bytes { color: var(--gray); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ov-bar { height: 6px; border-radius: 3px; background: var(--fill-bg); margin-top: 6px; overflow: hidden; }
+.ov-fill { height: 100%; border-radius: 3px; background: var(--blue); transition: width .3s var(--spring); }
+.ov-rank-sub { color: var(--gray); font-size: 12px; margin-top: 4px; }
+.ov-new { padding: 10px 0; border-bottom: .5px solid var(--hairline); }
+.ov-new:last-child { border-bottom: none; }
+.ov-new-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ov-new-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-new .chip { font-size: 12px; padding: 4px 10px; flex-shrink: 0; }
+.ov-new-sub { color: var(--gray); font-size: 12.5px; margin-top: 4px; }
+.ov-new-band { color: var(--gray); font-size: 12.5px; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+/* Forced-tablet duplicate so the two panels sit side-by-side exactly like auto-on-wide. */
+html[data-layout="tablet"] .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }

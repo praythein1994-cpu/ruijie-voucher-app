@@ -586,10 +586,8 @@ const GwApi = {
         if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
         if (typeof node === 'object') {
           const nm = node.name || node.appName || node.label || node.app_name || node.title;
-          // v1.5.167: only add LEAF apps (empty/missing app_list) — not category names
-          const kids = node.app_list || node.children || node.sub || node.apps || node.list || node.items;
-          const isLeaf = !kids || (Array.isArray(kids) && kids.length === 0);
-          if (nm && typeof nm === 'string' && isLeaf) addName(nm);
+          // v1.5.171: include ALL named nodes (parents like PUBG too) — match Gateway search behavior
+          if (nm && typeof nm === 'string') addName(nm);
           for (const k of ['children', 'sub', 'apps', 'list', 'items', 'data', 'tree', 'grp_list', 'group_list', 'app_list']) {
             if (node[k]) walk(node[k], depth + 1);
           }
@@ -597,6 +595,8 @@ const GwApi = {
         }
       };
       try { walk(d, 0); } catch (_) {}
+      // v1.5.171: sort A-Z (case-insensitive) so the app list is alphabetical
+      out.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
       if (out.length >= 3) return out;
       throw new Error('parsed ' + out.length + ' apps');
     });
