@@ -108,12 +108,15 @@ Write-Host "Compiled $classCount class files"
 if ($classCount -eq 0) { Write-Host "ERROR: No class files produced!" -ForegroundColor Red; exit 1 }
 
 Write-Host "== 4. d8 (dex) =="
-New-Item -ItemType Directory -Force -Path "$BuildTmp/dex" | Out-Null
-$classFiles = (Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class" -ErrorAction SilentlyContinue).FullName | Where-Object { $_ }
+$dexOut = "$BuildTmp/dex"
+New-Item -ItemType Directory -Force -Path $dexOut | Out-Null
+$classFiles = @(Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
 Write-Host "Dexing $($classFiles.Count) class files"
-& "$BT/d8" --lib "$Platform/android.jar" --min-api 24 `
-    --output "$BuildTmp/dex" `
-    $classFiles
+$d8bat = "$BT/d8.bat"
+if (-not (Test-Path $d8bat)) { $d8bat = "$BT/d8" }
+# Build argument array explicitly to avoid PowerShell native-command array issues
+$d8args = @('--lib', "$Platform/android.jar", '--min-api', '24', '--output', $dexOut) + $classFiles
+& $d8bat @d8args
 if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: d8 failed with exit code $LASTEXITCODE" -ForegroundColor Red; exit 1 }
 if (-not (Test-Path "$BuildTmp/dex/classes.dex")) { Write-Host "ERROR: classes.dex not created!" -ForegroundColor Red; exit 1 }
 Write-Host "classes.dex created"
