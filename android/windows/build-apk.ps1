@@ -34,10 +34,15 @@ if (-not (Test-Path $PassFile)) { Write-Host "ERROR: Password file not found at 
 if (-not (Test-Path $BT)) { Write-Host "ERROR: Build-tools not found at $BT" -ForegroundColor Red; exit 1 }
 if (-not (Test-Path $Platform)) { Write-Host "ERROR: Platform not found at $Platform" -ForegroundColor Red; exit 1 }
 
-# Update source
+# Update source (optional - skip if on a feature branch)
 Write-Host "== 0. Update source =="
 Push-Location $SrcDir
-& "C:\Program Files\Git\bin\git.exe" pull origin main 2>&1 | Select-Object -Last 2
+$currentBranch = & "C:\Program Files\Git\bin\git.exe" rev-parse --abbrev-ref HEAD 2>$null
+if ($currentBranch -eq "main") {
+    & "C:\Program Files\Git\bin\git.exe" pull origin main 2>&1 | Select-Object -Last 2
+} else {
+    Write-Host "On branch $currentBranch - skipping auto-pull" -ForegroundColor Yellow
+}
 Pop-Location
 
 Write-Host "== 1. Sync web app into assets =="
