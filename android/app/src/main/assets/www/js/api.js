@@ -461,24 +461,37 @@ const GwApi = {
     });
   },
 
-  /** Write Smart QoS config. tcSwitch: "on"|"off". Returns true on success. */
-  async qosSet(tcSwitch, uploadBand, downloadBand) {
+  /** Write Smart QoS config. tcSwitch: "on"|"off". Returns true on success.
+   * v1.5.171: accepts the last-read gateway state (raw) and merges — fields
+   * the UI doesn't edit (p2p switch, wan count, extra WAN entries) are
+   * preserved so a concurrent change from the other phone isn't clobbered.
+   * The gateway is the source of truth; callers should pass fresh raw. */
+  async qosSet(tcSwitch, uploadBand, downloadBand, raw) {
     return this._withAutoRelogin(async () => {
+      const r = (raw && typeof raw === 'object') ? raw : {};
+      const upB = String(uploadBand);
+      const dnB = String(downloadBand);
+      // Preserve every WAN entry the gateway reported, applying the new
+      // bands to each (UI exposes a single up/down pair).
+      const rawList = Array.isArray(r.list) ? r.list : [];
+      const list = rawList.length
+        ? rawList.map(w => ({ ...w, uploadBand: upB, downloadBand: dnB }))
+        : [{
+            downloadBand: dnB,
+            enable: 'on',
+            ifname: 'br-wan',
+            uploadBand: upB,
+          }];
       const body = {
         method: 'devConfig.set',
         params: {
           module: 'flowctrl', noParse: false, async: null, remoteIp: false, device: 'pc',
           data: {
             tcSwitch: tcSwitch ? 'on' : 'off',
-            p2pSwtich: 'off',
-            wanNum: '1',
-            list: [{
-              downloadBand: String(downloadBand),
-              enable: 'on',
-              ifname: 'br-wan',
-              uploadBand: String(uploadBand),
-            }],
-            version: '1.0.0',
+            p2pSwtich: r.p2pSwtich || 'off',
+            wanNum: r.wanNum || '1',
+            list,
+            version: r.version || '1.0.0',
           },
         },
       };

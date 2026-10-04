@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.170'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.171'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -88,6 +88,7 @@ const I18N = {
   'search.label': { my: 'ရှာဖွေမယ်', en: 'Search' },
   'search.ph': { my: 'ကုဒ်နံပါတ်ရှာမယ်…', en: 'Search codes…' },
   'search.clear': { my: 'ရှင်းမယ်', en: 'Clear' },
+  'search.cancel': { my: 'မလုပ်တော့ဘူး', en: 'cancel' },
   'search.refresh': { my: 'ပြန်ဆွဲမယ်', en: 'Refresh' },
   'chip.all': { my: 'အားလုံး', en: 'All' },
   'chip.s1': { my: 'မသုံးရသေး', en: 'Unused' },
@@ -512,6 +513,8 @@ const I18N = {
   'fw.checkAgain': { my: 'ပြန်စစ်မယ်', en: 'Check again' },
   'm.traffic': { my: 'Traffic', en: 'Traffic' },
   'm.trafficSub': { my: 'ဒေတာစီးဆင်းမှု', en: 'Flow table' },
+  'm.overview': { my: 'Overview', en: 'Overview' },
+  'm.overviewSub': { my: 'အကျဉ်းချုပ်', en: 'Dashboard' },
   'm.qos': { my: 'QoS', en: 'QoS' },
   'm.qosSub': { my: 'ဂိမ်းလိုင်းဦးစားပေး', en: 'Gaming priority' },
   'q.title': { my: 'QoS — ဂိမ်းဦးစားပေး', en: 'QoS — Gaming Priority' },
@@ -522,6 +525,7 @@ const I18N = {
   'q.down': { my: 'Downlink', en: 'Downlink' },
   'q.save': { my: 'သိမ်းမယ်', en: 'Save' },
   'q.refresh': { my: 'ပြန်ဖတ်', en: 'Refresh' },
+  'q.synced': { my: 'Gateway နဲ့ sync လုပ်ပြီးချိန်', en: 'Synced with gateway' },
   'q.saving': { my: 'သိမ်းနေတယ်…', en: 'Saving…' },
   'q.saved': { my: 'သိမ်းပြီးပြီ ✓', en: 'Saved ✓' },
   'q.fail': { my: 'မအောင်မြင်ဘူး', en: 'Failed' },
@@ -666,8 +670,11 @@ const I18N = {
   'sl.day30': { my: 'နောက်ဆုံး ၃၀ ရက်', en: 'Last 30 Days' },
   'sl.no': { my: 'စဉ်', en: 'No.' },
   'sl.profile': { my: 'Profile အမည်', en: 'Profile Name' },
+  'sl.profileShort': { my: 'Profile', en: 'Profile' },
+  'sl.priceShort': { my: 'ဈေး', en: 'Price' },
   'sl.made': { my: 'ထုတ်လုပ်ပြီး', en: 'Quantity' },
   'sl.activated': { my: 'စတင်သုံးစွဲသူ', en: 'Activated Accounts' },
+  'sl.activatedShort': { my: 'active', en: 'active' },
   'sl.totalPrice': { my: 'စုစုပေါင်းတန်ဖိုး', en: 'Total Price' },
   'sl.total': { my: 'စုစုပေါင်း', en: 'Total' },
   'sl.dateNote2': { my: 'ရက်စွဲအခြေခံ: ကတ်စတင်သုံးစွဲသည့်ရက် (သက်တမ်းကုန်ချိန် − သက်တမ်းကာလ) — ထုတ်လုပ်သည့်ရက်မဟုတ်ပါ။ တွက်ချက်၍မရသောကတ်များကိုသာ ထုတ်လုပ်သည့်ရက်ဖြင့် ထည့်သွင်းထားပါတယ်။', en: 'Date basis: the day each voucher was first used (expiry time − validity period), not the creation day. Vouchers where this cannot be derived fall back to creation time.' },
@@ -783,6 +790,15 @@ const I18N = {
   'mt.downRate': { my: 'အဆင်းနှုန်း', en: 'Down rate' },
   'mt.est': { my: '(ခန့်မှန်း)', en: '(est.)' },
   'mt.noData': { my: 'client traffic မရှိပါ', en: 'No client traffic' },
+  'ov.title': { my: 'အကျဉ်းချုပ်', en: 'Overview' },
+  'ov.trafficRanking': { my: 'Traffic Ranking', en: 'Traffic Ranking' },
+  'ov.newClients': { my: 'Newly Connected Clients', en: 'Newly Connected Clients' },
+  'ov.refresh': { my: 'ပြန်ဖတ်', en: 'Refresh' },
+  'ov.updated': { my: '{time} က ရထားတာ', en: 'updated {time}' },
+  'ov.noTraffic': { my: 'traffic data မရှိပါ — gateway ချိတ်ထားမှ မြင်ရမည်', en: 'No traffic data — connect the gateway to see it' },
+  'ov.noNew': { my: 'ဗောက်ချာသုံး client အသစ်မရှိပါ', en: 'No new voucher clients' },
+  'ov.needSso': { my: 'client နာမည်တွေမြင်ရရန် Ruijie အကောင့်ဝင်ပါ', en: 'Log in to the Ruijie account to see client names' },
+  'ov.voucher': { my: 'ဗောက်ချာ', en: 'Voucher' },
   'mt.cumNote': { my: 'စုစုပေါင်းတွေက လက်ရှိ flow table ထဲက counter တွေပါ — billing total မဟုတ်ပါ။ နှုန်းတွေက snapshot နှစ်ခုကြား ခန့်မှန်းချက်ပါ။', en: 'Totals are cumulative counters of currently-tracked flows — not billing totals. Rates are estimates between two snapshots.' },
   'mt.dnsTitle': { my: 'DNS စစ်ဆေးမှု', en: 'DNS check' },
   'mt.dnsNote': { my: 'AdGuard (94.140.14.14) မသုံးတဲ့ client တွေက DHCP DNS ကို ကျော်သုံးနေတာ (hardcoded DNS / DoT) ဖြစ်နိုင်တယ်။', en: 'Clients not using AdGuard (94.140.14.14) may bypass DHCP DNS with hardcoded DNS / DoT.' },
@@ -877,9 +893,12 @@ const I18N = {
   's.themeGlass': { my: 'Liquid Glass', en: 'Liquid Glass' },
   's.themeNeo': { my: 'Neumorphism', en: 'Neumorphism' },
   's.themeClay': { my: 'Claymorphism', en: 'Claymorphism' },
+  's.themeApple': { my: 'Apple', en: 'Apple' },
   's.language': { my: 'ဘာသာစကား', en: 'Language' },
   'upd.title': { my: 'အပ်ဒိတ်', en: 'App Update' },
   'upd.check': { my: 'အပ်ဒိတ်စစ်မယ်', en: 'Check for updates' },
+  'upd.availTitle': { my: 'အပ်ဒိတ်ရရှိနိုင်ပါတယ်', en: 'Update available' },
+  'upd.dlInstall': { my: 'ဒေါင်းလုပ်လုပ် & တင်မယ်', en: 'Download & Install' },
   'upd.auto': { my: 'အော်တိုဒေါင်းလုပ်လုပ်မယ်', en: 'Auto-download updates' },
   'upd.autoSub': { my: 'ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်', en: 'Download new versions automatically' },
   'upd.checking': { my: 'စစ်နေတယ်…', en: 'Checking…' },
@@ -1131,9 +1150,9 @@ async function copyText(text) {
 }
 
 /* ── theme (light/dark/glass/neo/clay) ── */
-const THEMES = ['light', 'dark', 'glass', 'neo', 'clay'];
-const THEME_META = { light: '#EDF1F8', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5' };
-const THEME_I18N = { light: 's.themeLight', dark: 's.themeDark', glass: 's.themeGlass', neo: 's.themeNeo', clay: 's.themeClay' };
+const THEMES = ['light', 'dark', 'glass', 'neo', 'clay', 'apple'];
+const THEME_META = { light: '#EDF1F8', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5', apple: '#FFFFFF' };
+const THEME_I18N = { light: 's.themeLight', dark: 's.themeDark', glass: 's.themeGlass', neo: 's.themeNeo', clay: 's.themeClay', apple: 's.themeApple' };
 const LAYOUT_I18N = { auto: 's.layoutAuto', phone: 's.layoutPhone', tablet: 's.layoutTablet' };
 /** v1.5.84: theme/layout are iOS bottom-sheet pickers (like Profile/Package) — fill select options in the current language. */
 function fillThemeLayoutSelects() {
@@ -2240,10 +2259,12 @@ async function loadVouchers(opts) {
     S.vouchersFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
     // v1.5.132: share the code→voucher map with Online Clients so the
     // client list doesn't re-fetch ALL vouchers on every load.
+    // v1.5.171: also stamp _acVMapAt so apClientVoucherMap() treats this
+    // as fresh and skips its own refetch.
     try {
       const m = new Map();
       for (const v of all) { const c = vCode(v); if (c && !m.has(c)) m.set(c, v); }
-      _acVMap = m; _acVMapPid = Number(S.projectId);
+      _acVMap = m; _acVMapPid = Number(S.projectId); _acVMapAt = Date.now();
     } catch (e) { /* map is best-effort */ }
     // newest first
     S.vouchers.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
@@ -5290,6 +5311,12 @@ async function loadQoS() {
     const down = (qos && qos.downloadBand) || '';
     const apps = (app && app.appList) || [];
     const policies = (pol && pol.list) || [];
+    // v1.5.171: keep last-read gateway state — the gateway is the source of
+    // truth, so writes merge onto this (or a fresh re-read) instead of
+    // hardcoded defaults, keeping both phones in sync.
+    const qosRaw = (qos && qos.raw) || null;
+    const appRaw = (app && app.raw) || null;
+    const syncTime = new Date().toLocaleTimeString();
     // funcmgr status shape varies; try common paths
     let appIdOn = null;
     try {
@@ -5310,6 +5337,7 @@ async function loadQoS() {
     } catch (_) {}
 
     body.innerHTML = `
+      <p class="muted small" style="margin:0 0 8px">✓ ${esc(t('q.synced'))} · ${esc(syncTime)}</p>
       <div class="card">
         <div class="row" style="justify-content:space-between;align-items:center">
           <b>${esc(t('q.smart'))}</b>
@@ -5502,7 +5530,11 @@ async function loadQoS() {
       if (!confirm(t('q.confirmSmart'))) return;
       toast(t('q.saving'));
       try {
-        const ok = await GwApi.qosSet(to, $('q-up').value || up || '15', $('q-down').value || down || '150');
+        // v1.5.171: re-read live gateway state first so the other phone's
+        // concurrent change isn't clobbered; user edits merge on top.
+        const fresh = await GwApi.qosGet().catch(() => null);
+        const raw = (fresh && fresh.raw) || qosRaw;
+        const ok = await GwApi.qosSet(to, $('q-up').value || up || '15', $('q-down').value || down || '150', raw);
         if (ok) { curSmart = to; toast(t('q.saved')); loadQoS(); }
         else toast(t('q.fail'));
       } catch (e) { toast(t('q.fail') + ': ' + e.message); }
@@ -5511,7 +5543,10 @@ async function loadQoS() {
     $('q-save').addEventListener('click', async () => {
       toast(t('q.saving'));
       try {
-        const ok = await GwApi.qosSet(curSmart, $('q-up').value || '15', $('q-down').value || '150');
+        // v1.5.171: re-read live gateway state first (see above).
+        const fresh = await GwApi.qosGet().catch(() => null);
+        const raw = (fresh && fresh.raw) || qosRaw;
+        const ok = await GwApi.qosSet(curSmart, $('q-up').value || '15', $('q-down').value || '150', raw);
         toast(ok ? t('q.saved') : t('q.fail'));
         if (ok) loadQoS();
       } catch (e) { toast(t('q.fail') + ': ' + e.message); }
@@ -5570,8 +5605,23 @@ async function loadQoS() {
       if (!confirm(t('q.confirmApp'))) return;
       toast(t('q.saving'));
       try {
-        const ok = await GwApi.qosAppSet(curApps);
+        // v1.5.171: read-modify-write the FULL app-group list. Writing only
+        // the key group (old behavior) would wipe other groups and the other
+        // phone's edits — the gateway stays the source of truth.
+        const fresh = await GwApi.qosAppGet().catch(() => null);
+        const rawList = (fresh && fresh.raw && Array.isArray(fresh.raw.list)) ? fresh.raw.list : null;
+        let ok;
+        if (rawList) {
+          const groups = rawList.map(g => ({ ...g }));
+          const ki = groups.findIndex(g => g.appGrp === 'key');
+          if (ki >= 0) groups[ki] = { ...groups[ki], appList: [...curApps] };
+          else groups.push({ appGrp: 'key', name: '关键通道', appList: [...curApps] });
+          ok = await GwApi.qosAppSetAll(groups);
+        } else {
+          ok = await GwApi.qosAppSet(curApps); // fallback: legacy single-group write
+        }
         toast(ok ? t('q.saved') : t('q.fail'));
+        if (ok) loadQoS();
       } catch (e) { toast(t('q.fail') + ': ' + e.message); }
     });
 
@@ -5650,6 +5700,109 @@ function renderTraffic(body, meta, agg, rates, count, now) {
             ? `<span class="chip ok">✓ ${esc(d)}</span>`
             : `<span class="chip">${esc(d)}</span>`).join(' ')}</td></tr>`).join('') || `<tr><td colspan="2" class="muted">${esc(t('mt.noData'))}</td></tr>`}
     </table></div>`;
+}
+
+/* ── Overview dashboard (More → Overview) ──
+   Ruijie-Cloud-style dashboard: Traffic Ranking (flow-table per-client
+   totals with bars) + Newly Connected Clients (voucher users only, with
+   voucher codes). Tablet: two columns via .grid-2; phone: stacked.
+   Traffic is manual-refresh only (one flow-table poll ≈ 166 kB). */
+async function moreOverview() {
+  S.moreFn = moreOverview;
+  moreShell(`${ic('chart', 'sm')} ${esc(t('ov.title'))}`, `
+    <div><button class="btn" id="ov-refresh">${ic('refresh', 'sm')}<span>${t('ov.refresh')}</span></button>
+    <span class="muted small" id="ov-meta"></span></div>
+    <div class="grid-2" style="margin-top:10px">
+      <section class="ov-panel"><div class="section-title">${esc(t('ov.trafficRanking'))}</div><div id="ov-traffic"><p class="muted">${t('more.loading')}</p></div></section>
+      <section class="ov-panel"><div class="section-title">${esc(t('ov.newClients'))}</div><div id="ov-new"><p class="muted">${t('more.loading')}</p></div></section>
+    </div>`);
+  $('ov-refresh').addEventListener('click', loadOverview);
+  loadOverview();
+}
+
+async function loadOverview() {
+  const tEl = $('ov-traffic'), nEl = $('ov-new'), meta = $('ov-meta');
+  if (!tEl || !nEl) return;
+  const loading = `<p class="muted">${t('more.loading')}</p>`;
+  tEl.innerHTML = loading; nEl.innerHTML = loading;
+  if (meta) meta.textContent = '';
+  const pid = Number(S.projectId);
+  const gwOk = typeof GwApi !== 'undefined' && GwApi.loggedIn();
+  const ssoOk = typeof Api !== 'undefined' && Api.ssoLoggedIn();
+
+  // Traffic: gateway flow table.
+  let agg = [];
+  if (gwOk) {
+    try {
+      const { flows } = await GwApi.flowTable();
+      agg = aggFlowsByClient(flows);
+    } catch (e) { /* section falls back to the no-data note */ }
+  }
+
+  // Clients: portal list for names + voucher attribution. Reuses the cached
+  // voucher map (never forced) — same rule as Online Clients v1.5.132.
+  let list = [], viaPortal = false, vmap = new Map();
+  if (ssoOk) {
+    try {
+      let hasAuth = null;
+      try { hasAuth = await Api.portalAuthStatus(pid); } catch (e) { hasAuth = null; }
+      list = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false, connectType: '' }) || [];
+      viaPortal = true;
+    } catch (e) { list = []; }
+    try { vmap = await apClientVoucherMap(pid, false); } catch (e) { /* voucher enrichment optional */ }
+  }
+
+  // IP → {name, voucher} for traffic-ranking labels.
+  const ipInfo = new Map();
+  list.forEach(c => {
+    const f = mcFields(c, viaPortal, vmap);
+    const ip = String(f.ip || '').trim();
+    if (ip && ip !== '—' && !ipInfo.has(ip)) {
+      ipInfo.set(ip, { name: f.name && f.name !== '—' ? f.name : ip, voucher: f.acct || '' });
+    }
+  });
+  renderOvTraffic(tEl, agg, ipInfo, gwOk);
+
+  // Newly connected: voucher users only, newest first.
+  const voucherClients = list
+    .map(c => ({ c, f: mcFields(c, viaPortal, vmap), ts: Number(c.onlineTime) || 0 }))
+    .filter(x => x.f.acct)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 8);
+  renderOvNew(nEl, voucherClients, ssoOk);
+
+  if (meta) meta.textContent = tx('ov.updated', { time: fmtTime(Date.now()) });
+}
+
+function renderOvTraffic(el, agg, ipInfo, gwOk) {
+  if (!agg.length) { el.innerHTML = `<p class="muted">${esc(t(gwOk ? 'ov.noTraffic' : 'mt.hint'))}</p>`; return; }
+  const topTotal = agg[0].upBytes + agg[0].downBytes;
+  el.innerHTML = agg.slice(0, 10).map(c => {
+    const total = c.upBytes + c.downBytes;
+    const pct = topTotal > 0 ? Math.max(3, Math.round(total / topTotal * 100)) : 0;
+    const info = ipInfo.get(c.ip) || {};
+    const name = info.name || c.ip;
+    const sub = [c.ip, info.voucher ? `${t('ov.voucher')}: ${info.voucher}` : ''].filter(Boolean).join(' · ');
+    return `<div class="ov-rank">
+      <div class="ov-rank-top"><span class="ov-rank-name">${esc(name)}</span><span class="ov-rank-bytes">${esc(fmtBytes(total))}</span></div>
+      <div class="ov-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div class="ov-fill" style="width:${pct}%"></div></div>
+      <div class="ov-rank-sub">${esc(sub)}</div>
+    </div>`;
+  }).join('') + `<p class="muted small">${esc(t('mt.cumNote'))}</p>`;
+}
+
+function renderOvNew(el, items, ssoOk) {
+  if (!ssoOk) { el.innerHTML = `<p class="muted small">${esc(t('ov.needSso'))}</p>`; return; }
+  if (!items.length) { el.innerHTML = `<p class="muted">${esc(t('ov.noNew'))}</p>`; return; }
+  el.innerHTML = items.map(({ c, f }) => {
+    const band = String(c.band || '').trim();
+    const sub = [f.dev && f.dev !== '—' ? f.dev : '', f.since && f.since !== '—' ? f.since : ''].filter(Boolean).join(' · ');
+    return `<div class="ov-new">
+      <div class="ov-new-top"><span class="ov-new-name">${esc(f.name && f.name !== '—' ? f.name : f.mac)}</span><span class="chip ok">${esc(f.acct)}</span></div>
+      ${sub ? `<div class="ov-new-sub">${esc(sub)}</div>` : ''}
+      ${band ? `<div class="ov-new-band">${ic('signal', 'sm')}<span>${esc(band)}</span></div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 /* Extract display values for one Online-Clients record. Pure and
@@ -6658,8 +6811,8 @@ async function checkAppUpdate(manual) {
     }
     if (manual) {
       updSetStatus('');
-      const yes = await iosConfirm(tx('upd.found', { v: rel.tag }), '', t('a.ok'), t('a.cancel'), false);
-      if (yes) updStartDownload(rel, false);
+      // v1.5.171: GlassVPN-style — show update card instead of dialog
+      updShowAvail(rel);
       return { state: 'manual', tag: rel.tag };
     }
     // auto-download mode: fetch quietly in the background
@@ -6670,6 +6823,26 @@ async function checkAppUpdate(manual) {
     else updSetStatus(t('upd.checkFail')); // v1.5.133: auto mode no longer fully silent
     return null;
   }
+}
+/* v1.5.171: GlassVPN-style update available card */
+function updShowAvail(rel) {
+  const card = $('upd-avail');
+  if (!card) return;
+  const ver = $('upd-avail-ver');
+  if (ver) ver.textContent = rel.tag || '';
+  const notes = $('upd-avail-notes');
+  if (notes) notes.textContent = (rel.notes || '').trim() || t('upd.noNotes');
+  card.hidden = false;
+  const btn = $('upd-dl-btn');
+  if (btn) {
+    btn.onclick = () => {
+      card.hidden = true;
+      updStartDownload(rel, false);
+    };
+  }
+  // Hide the bar if it was showing from a previous download
+  const bw = $('upd-bar-wrap');
+  if (bw) bw.hidden = true;
 }
 /* ═══════════ v1.5.138: LIVE UPDATE BANNER + AUTO-DETECT ═══════════
  * The app watches GitHub releases while it runs — a quiet check shortly
@@ -6783,6 +6956,13 @@ function updDlProgress(p) {
   if (pct) pct.textContent = Math.round(p) + '%';
   const fg = $('upd-ring-fg');
   if (fg) fg.style.strokeDashoffset = UPD_RING_C * (1 - Math.min(100, Math.max(0, p)) / 100);
+  // v1.5.171: GlassVPN-style horizontal bar
+  const bw = $('upd-bar-wrap');
+  if (bw) bw.hidden = false;
+  const bl = $('upd-bar-label');
+  if (bl) bl.textContent = tx('upd.downloading', { p: Math.round(p) });
+  const bf = $('upd-bar-fill');
+  if (bf) bf.style.width = Math.min(100, Math.max(0, p)) + '%';
 }
 function updDlDone() {
   const w0 = $('upd-dl');
@@ -7004,6 +7184,14 @@ function initUpdateSettings() {
   const B = updBridge();
   const card = $('upd-card');
   if (card && !B) card.style.display = 'none'; // web build: no updater needed
+  // v1.5.171: show current version in GlassVPN-style header
+  try {
+    const cv = $('upd-cur-ver');
+    if (cv && B) {
+      const v = updCurVersion();
+      if (v.name) cv.textContent = 'Version ' + v.name;
+    }
+  } catch (e) {}
   const tg = $('upd-auto');
   if (tg) {
     tg.checked = !!Store.load().updateAutoDl;
@@ -7683,19 +7871,25 @@ function openMcDetail(idx) {
    against the voucher list for package/price; unmatched codes are shown raw,
    never guessed. Tapping a client loads its onofflineUserHistory — consecutive
    records on different AP serials mean the client roamed between APs. */
-let _acVMap = null, _acVMapPid = 0;
+let _acVMap = null, _acVMapPid = 0, _acVMapAt = 0;
 /* v1.5.40: force=true refetches the voucher list from Cloud so voucher
  * statuses (expired/in-use) are realtime at view-open time. The old
  * session-long cache is what kept expired vouchers green. On fetch
  * failure the last-known map is returned instead of an empty one, so an
- * offline view still shows the previous enrichment instead of losing it. */
+ * offline view still shows the previous enrichment instead of losing it.
+ * PERF (v1.5.171): force=true now means "refresh if stale" (60s), not
+ * "always refetch". Callers at app-init, Online Clients, and per-AP views
+ * were each triggering a full paginated voucherListAll on every open —
+ * even seconds after loadVouchers() had just fetched the same data. */
+const ACVMAP_STALE_MS = 60000;
 async function apClientVoucherMap(pid, force) {
-  if (!force && _acVMap && _acVMapPid === pid) return _acVMap;
+  const fresh = _acVMap && _acVMapPid === pid && (Date.now() - _acVMapAt < ACVMAP_STALE_MS);
+  if (fresh) return _acVMap;
   try {
     const vs = await Api.voucherListAll(Number(pid), null);
     const m = new Map();
     (vs || []).forEach(v => { const c = vCode(v); if (c && !m.has(c)) m.set(c, v); });
-    _acVMap = m; _acVMapPid = pid;
+    _acVMap = m; _acVMapPid = pid; _acVMapAt = Date.now();
     return m;
   } catch (e) {
     if (_acVMap && _acVMapPid === pid) return _acVMap;
@@ -8284,26 +8478,41 @@ async function moreSales() {
   const render = () => {
     const [rs, re] = rangeBounds();
     const { rows, tm, ts, tr } = salesReportData(S.vouchers, priceByPkg, rs, re);
+    // v1.5.171: phone compact sale ledger — drop No. + Quantity columns,
+    // shorten headers (Profile, Price, active)
+    const phone = document.documentElement.classList.contains('ph-compact');
     const body = rows.map((r, i) =>
-      `<tr><td>${i + 1}</td><td>${esc(r.nm)}</td>` +
-      `<td class="num">${r.price ? esc(fmtMoney(r.price)) : '—'}</td>` +
-      `<td class="num">${r.made.toLocaleString()}</td>` +
-      `<td class="num"><b>${r.sold.toLocaleString()}</b></td>` +
-      `<td class="num"><b>${r.price ? esc(fmtMoney(r.rev)) : '—'}</b></td></tr>`
+      phone
+        ? `<tr><td>${esc(r.nm)}</td>` +
+          `<td class="num">${r.price ? esc(fmtMoney(r.price)) : '—'}</td>` +
+          `<td class="num"><b>${r.sold.toLocaleString()}</b></td>` +
+          `<td class="num"><b>${r.price ? esc(fmtMoney(r.rev)) : '—'}</b></td></tr>`
+        : `<tr><td>${i + 1}</td><td>${esc(r.nm)}</td>` +
+          `<td class="num">${r.price ? esc(fmtMoney(r.price)) : '—'}</td>` +
+          `<td class="num">${r.made.toLocaleString()}</td>` +
+          `<td class="num"><b>${r.sold.toLocaleString()}</b></td>` +
+          `<td class="num"><b>${r.price ? esc(fmtMoney(r.rev)) : '—'}</b></td></tr>`
     ).join('');
+    const head = phone
+      ? `<tr><th>${t('sl.profileShort')}</th><th class="num">${t('sl.priceShort')}</th>` +
+        `<th class="num">${t('sl.activatedShort')}</th><th class="num">${t('sl.totalPrice')}</th></tr>`
+      : `<tr><th>${t('sl.no')}</th><th>${t('sl.profile')}</th><th class="num">${t('sl.price')}</th>` +
+        `<th class="num">${t('sl.made')}</th><th class="num">${t('sl.activated')}</th><th class="num">${t('sl.totalPrice')}</th></tr>`;
+    const totalRow = phone
+      ? `<tr><td colspan="2"><b>${t('sl.total')}</b></td>` +
+        `<td class="num"><b id="sl-ts"></b></td>` +
+        `<td class="num"><b id="sl-tr"></b></td></tr>`
+      : `<tr><td colspan="3"><b>${t('sl.total')}</b></td>` +
+        `<td class="num"><b id="sl-tm"></b></td>` +
+        `<td class="num"><b id="sl-ts"></b></td>` +
+        `<td class="num"><b id="sl-tr"></b></td></tr>`;
     $('sl-list').innerHTML =
       `<div class="wrap-scroll"><table class="data">` +
-      `<tr><th>${t('sl.no')}</th><th>${t('sl.profile')}</th><th class="num">${t('sl.price')}</th>` +
-      `<th class="num">${t('sl.made')}</th><th class="num">${t('sl.activated')}</th><th class="num">${t('sl.totalPrice')}</th></tr>` +
-      body +
-      `<tr><td colspan="3"><b>${t('sl.total')}</b></td>` +
-      `<td class="num"><b id="sl-tm"></b></td>` +
-      `<td class="num"><b id="sl-ts"></b></td>` +
-      `<td class="num"><b id="sl-tr"></b></td></tr>` +
+      head + body + totalRow +
       `</table></div>`;
     // v1.5.56: iOS-style animated totals (tween from the previously shown values)
     const pt = prevTotals || { tm, ts, tr };
-    animNum($('sl-tm'), tm, null, pt.tm);
+    if (!phone) animNum($('sl-tm'), tm, null, pt.tm);
     animNum($('sl-ts'), ts, null, pt.ts);
     animNum($('sl-tr'), tr, n => fmtMoney(Math.round(n)), pt.tr);
     prevTotals = { tm, ts, tr };
@@ -9072,6 +9281,7 @@ async function init() {
     else if (k === 'usergroups') moreUserGroups();
     else if (k === 'devices') moreDevices();
     else if (k === 'firmware') moreFirmware(); // v1.5.145: dedicated firmware screen
+    else if (k === 'overview') moreOverview();
     else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
     else if (k === 'qos') moreQoS(); // v1.5.150: QoS management (verified APIs)
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
