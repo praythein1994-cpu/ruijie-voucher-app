@@ -6872,7 +6872,7 @@ function updBannerDismiss() {
   updBannerHide();
 }
 function updBannerGo() {
-  try { switchView('view-settings'); } catch (e) { return; }
+  try { switchView('view-settings', false); } catch (e) { return; }
   setTimeout(() => {
     const card = $('upd-card');
     if (!card) return;
@@ -9096,7 +9096,7 @@ async function init() {
       }
     } catch (e) { if (st) st.textContent = '✗ error'; }
   });
-  document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view)));
+  document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view, false)));
   $('project-select').addEventListener('change', onProjectChange);
 
   // v1.5.53: search opens ONLY on magnifier tap; toggles closed.
@@ -9119,7 +9119,7 @@ async function init() {
   });
   searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') setSearchOpen(false); });
   searchBtn.addEventListener('click', () => {
-    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', false);
     setSearchOpen(!isSearchOpen());
   });
   $('search-clear').addEventListener('click', () => {
@@ -9130,9 +9130,9 @@ async function init() {
     } else setSearchOpen(false); // X on empty field closes the search
   });
   // v1.5.53: topbar printer icon → printer view
-  $('btn-printer-top').addEventListener('click', () => switchView('view-printer'));
+  $('btn-printer-top').addEventListener('click', () => switchView('view-printer', false));
   $('btn-refresh-vouchers').addEventListener('click', function () {
-    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers');
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', false);
     this.classList.add('spinning');
     loadVouchers().finally(() => this.classList.remove('spinning'));
   });
