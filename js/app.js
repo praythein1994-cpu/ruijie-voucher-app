@@ -1920,7 +1920,7 @@ function enterApp() {
   const pp = ($('print-paper').value === '80' ? '58' : $('print-paper').value) || '58';
   document.querySelectorAll('#paper-seg button').forEach(b =>
     b.classList.toggle('active', b.dataset.paper === pp));
-  loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; startupSync(); });
+  loadProjects().then(() => { switchView('view-vouchers', 'replace'); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; startupSync(); });
   // Vouchers start immediately with the stored project (in parallel with
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
@@ -1954,8 +1954,15 @@ function switchView(id, push) {
   if (id === 'view-generate') { ensurePackages(); renderRecentGen(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-printer') { renderQueue(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-settings') fillSettings();
-  // SPA back-button support: one back press walks views instead of killing the app.
-  if (push !== false) {
+  // SPA back-button support: tab switches use replaceState (not push) so
+  // back from a top-level tab exits the app instead of walking through
+  // every visited tab. More sub-pages and modals still pushState so back
+  // walks sub-page → More menu correctly.
+  if (push === 'replace') {
+    const st = { view: id };
+    if (id === 'view-more') st.moreDepth = S.moreStack.length;
+    try { history.replaceState(st, ''); } catch (e) {}
+  } else if (push !== false) {
     // v1.5.48: re-entering the More tab while a sub-page is open seeds the
     // More-menu level first and tags the entry with the real sub-page depth —
     // so system back walks sub-page → More menu → previous tab instead of
@@ -6872,7 +6879,7 @@ function updBannerDismiss() {
   updBannerHide();
 }
 function updBannerGo() {
-  try { switchView('view-settings', false); } catch (e) { return; }
+  try { switchView('view-settings', 'replace'); } catch (e) { return; }
   setTimeout(() => {
     const card = $('upd-card');
     if (!card) return;
@@ -9096,7 +9103,7 @@ async function init() {
       }
     } catch (e) { if (st) st.textContent = '✗ error'; }
   });
-  document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view, false)));
+  document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view, 'replace')));
   $('project-select').addEventListener('change', onProjectChange);
 
   // v1.5.53: search opens ONLY on magnifier tap; toggles closed.
@@ -9119,7 +9126,7 @@ async function init() {
   });
   searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') setSearchOpen(false); });
   searchBtn.addEventListener('click', () => {
-    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', false);
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', 'replace');
     setSearchOpen(!isSearchOpen());
   });
   $('search-clear').addEventListener('click', () => {
@@ -9130,9 +9137,9 @@ async function init() {
     } else setSearchOpen(false); // X on empty field closes the search
   });
   // v1.5.53: topbar printer icon → printer view
-  $('btn-printer-top').addEventListener('click', () => switchView('view-printer', false));
+  $('btn-printer-top').addEventListener('click', () => switchView('view-printer', 'replace'));
   $('btn-refresh-vouchers').addEventListener('click', function () {
-    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', false);
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', 'replace');
     this.classList.add('spinning');
     loadVouchers().finally(() => this.classList.remove('spinning'));
   });
