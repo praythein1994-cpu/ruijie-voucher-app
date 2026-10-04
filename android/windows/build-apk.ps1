@@ -106,14 +106,16 @@ $classFiles = (Get-ChildItem -Recurse "$BuildTmp/classes" -Filter "*.class").Ful
     $classFiles
 
 Write-Host "== 5. Add classes.dex =="
-Add-Type -AssemblyName System.IO.Compression.FileSystem
 $apkPath = "$OutDir/base.apk"
 $dexPath = "$BuildTmp/dex/classes.dex"
-$zip = [System.IO.Compression.ZipFile]::Open($apkPath, 'Update')
-try {
-    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $dexPath, "classes.dex", [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
-} finally { $zip.Dispose() }
-Write-Host "classes.dex added"
+python -c @"
+import zipfile, sys
+apk = r'$apkPath'
+dex = r'$dexPath'
+with zipfile.ZipFile(apk, 'a', zipfile.ZIP_DEFLATED) as z:
+    z.write(dex, 'classes.dex')
+print('classes.dex added')
+"@
 
 Write-Host "== 6. zipalign =="
 & "$BT/zipalign" -f 4 "$OutDir/base.apk" "$OutDir/aligned.apk"
