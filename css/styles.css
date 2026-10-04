@@ -804,7 +804,7 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
 /* ── Icon-only search: collapsed by default, expands on tap ── */
 .toolbar-row .search-wrap { display: none; }
 .toolbar-row .search-wrap.open {
-  display: block;
+  display: flex;
   margin-bottom: 8px;
   animation: searchin .28s var(--spring);
 }
