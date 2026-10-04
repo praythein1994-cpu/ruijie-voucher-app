@@ -1860,6 +1860,16 @@ async function startupSync() {
         const list = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false, connectType: '' });
         try { cachePortalVouchers(list || []); } catch (e) { /* cache is best-effort */ }
       } catch (e) { /* portal sync optional */ }
+      // v1.5.175: pre-fetch the WLAN/SSID list in the background at startup
+      // so Voucher VLAN detection is instant when Settings opens — real
+      // detection, just started early. Never displayed as "detected" until
+      // detectVoucherVlan() actually runs on this data.
+      if (!S.ssidList || !S.ssidList.length) {
+        Api.ssidListSso(pid).then(r => {
+          const l = (r && r.list) || [];
+          if (l.length) S.ssidList = l;
+        }).catch(() => {});
+      }
     }
   } catch (e) { /* never break startup */ }
 }
@@ -2259,7 +2269,7 @@ async function loadVouchers(opts) {
   }
   try {
     const all = await Api.voucherListAll(S.projectId, (done, total) => {
-      if (!opts.silent && gen === S._voucherGen) $('voucher-count').textContent = `${t('v.loading')} ${done}/${total}`;
+      if (!opts.silent && gen === S._voucherGen) { const vc = $('voucher-count'); if (vc) vc.textContent = `${t('v.loading')} ${done}/${total}`; }
     });
     if (gen !== S._voucherGen) return; // superseded — discard
     S.vouchers = all;
@@ -2387,7 +2397,8 @@ function renderVouchers() {
   if (fe) fe.textContent = S.vouchersFetchedAt ? t('v.updated') + ' ' + fmtTime(S.vouchersFetchedAt) : '';
 
   const list = filteredVouchers();
-  $('voucher-count').textContent = S.vFilter || S.vStatus
+  const vcEl = $('voucher-count');
+  if (vcEl) vcEl.textContent = S.vFilter || S.vStatus
     ? tx('v.found', { n: list.length, total: S.vouchers.length })
     : tx('v.total', { n: S.vouchers.length });
   const el = $('voucher-list');
@@ -4110,7 +4121,8 @@ function moreHome() {
  * level from the history entry's moreDepth. */
 function moreShell(title, inner) {
   $('more-menu').classList.add('hidden');
-  $('more-content').innerHTML = `<div class="card"><h2>${title}</h2>${inner}</div>`;
+  // v1.5.175: no big in-page titles (user rule) — title param ignored, kept for API compat.
+  $('more-content').innerHTML = `<div class="card">${inner}</div>`;
   // The caller sets S.moreFn just before calling moreShell — capture it as
   // this level's re-renderer. Same-level re-renders (language refresh,
   // post-reboot refresh) don't push a duplicate entry.
@@ -5145,37 +5157,17 @@ async function moreWebAuth() {
   const gNum = (k, ph) => `<input id="wg-${k}" type="number" min="0" inputmode="numeric" class="ug-input" value="${esc(String(glob[k] ?? ''))}" placeholder="${esc(ph)}">`;
   gEl.innerHTML = `
   <div class="ug-card" style="margin-top:12px">
-    <div class="ug-sect">${esc(t('wg.title'))}</div>
-    <div class="segmented ug-seg" id="wg-proto">
-      <button type="button" data-p="http" class="${String(glob.proto) === 'http' ? 'active' : ''}">http</button>
-      <button type="button" data-p="https" class="${String(glob.proto) === 'https' ? 'active' : ''}">https</button>
-    </div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.stateUrl'))}</span>
-      <input id="wg-user_state_url" type="text" class="ug-input" value="${esc(String(glob.user_state_url || ''))}"></div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.remindDays'))}</span>
-      <div class="ug-inline">${gNum('remind_days', '1')}<span class="ug-unit">${esc(t('wg.days'))}</span></div></div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.remindInterval'))}</span>
-      <div class="ug-inline">${gNum('remind_interval', '1')}<span class="ug-unit">${esc(t('wg.hours'))}</span></div></div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.idle'))}</span>
-      <div class="ug-inline">${gNum('flow_detect_time', '15')}<span class="ug-unit">${esc(t('wa.min'))}</span></div></div>
     <div class="ug-field"><span class="ug-lab">${esc(t('wg.httpCheck'))}</span>
       <label class="switch"><input id="wg-http_host_check" type="checkbox" ${gOn('http_host_check') ? 'checked' : ''}><span class="track"></span></label></div>
     <div class="row" style="margin-top:14px"><button class="btn primary" id="wg-save">${t('wa.save')}</button></div>
   </div>`;
-  $('wg-proto').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    $('wg-proto').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
-  });
+  // v1.5.175: Global Config fields removed — only HTTP Injection Prevention remains.
+  // Save sends back the full object that was read (untouched fields survive).
   $('wg-save').addEventListener('click', async () => {
     if (!(await iosConfirm(t('wg.confirm'), '', t('a.save'), t('a.cancel'), false))) return;
     const g = S._waGlob;
-    const act = $('wg-proto').querySelector('button.active');
-    g.proto = act ? act.dataset.p : String(g.proto || 'http');
-    g.user_state_url = $('wg-user_state_url').value.trim();
-    g.remind_days = String($('wg-remind_days').value || '0');
-    g.remind_interval = String($('wg-remind_interval').value || '0');
-    g.flow_detect_time = String($('wg-flow_detect_time').value || '0');
-    g.http_host_check = $('wg-http_host_check').checked ? '1' : '0';
+    const hhc = $('wg-http_host_check');
+    if (hhc) g.http_host_check = hhc.checked ? '1' : '0';
     try {
       await GwApi.globalAuthSet(g);
       toast(t('wa.saved'));
@@ -5721,14 +5713,13 @@ function renderTraffic(body, meta, agg, rates, count, now) {
    Traffic is manual-refresh only (one flow-table poll ≈ 166 kB). */
 async function moreOverview() {
   S.moreFn = moreOverview;
-  moreShell(`${ic('chart', 'sm')} ${esc(t('ov.title'))}`, `
-    <div><button class="btn" id="ov-refresh">${ic('refresh', 'sm')}<span>${t('ov.refresh')}</span></button>
-    <span class="muted small" id="ov-meta"></span></div>
+  // v1.5.175: header card (title + Refresh row) removed per user request.
+  // Data loads on entry; pull-to-refresh not needed.
+  moreShell('', `
     <div class="grid-2" style="margin-top:10px">
       <section class="ov-panel"><div class="section-title">${esc(t('ov.trafficRanking'))}</div><div id="ov-traffic"><p class="muted">${t('more.loading')}</p></div></section>
       <section class="ov-panel"><div class="section-title">${esc(t('ov.newClients'))}</div><div id="ov-new"><p class="muted">${t('more.loading')}</p></div></section>
     </div>`);
-  $('ov-refresh').addEventListener('click', loadOverview);
   loadOverview();
 }
 
@@ -5764,13 +5755,17 @@ async function loadOverview() {
     try { vmap = await apClientVoucherMap(pid, false); } catch (e) { /* voucher enrichment optional */ }
   }
 
-  // IP → {name, voucher} for traffic-ranking labels.
+  // IP → {name, voucher, totalBytes} for traffic-ranking labels.
+  // v1.5.175: include the portal's cumulative flowUpDown so each row shows
+  // THAT CLIENT's data total, not just live flow-table bytes.
   const ipInfo = new Map();
   list.forEach(c => {
     const f = mcFields(c, viaPortal, vmap);
     const ip = String(f.ip || '').trim();
     if (ip && ip !== '—' && !ipInfo.has(ip)) {
-      ipInfo.set(ip, { name: f.name && f.name !== '—' ? f.name : ip, voucher: f.acct || '' });
+      const tot = Number(c.flowUpDown);
+      ipInfo.set(ip, { name: f.name && f.name !== '—' ? f.name : ip, voucher: f.acct || '',
+        totalBytes: Number.isFinite(tot) && tot > 0 ? tot : 0 });
     }
   });
   renderOvTraffic(tEl, agg, ipInfo, gwOk);
@@ -5788,11 +5783,17 @@ async function loadOverview() {
 
 function renderOvTraffic(el, agg, ipInfo, gwOk) {
   if (!agg.length) { el.innerHTML = `<p class="muted">${esc(t(gwOk ? 'ov.noTraffic' : 'mt.hint'))}</p>`; return; }
-  const topTotal = agg[0].upBytes + agg[0].downBytes;
-  el.innerHTML = agg.slice(0, 10).map(c => {
-    const total = c.upBytes + c.downBytes;
-    const pct = topTotal > 0 ? Math.max(3, Math.round(total / topTotal * 100)) : 0;
+  // v1.5.175: each row shows THAT CLIENT's data total (portal cumulative
+  // flowUpDown when known), not just live flow-table bytes. Never invented:
+  // unknown totals fall back to the flow-table figure.
+  const rows = agg.map(c => {
     const info = ipInfo.get(c.ip) || {};
+    const total = (info.totalBytes > 0) ? info.totalBytes : (c.upBytes + c.downBytes);
+    return { c, info, total };
+  }).sort((a, b) => b.total - a.total);
+  const topTotal = rows.length ? rows[0].total : 0;
+  el.innerHTML = rows.slice(0, 10).map(({ c, info, total }) => {
+    const pct = topTotal > 0 ? Math.max(3, Math.round(total / topTotal * 100)) : 0;
     const name = info.name || c.ip;
     const sub = [c.ip, info.voucher ? `${t('ov.voucher')}: ${info.voucher}` : ''].filter(Boolean).join(' · ');
     return `<div class="ov-rank">
@@ -6535,13 +6536,13 @@ function onKickToggle() {
   const on = !!(tg && tg.checked);
   Store.save({ kickAuto: on });
   if (hasAutoKickBg()) {
-    try {
-      if (on) {
-        syncAutoKickConfig();
-        window.RuijieBridge.monitorRequestPermission(); // same notif permission
-      }
-      window.RuijieBridge.autoKickSetEnabled(on);
-    } catch (e) {}
+    // v1.5.175: never let a sync failure block the actual scheduling —
+    // each step is guarded independently so the job always gets (re)scheduled.
+    if (on) {
+      try { syncAutoKickConfig(); } catch (e) {}
+      try { window.RuijieBridge.monitorRequestPermission(); } catch (e) {}
+    }
+    try { window.RuijieBridge.autoKickSetEnabled(on); } catch (e) {}
     setTimeout(refreshKickStatus, 400);
   } else {
     refreshKickStatus();
@@ -6570,6 +6571,17 @@ function initKickSettings() {
   if (tg) {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
+  }
+  // v1.5.175: self-heal — if the toggle is ON but the native job isn't
+  // scheduled (e.g. after an update), re-push config and re-schedule now.
+  if (Store.load().kickAuto && hasAutoKickBg()) {
+    try {
+      const info = JSON.parse(window.RuijieBridge.autoKickInfo() || '{}');
+      if (!info.scheduled) {
+        try { syncAutoKickConfig(); } catch (e) {}
+        try { window.RuijieBridge.autoKickSetEnabled(true); } catch (e) {}
+      }
+    } catch (e) {}
   }
   // voucher VLAN for scoping the "suspicious" flag — picked from the
   // Ruijie Cloud WLAN list; the captive-portal VLAN is auto-selected.

@@ -291,7 +291,6 @@
           <button class="chip" data-s="3"><span class="dot" style="background:var(--muted)"></span><span data-i18n="chip.s3">သက်တမ်းကုန်</span></button>
         </div>
       </div>
-      <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div id="voucher-fetched" class="muted small"></div></div>
       <div class="row voucher-actions" style="justify-content:space-between;align-items:center;position:relative"><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button><div class="row" id="bulk-inline" style="gap:8px;display:none;align-items:center"><button id="btn-bulk-delete" class="pdel-mini" disabled data-i18n-aria="v.bulkDelete"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><b class="pdel-n" id="bulk-count">0</b></button><button id="btn-bulk-print" class="btn small pbtn-mini" disabled data-i18n-aria="v.bulkPrint"><svg class="ic sm" aria-hidden="true"><use href="#i-printer"/></svg></button></div><button id="btn-voucher-more" class="btn small" aria-label="More">More</button><div id="voucher-more-menu" class="more-menu hidden"><button id="btn-del-expired"><svg class="ic sm"><use href="#i-trash"/></svg><span data-i18n="v.delExpired">သက်တမ်းကုန်တွေ ဖျက်မယ်</span></button><button id="btn-reset-selected"><svg class="ic sm"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button></div></div>
       <div id="voucher-list" class="list"></div>
       <div id="voucher-loading" class="loading hidden"></div>
@@ -515,11 +514,6 @@
           <div class="t"><div class="t-main" data-i18n="kick.auto">Quota ပြည့်ရင် အလိုအလျောက် ဖြုတ်မယ်</div><div class="sub" data-i18n="kick.autoSub">Voucher limit ပြည့်ပြီး ဆက်ချိတ်နေတဲ့ client ကို ဖြုတ်ခိုင်းမယ်</div></div>
           <label class="switch"><input type="checkbox" id="kick-auto"><span class="track"></span></label>
         </div>
-        <div class="set-row">
-          <span class="set-ico" style="--tile:#8E8E93"><svg class="ic"><use href="#i-alert"/></svg></span>
-          <div class="t"><div class="t-main" data-i18n="kick.status">အခြေအနေ</div><div class="sub" data-i18n="kick.soon">Cloud verify ပြီးမှ အလုပ်လုပ်မယ်</div></div>
-          <span class="set-val" id="kick-status">…</span>
-        </div>
         <label class="set-row set-field"><span class="fld-label" data-i18n="kick.vlan">Voucher VLAN</span><select id="kick-vlan" class="fld-input"></select></label>
         <label class="set-row set-field"><span class="fld-label" data-i18n="kick.interval">ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ</span><input id="kick-interval" class="fld-input" type="number" min="1" step="1" value="15" style="width:80px"></label>
         <div class="set-row"><div class="t"><div class="sub" data-i18n="kick.vlanSub">သံသယရှိ flag က ဒီ VLAN ပေါ်ကလူတွေအတွက်ပဲ ပြမယ်</div></div></div>
@@ -543,9 +537,6 @@
 
       <div class="section-title" data-i18n="upd.title">အပ်ဒိတ်</div>
       <div class="set-group" id="upd-card">
-        <div class="upd-ver-row">
-          <div class="t"><div class="sub" id="upd-cur-ver"></div></div>
-        </div>
         <div class="set-row upd-action">
           <div class="t"><div class="t-main" data-i18n="upd.check">အပ်ဒိတ်စစ်မယ်</div><div class="sub" id="upd-status"></div></div>
           <button type="button" class="btn small" id="upd-check-btn" data-i18n="upd.check">အပ်ဒိတ်စစ်မယ်</button>
