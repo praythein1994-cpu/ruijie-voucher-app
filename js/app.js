@@ -4374,10 +4374,12 @@ function ssoDeadSession(e) {
 function ssoQueueRetry(fn) {
   ssoPendingRetry = fn; // at most one pending retry; a newer failure replaces it
 }
-function ssoSilentReauth() {
+function ssoSilentReauth(force) {
   if (!hasSso()) return;
   const now = Date.now();
-  if (now - ssoLastReauth < 5 * 60 * 1000) return;
+  // v1.5.173: user-initiated refresh bypasses the 5-min cooldown — if the
+  // last silent re-auth failed, manual refresh must work immediately.
+  if (!force && now - ssoLastReauth < 5 * 60 * 1000) return;
   let info = null;
   try { info = JSON.parse(window.RuijieBridge.ssoAccountInfo() || '{}'); } catch (e) {}
   if (!info || !info.has || !info.autoLogin) return;
@@ -4467,10 +4469,13 @@ async function moreDevices() {
     // v1.5.53: dead session → queue a one-shot retry of this exact load and
     // silently re-authenticate. The retry fires on the next successful login;
     // genuine errors still render as before.
+    // v1.5.173: force=true — user tapped into this page, so bypass the
+    // 5-min cooldown. If the last silent re-auth failed, manual navigation
+    // must trigger a fresh login attempt immediately.
     if (deadSession && sso) {
       const retryType = type;
       ssoQueueRetry(() => load(retryType));
-      ssoSilentReauth();
+      ssoSilentReauth(true);
     }
     let cliByAp = null, apNames = null;
     const clients = await clientP;
@@ -7277,7 +7282,15 @@ async function moreClients() {
       viaPortal = true;
       try { cachePortalVouchers(list); } catch (e) { /* voucher cache is best-effort */ }
       if (hasAuth === false) srcNote = t('ac.noAuthCfg');
-    } catch (e) { srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140); }
+    } catch (e) {
+      srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140);
+      // v1.5.173: portal dead session → queue retry + force silent re-auth
+      // (bypass 5-min cooldown on user navigation), same as Devices page.
+      if (ssoDeadSession(e)) {
+        ssoQueueRetry(() => { try { moreClients(); } catch (err) {} });
+        ssoSilentReauth(true);
+      }
+    }
   } else {
     srcNote = t('ac.needSso');
   }
