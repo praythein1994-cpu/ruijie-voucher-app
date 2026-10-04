@@ -544,7 +544,7 @@
       <div class="section-title" data-i18n="upd.title">အပ်ဒိတ်</div>
       <div class="set-group" id="upd-card">
         <div class="upd-ver-row">
-          <div class="t"><div class="t-main">P Manager</div><div class="sub" id="upd-cur-ver"></div></div>
+          <div class="t"><div class="sub" id="upd-cur-ver"></div></div>
         </div>
         <div class="set-row upd-action">
           <div class="t"><div class="t-main" data-i18n="upd.check">အပ်ဒိတ်စစ်မယ်</div><div class="sub" id="upd-status"></div></div>
@@ -561,31 +561,9 @@
           </div>
           <div class="upd-avail-notes" id="upd-avail-notes"></div>
         </div>
-        <!-- GlassVPN-style horizontal download progress -->
-        <div class="upd-bar-wrap" id="upd-bar-wrap" hidden>
-          <div class="t-main" id="upd-bar-label">Downloading... 0%</div>
-          <div class="upd-bar"><div class="upd-bar-fill" id="upd-bar-fill" style="width:0%"></div></div>
-        </div>
         <div class="set-row">
           <div class="t"><div class="t-main" data-i18n="upd.auto">အော်တိုဒေါင်းလုပ်လုပ်မယ်</div><div class="sub" data-i18n="upd.autoSub">ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်</div></div>
           <label class="switch"><input type="checkbox" id="upd-auto"><span class="track"></span></label>
-        </div>
-        <div class="upd-dl" id="upd-dl" hidden>
-          <div class="upd-ring">
-            <svg viewBox="0 0 72 72" aria-hidden="true">
-              <defs>
-                <linearGradient id="updRingGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#0A84FF"/>
-                  <stop offset="1" stop-color="#5E5CE6"/>
-                </linearGradient>
-              </defs>
-              <circle class="upd-ring-bg" cx="36" cy="36" r="30"/>
-              <circle class="upd-ring-fg" id="upd-ring-fg" cx="36" cy="36" r="30"/>
-            </svg>
-            <span class="upd-ring-icon" id="upd-ring-icon"></span>
-          </div>
-          <span class="upd-dl-pct" id="upd-dl-pct">0%</span>
-          <div class="upd-dl-label" id="upd-dl-label"></div>
         </div>
         <div class="upd-ready" id="upd-install-row" hidden>
           <div class="upd-ready-head">
