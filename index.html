@@ -2,7 +2,7 @@
 <html lang="my" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0A72E8">
 <title>P Manager</title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -404,7 +404,7 @@
         <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
         <button class="menu-item" data-more="firmware"><svg class="ic lg"><use href="#i-up"/></svg><span data-i18n="m.firmware">Firmware update</span><small data-i18n="m.firmwareSub">စက်အပ်ဒိတ်များ</small></button>
         <button class="menu-item" data-more="overview"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.overview">Overview</span><small data-i18n="m.overviewSub">အကျဉ်းချုပ်</small></button>
-        <button class="menu-item" data-more="traffic"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.traffic">Traffic</span><small data-i18n="m.trafficSub">ဒေတာစီးဆင်းမှု</small></button>
+        <button class="menu-item" data-more="traffic" style="display:none"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.traffic">Traffic</span><small data-i18n="m.trafficSub">ဒေတာစီးဆင်းမှု</small></button>
         <button class="menu-item" data-more="qos"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.qos">QoS</span><small data-i18n="m.qosSub">ဂိမ်းလိုင်းဦးစားပေး</small></button>
         <button class="menu-item" data-more="webauth"><svg class="ic lg"><use href="#i-lock"/></svg><span data-i18n="m.webauth">Web Auth</span><small data-i18n="m.webauthSub">ဝင်ရောက်ခွင့်စီမံခန့်ခွဲမှု</small></button>
         <button class="menu-item" data-more="wifi"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.wifi">WiFi</span><small data-i18n="m.wifiSub">SSID များ</small></button>
@@ -421,10 +421,6 @@
     <!-- SETTINGS -->
     <section id="view-settings" class="view hidden">
       <div class="set-group">
-        <div class="set-row">
-          <span class="set-ico" style="--tile:#8E8E93"><svg class="ic"><use href="#i-user"/></svg></span>
-          <div class="t"><div class="t-main" data-i18n="s.account">အကောင့်အချက်အလက်</div></div>
-        </div>
         <div class="set-pad" id="account-info"></div>
       </div>
 

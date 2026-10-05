@@ -594,7 +594,7 @@ const GwApi = {
         out.push({ name: s, leaf: true, id: s });
       };
       const walk = (node, depth) => {
-        if (!node || depth > 6) return;
+        if (!node || depth > 10) return; // v1.5.177: PUBG at depth 8 was cut off
         if (typeof node === 'string') { addName(node); return; }
         if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
         if (typeof node === 'object') {

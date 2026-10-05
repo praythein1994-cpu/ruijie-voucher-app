@@ -2348,7 +2348,16 @@ function filteredVouchers() {
     // v1.5.66: filter on EFFECTIVE status — spent/kicked vouchers leave
     // "In use" and appear under "Expired" even while Cloud still says 2.
     if (S.vStatus && vEffStatus(v) !== S.vStatus) return false;
-    if (q && !vCode(v).toLowerCase().includes(q) && !(v.comment || '').toLowerCase().includes(q) && !(v.nameRef || '').toLowerCase().includes(q)) return false;
+    if (q) {
+      // v1.5.177: search by IP and MAC too — MAC accepts any format (strip non-hex)
+      const qn = q.replace(/[^0-9a-f]/gi, '');
+      const vMac = normMac(v.bindMac || v.mac || '');
+      const vIp = (v.ip || v.clientIp || '').toLowerCase();
+      const mBasic = vCode(v).toLowerCase().includes(q) || (v.comment || '').toLowerCase().includes(q) || (v.nameRef || '').toLowerCase().includes(q);
+      const mIp = vIp && vIp.includes(q);
+      const mMac = qn.length >= 4 && vMac && vMac.includes(qn.toLowerCase());
+      if (!mBasic && !mIp && !mMac) return false;
+    }
     return true;
   });
 }
@@ -2762,8 +2771,8 @@ function openVoucherDetail(uuid) {
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
     ['Upload limit', v.uploadRateLimit ? v.uploadRateLimit + ' KB/s' : '—'],
     [t('d.price'), v.packagePrice ? esc(v.packagePrice) : '—'],
-    [t('d.note'), esc(v.comment || v.nameRef || '—')],
-    [t('d.macbind'), v.bindMac ? 'Yes' : 'No'],
+    [t('d.note'), esc(v.ip || v.clientIp || v.comment || v.nameRef || '—')],
+    [t('d.macbind'), esc(v.bindMac || v.mac || '—')],
   ];
   $('modal-body').innerHTML = `
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
@@ -5488,6 +5497,9 @@ async function loadQoS() {
           <input type="text" id="pe-name" value="${esc(p.comment || '')}" style="width:100%"></label>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
+        <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.apps') || 'Apps')}</div>
+          <select id="pe-app-sel" style="width:100%;padding:8px;border-radius:8px"><option value="">${esc(t('q.selApp') || 'Select app...')}</option></select>
+          <div id="pe-app-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>
         <div class="row" style="margin-top:8px">
           <label style="flex:1">${esc(t('q.upLimit'))} (Mbps)<br>
             <input type="number" id="pe-up" value="${esc(k2m(p.upRate || p.allUpRate))}" step="0.1" min="0"></label>
@@ -5501,6 +5513,32 @@ async function loadQoS() {
       </div>`;
       document.body.appendChild(ov);
       ov.querySelector('#pe-cancel').addEventListener('click', () => ov.remove());
+      // v1.5.177: App Speed Limit — multi-select apps from tree with chip preview
+      const appSel = ov.querySelector('#pe-app-sel');
+      const chipBox = ov.querySelector('#pe-app-chips');
+      let selApps = Array.isArray(p.appList) ? [...p.appList] : [];
+      const renderChips = () => {
+        chipBox.innerHTML = selApps.map((a, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(a)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
+        chipBox.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selApps.splice(Number(b.dataset.i), 1); renderChips(); }));
+      };
+      const fillAppSel = (items) => {
+        if (!items || !items.length) return;
+        appSel.innerHTML = `<option value="">${esc(t('q.selApp') || 'Select app...')}</option>` +
+          items.map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('');
+      };
+      if (typeof tree !== 'undefined' && tree) fillAppSel(tree);
+      else GwApi.qosAppTree().then(fillAppSel).catch(() => {});
+      // Keep a ref to tree items for lookup
+      let treeItems = (typeof tree !== 'undefined' && tree) ? tree : [];
+      GwApi.qosAppTree().then(items => { treeItems = items || []; fillAppSel(treeItems); }).catch(() => {});
+      appSel.addEventListener('change', () => {
+        const idx = appSel.value;
+        if (idx === '') return;
+        const name = treeItems[Number(idx)] && treeItems[Number(idx)].name;
+        if (name && !selApps.includes(name)) { selApps.push(name); renderChips(); }
+        appSel.value = '';
+      });
+      renderChips();
       ov.querySelector('#pe-save').addEventListener('click', async () => {
         const np = isNew ? {
           policy_id: '10', ip_group: 'fc_rule_' + Date.now(),
@@ -5511,6 +5549,7 @@ async function loadQoS() {
         } : p;
         np.comment = ov.querySelector('#pe-name').value.trim();
         np.ipRange = ov.querySelector('#pe-ip').value.trim();
+        np.appList = selApps; // v1.5.177: App Speed Limit
         // v1.5.154: UI is Mbps, gateway stores Kbps — convert with m2k
         const uv = m2k(ov.querySelector('#pe-up').value.trim());
         const dv = m2k(ov.querySelector('#pe-dn').value.trim());
@@ -8488,8 +8527,7 @@ async function moreSales() {
        <label style="flex:1">${t('sl.to')} <input type="date" id="sl-to" value="${todayStr}"></label>
      </div>
      <div id="sl-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>
-     <div class="row"><button class="btn" id="sl-refresh">${ic('refresh', 'sm')}<span>${t('sl.refreshV')}</span></button></div>
-     <p class="muted small">${t('sl.dateNote2')}</p>`);
+          <p class="muted small">${t('sl.dateNote2')}</p>`);
   await ensurePackages();
   const priceByPkg = {};
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
@@ -8559,7 +8597,7 @@ async function moreSales() {
   }));
   $('sl-from').addEventListener('change', render);
   $('sl-to').addEventListener('change', render);
-  $('sl-refresh').addEventListener('click', async () => { await loadVouchers(); render(); });
+  const slr = $('sl-refresh'); if (slr) slr.addEventListener('click', async () => { await loadVouchers(); render(); });
   render();
 }
 
