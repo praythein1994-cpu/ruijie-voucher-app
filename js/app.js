@@ -5546,8 +5546,6 @@ async function loadQoS() {
           <div id="pe-ug-chips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"></div></div>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
-        <div class="ug-row"><span class="ug-lab">${esc(t('q.allUsers') || 'All users')}</span>
-          <label class="switch"><input type="checkbox" id="pe-allip" ${!p.ipRange ? ' checked' : ''}><span class="track"></span></label></div>
         <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.apps') || 'Apps')}</div>
           <button type="button" id="pe-app-btn" class="btn" style="width:100%;text-align:left">${esc(t('q.selApp') || 'Select app...')}</button>
           <div id="pe-app-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>
@@ -5612,17 +5610,24 @@ async function loadQoS() {
         const renderApps = (filter) => {
           const f = (filter || '').toLowerCase();
           const filtered = f ? allApps.filter(x => x.name.toLowerCase().includes(f)) : allApps;
-          // Group by category if available, otherwise flat list
-          appsList.innerHTML = filtered.map((x, idx) => `
-            <label style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">
+          // v1.5.193: Clear checkmarks like Voucher UI — selected items show blue check
+          appsList.innerHTML = filtered.map((x, idx) => {
+            const isSel = tempSel.includes(x.name);
+            return `
+            <label style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;${isSel ? 'background:#E8F0FE;' : ''}">
               <span style="flex:1">${esc(x.name)}</span>
-              <input type="checkbox" value="${esc(x.name)}" ${tempSel.includes(x.name) ? 'checked' : ''}>
-            </label>`).join('') || '<p class="muted" style="text-align:center;padding:20px">No apps found</p>';
-          appsList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', () => {
-              if (cb.checked) { if (!tempSel.includes(cb.value)) tempSel.push(cb.value); }
-              else { tempSel = tempSel.filter(a => a !== cb.value); }
-              updateCount();
+              <span style="width:24px;height:24px;border-radius:50%;border:2px solid ${isSel ? '#007AFF' : '#ccc'};background:${isSel ? '#007AFF' : 'transparent'};display:flex;align-items:center;justify-content:center;color:white;font-size:14px">${isSel ? '✓' : ''}</span>
+              <input type="checkbox" value="${esc(x.name)}" ${isSel ? 'checked' : ''} style="display:none">
+            </label>`;
+          }).join('') || '<p class="muted" style="text-align:center;padding:20px">No apps found</p>';
+          appsList.querySelectorAll('label').forEach((label, idx) => {
+            label.addEventListener('click', (e) => {
+              e.preventDefault();
+              const cb = label.querySelector('input[type="checkbox"]');
+              const val = cb.value;
+              if (tempSel.includes(val)) { tempSel = tempSel.filter(a => a !== val); }
+              else { tempSel.push(val); }
+              renderApps(searchInput.value); updateCount();
             });
           });
         };
@@ -5695,8 +5700,9 @@ async function loadQoS() {
       };
       // v1.5.190: User selector modal with Subnet Group + User Group tabs (matches gateway UI)
       const openUGModal = async () => {
+        try {
         const mOv = document.createElement('div');
-        mOv.className = 'modal'; mOv.style.display = 'flex';
+        mOv.className = 'modal'; mOv.style.display = 'flex'; mOv.style.zIndex = '9999';
         // Subnet groups (from gateway screenshot)
         const subnets = [
           { name: 'WIFI CODE', range: '192.168.20.1-192.168.21.254' },
@@ -5763,6 +5769,7 @@ async function loadQoS() {
         });
         mOv.querySelector('#ugm-close').addEventListener('click', () => mOv.remove());
         mOv.addEventListener('click', (e) => { if (e.target === mOv) mOv.remove(); });
+        } catch (err) { console.error('UG modal error:', err); toast('Error: ' + err.message, true); }
       };
       if (ugBtn) ugBtn.addEventListener('click', openUGModal);
       renderUGChips(); updateUGBtn();
@@ -5777,8 +5784,7 @@ async function loadQoS() {
         } : p;
         np.comment = ov.querySelector('#pe-name').value.trim();
         // v1.5.181: "All users" checkbox — empty ipRange means all IPs
-        const allIp = ov.querySelector('#pe-allip');
-        np.ipRange = (allIp && allIp.checked) ? '' : ov.querySelector('#pe-ip').value.trim();
+        np.ipRange = ov.querySelector('#pe-ip').value.trim();
         np.appList = selApps; // v1.5.177: App Speed Limit
         np.userGroups = selUGs; // v1.5.182: User Group selector
         np.user_group_list = selUGs; // gateway field
