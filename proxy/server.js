@@ -480,8 +480,27 @@ async function handleDeviceSet(req, res, u) {
   catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save device registry' }); }
   return send(res, req, 200, { ok: true, status });
 }
-async function handleDeviceConfig(req, res, u) {
+/* v1.5.187: Delete a device from the registry (admin). */
+async function handleDeviceDelete(req, res, u) {
   if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let p;
+  try { p = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!deviceAdmin(u, p)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const id = String(p.deviceId || '').slice(0, 128);
+  const store = Devices.readStore();
+  if (!store.devices[id]) return send(res, req, 404, { code: -7, msg: 'Device not found' });
+  // Safety: never delete the device you're managing from.
+  const by = String(p.by || '').slice(0, 128);
+  if (by && by === id) {
+    return send(res, req, 400, { code: -1, msg: 'Cannot delete the device you are managing from' });
+  }
+  delete store.devices[id];
+  try { Devices.writeStore(store); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save device registry' }); }
+  return send(res, req, 200, { ok: true, deleted: id });
+}
+async function handleDeviceConfig(req, res, u) {  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
   let p;
   try { p = JSON.parse(await readBody(req)); }
   catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
@@ -658,6 +677,7 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/devices/check' && req.method === 'GET') return handleDeviceCheck(req, res, u);
     if (u.pathname === '/api/devices/list' && req.method === 'GET') return handleDeviceList(req, res, u);
     if (u.pathname === '/api/devices/set' && req.method === 'POST') return handleDeviceSet(req, res, u);
+    if (u.pathname === '/api/devices/delete' && req.method === 'POST') return handleDeviceDelete(req, res, u);
     if (u.pathname === '/api/devices/config' && req.method === 'POST') return handleDeviceConfig(req, res, u);
     // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
     // server-side portal CAS login, only the VLAN-30 SSID can be changed.
