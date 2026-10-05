@@ -131,6 +131,7 @@ const I18N = {
   'd.curClients': { my: 'လက်ရှိသုံးနေသူ', en: 'Current clients' },
   'd.price': { my: 'ဈေးနှုန်း', en: 'Price' },
   'd.note': { my: 'မှတ်ချက်', en: 'Note' },
+  'd.ip': { my: 'IP', en: 'IP' },
   'd.macbind': { my: 'MAC bind', en: 'MAC bind' },
   'a.copy': { my: 'ကူးမယ်', en: 'Copy' },
   'a.queue': { my: 'Queue ထဲထည့်မယ်', en: 'Add to queue' },
@@ -2775,7 +2776,7 @@ function openVoucherDetail(uuid) {
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
     ['Upload limit', v.uploadRateLimit ? v.uploadRateLimit + ' KB/s' : '—'],
     [t('d.price'), v.packagePrice ? esc(v.packagePrice) : '—'],
-    [t('d.note'), `<span id="vd-ip">${esc(v.comment || v.nameRef || '—')}</span>`],
+    [t('d.ip'), `<span id="vd-ip">—</span>`],
     [t('d.macbind'), `<span id="vd-mac">${v.bindMac ? t('a.yes') || 'Yes' : (t('a.no') || 'No')}</span>`],
   ];
   $('modal-body').innerHTML = `
