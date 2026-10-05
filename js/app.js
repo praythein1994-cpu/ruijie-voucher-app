@@ -2772,12 +2772,27 @@ function openVoucherDetail(uuid) {
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
     ['Upload limit', v.uploadRateLimit ? v.uploadRateLimit + ' KB/s' : '—'],
     [t('d.price'), v.packagePrice ? esc(v.packagePrice) : '—'],
-    [t('d.note'), esc(v.ip || v.clientIp || v.comment || v.nameRef || '—')],
-    [t('d.macbind'), esc(v.bindMac || v.mac || '—')],
+    [t('d.note'), `<span id="vd-ip">${esc(v.comment || v.nameRef || '—')}</span>`],
+    [t('d.macbind'), `<span id="vd-mac">${v.bindMac ? t('a.yes') || 'Yes' : (t('a.no') || 'No')}</span>`],
   ];
   $('modal-body').innerHTML = `
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
+  // v1.5.179: fetch bound MACs and IP for display
+  (async () => {
+    try {
+      const tenantName = (() => { try { const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}'); return bi.email || ''; } catch (e) { return ''; } })();
+      const list = await Api.voucherBindMacListSso(S.projectId, v, tenantName, '');
+      if (list && list.length) {
+        const macs = list.map(x => x.mac).filter(Boolean);
+        const ips = list.map(x => x.ip).filter(Boolean);
+        const macEl = $('vd-mac');
+        if (macEl && macs.length) macEl.textContent = macs.join(', ');
+        const ipEl = $('vd-ip');
+        if (ipEl && ips.length) ipEl.textContent = ips.join(', ');
+      }
+    } catch (e) {}
+  })();
   // v1.5.68: Disconnect on EVERY voucher preview (user request) — it takes
   // Print's spot for all vouchers, not just In use. (Queue / top-bar print
   // paths remain for printing.)
