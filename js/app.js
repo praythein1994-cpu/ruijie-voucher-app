@@ -2785,7 +2785,7 @@ function openVoucherDetail(uuid) {
       const list = await Api.voucherBindMacListSso(S.projectId, v, tenantName, '');
       if (list && list.length) {
         const macs = list.map(x => x.mac).filter(Boolean);
-        const ips = list.map(x => x.ip).filter(Boolean);
+        const ips = list.map(x => x.ip || x.ipAddr || x.ipAddress || x.userIp || x.clientIp).filter(Boolean);
         const macEl = $('vd-mac');
         if (macEl && macs.length) macEl.textContent = macs.join(', ');
         const ipEl = $('vd-ip');
