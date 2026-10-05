@@ -647,6 +647,8 @@ const I18N = {
   'ad.unknownDevice': { my: 'အမည်မသိ device', en: 'Unknown device' },
   'ad.empty': { my: 'device မရှိသေးပါ', en: 'No devices yet' },
   'ad.confirmBlock': { my: 'ဒီ device ကို ပိတ်မှာလား?', en: 'Block this device?' },
+  'ad.delete': { my: 'ဖျက်', en: 'Delete' },
+  'ad.confirmDelete': { my: 'ဒီ device ကို ဖျက်မှာလား?', en: 'Delete this device?' },
   'rec.done': { my: 'မှတ်တမ်းသိမ်းပြီးပြီ', en: 'Recording saved' },
   'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
@@ -7297,7 +7299,8 @@ async function adRender() {
         : '') +
         (st !== 'blocked'
           ? `<button type="button" class="btn small danger-ghost" data-ad="block" data-id="${esc(d.id)}"${isMe ? ' disabled' : ''}>${esc(t('ad.block'))}</button>`
-          : '');
+          : '') +
+        `<button type="button" class="btn small danger-ghost" data-ad="delete" data-id="${esc(d.id)}"${isMe ? ' disabled' : ''}>${esc(t('ad.delete'))}</button>`;
     return `<div class="set-row"><div class="t"><div class="t-main">${esc(name)}${isMe ? ` <span class="ad-me">${esc(t('ad.thisDevice'))}</span>` : ''}</div>` +
       (sub ? `<div class="sub">${esc(sub)}</div>` : '') +
       `<div class="sub">${esc(t('ad.lastSeen'))}: ${esc(adFmtDate(d.lastSeen))}</div>` +
@@ -7308,12 +7311,20 @@ async function adRender() {
   listBox.querySelectorAll('[data-ad]').forEach(b => b.addEventListener('click', async () => {
     const id = b.dataset.id, act = b.dataset.ad;
     if (act === 'block' && !(await iosConfirm(t('ad.confirmBlock'), '', t('ad.block'), t('a.cancel'), true))) return;
+    if (act === 'delete' && !(await iosConfirm(t('ad.confirmDelete'), '', t('ad.delete'), t('a.cancel'), true))) return;
     b.disabled = true;
     try {
-      await adApi('/api/devices/set', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, status: act === 'block' ? 'blocked' : 'allowed', by: myId }),
-      });
+      if (act === 'delete') {
+        await adApi('/api/devices/delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, by: myId }),
+        });
+      } else {
+        await adApi('/api/devices/set', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, status: act === 'block' ? 'blocked' : 'allowed', by: myId }),
+        });
+      }
       toast(t('ad.saved'));
     } catch (e) { toast(t('ad.saveFail'), true); }
     adRender();
