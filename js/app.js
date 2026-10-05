@@ -2893,27 +2893,6 @@ function pkgGroupId(p) {
 function pkgName(p) {
   return p.packageName || p.profileName || p.userGroupName || p.name || p.groupName || 'Package';
 }
-/* v1.5.183: Field fallbacks for user group details — API returns varying field names */
-function pkgDevices(p) {
-  const v = p.noOfDevice ?? p.no_of_device ?? p.deviceLimit ?? p.maxDevices ?? p.devices;
-  return v === undefined || v === null || v === '' ? 0 : Number(v);
-}
-function pkgQuota(p) {
-  const v = p.quota ?? p.flowQuota ?? p.dataQuota ?? p.totalQuota;
-  return v === undefined || v === null || v === '' ? 0 : Number(v);
-}
-function pkgUpRate(p) {
-  const v = p.uploadRateLimit ?? p.upRateLimit ?? p.maxUpRate ?? p.uploadSpeed ?? p.upSpeed;
-  return v === undefined || v === null || v === '' ? 0 : Number(v);
-}
-function pkgDownRate(p) {
-  const v = p.downloadRateLimit ?? p.downRateLimit ?? p.maxDownRate ?? p.downloadSpeed ?? p.downSpeed;
-  return v === undefined || v === null || v === '' ? 0 : Number(v);
-}
-function pkgDuration(p) {
-  const v = p.timePeriod ?? p.duration ?? p.validity ?? p.period;
-  return v === undefined || v === null || v === '' ? 0 : Number(v);
-}
 function fillPackageSelects() {
   const opts = S.packages.map(p => {
     const uid = pkgGroupId(p), pid = pkgProfileId(p);
@@ -4327,17 +4306,18 @@ function renderUserGroupForm(editP) {
       const c = $('ugc-' + id), x = $('ugx-' + id);
       if (c) c.hidden = s.value !== 'custom';
       if (x && s.value === 'custom') x.value = sv;
-      if (typeof s.refreshIosPicker === 'function') { try { s.refreshIosPicker(); } catch (e) {} }
+      // v1.5.183: sync the iOS picker button (setSel doesn't fire change event)
+      if (typeof syncIosPickerBtn === 'function') { try { syncIosPickerBtn(s); } catch (e) {} }
     };
-    setSel('devices', pkgDevices(editP) === 0 && pv('noOfDevice') === '' ? '0' : String(pkgDevices(editP)));
-    const isDaily = Number(pv('durationCtrlType')) === 1 || (pNum('timePeriodDaily') > 0 && pkgDuration(editP) === 0);
+    setSel('devices', pv('noOfDevice') === '' ? '0' : pv('noOfDevice'));
+    const isDaily = Number(pv('durationCtrlType')) === 1 || (pNum('timePeriodDaily') > 0 && pNum('timePeriod') === 0);
     const pseg = $('ug-pseg');
     if (pseg) pseg.querySelectorAll('button').forEach(x => x.classList.toggle('active', (x.dataset.p === 'daily') === isDaily));
     try { pseg.dataset.cur = isDaily ? 'daily' : 'total'; } catch (e) {}
-    setSel('duration', isDaily ? pNum('timePeriodDaily') : pkgDuration(editP));
-    setSel('quota', pkgQuota(editP));
-    setSel('upspeed', pkgUpRate(editP));
-    setSel('downspeed', pkgDownRate(editP));
+    setSel('duration', isDaily ? pNum('timePeriodDaily') : pNum('timePeriod'));
+    setSel('quota', pNum('quota') || pNum('flowQuota'));
+    setSel('upspeed', pNum('uploadRateLimit'));
+    setSel('downspeed', pNum('downloadRateLimit'));
     window._ugEditPeriod = isDaily ? 'daily' : 'total';
   }
   // segmented period type
