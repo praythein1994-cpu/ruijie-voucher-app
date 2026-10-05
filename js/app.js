@@ -2262,7 +2262,7 @@ async function loadVouchers(opts) {
   S._vouchersLoading = true;
   const listEl = $('voucher-list');
   if (!opts.silent) {
-    $('voucher-count').textContent = '';
+    const vc0 = $('voucher-count'); if (vc0) vc0.textContent = ''; // v1.5.176: null-guard (element removed in v1.5.175)
     // iOS-style skeleton shimmer
     listEl.innerHTML = Array.from({ length: 6 }, () =>
       '<div class="skel"><div class="bar" style="width:52%"></div><div class="bar" style="width:34%"></div></div>').join('');

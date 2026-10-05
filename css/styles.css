@@ -2446,6 +2446,8 @@ html.ph-compact .fw-upbtn { width: 100%; margin-top: 4px; }
   display: inline-flex; align-items: center; justify-content: center;
 }
 #btn-bulk-select { padding: 9px 18px; font-size: 14px; border-radius: 10px; }
+/* v1.5.176: tighten gap left by removed count/fetched row (user request) */
+#view-vouchers .voucher-actions { margin-top: 2px; }
 
 /* ── v1.5.105: voucher count + updated timestamp — same baseline on one line ── */
 #voucher-count, #voucher-fetched { line-height: 1.5; margin: 0; padding: 0; }
