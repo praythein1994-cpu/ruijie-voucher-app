@@ -98,6 +98,7 @@ $javaFiles += (Get-ChildItem -Recurse "$BuildTmp/gen" -Filter "*.java" -ErrorAct
 $javaFiles = $javaFiles | Where-Object { $_ }
 Write-Host "Found $($javaFiles.Count) Java files"
 if ($javaFiles.Count -eq 0) { Write-Host "ERROR: No Java files found!" -ForegroundColor Red; exit 1 }
+$ErrorActionPreference = "Continue" # v1.5.196: javac "Note:" goes to stderr; don't let it abort the build
 & javac -encoding UTF-8 -source 8 -target 8 -nowarn `
     -classpath "$Platform/android.jar" `
     -d "$BuildTmp/classes" `
