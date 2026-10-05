@@ -31,6 +31,9 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
 
+        // v1.5.184: Enable WebView remote debugging for PC emulator testing
+        WebView.setWebContentsDebuggingEnabled(true);
+
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);          // localStorage for credentials/settings
