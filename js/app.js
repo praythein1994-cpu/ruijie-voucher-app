@@ -899,6 +899,7 @@ const I18N = {
   'upd.check': { my: 'အပ်ဒိတ်စစ်မယ်', en: 'Check for updates' },
   'upd.availTitle': { my: 'အပ်ဒိတ်ရရှိနိုင်ပါတယ်', en: 'Update available' },
   'upd.dlInstall': { my: 'ဒေါင်းလုပ်လုပ် & တင်မယ်', en: 'Download & Install' },
+  'upd.dlUpdate': { my: 'ဒေါင်းလုပ်လုပ် & အပ်ဒိတ်', en: 'Download & update' },
   'upd.auto': { my: 'အော်တိုဒေါင်းလုပ်လုပ်မယ်', en: 'Auto-download updates' },
   'upd.autoSub': { my: 'ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်', en: 'Download new versions automatically' },
   'upd.checking': { my: 'စစ်နေတယ်…', en: 'Checking…' },
@@ -6720,9 +6721,16 @@ async function updLatestRelease() {
   const tag = String(j.tag_name || '').trim();
   const apk = (j.assets || []).find(a => /\.apk$/i.test(String(a.name || '')));
   if (!tag || !apk || !apk.browser_download_url) throw new Error('no-apk');
+  /* v1.5.178: resolve the 302 redirect — DownloadManager stalls on github.com
+   * redirect URLs, so pass the final release-assets URL instead. */
+  let dlUrl = apk.browser_download_url;
+  try {
+    const hr = await fetch(dlUrl, { method: 'HEAD', redirect: 'follow' });
+    if (hr && hr.url && hr.url !== dlUrl) dlUrl = hr.url;
+  } catch (e) {}
   /* v1.5.137: capture the release notes too — the UPDATE Ready card shows
    * them in an expandable "what's new" section. */
-  return { tag, name: String(apk.name || 'update.apk'), url: apk.browser_download_url,
+  return { tag, name: String(apk.name || 'update.apk'), url: dlUrl,
            notes: String(j.body || '').trim() };
 }
 function updSetStatus(msg) {
@@ -6792,6 +6800,14 @@ function updOnDownloadDone(rel, ok, id) {
   if (ok) {
     updPendingSave({ id, tag: rel.tag, name: rel.name, notes: rel.notes || '' });
     updSetStatus(t('upd.downloaded'));
+    // v1.5.178: button becomes "Install"
+    const btn = $('upd-check-btn');
+    const label = $('upd-btn-label');
+    if (btn) {
+      btn.textContent = t('upd.install') || 'Install';
+      if (label) label.textContent = btn.textContent;
+      btn.onclick = () => updInstallApk(id);
+    }
     updRefreshInstallUI();
     updBannerShow(rel.tag, true); // v1.5.138: banner upgrades to UPDATE Ready
     updDlDone(); // v1.5.139: ring celebrates, then the UPDATE Ready card takes over
@@ -6887,22 +6903,22 @@ async function checkAppUpdate(manual) {
     return null;
   }
 }
-/* v1.5.171: GlassVPN-style update available card */
+/* v1.5.178: single-button update flow — the Check button itself changes state.
+ * "Check for updates" -> (found) "Download & update" -> (done) "Install". */
 function updShowAvail(rel) {
-  const card = $('upd-avail');
-  if (!card) return;
-  const ver = $('upd-avail-ver');
-  if (ver) ver.textContent = rel.tag || '';
-  const notes = $('upd-avail-notes');
-  if (notes) notes.textContent = (rel.notes || '').trim() || t('upd.noNotes');
-  card.hidden = false;
-  const btn = $('upd-dl-btn');
-  if (btn) {
-    btn.onclick = () => {
-      card.hidden = true;
-      updStartDownload(rel, false);
-    };
-  }
+  const btn = $('upd-check-btn');
+  const label = $('upd-btn-label');
+  if (!btn) return;
+  // Show available version in the status line
+  updSetStatus((rel.tag || '') + (rel.notes ? ' — ' + rel.notes.split('\n')[0] : ''));
+  // Change button to "Download & update"
+  btn.textContent = t('upd.dlUpdate') || 'Download & update';
+  if (label) label.textContent = btn.textContent;
+  btn.onclick = () => {
+    btn.textContent = t('upd.check') || 'Check for updates';
+    if (label) label.textContent = btn.textContent;
+    updStartDownload(rel, false);
+  };
   // Hide the bar if it was showing from a previous download
   const bw = $('upd-bar-wrap');
   if (bw) bw.hidden = true;
