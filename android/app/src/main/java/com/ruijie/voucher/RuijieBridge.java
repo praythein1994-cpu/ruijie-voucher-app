@@ -1,6 +1,7 @@
 package com.ruijie.voucher;
 
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -1299,6 +1300,60 @@ public class RuijieBridge {
             nm.notify(2001, b.build());
             JSONObject o = new JSONObject();
             o.put("ok", true);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /* v1.5.192: Native APK download via DownloadManager (bypasses WebView CORS).
+     * Returns the DownloadManager ID as string, or error JSON. */
+    @JavascriptInterface
+    public String downloadApk(final String url, final String fileName) {
+        try {
+            DownloadManager dm = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            if (dm == null) return btErr("DownloadManager unavailable");
+            Uri uri = Uri.parse(url);
+            DownloadManager.Request req = new DownloadManager.Request(uri);
+            req.setTitle("P Manager Update");
+            req.setDescription("Downloading " + fileName);
+            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalPublicDir(
+                android.os.Environment.DIRECTORY_DOWNLOADS, fileName);
+            req.setAllowedOverMetered(true);
+            req.setAllowedOverRoaming(true);
+            long id = dm.enqueue(req);
+            JSONObject o = new JSONObject();
+            o.put("ok", true);
+            o.put("downloadId", id);
+            return o.toString();
+        } catch (Exception e) {
+            return btErr(e.getMessage());
+        }
+    }
+
+    /* v1.5.192: Check download progress. Returns {status, bytesDownloaded, totalBytes}. */
+    @JavascriptInterface
+    public String downloadProgress(final String downloadIdStr) {
+        try {
+            long downloadId = Long.parseLong(downloadIdStr);
+            DownloadManager dm = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Query q = new DownloadManager.Query();
+            q.setFilterById(downloadId);
+            android.database.Cursor c = dm.query(q);
+            JSONObject o = new JSONObject();
+            if (c != null && c.moveToFirst()) {
+                int statusIdx = c.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                int bytesIdx = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                int totalIdx = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+                o.put("status", c.getInt(statusIdx));
+                o.put("bytesDownloaded", c.getLong(bytesIdx));
+                o.put("totalBytes", c.getLong(totalIdx));
+                o.put("ok", true);
+                c.close();
+            } else {
+                o.put("ok", false);
+            }
             return o.toString();
         } catch (Exception e) {
             return btErr(e.getMessage());

@@ -6952,13 +6952,10 @@ async function updLatestRelease() {
   const tag = String(j.tag_name || '').trim();
   const apk = (j.assets || []).find(a => /\.apk$/i.test(String(a.name || '')));
   if (!tag || !apk || !apk.browser_download_url) throw new Error('no-apk');
-  /* v1.5.178: resolve the 302 redirect — DownloadManager stalls on github.com
-   * redirect URLs, so pass the final release-assets URL instead. */
+  /* v1.5.192: Skip the HEAD redirect resolution — it was blocked by CORS in
+   * WebView (origin 'null'). The native DownloadManager follows the 302
+   * redirect itself, so pass the original browser_download_url directly. */
   let dlUrl = apk.browser_download_url;
-  try {
-    const hr = await fetch(dlUrl, { method: 'HEAD', redirect: 'follow' });
-    if (hr && hr.url && hr.url !== dlUrl) dlUrl = hr.url;
-  } catch (e) {}
   /* v1.5.137: capture the release notes too — the UPDATE Ready card shows
    * them in an expandable "what's new" section. */
   return { tag, name: String(apk.name || 'update.apk'), url: dlUrl,
