@@ -536,6 +536,7 @@ const I18N = {
   'q.noApps': { my: 'App မရှိသေးဘူး', en: 'No apps yet' },
   'q.apps': { my: 'App များ', en: 'Apps' },
   'q.allUsers': { my: 'အသုံးပြုသူအားလုံး', en: 'All users' },
+  'q.userGroup': { my: 'User Group', en: 'User Group' },
   'q.appid': { my: 'App Identification', en: 'App Identification' },
   'q.appidHint': { my: 'DPI — memory 9MB သုံးတယ်။ Gateway offline သွားရင် ပိတ်လိုက်။', en: 'DPI — uses 9MB memory. Turn off if gateway goes offline.' },
   'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
@@ -5513,6 +5514,9 @@ async function loadQoS() {
         <b>${esc(isNew ? t('q.addPol') : t('q.editPol'))}</b>
         <label style="display:block;margin-top:10px">${esc(t('q.polName'))}<br>
           <input type="text" id="pe-name" value="${esc(p.comment || '')}" style="width:100%"></label>
+        <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.userGroup') || 'User Group')}</div>
+          <select id="pe-ug" multiple style="width:100%;padding:8px;border-radius:8px;min-height:80px"></select>
+          <div id="pe-ug-chips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"></div></div>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
         <label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px">
@@ -5566,6 +5570,31 @@ async function loadQoS() {
         appSel.value = '';
       });
       renderChips();
+      // v1.5.182: User Group selector — fetch from gateway
+      const ugSel = ov.querySelector('#pe-ug');
+      const ugChips = ov.querySelector('#pe-ug-chips');
+      let selUGs = Array.isArray(p.userGroups) ? [...p.userGroups] : [];
+      let allUGs = [];
+      const renderUGChips = () => {
+        ugChips.innerHTML = selUGs.map((g, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(g)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
+        ugChips.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selUGs.splice(Number(b.dataset.i), 1); renderUGChips(); syncUGSelect(); }));
+      };
+      const syncUGSelect = () => {
+        if (!ugSel) return;
+        Array.from(ugSel.options).forEach(o => { o.selected = selUGs.includes(o.value); });
+      };
+      if (ugSel) {
+        GwApi.qosUserGroupList().then(groups => {
+          allUGs = groups || [];
+          ugSel.innerHTML = allUGs.map(g => `<option value="${esc(g.path)}">${esc(g.name)}</option>`).join('');
+          syncUGSelect();
+        }).catch(() => {});
+        ugSel.addEventListener('change', () => {
+          selUGs = Array.from(ugSel.selectedOptions).map(o => o.value);
+          renderUGChips();
+        });
+      }
+      renderUGChips();
       ov.querySelector('#pe-save').addEventListener('click', async () => {
         const np = isNew ? {
           policy_id: '10', ip_group: 'fc_rule_' + Date.now(),
@@ -5579,6 +5608,8 @@ async function loadQoS() {
         const allIp = ov.querySelector('#pe-allip');
         np.ipRange = (allIp && allIp.checked) ? '' : ov.querySelector('#pe-ip').value.trim();
         np.appList = selApps; // v1.5.177: App Speed Limit
+        np.userGroups = selUGs; // v1.5.182: User Group selector
+        np.user_group_list = selUGs; // gateway field
         // v1.5.154: UI is Mbps, gateway stores Kbps — convert with m2k
         const uv = m2k(ov.querySelector('#pe-up').value.trim());
         const dv = m2k(ov.querySelector('#pe-dn').value.trim());

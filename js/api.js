@@ -630,6 +630,25 @@ const GwApi = {
     });
   },
 
+  /** Get gateway user groups for QoS policy. Returns array of {name, path}. */
+  async qosUserGroupList() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: { module: 'user_group', data: { type: 'all' }, device: 'pc' },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const d = (j && j.data) || {};
+      const list = Array.isArray(d.list) ? d.list : (Array.isArray(d.groups) ? d.groups : []);
+      return list.map(g => ({
+        name: g.name || g.groupName || g.path || '',
+        path: g.path || g.name || '',
+        raw: g,
+      })).filter(g => g.name);
+    });
+  },
+
   /** Write full Custom QoS policy list. Returns true on success. */
   async qosPolicySet(list) {
     return this._withAutoRelogin(async () => {
