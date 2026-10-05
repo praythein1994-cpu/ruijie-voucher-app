@@ -5573,7 +5573,7 @@ async function loadQoS() {
       // v1.5.182: User Group selector — fetch from gateway
       const ugSel = ov.querySelector('#pe-ug');
       const ugChips = ov.querySelector('#pe-ug-chips');
-      let selUGs = Array.isArray(p.userGroups) ? [...p.userGroups] : [];
+      let selUGs = Array.isArray(p.userGroups) ? [...p.userGroups] : (Array.isArray(p.user_group_list) ? [...p.user_group_list] : []);
       let allUGs = [];
       const renderUGChips = () => {
         ugChips.innerHTML = selUGs.map((g, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(g)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
