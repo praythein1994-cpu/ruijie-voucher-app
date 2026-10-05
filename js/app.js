@@ -9183,19 +9183,19 @@ async function init() {
   const bss = $('btn-sync-settings');
   if (bss) bss.addEventListener('click', async () => {
     const st = $('sync-status');
+    const sw = $('sync-status-wrap');
+    const setSt = (txt) => { if (st) st.textContent = txt; if (sw) sw.hidden = !txt || txt === '—'; };
     try {
-      if (st) st.textContent = 'Syncing…';
+      setSt('Syncing…');
       // v1.5.124: pull FIRST (get other phone's changes), then push (send our changes)
       const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
       if (pullR.ok && pullR.applied && typeof refreshSyncedUI === 'function') {
         try { refreshSyncedUI(Store.load()); } catch (e) {}
       }
       const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
-      if (st) {
-        if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
-        else st.textContent = '✗ ' + (pullR.reason || pushR.reason || 'failed');
-      }
-    } catch (e) { if (st) st.textContent = '✗ error'; }
+      if (pushR.ok && pullR.ok) setSt('✓ Synced ' + new Date().toLocaleTimeString());
+      else setSt('✗ ' + (pullR.reason || pushR.reason || 'failed'));
+    } catch (e) { setSt('✗ error'); }
   });
   document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view, 'replace')));
   $('project-select').addEventListener('change', onProjectChange);
