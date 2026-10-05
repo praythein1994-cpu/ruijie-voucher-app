@@ -2162,7 +2162,10 @@ function closeAnySheet() {
   document.querySelectorAll('.ios-sheet-ov').forEach(ov => ov.remove());
 }
 function closeAnyModal() {
-  document.querySelectorAll('.modal:not(.hidden)').forEach(m => closeModal(m.id));
+  document.querySelectorAll('.modal:not(.hidden)').forEach(m => {
+    if (m.id) closeModal(m.id);
+    else m.remove(); // v1.5.186: dynamically created modals (no id)
+  });
 }
 /* v1.5.92: Back is handled entirely through WebView history.
    Native onBackPressed() just calls goBack(); this handler decides what
@@ -5521,8 +5524,8 @@ async function loadQoS() {
           <div id="pe-ug-chips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"></div></div>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px">
-          <input type="checkbox" id="pe-allip" ${!p.ipRange ? 'checked' : ''}> ${esc(t('q.allUsers') || 'All users')}</label>
+        <div class="ug-row"><span class="ug-lab">${esc(t('q.allUsers') || 'All users')}</span>
+          <label class="switch"><input type="checkbox" id="pe-allip" ${!p.ipRange ? ' checked' : ''}><span class="track"></span></label></div>
         <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.apps') || 'Apps')}</div>
           <input type="text" id="pe-app-search" placeholder="Search apps..." style="width:100%;padding:8px;border-radius:8px;margin-bottom:6px">
           <select id="pe-app-sel" style="width:100%;padding:8px;border-radius:8px"><option value="">${esc(t('q.selApp') || 'Select app...')}</option></select>
@@ -5546,6 +5549,7 @@ async function loadQoS() {
       const chipBox = ov.querySelector('#pe-app-chips');
       let selApps = Array.isArray(p.appList) ? [...p.appList] : [];
       let allApps = [];
+      let treeItems = [];
       const renderChips = () => {
         chipBox.innerHTML = selApps.map((a, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(a)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
         chipBox.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selApps.splice(Number(b.dataset.i), 1); renderChips(); }));
@@ -5559,11 +5563,12 @@ async function loadQoS() {
           filtered.map(x => `<option value="${items.indexOf(x)}">${esc(x.name)}</option>`).join('');
       };
       if (appSearch) appSearch.addEventListener('input', () => fillAppSel(allApps, appSearch.value));
-      if (typeof tree !== 'undefined' && tree) { allApps = tree; fillAppSel(allApps); }
-      else GwApi.qosAppTree().then(items => { allApps = items || []; fillAppSel(allApps); }).catch(() => {});
-      // Keep a ref to tree items for lookup
-      let treeItems = (typeof tree !== 'undefined' && tree) ? tree : [];
-      GwApi.qosAppTree().then(items => { treeItems = items || []; fillAppSel(treeItems); }).catch(() => {});
+      // v1.5.186: Single API call for app tree (fix race condition)
+      GwApi.qosAppTree().then(items => {
+        allApps = items || [];
+        treeItems = items || [];
+        fillAppSel(allApps, appSearch ? appSearch.value : '');
+      }).catch(() => {});
       appSel.addEventListener('change', () => {
         const idx = appSel.value;
         if (idx === '') return;

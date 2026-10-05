@@ -641,11 +641,21 @@ const GwApi = {
       if (gwAuthFailed(j)) throw new Error('Gateway session expired');
       const d = (j && j.data) || {};
       const list = Array.isArray(d.list) ? d.list : (Array.isArray(d.groups) ? d.groups : []);
-      return list.map(g => ({
-        name: g.name || g.groupName || g.path || '',
-        path: g.path || g.name || '',
-        raw: g,
-      })).filter(g => g.name);
+      return list.map(g => {
+        // v1.5.186: Try multiple fields for friendly name; fall back to cleaned path
+        let name = g.name || g.groupName || g.displayName || g.title || '';
+        const path = g.path || g.id || '';
+        if (!name && path) {
+          // Clean up path: "/auth_root/1hour" -> "1hour", "auth_root" -> "auth_root"
+          const parts = path.split('/').filter(Boolean);
+          name = parts.length ? parts[parts.length - 1] : path;
+        }
+        return {
+          name: name || path || 'Unknown',
+          path: path || name || '',
+          raw: g,
+        };
+      }).filter(g => g.name && g.name !== 'Unknown');
     });
   },
 
