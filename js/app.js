@@ -538,6 +538,9 @@ const I18N = {
   'q.apps': { my: 'App များ', en: 'Apps' },
   'q.allUsers': { my: 'အသုံးပြုသူအားလုံး', en: 'All users' },
   'q.userGroup': { my: 'User Group', en: 'User Group' },
+  'q.selUser': { my: 'User ရွေးပါ...', en: 'Select user...' },
+  'q.subnetGroup': { my: 'Subnet Group', en: 'Subnet Group' },
+  'q.userGroupTab': { my: 'User Group', en: 'User Group' },
   'q.appid': { my: 'App Identification', en: 'App Identification' },
   'q.appidHint': { my: 'DPI — memory 9MB သုံးတယ်။ Gateway offline သွားရင် ပိတ်လိုက်။', en: 'DPI — uses 9MB memory. Turn off if gateway goes offline.' },
   'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
@@ -5536,16 +5539,17 @@ async function loadQoS() {
         <b>${esc(isNew ? t('q.addPol') : t('q.editPol'))}</b>
         <label style="display:block;margin-top:10px">${esc(t('q.polName'))}<br>
           <input type="text" id="pe-name" value="${esc(p.comment || '')}" style="width:100%"></label>
+        <div class="ug-row" style="margin-top:10px"><span class="ug-lab">Enable</span>
+          <label class="switch"><input type="checkbox" id="pe-enable" ${p.effective !== '0' ? ' checked' : ''}><span class="track"></span></label></div>
         <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.userGroup') || 'User Group')}</div>
-          <select id="pe-ug" multiple style="width:100%;padding:8px;border-radius:8px;min-height:80px"></select>
+          <button type="button" id="pe-ug-btn" class="btn" style="width:100%;text-align:left">${esc(t('q.selUser') || 'Select user...')}</button>
           <div id="pe-ug-chips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"></div></div>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
         <div class="ug-row"><span class="ug-lab">${esc(t('q.allUsers') || 'All users')}</span>
           <label class="switch"><input type="checkbox" id="pe-allip" ${!p.ipRange ? ' checked' : ''}><span class="track"></span></label></div>
         <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.apps') || 'Apps')}</div>
-          <input type="text" id="pe-app-search" placeholder="Search apps..." style="width:100%;padding:8px;border-radius:8px;margin-bottom:6px">
-          <select id="pe-app-sel" style="width:100%;padding:8px;border-radius:8px"><option value="">${esc(t('q.selApp') || 'Select app...')}</option></select>
+          <button type="button" id="pe-app-btn" class="btn" style="width:100%;text-align:left">${esc(t('q.selApp') || 'Select app...')}</button>
           <div id="pe-app-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>
         <div class="row" style="margin-top:8px">
           <label style="flex:1">${esc(t('q.upLimit'))} (Mbps)<br>
@@ -5561,31 +5565,104 @@ async function loadQoS() {
       document.body.appendChild(ov);
       ov.querySelector('#pe-cancel').addEventListener('click', () => ov.remove());
       // v1.5.177: App Speed Limit — multi-select apps from tree with chip preview
-      const appSel = ov.querySelector('#pe-app-sel');
-      const appSearch = ov.querySelector('#pe-app-search');
+      const appBtn = ov.querySelector('#pe-app-btn');
       const chipBox = ov.querySelector('#pe-app-chips');
       let selApps = Array.isArray(p.appList) ? [...p.appList] : [];
       let allApps = [];
-      let treeItems = [];
       const renderChips = () => {
         chipBox.innerHTML = selApps.map((a, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(a)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
-        chipBox.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selApps.splice(Number(b.dataset.i), 1); renderChips(); }));
+        chipBox.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selApps.splice(Number(b.dataset.i), 1); renderChips(); updateAppBtn(); }));
       };
-      const fillAppSel = (items, filter) => {
-        if (!items || !items.length) return;
-        const f = (filter || '').toLowerCase();
-        const filtered = f ? items.filter(x => x.name.toLowerCase().includes(f)) : items;
-        // Keep original indices for lookup
-        appSel.innerHTML = `<option value="">${esc(t('q.selApp') || 'Select app...')}</option>` +
-          filtered.map(x => `<option value="${items.indexOf(x)}">${esc(x.name)}</option>`).join('');
+      const updateAppBtn = () => {
+        appBtn.textContent = selApps.length ? `${selApps.length} selected` : (t('q.selApp') || 'Select app...');
       };
-      if (appSearch) appSearch.addEventListener('input', () => fillAppSel(allApps, appSearch.value));
-      // v1.5.186: Single API call for app tree (fix race condition)
-      GwApi.qosAppTree().then(items => {
-        allApps = items || [];
-        treeItems = items || [];
-        fillAppSel(allApps, appSearch ? appSearch.value : '');
-      }).catch(() => {});
+      // v1.5.190: App selector modal with APPS/App Group tabs (matches gateway UI)
+      const openAppModal = async () => {
+        const mOv = document.createElement('div');
+        mOv.className = 'modal'; mOv.style.display = 'flex';
+        mOv.innerHTML = `<div class="modal-box" style="max-width:440px;max-height:80vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <b>Select Application</b>
+            <button type="button" class="btn small" id="appm-close">✕</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="text" id="appm-search" placeholder="Please enter" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd">
+            <span id="appm-count" style="align-self:center;font-size:13px;color:#007AFF">${selApps.length} Selected</span>
+          </div>
+          <div style="display:flex;gap:16px;border-bottom:1px solid #eee;margin-bottom:12px">
+            <button type="button" class="btn small" id="appm-tab-apps" style="border-bottom:2px solid #007AFF">APPS</button>
+            <button type="button" class="btn small" id="appm-tab-group">App Group</button>
+          </div>
+          <div id="appm-apps-list"></div>
+          <div id="appm-group-list" style="display:none"><p class="muted" style="text-align:center;padding:40px">No Data</p></div>
+          <div style="display:flex;gap:12px;margin-top:16px;align-items:center">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="appm-select-all"> Select All
+            </label>
+            <button type="button" class="btn primary" id="appm-ok" style="flex:1">OK</button>
+          </div>
+        </div>`;
+        document.body.appendChild(mOv);
+        const appsList = mOv.querySelector('#appm-apps-list');
+        const groupList = mOv.querySelector('#appm-group-list');
+        const searchInput = mOv.querySelector('#appm-search');
+        const countSpan = mOv.querySelector('#appm-count');
+        let tempSel = [...selApps];
+        const updateCount = () => { countSpan.textContent = `${tempSel.length} Selected`; };
+        const renderApps = (filter) => {
+          const f = (filter || '').toLowerCase();
+          const filtered = f ? allApps.filter(x => x.name.toLowerCase().includes(f)) : allApps;
+          // Group by category if available, otherwise flat list
+          appsList.innerHTML = filtered.map((x, idx) => `
+            <label style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">
+              <span style="flex:1">${esc(x.name)}</span>
+              <input type="checkbox" value="${esc(x.name)}" ${tempSel.includes(x.name) ? 'checked' : ''}>
+            </label>`).join('') || '<p class="muted" style="text-align:center;padding:20px">No apps found</p>';
+          appsList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+              if (cb.checked) { if (!tempSel.includes(cb.value)) tempSel.push(cb.value); }
+              else { tempSel = tempSel.filter(a => a !== cb.value); }
+              updateCount();
+            });
+          });
+        };
+        // Load apps
+        try {
+          const items = await GwApi.qosAppTree();
+          allApps = items || [];
+          renderApps('');
+        } catch (e) {
+          appsList.innerHTML = '<p class="muted">Failed to load apps</p>';
+        }
+        searchInput.addEventListener('input', () => renderApps(searchInput.value));
+        // Tab switching
+        mOv.querySelector('#appm-tab-apps').addEventListener('click', (e) => {
+          appsList.style.display = ''; groupList.style.display = 'none';
+          e.target.style.borderBottom = '2px solid #007AFF';
+          mOv.querySelector('#appm-tab-group').style.borderBottom = 'none';
+        });
+        mOv.querySelector('#appm-tab-group').addEventListener('click', (e) => {
+          appsList.style.display = 'none'; groupList.style.display = '';
+          e.target.style.borderBottom = '2px solid #007AFF';
+          mOv.querySelector('#appm-tab-apps').style.borderBottom = 'none';
+        });
+        // Select All
+        mOv.querySelector('#appm-select-all').addEventListener('change', (e) => {
+          if (e.target.checked) { tempSel = allApps.map(x => x.name); }
+          else { tempSel = []; }
+          renderApps(searchInput.value); updateCount();
+        });
+        // OK
+        mOv.querySelector('#appm-ok').addEventListener('click', () => {
+          selApps = [...tempSel];
+          renderChips(); updateAppBtn();
+          mOv.remove();
+        });
+        mOv.querySelector('#appm-close').addEventListener('click', () => mOv.remove());
+        mOv.addEventListener('click', (e) => { if (e.target === mOv) mOv.remove(); });
+      };
+      if (appBtn) appBtn.addEventListener('click', openAppModal);
+      renderChips(); updateAppBtn();
       appSel.addEventListener('change', () => {
         const idx = appSel.value;
         if (idx === '') return;
@@ -5595,34 +5672,105 @@ async function loadQoS() {
       });
       renderChips();
       // v1.5.182: User Group selector — fetch from gateway
-      const ugSel = ov.querySelector('#pe-ug');
+      const ugBtn = ov.querySelector('#pe-ug-btn');
       const ugChips = ov.querySelector('#pe-ug-chips');
       let selUGs = Array.isArray(p.userGroups) ? [...p.userGroups] : (Array.isArray(p.user_group_list) ? [...p.user_group_list] : []);
       let allUGs = [];
+      let selSubnet = p.subnetGroup || ''; // v1.5.190: Subnet Group selection
       const renderUGChips = () => {
-        ugChips.innerHTML = selUGs.map((g, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(g)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
-        ugChips.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selUGs.splice(Number(b.dataset.i), 1); renderUGChips(); syncUGSelect(); }));
+        const chips = [];
+        if (selSubnet) chips.push(`<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(selSubnet)} <b data-s="1" style="cursor:pointer">×</b></span>`);
+        chips.push(...selUGs.map((g, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(g)} <b data-i="${i}" style="cursor:pointer">×</b></span>`));
+        ugChips.innerHTML = chips.join('');
+        ugChips.querySelectorAll('b').forEach(b => b.addEventListener('click', () => {
+          if (b.dataset.s) { selSubnet = ''; } else { selUGs.splice(Number(b.dataset.i), 1); }
+          renderUGChips(); updateUGBtn();
+        }));
       };
-      const syncUGSelect = () => {
-        if (!ugSel) return;
-        Array.from(ugSel.options).forEach(o => { o.selected = selUGs.includes(o.value); });
+      const updateUGBtn = () => {
+        const parts = [];
+        if (selSubnet) parts.push(selSubnet);
+        parts.push(...selUGs);
+        ugBtn.textContent = parts.length ? parts.join(', ') : (t('q.selUser') || 'Select user...');
       };
-      if (ugSel) {
-        GwApi.qosUserGroupList().then(groups => {
+      // v1.5.190: User selector modal with Subnet Group + User Group tabs (matches gateway UI)
+      const openUGModal = async () => {
+        const mOv = document.createElement('div');
+        mOv.className = 'modal'; mOv.style.display = 'flex';
+        // Subnet groups (from gateway screenshot)
+        const subnets = [
+          { name: 'WIFI CODE', range: '192.168.20.1-192.168.21.254' },
+          { name: 'VLAN30', range: '192.168.30.1-192.168.31.254' },
+          { name: 'VLAN233', range: '192.168.110.1-192.168.111.254' },
+        ];
+        mOv.innerHTML = `<div class="modal-box" style="max-width:440px;max-height:80vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <b>${esc(t('q.userGroup') || 'User')}</b>
+            <button type="button" class="btn small" id="ugm-close">✕</button>
+          </div>
+          <div style="display:flex;gap:16px;border-bottom:1px solid #eee;margin-bottom:12px">
+            <button type="button" class="btn small" id="ugm-tab-subnet" style="border-bottom:2px solid #007AFF">${esc(t('q.subnetGroup'))}</button>
+            <button type="button" class="btn small" id="ugm-tab-user">${esc(t('q.userGroupTab'))}</button>
+          </div>
+          <div id="ugm-subnet-list"></div>
+          <div id="ugm-user-list" style="display:none"></div>
+          <div style="margin-top:16px"><button type="button" class="btn primary" id="ugm-ok" style="width:100%">OK</button></div>
+        </div>`;
+        document.body.appendChild(mOv);
+        const subnetList = mOv.querySelector('#ugm-subnet-list');
+        const userList = mOv.querySelector('#ugm-user-list');
+        // Render subnet groups
+        subnetList.innerHTML = subnets.map(s => `
+          <label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">
+            <input type="radio" name="ugm-subnet" value="${esc(s.name)}" ${selSubnet === s.name ? 'checked' : ''}>
+            <div><div style="font-weight:500">${esc(s.name)}</div><div style="font-size:12px;color:#888">${esc(s.range)}</div></div>
+          </label>`).join('');
+        // Render user groups (fetch from gateway)
+        try {
+          const groups = await GwApi.qosUserGroupList();
           allUGs = groups || [];
-          ugSel.innerHTML = allUGs.map(g => `<option value="${esc(g.path)}">${esc(g.name)}</option>`).join('');
-          syncUGSelect();
-        }).catch(() => {});
-        ugSel.addEventListener('change', () => {
-          selUGs = Array.from(ugSel.selectedOptions).map(o => o.value);
-          renderUGChips();
+          // Add "All Users" at top (gateway has this)
+          const allUsersOpt = { name: 'All Users', path: '' };
+          const displayGroups = [allUsersOpt, ...allUGs];
+          userList.innerHTML = displayGroups.map(g => `
+            <label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">
+              <input type="checkbox" value="${esc(g.path)}" data-name="${esc(g.name)}" ${selUGs.includes(g.path) ? 'checked' : ''}>
+              <div style="font-weight:500">${esc(g.name)}</div>
+            </label>`).join('');
+        } catch (e) {
+          userList.innerHTML = `<p class="muted">Failed to load user groups</p>`;
+        }
+        // Tab switching
+        const tabSubnet = mOv.querySelector('#ugm-tab-subnet');
+        const tabUser = mOv.querySelector('#ugm-tab-user');
+        tabSubnet.addEventListener('click', () => {
+          subnetList.style.display = ''; userList.style.display = 'none';
+          tabSubnet.style.borderBottom = '2px solid #007AFF'; tabUser.style.borderBottom = 'none';
         });
-      }
-      renderUGChips();
+        tabUser.addEventListener('click', () => {
+          subnetList.style.display = 'none'; userList.style.display = '';
+          tabUser.style.borderBottom = '2px solid #007AFF'; tabSubnet.style.borderBottom = 'none';
+        });
+        // OK button
+        mOv.querySelector('#ugm-ok').addEventListener('click', () => {
+          const selSub = mOv.querySelector('input[name="ugm-subnet"]:checked');
+          selSubnet = selSub ? selSub.value : '';
+          selUGs = Array.from(mOv.querySelectorAll('#ugm-user-list input[type="checkbox"]:checked')).map(cb => cb.value).filter(Boolean);
+          // If "All Users" checked (empty path), clear others
+          if (mOv.querySelector('#ugm-user-list input[value=""]:checked')) selUGs = [];
+          renderUGChips(); updateUGBtn();
+          mOv.remove();
+        });
+        mOv.querySelector('#ugm-close').addEventListener('click', () => mOv.remove());
+        mOv.addEventListener('click', (e) => { if (e.target === mOv) mOv.remove(); });
+      };
+      if (ugBtn) ugBtn.addEventListener('click', openUGModal);
+      renderUGChips(); updateUGBtn();
       ov.querySelector('#pe-save').addEventListener('click', async () => {
         const np = isNew ? {
           policy_id: '10', ip_group: 'fc_rule_' + Date.now(),
-          type: 'macc_cst', mode: 'share', intf: 'br-wan', tcPri: '1',
+          // v1.5.190: Match working Limit3 policy (from gateway capture)
+          type: 'web', mode: 'per_ip', intf: 'br-wan', tcPri: '1',
           tr_effective: '1', tr_group: '所有时段', wholeWan: '0',
           idyc_version: 'V3', effective: '-1', appList: [],
           user_group_list: [], vlanList: [], tr_range: [], intfGrpList: [],
