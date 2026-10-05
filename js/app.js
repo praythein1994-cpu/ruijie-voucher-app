@@ -534,6 +534,8 @@ const I18N = {
   'q.keygrpHint': { my: 'ဒီ app တွေရဲ့ traffic ကို အမြဲဦးစားပေးမယ်', en: 'Traffic from these apps is always prioritized' },
   'q.appPh': { my: 'App နာမည် (ဥပမာ MobileLegends)', en: 'App name (e.g. MobileLegends)' },
   'q.noApps': { my: 'App မရှိသေးဘူး', en: 'No apps yet' },
+  'q.apps': { my: 'App များ', en: 'Apps' },
+  'q.allUsers': { my: 'အသုံးပြုသူအားလုံး', en: 'All users' },
   'q.appid': { my: 'App Identification', en: 'App Identification' },
   'q.appidHint': { my: 'DPI — memory 9MB သုံးတယ်။ Gateway offline သွားရင် ပိတ်လိုက်။', en: 'DPI — uses 9MB memory. Turn off if gateway goes offline.' },
   'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
@@ -5513,7 +5515,10 @@ async function loadQoS() {
           <input type="text" id="pe-name" value="${esc(p.comment || '')}" style="width:100%"></label>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px">
+          <input type="checkbox" id="pe-allip" ${!p.ipRange ? 'checked' : ''}> ${esc(t('q.allUsers') || 'All users')}</label>
         <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.apps') || 'Apps')}</div>
+          <input type="text" id="pe-app-search" placeholder="Search apps..." style="width:100%;padding:8px;border-radius:8px;margin-bottom:6px">
           <select id="pe-app-sel" style="width:100%;padding:8px;border-radius:8px"><option value="">${esc(t('q.selApp') || 'Select app...')}</option></select>
           <div id="pe-app-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>
         <div class="row" style="margin-top:8px">
@@ -5531,19 +5536,25 @@ async function loadQoS() {
       ov.querySelector('#pe-cancel').addEventListener('click', () => ov.remove());
       // v1.5.177: App Speed Limit — multi-select apps from tree with chip preview
       const appSel = ov.querySelector('#pe-app-sel');
+      const appSearch = ov.querySelector('#pe-app-search');
       const chipBox = ov.querySelector('#pe-app-chips');
       let selApps = Array.isArray(p.appList) ? [...p.appList] : [];
+      let allApps = [];
       const renderChips = () => {
         chipBox.innerHTML = selApps.map((a, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(a)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
         chipBox.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selApps.splice(Number(b.dataset.i), 1); renderChips(); }));
       };
-      const fillAppSel = (items) => {
+      const fillAppSel = (items, filter) => {
         if (!items || !items.length) return;
+        const f = (filter || '').toLowerCase();
+        const filtered = f ? items.filter(x => x.name.toLowerCase().includes(f)) : items;
+        // Keep original indices for lookup
         appSel.innerHTML = `<option value="">${esc(t('q.selApp') || 'Select app...')}</option>` +
-          items.map((x, i) => `<option value="${i}">${esc(x.name)}</option>`).join('');
+          filtered.map(x => `<option value="${items.indexOf(x)}">${esc(x.name)}</option>`).join('');
       };
-      if (typeof tree !== 'undefined' && tree) fillAppSel(tree);
-      else GwApi.qosAppTree().then(fillAppSel).catch(() => {});
+      if (appSearch) appSearch.addEventListener('input', () => fillAppSel(allApps, appSearch.value));
+      if (typeof tree !== 'undefined' && tree) { allApps = tree; fillAppSel(allApps); }
+      else GwApi.qosAppTree().then(items => { allApps = items || []; fillAppSel(allApps); }).catch(() => {});
       // Keep a ref to tree items for lookup
       let treeItems = (typeof tree !== 'undefined' && tree) ? tree : [];
       GwApi.qosAppTree().then(items => { treeItems = items || []; fillAppSel(treeItems); }).catch(() => {});
@@ -5564,7 +5575,9 @@ async function loadQoS() {
           user_group_list: [], vlanList: [], tr_range: [], intfGrpList: [],
         } : p;
         np.comment = ov.querySelector('#pe-name').value.trim();
-        np.ipRange = ov.querySelector('#pe-ip').value.trim();
+        // v1.5.181: "All users" checkbox — empty ipRange means all IPs
+        const allIp = ov.querySelector('#pe-allip');
+        np.ipRange = (allIp && allIp.checked) ? '' : ov.querySelector('#pe-ip').value.trim();
         np.appList = selApps; // v1.5.177: App Speed Limit
         // v1.5.154: UI is Mbps, gateway stores Kbps — convert with m2k
         const uv = m2k(ov.querySelector('#pe-up').value.trim());
@@ -6797,14 +6810,8 @@ function updRefreshInstallUI() {
     updDlHide(); // v1.5.139: no download running — ring stays out of the way
   }
   if (st === 'ready') {
-    row.hidden = false;
-    /* v1.5.137: UPDATE Ready card — version line + collapsed-by-default
-     * release notes (textContent only, never HTML). */
-    const p = updPendingLoad();
-    const ver = $('upd-ready-ver');
-    if (ver) ver.textContent = (p && p.tag) ? p.tag : '';
-    const notes = $('upd-ready-notes');
-    if (notes) notes.textContent = (p && p.notes) ? p.notes : t('upd.noNotes');
+    // v1.5.181: UPDATE Ready card removed — the main button already shows "Install"
+    row.hidden = true;
   } else {
     row.hidden = true;
   }
