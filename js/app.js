@@ -2788,17 +2788,32 @@ function openVoucherDetail(uuid) {
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
   // v1.5.179: fetch bound MACs and IP for display
+  // v1.5.188: IP from online clients (match by MAC) — user suggestion
   (async () => {
     try {
       const tenantName = (() => { try { const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}'); return bi.email || ''; } catch (e) { return ''; } })();
       const list = await Api.voucherBindMacListSso(S.projectId, v, tenantName, '');
+      let macs = [];
       if (list && list.length) {
-        const macs = list.map(x => x.mac).filter(Boolean);
+        macs = list.map(x => x.mac).filter(Boolean);
         const ips = list.map(x => x.ip || x.ipAddr || x.ipAddress || x.userIp || x.clientIp).filter(Boolean);
         const macEl = $('vd-mac');
         if (macEl && macs.length) macEl.textContent = macs.join(', ');
         const ipEl = $('vd-ip');
         if (ipEl && ips.length) ipEl.textContent = ips.join(', ');
+        // If no IP from bind list, try online clients
+        if (ipEl && !ips.length && macs.length) {
+          try {
+            const clients = await Api.allOnlineClients(S.projectId);
+            const normMacs = macs.map(m => normMac(m));
+            const matched = (clients || []).filter(c => {
+              const cm = normMac(c.mac || c.clientMac || c.staMac || '');
+              return cm && normMacs.includes(cm);
+            });
+            const clientIps = matched.map(c => c.ip || c.clientIp || c.ipAddress || c.userIp).filter(Boolean);
+            if (clientIps.length) ipEl.textContent = clientIps.join(', ');
+          } catch (e2) {}
+        }
       }
     } catch (e) {}
   })();
