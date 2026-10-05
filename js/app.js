@@ -4597,6 +4597,8 @@ async function moreDevices() {
           const ncliShow = ncli > 0 ? ncli : ncliLocal;
           const showCli = isApRow && sn && (ncliShow > 0 || !d.local);
           const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" data-aplocal="${d.local ? '1' : ''}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncliShow}</span></button>` : '';
+          // v1.5.197: device performance button — shows CPU/Memory via Cloud API
+          const pb = sn ? `<button class="btn" data-perf="${esc(sn)}" data-name="${esc(nm)}" title="CPU/Memory">${ic('chart', 'sm')}</button>` : '';
           return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small>${(() => {
             // Cloud device list carries the management IP as `localIp`
             // (verified from the portal's own device-list JS bundle);
@@ -4606,17 +4608,45 @@ async function moreDevices() {
           })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
-          <td>${rb}${cb}</td></tr>`;
+          <td>${rb}${cb}${pb}</td></tr>`;
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name, b.dataset.local === '1')));
     document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames, b.dataset.aplocal === '1')));
+    document.querySelectorAll('#md-list [data-perf]').forEach(b => b.addEventListener('click', () => showDevicePerf(b.dataset.perf, b.dataset.name)));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#md-chips .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active'); load(c.dataset.t);
   }));
   load('');
+}
+
+/* v1.5.197: Device CPU/Memory performance popup (Cloud API 2.6.6) */
+async function showDevicePerf(sn, name) {
+  const ov = document.createElement('div');
+  ov.className = 'modal'; ov.style.display = 'flex';
+  ov.innerHTML = `<div class="modal-box" style="max-width:320px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b>${esc(name || sn)}</b>
+      <button type="button" class="btn small" id="perf-close">✕</button>
+    </div>
+    <div id="perf-body"><p class="muted">${t('more.loading')}</p></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#perf-close').addEventListener('click', () => ov.remove());
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+  try {
+    const d = await Api.devicePerf(sn);
+    const data = d.data || d;
+    ov.querySelector('#perf-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">
+        <div><div style="font-size:24px;font-weight:bold">${data.cpuRate != null ? data.cpuRate + '%' : '—'}</div><div class="muted small">CPU</div></div>
+        <div><div style="font-size:24px;font-weight:bold">${data.memoryRate != null ? data.memoryRate + '%' : '—'}</div><div class="muted small">Memory</div></div>
+      </div>`;
+  } catch (e) {
+    ov.querySelector('#perf-body').innerHTML = `<p class="err">${esc(e.message || e)}</p>`;
+  }
 }
 
 /* ── Device reboot (v1.5.13 SSO portal · v1.5.78 gateway-local) ──
