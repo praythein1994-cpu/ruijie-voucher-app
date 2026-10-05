@@ -2656,6 +2656,24 @@ const Api = {
     const d = this.unwrap(j);
     return d.list || d.data || [];
   },
+
+  /* ── New Cloud APIs (2024-08-20 doc) ── */
+
+  /* 2.6.10: Get Application Traffic Statistics — per-app up/down flow on gateway.
+   * Path: /logbizagent/logbiz/api/eg/appflow/statistic/data-minute/appname */
+  async appTrafficStats(groupId, sn, endTime = Date.now(), pageIndex = 0, pageSize = 50) {
+    const j = await this.call('POST', '/logbizagent/logbiz/api/eg/appflow/statistic/data-minute/appname', {},
+      { groupId, sn, endTime, pageIndex, pageSize });
+    const d = this.unwrap(j);
+    return d.list || d.data || [];
+  },
+
+  /* 2.6.6: Get Device CPU and Memory.
+   * Path: /logbizagent/logbiz/api/sys/current_performance */
+  async devicePerf(sn) {
+    const j = await this.call('GET', '/logbizagent/logbiz/api/sys/current_performance', { sn });
+    return this.unwrap(j);
+  },
 };
 
 // persistent UI state (selected project, printer prefs)

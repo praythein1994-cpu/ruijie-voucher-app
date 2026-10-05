@@ -5926,10 +5926,37 @@ async function moreTraffic() {
   moreShell(`${ic('chart', 'sm')} ${esc(t('mt.title'))}`, `
     ${GwApi.loggedIn() ? '' : `<p class="muted small">${t('md.needGw')}</p>`}
     <div><button class="btn" id="mt-refresh">${ic('refresh', 'sm')}<span>${t('mt.refresh')}</span></button>
+    <button class="btn" id="mt-cloud-apps">${ic('chart', 'sm')}<span>App Traffic (Cloud)</span></button>
     <span class="muted small" id="mt-meta"></span></div>
     <div id="mt-body" style="margin-top:10px"><p class="muted">${t('mt.hint')}</p></div>`);
   $('mt-refresh').addEventListener('click', loadTraffic);
+  $('mt-cloud-apps').addEventListener('click', loadCloudAppTraffic);
   if (GwApi.loggedIn()) loadTraffic();
+}
+
+/* v1.5.195: Cloud App Traffic Statistics (2.6.10) — per-app up/down from Cloud API */
+async function loadCloudAppTraffic() {
+  const body = $('mt-body'), meta = $('mt-meta');
+  if (!body) return;
+  body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
+  try {
+    const groupId = S.projectId;
+    const devices = await Api.deviceListSso(groupId).catch(() => []);
+    const gw = (devices || []).find(d => d.commonType === 'GATEWAY' || d.productType === 'EGW');
+    if (!gw) { body.innerHTML = '<p class="muted">No gateway found</p>'; return; }
+    const sn = gw.serialNumber || gw.sn;
+    const list = await Api.appTrafficStats(groupId, sn);
+    if (!list.length) { body.innerHTML = '<p class="muted">No app traffic data</p>'; return; }
+    const fmt = (b) => b > 1048576 ? (b/1048576).toFixed(1) + ' MB' : (b/1024).toFixed(1) + ' KB';
+    body.innerHTML = `<div class="card"><b>App Traffic (Cloud)</b><div style="margin-top:8px">
+      ${list.map(a => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span><b>${esc(a.appName || '?')}</b> <span class="muted small">${esc(a.appGroupName || '')}</span></span>
+        <span class="small">↓ ${fmt(a.downFlow || 0)} ↑ ${fmt(a.upFlow || 0)}</span>
+      </div>`).join('')}</div></div>`;
+    if (meta) meta.textContent = `${list.length} apps`;
+  } catch (e) {
+    body.innerHTML = `<p class="err">${esc(e.message || e)}</p>`;
+  }
 }
 
 async function loadTraffic() {
