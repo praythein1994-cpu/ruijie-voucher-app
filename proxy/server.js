@@ -184,6 +184,27 @@ function handlePcResultGet(req, res, u) {
   pcResults.delete(id);
   return send(res, req, 200, { ok: true, done: true, output: r.output, exit: r.exit });
 }
+// PC screenshot streaming: PC POSTs latest screenshot, owner GETs it (not deleted on read)
+let pcScreenshot = { image: '', ts: 0 };
+async function handlePcScreenshotPost(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (!pcCheckKey(u, payload)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  const img = String(payload.image || '');
+  if (!img) return send(res, req, 400, { code: -1, msg: 'image is required' });
+  // Limit to ~500KB base64 to prevent memory abuse
+  if (img.length > 700000) return send(res, req, 400, { code: -1, msg: 'image too large' });
+  pcScreenshot = { image: img, ts: Date.now() };
+  return send(res, req, 200, { ok: true });
+}
+function handlePcScreenshotGet(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  if (!pcCheckKey(u, null)) return send(res, req, 403, { code: -6, msg: 'Forbidden' });
+  if (!pcScreenshot.image) return send(res, req, 200, { ok: true, has: false });
+  return send(res, req, 200, { ok: true, has: true, image: pcScreenshot.image, ts: pcScreenshot.ts });
+}
 
 /* ── Agent-to-agent chat board (2026-10-03) ──────────────────────
  * Shared message board so two Muse agents (A = main chat, B = browser
@@ -666,6 +687,8 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/pc/queue' && req.method === 'GET') return handlePcQueueGet(req, res, u);
     if (u.pathname === '/api/pc/result' && req.method === 'POST') return handlePcResultPost(req, res, u);
     if (u.pathname.startsWith('/api/pc/result/') && req.method === 'GET') return handlePcResultGet(req, res, u);
+    if (u.pathname === '/api/pc/screenshot' && req.method === 'POST') return handlePcScreenshotPost(req, res, u);
+    if (u.pathname === '/api/pc/screenshot' && req.method === 'GET') return handlePcScreenshotGet(req, res, u);
     if (u.pathname === '/api/agents/chat' && req.method === 'POST') return handleAgentChatPost(req, res, u);
     if (u.pathname === '/api/agents/chat' && req.method === 'GET') return handleAgentChatGet(req, res, u);
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'GET') return handleProfileGet(req, res, u);
