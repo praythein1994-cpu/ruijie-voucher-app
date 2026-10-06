@@ -610,6 +610,8 @@ const I18N = {
   'm.clients': { my: 'Online Clients', en: 'Online Clients' },
   'm.foreign': { my: 'သူစိမ်း code', en: 'Foreign Codes' },
   'm.foreignSub': { my: 'မသိတဲ့ voucher များ', en: 'Unknown vouchers' },
+  'm.bypass': { my: 'Portal Bypass', en: 'Portal Bypass' },
+  'm.bypassSub': { my: 'Code မထည့်ပဲ သုံးနေသူများ', en: 'Using without a code' },
   'mf.title': { my: 'သူစိမ်း voucher code စစ်ဆေးမှု', en: 'Foreign Voucher Check' },
   'mf.desc': { my: 'ကိုယ်မထုတ်ထားတဲ့ voucher code နဲ့ ဝင်သုံးနေတဲ့ client များ', en: 'Clients using voucher codes you did not create' },
   'mf.scan': { my: 'စစ်ဆေးမယ်', en: 'Scan' },
@@ -619,6 +621,9 @@ const I18N = {
   'mf.kick': { my: 'ဖြုတ်မယ်', en: 'Kick' },
   'mf.kickAll': { my: 'အားလုံးဖြုတ်မယ်', en: 'Kick All' },
   'mf.online': { my: 'Online', en: 'Online' },
+  'mf.bypass': { my: 'Portal ကျော်နေသူများ', en: 'Portal Bypass' },
+  'mf.bypassDesc': { my: 'Voucher code မထည့်ပဲ 10MB အထက် သုံးနေတဲ့ client များ', en: 'Clients using 10MB+ without a voucher code' },
+  'mf.noBypass': { my: 'Portal ကျော်နေသူ မတွေ့ပါ ✅', en: 'No portal bypass found ✅' },
   'mf.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
   'm.history': { my: 'History', en: 'History' },
   'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
@@ -7831,6 +7836,110 @@ async function scanForeignVouchers() {
   }
 }
 
+/* v1.5.200: Portal Bypass page — standalone (user request).
+ * Finds clients on the voucher VLAN without voucher auth using 10MB+. */
+async function moreBypass() {
+  S.moreFn = moreBypass;
+  moreShell(`${ic('alert', 'sm')} ${esc(t('m.bypass'))}`,
+    `<p class="muted">${esc(t('mf.bypassDesc'))}</p>
+     <div style="margin:12px 0"><button class="btn primary" id="mb-scan">${esc(t('mf.scan'))}</button></div>
+     <div id="mb-list"><p class="muted">${esc(t('mf.scanning'))}</p></div>`);
+  $('mb-scan').addEventListener('click', scanPortalBypassPage);
+  scanPortalBypassPage(); // auto-scan on open
+}
+
+async function scanPortalBypassPage() {
+  const listEl = $('mb-list');
+  if (!listEl) return;
+  if (!Api.ssoLoggedIn()) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
+  listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
+  // Reuse the bypass scanner, rendering into our own container
+  const tmp = document.createElement('div');
+  try {
+    await scanPortalBypass(tmp);
+    listEl.innerHTML = tmp.innerHTML;
+    // Move any appended children
+    while (tmp.firstChild) listEl.appendChild(tmp.firstChild);
+  } catch (e) {
+    listEl.innerHTML = `<p class="err">${esc(String((e && e.message) || e))}</p>`;
+  }
+}
+
+/* v1.5.200: Portal bypass detection — finds clients on the voucher VLAN
+ * without voucher auth who have used 10MB+ (portal-only traffic should be <5MB).
+ * These are devices getting internet without entering a code. */
+async function scanPortalBypass(listEl) {
+  const pid = Number(S.projectId);
+  const vVlan = voucherVlan(Store.load());
+  if (!vVlan) return; // no voucher VLAN configured
+  const BYPASS_THRESHOLD = 10 * 1048576; // 10MB in bytes
+  // Get portal clients (has VLAN + flowUpDown)
+  let clients = [];
+  try {
+    clients = await Api.portalClients(pid, { pageSize: 1000 }) || [];
+  } catch (e) { return; }
+  // Get authenticated MACs (have voucher auth) — THREE sources for certainty:
+  // 1) Portal auth records, 2) Gateway authenticated list, 3) Portal clients account field
+  const authMacs = new Set();
+  try {
+    const recs = await Api.portalAuthUsers(pid);
+    for (const r of (recs || [])) {
+      const mac = normMac(r.userMac || r.mac || '');
+      if (mac) authMacs.add(mac);
+    }
+  } catch (e) {}
+  try {
+    const gw = await Api.authOnlineUsers() || {};
+    for (const u of (gw.list || [])) {
+      const mac = normMac(u.mac || '');
+      if (mac) authMacs.add(mac);
+    }
+  } catch (e) {}
+  // 3) Portal clients with account field set = has voucher auth
+  const clientAccts = new Map();
+  for (const c of clients) {
+    const mac = normMac(c.mac || c.userMac || '');
+    const acct = String(c.account || c.authAccount || c.authName || '').trim();
+    if (mac && acct) {
+      authMacs.add(mac);
+      clientAccts.set(mac, acct);
+    }
+  }
+  // Find bypass suspects
+  const bypass = [];
+  for (const c of clients) {
+    const vlan = String(c.vlan || c.vlanId || '').trim();
+    if (vlan !== String(vVlan).trim()) continue;
+    const mac = normMac(c.mac || c.userMac || '');
+    if (!mac || authMacs.has(mac)) continue; // has voucher auth
+    const flow = Number(c.flowUpDown || 0);
+    if (flow < BYPASS_THRESHOLD) continue;
+    bypass.push({
+      mac: c.mac || c.userMac || '',
+      ip: c.ip || c.userIp || '',
+      name: c.hostname || c.deviceName || c.userName || '',
+      flow,
+    });
+  }
+  // Render bypass section
+  const div = document.createElement('div');
+  div.style.marginTop = '24px';
+  if (!bypass.length) {
+    div.innerHTML = `<p class="ok">${esc(t('mf.noBypass'))}</p>`;
+  } else {
+    div.innerHTML = `
+      <h3 style="color:var(--red)">${esc(t('mf.bypass'))} (${bypass.length})</h3>
+      <p class="muted small">${esc(t('mf.bypassDesc'))}</p>
+      <div class="mc-list">${bypass.map(b => `
+        <div class="mc-row" style="border-left:3px solid var(--orange)">
+          <div><b>${esc(b.mac)}</b></div>
+          <div class="muted small">${esc(b.ip || '—')} · ${esc(fmtBytes(b.flow))}</div>
+          <div class="muted small">${esc(b.name || '')}</div>
+        </div>`).join('')}</div>`;
+  }
+  listEl.appendChild(div);
+}
+
 /* Kick a foreign voucher client: resolve auth record, kick, mark voucher. */
 async function kickForeignClient(f) {
   const pid = Number(S.projectId);
@@ -9903,6 +10012,7 @@ async function init() {
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
     else if (k === 'foreign') moreForeign(); // v1.5.198: foreign voucher code detection
+    else if (k === 'bypass') moreBypass(); // v1.5.200: portal bypass detection
     else if (k === 'history') moreHistory(); // v1.5.54
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
