@@ -275,6 +275,8 @@ const I18N = {
   'unbind.unbind': { my: 'ဖြုတ်မယ်', en: 'Unbind' },
   'confirm.signoutBtn': { my: 'ထွက်မယ်', en: 'Sign out' },
   'a.cancel': { my: 'မလုပ်တော့ပါ', en: 'Cancel' },
+  'a.yes': { my: 'ဟုတ်တယ်', en: 'Yes' },
+  'a.no': { my: 'မဟုတ်ဘူး', en: 'No' },
   'v.unknown': { my: 'အဟောင်း/မသိ', en: 'old/unknown' },
   'kick.title': { my: 'Client ဖြုတ်ချခြင်း', en: 'Client Disconnect' },
   'kick.auto': { my: 'Quota ပြည့်ရင် အလိုအလျောက် ဖြုတ်မယ်', en: 'Auto-disconnect when quota is spent' },
@@ -604,6 +606,17 @@ const I18N = {
   'al.readonly': { my: 'ကြည့်ရန်သာ', en: 'View only' },
   'al.confirm': { my: 'MAC Allowlist ကို gateway မှာ သိမ်းမှာသေချာပါသလား?', en: 'Save the MAC allowlist to the gateway?' },
   'm.clients': { my: 'Online Clients', en: 'Online Clients' },
+  'm.foreign': { my: 'သူစိမ်း code', en: 'Foreign Codes' },
+  'm.foreignSub': { my: 'မသိတဲ့ voucher များ', en: 'Unknown vouchers' },
+  'mf.title': { my: 'သူစိမ်း voucher code စစ်ဆေးမှု', en: 'Foreign Voucher Check' },
+  'mf.desc': { my: 'ကိုယ်မထုတ်ထားတဲ့ voucher code နဲ့ ဝင်သုံးနေတဲ့ client များ', en: 'Clients using voucher codes you did not create' },
+  'mf.scan': { my: 'စစ်ဆေးမယ်', en: 'Scan' },
+  'mf.scanning': { my: 'စစ်ဆေးနေတယ်…', en: 'Scanning…' },
+  'mf.empty': { my: 'သူစိမ်း code မတွေ့ပါ ✅', en: 'No foreign codes found ✅' },
+  'mf.found': { my: 'သူစိမ်း code {n} ခု တွေ့တယ်', en: 'Found {n} foreign codes' },
+  'mf.kick': { my: 'ဖြုတ်မယ်', en: 'Kick' },
+  'mf.kickAll': { my: 'အားလုံးဖြုတ်မယ်', en: 'Kick All' },
+  'mf.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
   'm.history': { my: 'History', en: 'History' },
   'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
   'mh.title': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Client History' },
@@ -2730,19 +2743,50 @@ function extractExpireCount(j) {
   return null;
 }
 
+/* v1.5.198: kick all online clients associated with a voucher code.
+ * Used by Reset (kick first, then reset) so the user never has to press
+ * Disconnect separately. */
+async function kickVoucherClients(v) {
+  const code = String(vCode(v) || '').trim();
+  if (!code) return;
+  const pid = Number(S.projectId);
+  try {
+    const recs = await Api.portalAuthUsers(pid);
+    const mine = recs.filter(r => String(r.account || '').trim() === code);
+    for (const rec of mine) {
+      try { await Api.clientKickSso(pid, rec); } catch (e) {}
+    }
+  } catch (e) {}
+}
+
 /* ═══════════ v1.5.101: Reset selected vouchers (Ruijie Cloud style) ═══════════
    Reset clears a voucher's usage (used time/quota) back to fresh/unused.
    v1.5.104: uses the VERIFIED portal envelope (2026-10-01, from live portal
    JS): POST /intlSamVoucher/voucher/reset with
    params:{recordList:[uuids], voucherCode:"codes"} querys:{group_id}.
-   The portal sends ONE call for all selected vouchers — we do the same. */
+   The portal sends ONE call for all selected vouchers — we do the same.
+   v1.5.198: Reset now kicks associated clients FIRST, then resets, then
+   clears the kicked/expired mark so the voucher shows as Unused. */
 async function resetSelectedVouchers() {
   const uuids = bulkSelectedUuids();
   if (!uuids.length) { toast(t('v.resetNone')); return; }
   const vs = uuids.map(u => S.vouchers.find(x => x.uuid === u)).filter(Boolean);
   if (!(await iosConfirm(tx('v.resetConfirm', { n: vs.length }), '', t('v.reset'), t('a.cancel'), true))) return;
   try {
+    // v1.5.198: kick associated clients first
+    for (const v of vs) {
+      try { await kickVoucherClients(v); } catch (e) {}
+    }
     await Api.voucherResetMany(S.projectId, vs);
+    // v1.5.198: clear kicked/expired marks so vouchers show as Unused
+    for (const v of vs) {
+      clearKickedVoucher(vCode(v));
+      try {
+        v.usedTime = 0; v.usedQuota = 0;
+        const sv = (S.vouchers || []).find(x => x.uuid === v.uuid);
+        if (sv) { sv.usedTime = 0; sv.usedQuota = 0; }
+      } catch (e) {}
+    }
     toast(tx('v.resetDone', { ok: vs.length }));
   } catch (e) {
     toast(tx('v.resetDone', { ok: 0 }) + ` · ${vs.length} ✗`);
@@ -6502,6 +6546,17 @@ function markKickedVoucher(code) {
   m[code] = Date.now();
   try { Store.save({ kickedVouchers: m }); } catch (e) {}
 }
+/* v1.5.198: clear the kicked/expired mark for a voucher (after reset) —
+ * the voucher becomes Unused again, not Expired. */
+function clearKickedVoucher(code) {
+  code = String(code || '').trim();
+  if (!code) return;
+  const m = kickedVoucherMarks();
+  if (m[code]) {
+    delete m[code];
+    try { Store.save({ kickedVouchers: m }); } catch (e) {}
+  }
+}
 /* v1.5.74: warn before Disconnect when the voucher still has quota or time
  * left. Only claims what is known: quota>0 and not fully spent, or
  * timePeriod>0 and not fully used. Unlimited/missing fields → no claim. */
@@ -7610,6 +7665,100 @@ function autoKickScan(list) {
     // prevents a kick → refresh → still-sticky → kick loop.
     if ((st === 'datalimit' || st === 'timeup') && autoKickDue(c)) requestKick(c, { auto: true });
   });
+}
+
+/* v1.5.198: Foreign voucher code detection — finds clients using voucher
+ * codes NOT in our voucher list (stolen/foreign codes, per Time Code Manager
+ * page report 2026-10-06). Compares portal auth records (authType "15") against
+ * known voucher codes. */
+async function moreForeign() {
+  S.moreFn = moreForeign;
+  moreShell(`${ic('shield', 'sm')} ${esc(t('mf.title'))}`,
+    `<p class="muted">${esc(t('mf.desc'))}</p>
+     <div style="margin:12px 0"><button class="btn primary" id="mf-scan">${esc(t('mf.scan'))}</button></div>
+     <div id="mf-list"></div>`);
+  $('mf-scan').addEventListener('click', scanForeignVouchers);
+}
+
+async function scanForeignVouchers() {
+  const listEl = $('mf-list');
+  if (!Api.ssoLoggedIn()) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
+  listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
+  try {
+    // Build set of known voucher codes
+    const known = new Set();
+    for (const v of (S.vouchers || [])) {
+      const code = String(vCode(v) || '').trim();
+      if (code) known.add(code);
+    }
+    // Get auth records
+    const recs = await Api.portalAuthUsers(Number(S.projectId));
+    // Find voucher-type records with unknown codes
+    const foreign = [];
+    for (const r of (recs || [])) {
+      const authType = String(r.authType || r.auth_type || '');
+      if (authType !== '15') continue; // only voucher auth
+      const code = String(r.account || '').trim();
+      if (!code || known.has(code)) continue;
+      foreign.push({
+        code,
+        mac: r.userMac || r.mac || '',
+        ip: r.userIp || r.ip || '',
+        name: r.userName || r.nickName || '',
+        time: r.loginTime || r.createTime || '',
+      });
+    }
+    if (!foreign.length) {
+      listEl.innerHTML = `<p class="ok">${esc(t('mf.empty'))}</p>`;
+      return;
+    }
+    listEl.innerHTML = `
+      <p class="warn">${esc(tx('mf.found', { n: foreign.length }))}</p>
+      <div style="margin:8px 0"><button class="btn danger" id="mf-kickall">${esc(t('mf.kickAll'))}</button></div>
+      <div class="mc-list">${foreign.map((f, i) => `
+        <div class="mc-row" style="border-left:3px solid var(--red)">
+          <div><b>${esc(f.code)}</b></div>
+          <div class="muted small">${esc(f.mac || '—')} · ${esc(f.ip || '—')}</div>
+          <div class="muted small">${esc(f.name || '')}</div>
+          <button class="btn sm danger" data-mf-kick="${i}">${esc(t('mf.kick'))}</button>
+        </div>`).join('')}</div>`;
+    // Wire kick buttons
+    listEl.querySelectorAll('[data-mf-kick]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const f = foreign[Number(btn.dataset.mfKick)];
+        if (!f) return;
+        btn.disabled = true;
+        try {
+          await kickForeignClient(f);
+          btn.textContent = '✓';
+        } catch (e) {
+          toast(String((e && e.message) || e), true);
+          btn.disabled = false;
+        }
+      });
+    });
+    $('mf-kickall').addEventListener('click', async () => {
+      if (!(await iosConfirm(tx('mf.found', { n: foreign.length }), '', t('mf.kickAll'), t('a.cancel'), true))) return;
+      for (const f of foreign) {
+        try { await kickForeignClient(f); } catch (e) {}
+      }
+      scanForeignVouchers(); // refresh
+    });
+  } catch (e) {
+    listEl.innerHTML = `<p class="err">${esc(String((e && e.message) || e))}</p>`;
+  }
+}
+
+/* Kick a foreign voucher client: resolve auth record, kick, mark voucher. */
+async function kickForeignClient(f) {
+  const pid = Number(S.projectId);
+  const recs = await Api.portalAuthUsers(pid);
+  const rec = recs.find(r => String(r.account || '').trim() === f.code &&
+    normMac(r.userMac) === normMac(f.mac));
+  if (!rec) throw new Error('Record not found');
+  await Api.clientKickSso(pid, rec);
+  markKickedVoucher(f.code);
+  toast(t('kick.done') || 'Kicked');
 }
 
 /* Online-Clients render cache: fetch once per visit, re-render locally on
@@ -9580,7 +9729,11 @@ async function init() {
     const v = modalVoucher;
     if (!(await iosConfirm(tx('v.resetConfirm', { n: 1 }), vCode(v), t('v.reset'), t('a.cancel'), true))) return;
     try {
+      // v1.5.198: kick associated clients first, then reset
+      try { await kickVoucherClients(v); } catch (e) {}
       await Api.voucherReset(S.projectId, v);
+      // v1.5.198: clear kicked/expired mark so voucher shows as Unused
+      clearKickedVoucher(vCode(v));
       // v1.5.129: optimistically clear usage so status updates immediately
       try {
         v.usedTime = 0; v.usedQuota = 0;
@@ -9667,6 +9820,7 @@ async function init() {
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
+    else if (k === 'foreign') moreForeign(); // v1.5.198: foreign voucher code detection
     else if (k === 'history') moreHistory(); // v1.5.54
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();
