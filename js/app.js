@@ -280,6 +280,8 @@ const I18N = {
   'v.unknown': { my: 'အဟောင်း/မသိ', en: 'old/unknown' },
   'kick.title': { my: 'Client ဖြုတ်ချခြင်း', en: 'Client Disconnect' },
   'kick.auto': { my: 'Quota ပြည့်ရင် အလိုအလျောက် ဖြုတ်မယ်', en: 'Auto-disconnect when quota is spent' },
+  'kick.foreign': { my: 'သူစိမ်း code အလိုအလျောက် ဖြုတ်မယ်', en: 'Auto-kick foreign codes' },
+  'kick.foreignSub': { my: 'ကိုယ်မထုတ်ထားတဲ့ voucher code သုံးနေတဲ့ client ကို ဖြုတ်မယ်', en: 'Kick clients using voucher codes you did not create' },
   'kick.autoSub': { my: 'Voucher limit ပြည့်ပြီး ဆက်ချိတ်နေတဲ့ client ကို ဖြုတ်ခိုင်းမယ်', en: 'Disconnect clients still online after their voucher quota is spent' },
   'kick.status': { my: 'အခြေအနေ', en: 'Status' },
   'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
@@ -616,6 +618,7 @@ const I18N = {
   'mf.found': { my: 'သူစိမ်း code {n} ခု တွေ့တယ်', en: 'Found {n} foreign codes' },
   'mf.kick': { my: 'ဖြုတ်မယ်', en: 'Kick' },
   'mf.kickAll': { my: 'အားလုံးဖြုတ်မယ်', en: 'Kick All' },
+  'mf.online': { my: 'Online', en: 'Online' },
   'mf.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
   'm.history': { my: 'History', en: 'History' },
   'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
@@ -6961,6 +6964,14 @@ function initKickSettings() {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
   }
+  // v1.5.199: foreign code auto-kick toggle
+  const tf = $('kick-foreign');
+  if (tf) {
+    tf.checked = Store.load().kickForeign !== false; // default ON
+    tf.addEventListener('change', () => {
+      Store.save({ kickForeign: tf.checked });
+    });
+  }
   // v1.5.175: self-heal — if the toggle is ON but the native job isn't
   // scheduled (e.g. after an update), re-push config and re-schedule now.
   if (Store.load().kickAuto && hasAutoKickBg()) {
@@ -7659,11 +7670,25 @@ function initUpdateSettings() {
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
   if (!Store.load().kickAuto) return;
+  // v1.5.199: build known voucher set for foreign code detection
+  const known = new Set();
+  try {
+    for (const v of (S.vouchers || [])) {
+      const code = String(vCode(v) || '').trim();
+      if (code) known.add(code);
+    }
+  } catch (e) {}
+  const kickForeign = Store.load().kickForeign !== false; // default ON
   (list || []).forEach(c => {
-    const st = clientStatusOf(String(c.account || c.authAccount || '').trim(), mcCache && mcCache.vmap);
+    const code = String(c.account || c.authAccount || '').trim();
+    const st = clientStatusOf(code, mcCache && mcCache.vmap);
     // v1.5.62: skip clients kicked within the cooldown (manual or auto) —
     // prevents a kick → refresh → still-sticky → kick loop.
     if ((st === 'datalimit' || st === 'timeup') && autoKickDue(c)) requestKick(c, { auto: true });
+    // v1.5.199: auto-kick foreign voucher codes (user request)
+    if (kickForeign && code && !known.has(code) && autoKickDue(c)) {
+      requestKick(c, { auto: true });
+    }
   });
 }
 
@@ -7676,8 +7701,10 @@ async function moreForeign() {
   moreShell(`${ic('shield', 'sm')} ${esc(t('mf.title'))}`,
     `<p class="muted">${esc(t('mf.desc'))}</p>
      <div style="margin:12px 0"><button class="btn primary" id="mf-scan">${esc(t('mf.scan'))}</button></div>
-     <div id="mf-list"></div>`);
+     <div id="mf-list"><p class="muted">${esc(t('mf.scanning'))}</p></div>`);
   $('mf-scan').addEventListener('click', scanForeignVouchers);
+  // v1.5.199: auto-scan on page open (user request)
+  scanForeignVouchers();
 }
 
 async function scanForeignVouchers() {
@@ -7692,22 +7719,76 @@ async function scanForeignVouchers() {
       if (code) known.add(code);
     }
     // Get auth records
+    // Get auth records (MAC → voucher code mapping for cloud clients)
     const recs = await Api.portalAuthUsers(Number(S.projectId));
-    // Find voucher-type records with unknown codes
+    // v1.5.199: combine ALL THREE online-client sources (user instruction):
+    // 1) Gateway app_auth_get_user_online — has voucher code DIRECTLY (userName)
+    // 2) Cloud sta_users currentUser — match MAC to auth records
+    // 3) (gateway user_list is all users, not just voucher — skip for voucher check)
     const foreign = [];
+    const seen = new Set();
+    // v1.5.199: track device history — currently online + last used time
+    const addForeign = (code, mac, ip, name, lastTime, isOnline) => {
+      code = String(code || '').trim();
+      mac = String(mac || '').trim();
+      if (!code || known.has(code)) return;
+      const key = normMac(mac) || code;
+      if (seen.has(key)) {
+        // Merge: update online status and time if this source is newer
+        const ex = foreign.find(f => (normMac(f.mac) || f.code) === key);
+        if (ex) {
+          if (isOnline) ex.isOnline = true;
+          if (lastTime && (!ex.lastTime || lastTime > ex.lastTime)) ex.lastTime = lastTime;
+          if (ip && !ex.ip) ex.ip = ip;
+          if (name && !ex.name) ex.name = name;
+        }
+        return;
+      }
+      seen.add(key);
+      foreign.push({ code, mac, ip: ip || '', name: name || '', lastTime: lastTime || '', isOnline: !!isOnline });
+    };
+    // Build MAC → {code, lastTime} from auth records (for history)
+    const macHistory = {};
     for (const r of (recs || [])) {
       const authType = String(r.authType || r.auth_type || '');
-      if (authType !== '15') continue; // only voucher auth
+      if (authType !== '15') continue;
+      const mac = normMac(r.userMac || r.mac || '');
       const code = String(r.account || '').trim();
-      if (!code || known.has(code)) continue;
-      foreign.push({
-        code,
-        mac: r.userMac || r.mac || '',
-        ip: r.userIp || r.ip || '',
-        name: r.userName || r.nickName || '',
-        time: r.loginTime || r.createTime || '',
-      });
+      if (!mac || !code) continue;
+      const lt = r.loginTime || r.createTime || r.authTime || '';
+      if (!macHistory[mac] || (lt && lt > (macHistory[mac].lastTime || ''))) {
+        macHistory[mac] = { code, lastTime: lt };
+      }
     }
+    // Source 1: Gateway authenticated users (direct voucher code)
+    try {
+      const gw = await Api.authOnlineUsers() || {};
+      for (const u of (gw.list || [])) {
+        const mac = normMac(u.mac || '');
+        const hist = macHistory[mac] || {};
+        addForeign(u.voucher || u.userName, u.mac, u.ip, u.hostname || u.deviceName,
+          hist.lastTime, true);
+      }
+    } catch (e) {}
+    // Source 2: Cloud online clients (MAC → auth record → voucher code)
+    try {
+      const online = await Api.allOnlineClients(Number(S.projectId)) || [];
+      const macToCode = {};
+      for (const r of (recs || [])) {
+        const authType = String(r.authType || r.auth_type || '');
+        if (authType !== '15') continue;
+        const mac = normMac(r.userMac || r.mac || '');
+        const code = String(r.account || '').trim();
+        if (mac && code) macToCode[mac] = code;
+      }
+      for (const c of online) {
+        const mac = normMac(c.mac || c.userMac || '');
+        if (!mac) continue;
+        const hist = macHistory[mac] || {};
+        addForeign(macToCode[mac] || '', c.mac || c.userMac, c.ip || c.userIp,
+          c.hostname || c.deviceName || c.userName, hist.lastTime, true);
+      }
+    } catch (e) {}
     if (!foreign.length) {
       listEl.innerHTML = `<p class="ok">${esc(t('mf.empty'))}</p>`;
       return;
@@ -7717,9 +7798,10 @@ async function scanForeignVouchers() {
       <div style="margin:8px 0"><button class="btn danger" id="mf-kickall">${esc(t('mf.kickAll'))}</button></div>
       <div class="mc-list">${foreign.map((f, i) => `
         <div class="mc-row" style="border-left:3px solid var(--red)">
-          <div><b>${esc(f.code)}</b></div>
+          <div><b>${esc(f.code)}</b> ${f.isOnline ? `<span class="badge ok">${esc(t('mf.online') || 'Online')}</span>` : ''}</div>
           <div class="muted small">${esc(f.mac || '—')} · ${esc(f.ip || '—')}</div>
           <div class="muted small">${esc(f.name || '')}</div>
+          ${f.lastTime ? `<div class="muted small">🕐 ${esc(fmtDate(f.lastTime))}</div>` : ''}
           <button class="btn sm danger" data-mf-kick="${i}">${esc(t('mf.kick'))}</button>
         </div>`).join('')}</div>`;
     // Wire kick buttons
