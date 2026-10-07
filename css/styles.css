@@ -376,13 +376,13 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .card h2 { margin: 0 0 8px; font-size: 18px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 8px; }
 
 /* ── Voucher page ── */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 0; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; }
 .stat {
-  background: var(--card); border-radius: var(--radius); padding: 10px 4px 9px; text-align: center;
+  background: var(--card); border-radius: var(--radius); padding: 6px 4px; text-align: center;
   box-shadow: var(--shadow-card);
 }
-.stat .n { font-size: 18px; font-weight: 700; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
-.stat .l { font-size: 8px; color: var(--gray); font-weight: 500; margin-top: 2px; }
+.stat .n { font-size: 12px; font-weight: 700; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.stat .l { font-size: 9px; color: var(--gray); font-weight: 500; margin-top: 2px; }
 .stat.g .n { color: var(--green); } .stat.a .n { color: var(--orange); }
 .stat.m .n { color: var(--gray); } .stat.t .n { color: var(--blue); }
 
@@ -403,11 +403,11 @@ input[type="search"]::-webkit-search-cancel-button { display: none; -webkit-appe
 .tool-btn:active { opacity: .6; }
 .refresh-btn.spinning { animation: spin .9s linear infinite; pointer-events: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.chips { display: flex; gap: 8px; margin-top: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.chips { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
 .chip {
   border: none; background: var(--fill-bg); color: var(--label);
-  border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  border-radius: 20px; padding: 6px 12px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer;
   font-family: inherit; transition: all .15s;
 }
 /* ── Online-Clients status colors (clientStatusOf) · theme-agnostic ── */
@@ -554,7 +554,7 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 /* iOS grouped voucher list */
 .list { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); }
 .voucher-row {
-  padding: 13px 14px 13px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+  padding: 8px 10px; display: flex; align-items: center; gap: 6px; cursor: pointer;
   border-bottom: .5px solid var(--hairline); transition: background .12s;
 }
 .voucher-row:last-child { border-bottom: none; }
@@ -573,22 +573,22 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 }
 .voucher-row > :not(.remain-fill) { position: relative; z-index: 1; }
 .remain-txt {
-  flex: none; font-size: 10px; font-weight: 700; color: var(--blue);
+  flex: none; font-size: 11px; font-weight: 700; color: var(--blue);
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.voucher-row .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.voucher-row .status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .status-dot.s1 { background: var(--green); }
 .status-dot.s2 { background: var(--orange); }
 .status-dot.s3 { background: var(--gray); }
 .voucher-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 700; font-size: 15px; letter-spacing: .8px; font-variant-numeric: tabular-nums;
+  font-weight: 700; font-size: 12px; letter-spacing: .8px; font-variant-numeric: tabular-nums;
 }
 .voucher-meta { flex: 1; min-width: 0; }
-.voucher-meta .pkg { font-size: 11px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-.voucher-row .chev { color: #C7C7CC; font-size: 16px; font-weight: 600; flex: none; }
+.voucher-meta .pkg { font-size: 9px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.voucher-row .chev { color: #C7C7CC; font-size: 14px; font-weight: 600; flex: none; }
 [data-theme="dark"] .voucher-row .chev { color: #48484A; }
-.badge { font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 20px; white-space: nowrap; }
+.badge { font-size: 9px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
 .badge.s1 { background: rgba(52, 199, 89, .14); color: var(--green); }
 .badge.s2 { background: rgba(255, 149, 0, .14); color: var(--orange); }
 .badge.s3 { background: var(--fill-bg); color: var(--gray); }
@@ -840,6 +840,47 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
   /* tablet: topbar action icons (search/refresh/printer) to the right, off the corner */
   html:not([data-layout="phone"]) #btn-search { margin-left: auto; }
   html:not([data-layout="phone"]) #topbar { padding-right: 28px; }
+  /* v1.5.209: tablet right-side fixed panel for voucher stats/filters */
+  html:not([data-layout="phone"]) #view-vouchers {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    grid-template-areas:
+      "vsearch vsearch"
+      "vactions vactions"
+      "vlist vstats"
+      "vlist vchips"
+      "vloading vloading";
+    column-gap: 16px;
+    align-items: start;
+  }
+  html:not([data-layout="phone"]) #view-vouchers #voucher-search-row { grid-area: vsearch; }
+  html:not([data-layout="phone"]) #view-vouchers .voucher-actions { grid-area: vactions; }
+  html:not([data-layout="phone"]) #view-vouchers #voucher-list { grid-area: vlist; min-width: 0; }
+  html:not([data-layout="phone"]) #view-vouchers #voucher-loading { grid-area: vloading; }
+  html:not([data-layout="phone"]) #view-vouchers .stat-grid {
+    grid-area: vstats;
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow-card); padding: 12px;
+  }
+  html:not([data-layout="phone"]) #view-vouchers .stat {
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px; text-align: left;
+    background: transparent; box-shadow: none; border-radius: 10px;
+  }
+  html:not([data-layout="phone"]) #view-vouchers .stat .n { font-size: 20px; }
+  html:not([data-layout="phone"]) #view-vouchers .stat .l { font-size: 12px; margin-top: 0; }
+  html:not([data-layout="phone"]) #view-vouchers .toolbar {
+    grid-area: vchips;
+    position: static; margin: 12px 0 0; padding: 12px;
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  html:not([data-layout="phone"]) #view-vouchers .chips {
+    flex-direction: column; overflow: visible; margin-top: 0; gap: 6px;
+  }
+  html:not([data-layout="phone"]) #view-vouchers .chip {
+    width: 100%; justify-content: flex-start; text-align: left;
+  }
 }
 /* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
 html[data-layout="tablet"] .view { max-width: 980px; }
@@ -862,6 +903,47 @@ html[data-layout="tablet"] .connect-card { max-width: 440px; padding: 38px 32px;
 /* tablet: topbar action icons (search/refresh/printer) to the right, off the corner */
 html[data-layout="tablet"] #btn-search { margin-left: auto; }
 html[data-layout="tablet"] #topbar { padding-right: 28px; }
+/* v1.5.209: tablet right-side fixed panel for voucher stats/filters */
+html[data-layout="tablet"] #view-vouchers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-areas:
+    "vsearch vsearch"
+    "vactions vactions"
+    "vlist vstats"
+    "vlist vchips"
+    "vloading vloading";
+  column-gap: 16px;
+  align-items: start;
+}
+html[data-layout="tablet"] #view-vouchers #voucher-search-row { grid-area: vsearch; }
+html[data-layout="tablet"] #view-vouchers .voucher-actions { grid-area: vactions; }
+html[data-layout="tablet"] #view-vouchers #voucher-list { grid-area: vlist; min-width: 0; }
+html[data-layout="tablet"] #view-vouchers #voucher-loading { grid-area: vloading; }
+html[data-layout="tablet"] #view-vouchers .stat-grid {
+  grid-area: vstats;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow-card); padding: 12px;
+}
+html[data-layout="tablet"] #view-vouchers .stat {
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px; text-align: left;
+  background: transparent; box-shadow: none; border-radius: 10px;
+}
+html[data-layout="tablet"] #view-vouchers .stat .n { font-size: 20px; }
+html[data-layout="tablet"] #view-vouchers .stat .l { font-size: 12px; margin-top: 0; }
+html[data-layout="tablet"] #view-vouchers .toolbar {
+  grid-area: vchips;
+  position: static; margin: 12px 0 0; padding: 12px;
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+html[data-layout="tablet"] #view-vouchers .chips {
+  flex-direction: column; overflow: visible; margin-top: 0; gap: 6px;
+}
+html[data-layout="tablet"] #view-vouchers .chip {
+  width: 100%; justify-content: flex-start; text-align: left;
+}
 
 @media (min-width: 1100px) {
   html:not([data-layout="phone"]) .view { max-width: 1180px; }
