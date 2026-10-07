@@ -856,20 +856,54 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
   html:not([data-layout="phone"]) #btn-search { margin-left: auto; }
   html:not([data-layout="phone"]) #topbar { padding-right: 28px; }
   /* v1.5.209: tablet right-side fixed panel for voucher stats/filters */
+  /* v1.5.211: Select/More moved into the sidebar below the filter chips (user request) */
   html:not([data-layout="phone"]) #view-vouchers {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 220px;
     grid-template-areas:
       "vsearch vsearch"
-      "vactions vactions"
       "vlist vstats"
       "vlist vchips"
+      "vlist vactions"
       "vloading vloading";
     column-gap: 16px;
     align-items: start;
   }
   html:not([data-layout="phone"]) #view-vouchers #voucher-search-row { grid-area: vsearch; }
-  html:not([data-layout="phone"]) #view-vouchers .voucher-actions { grid-area: vactions; }
+  html:not([data-layout="phone"]) #view-vouchers .voucher-actions {
+    grid-area: vactions;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin: 12px 0 0;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    padding: 12px;
+  }
+  html:not([data-layout="phone"]) #view-vouchers .voucher-actions .btn {
+    width: 100%;
+    min-height: 38px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+  /* More on top; its dropdown opens in-flow and pushes Select down */
+  html:not([data-layout="phone"]) #view-vouchers #btn-voucher-more { order: 1; }
+  html:not([data-layout="phone"]) #view-vouchers #voucher-more-menu {
+    order: 2;
+    position: static;
+    width: 100%;
+    min-width: 0;
+    box-shadow: none;
+    background: var(--fill-bg);
+    padding: 4px;
+    margin: 0;
+  }
+  html:not([data-layout="phone"]) #view-vouchers #btn-bulk-select { order: 3; }
+  html:not([data-layout="phone"]) #view-vouchers #bulk-inline { order: 4; justify-content: center; }
+  /* stat rows are tappable filters on tablet */
+  html:not([data-layout="phone"]) #view-vouchers .stat-grid .stat { cursor: pointer; }
+  html:not([data-layout="phone"]) #view-vouchers .stat-grid .stat.active { background: var(--fill-bg); }
   html:not([data-layout="phone"]) #view-vouchers #voucher-list { grid-area: vlist; min-width: 0; }
   html:not([data-layout="phone"]) #view-vouchers #voucher-loading { grid-area: vloading; }
   html:not([data-layout="phone"]) #view-vouchers .stat-grid {
@@ -922,20 +956,54 @@ html[data-layout="tablet"] .connect-card { max-width: 440px; padding: 38px 32px;
 html[data-layout="tablet"] #btn-search { margin-left: auto; }
 html[data-layout="tablet"] #topbar { padding-right: 28px; }
 /* v1.5.209: tablet right-side fixed panel for voucher stats/filters */
+/* v1.5.211: Select/More moved into the sidebar below the filter chips (user request) */
 html[data-layout="tablet"] #view-vouchers {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
   grid-template-areas:
     "vsearch vsearch"
-    "vactions vactions"
     "vlist vstats"
     "vlist vchips"
+    "vlist vactions"
     "vloading vloading";
   column-gap: 16px;
   align-items: start;
 }
 html[data-layout="tablet"] #view-vouchers #voucher-search-row { grid-area: vsearch; }
-html[data-layout="tablet"] #view-vouchers .voucher-actions { grid-area: vactions; }
+html[data-layout="tablet"] #view-vouchers .voucher-actions {
+  grid-area: vactions;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 12px 0 0;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 12px;
+}
+html[data-layout="tablet"] #view-vouchers .voucher-actions .btn {
+  width: 100%;
+  min-height: 38px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+/* More on top; its dropdown opens in-flow and pushes Select down */
+html[data-layout="tablet"] #view-vouchers #btn-voucher-more { order: 1; }
+html[data-layout="tablet"] #view-vouchers #voucher-more-menu {
+  order: 2;
+  position: static;
+  width: 100%;
+  min-width: 0;
+  box-shadow: none;
+  background: var(--fill-bg);
+  padding: 4px;
+  margin: 0;
+}
+html[data-layout="tablet"] #view-vouchers #btn-bulk-select { order: 3; }
+html[data-layout="tablet"] #view-vouchers #bulk-inline { order: 4; justify-content: center; }
+/* stat rows are tappable filters on tablet */
+html[data-layout="tablet"] #view-vouchers .stat-grid .stat { cursor: pointer; }
+html[data-layout="tablet"] #view-vouchers .stat-grid .stat.active { background: var(--fill-bg); }
 html[data-layout="tablet"] #view-vouchers #voucher-list { grid-area: vlist; min-width: 0; }
 html[data-layout="tablet"] #view-vouchers #voucher-loading { grid-area: vloading; }
 html[data-layout="tablet"] #view-vouchers .stat-grid {
@@ -2669,12 +2737,16 @@ html.ph-compact .fw-upbtn { width: 100%; margin-top: 4px; }
 
 /* ── v1.5.105: Vouchers page — Select & More buttons identical size (user request) ──
    (replaces the old fix4 rule that made Select smaller) */
+/* v1.5.211: phone-compact — smaller buttons to match the voucher count row above (user request) */
+#view-vouchers .voucher-actions {
+  justify-content: space-between; align-items: center; position: relative;
+}
 .voucher-actions .btn {
-  flex: none; min-height: 38px; padding: 9px 18px;
-  font-size: 12px; font-weight: 600; line-height: 1.25; border-radius: 10px;
+  flex: none; min-height: 32px; padding: 6px 14px;
+  font-size: 11px; font-weight: 600; line-height: 1.25; border-radius: 9px;
   display: inline-flex; align-items: center; justify-content: center;
 }
-#btn-bulk-select { padding: 9px 18px; font-size: 12px; border-radius: 10px; }
+#btn-bulk-select { padding: 6px 14px; font-size: 11px; border-radius: 9px; }
 /* v1.5.176: tighten gap left by removed count/fetched row (user request) */
 #view-vouchers .voucher-actions { margin-top: 2px; }
 

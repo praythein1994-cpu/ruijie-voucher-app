@@ -10417,14 +10417,17 @@ async function init() {
   $('btn-reset-selected').addEventListener('click', () => { toggleVoucherMore(false); resetSelectedVouchers(); });
 
   // v1.5.210: shared voucher status setter — keeps phone combined tabs + tablet chips in sync
+  // v1.5.211: also syncs tablet sidebar stat rows (tappable filters)
   function setVoucherStatus(s) {
     S.vStatus = s;
     document.querySelectorAll('#voucher-status-chips .chip').forEach(x => x.classList.toggle('active', x.dataset.s === s));
     document.querySelectorAll('#voucher-combined .combined-tab').forEach(x => x.classList.toggle('active', x.dataset.s === s));
+    document.querySelectorAll('#view-vouchers .stat-grid .stat').forEach(x => x.classList.toggle('active', x.dataset.s === s));
     renderVouchers();
   }
   document.querySelectorAll('#voucher-status-chips .chip').forEach(c => c.addEventListener('click', () => setVoucherStatus(c.dataset.s)));
   document.querySelectorAll('#voucher-combined .combined-tab').forEach(c => c.addEventListener('click', () => setVoucherStatus(c.dataset.s)));
+  document.querySelectorAll('#view-vouchers .stat-grid .stat').forEach(c => c.addEventListener('click', () => setVoucherStatus(c.dataset.s)));
   $('modal-close').addEventListener('click', () => closeModal('modal'));
   $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal('modal'); });
   $('modal-print').addEventListener('click', () => { if (modalVoucher) doPrint([{ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }]); });
