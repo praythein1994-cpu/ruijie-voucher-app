@@ -12,8 +12,8 @@ PLATFORM="$SDK/platforms/android-34"
 APP=app/src/main
 OUT=build/apk
 KS="$HOME/.ruijie-voucher-pc.keystore"
-VERSION_CODE=212
-VERSION_NAME="1.5.211"
+VERSION_CODE=213
+VERSION_NAME="1.5.212"
 OUT_NAME="ruijie-voucher-${VERSION_NAME}.apk"
 
 echo "== 1. sync web app into assets =="

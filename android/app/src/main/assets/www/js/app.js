@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.208'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.212'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -2604,6 +2604,11 @@ function renderVouchers() {
   animNum($('stat-used'), n2);
   animNum($('stat-expired'), n3);
   animNum($('stat-total'), S.vouchers.length);
+  // v1.5.210: phone combined stats+filter row counts
+  animNum($('ctab-active'), n1);
+  animNum($('ctab-used'), n2);
+  animNum($('ctab-expired'), n3);
+  animNum($('ctab-total'), S.vouchers.length);
   // v1.5.54: last-fetched timestamp
   const fe = $('voucher-fetched');
   if (fe) fe.textContent = S.vouchersFetchedAt ? t('v.updated') + ' ' + fmtTime(S.vouchersFetchedAt) : '';
@@ -10411,10 +10416,18 @@ async function init() {
   $('btn-del-expired').addEventListener('click', () => { toggleVoucherMore(false); deleteExpiredVouchers(); });
   $('btn-reset-selected').addEventListener('click', () => { toggleVoucherMore(false); resetSelectedVouchers(); });
 
-  document.querySelectorAll('#voucher-status-chips .chip').forEach(c => c.addEventListener('click', () => {
-    document.querySelectorAll('#voucher-status-chips .chip').forEach(x => x.classList.remove('active'));
-    c.classList.add('active'); S.vStatus = c.dataset.s; renderVouchers();
-  }));
+  // v1.5.210: shared voucher status setter — keeps phone combined tabs + tablet chips in sync
+  // v1.5.211: also syncs tablet sidebar stat rows (tappable filters)
+  function setVoucherStatus(s) {
+    S.vStatus = s;
+    document.querySelectorAll('#voucher-status-chips .chip').forEach(x => x.classList.toggle('active', x.dataset.s === s));
+    document.querySelectorAll('#voucher-combined .combined-tab').forEach(x => x.classList.toggle('active', x.dataset.s === s));
+    document.querySelectorAll('#view-vouchers .stat-grid .stat').forEach(x => x.classList.toggle('active', x.dataset.s === s));
+    renderVouchers();
+  }
+  document.querySelectorAll('#voucher-status-chips .chip').forEach(c => c.addEventListener('click', () => setVoucherStatus(c.dataset.s)));
+  document.querySelectorAll('#voucher-combined .combined-tab').forEach(c => c.addEventListener('click', () => setVoucherStatus(c.dataset.s)));
+  document.querySelectorAll('#view-vouchers .stat-grid .stat').forEach(c => c.addEventListener('click', () => setVoucherStatus(c.dataset.s)));
   $('modal-close').addEventListener('click', () => closeModal('modal'));
   $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal('modal'); });
   $('modal-print').addEventListener('click', () => { if (modalVoucher) doPrint([{ code: vCode(modalVoucher), pkg: modalVoucher.packageName, period: modalVoucher.timePeriod, quota: modalVoucher.quota }]); });
