@@ -1687,6 +1687,60 @@ const Api = {
     return { list: inner.list || [], count: inner.count || 0 };
   },
 
+  /* ── WQoS (Wireless QoS / speed-limit) — SSO portal bridge ──
+   * Verified from portal capture 2026-10-08 (config_other_wqos_menu page).
+   * - GET /enet/speed-limit/support?group_id={gid}
+   * - GET /enet/speed-limit/user-base?group_id={gid}  (list user limits)
+   * - GET /enet/speed-limit/switch?group_id={gid}    (master toggle)
+   * - POST /enet/speed-limit/user-base {upLimit,downLimit,groupId,mac} (Kbps)
+   */
+  async ssoWqosSupport(groupId) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    const api = '/enet/speed-limit/support?group_id=' + groupId;
+    const env = { api, authParams: { api, method: 'GET' }, method: 'GET', module: 'default', querys: { lang: 'en', cloudType: 'smb' } };
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) throw new Error(j.msg || j.message || ('WQoS support စစ်မရပါ (code ' + c + ')'));
+    return (j && j.data) || j || {};
+  },
+
+  async ssoWqosSwitch(groupId) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    const api = '/enet/speed-limit/switch?group_id=' + groupId;
+    const env = { api, authParams: { api, method: 'GET' }, method: 'GET', module: 'default', querys: { lang: 'en', cloudType: 'smb' } };
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) throw new Error(j.msg || j.message || ('WQoS toggle စစ်မရပါ (code ' + c + ')'));
+    return (j && j.data) || j || {};
+  },
+
+  async ssoWqosUserBase(groupId) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    const api = '/enet/speed-limit/user-base?group_id=' + groupId;
+    const env = { api, authParams: { api, method: 'GET' }, method: 'GET', module: 'default', querys: { lang: 'en', cloudType: 'smb' } };
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) throw new Error(j.msg || j.message || ('WQoS user list ရမရပါ (code ' + c + ')'));
+    const d = (j && j.data) || j || {};
+    return Array.isArray(d) ? d : (d.list || d.userList || []);
+  },
+
+  async ssoWqosSetUserLimit(groupId, mac, upKbps, downKbps) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    if (!mac) throw new Error('MAC မရှိပါ');
+    const api = '/enet/speed-limit/user-base';
+    const params = { upLimit: upKbps, downLimit: downKbps, groupId: groupId, mac: mac };
+    const env = { api, authParams: { api, method: 'POST' }, method: 'POST', module: 'default', params, querys: { lang: 'en', cloudType: 'smb' } };
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) throw new Error(j.msg || j.message || ('Speed limit သိမ်းမရပါ (code ' + c + ')'));
+    return (j && j.data) || j || {};
+  },
+
   /* ── SSID management (Cloud webproxy, SSO session) ──
    * Source: portal's own JS (SeniorIndex-D70dfrR8.js, presetConf-CFOiaIt9.js),
    * read-only inspection 2026-09-30. Nothing was created/modified in the portal.

@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- v1.5.204: battery-heavy but reliable foreground auto-kick service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Bluetooth thermal printer (classic SPP). Legacy flags for API <= 30;
          runtime BLUETOOTH_SCAN / BLUETOOTH_CONNECT for API 31+. -->
@@ -43,5 +46,19 @@
             android:name=".AutoKickJob"
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false" />
+        <!-- v1.5.204: foreground auto-kick (dataSync type required for targetSdk 34) -->
+        <service
+            android:name=".AutoKickService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <!-- v1.5.204: restart auto-kick after reboot (foreground services
+             don't survive reboots; the persisted job does, as fallback) -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

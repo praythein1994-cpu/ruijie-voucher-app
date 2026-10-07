@@ -404,18 +404,13 @@
         <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
         <button class="menu-item" data-more="firmware"><svg class="ic lg"><use href="#i-up"/></svg><span data-i18n="m.firmware">Firmware update</span><small data-i18n="m.firmwareSub">စက်အပ်ဒိတ်များ</small></button>
         <button class="menu-item" data-more="overview"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.overview">Overview</span><small data-i18n="m.overviewSub">အကျဉ်းချုပ်</small></button>
-        <button class="menu-item" data-more="traffic" hidden><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.traffic">Traffic</span><small data-i18n="m.trafficSub">ဒေတာစီးဆင်းမှု</small></button>
-        <button class="menu-item" data-more="qos"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.qos">QoS</span><small data-i18n="m.qosSub">ဂိမ်းလိုင်းဦးစားပေး</small></button>
+        <button class="menu-item" data-more="speedlimit"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.speedlimit">Speed Limit</span><small data-i18n="m.speedlimitSub">မြန်နှုန်းကန့်သတ်ချက်</small></button>
+        <button class="menu-item" data-more="security"><span class="ic lg emoji-ic">🛡️</span><span data-i18n="m.security">Security</span><small data-i18n="m.securitySub">လုံခြုံရေး စောင့်ကြည့်မှု</small></button>
+        <button class="menu-item" data-more="tools"><svg class="ic lg"><use href="#i-box"/></svg><span data-i18n="m.tools">Tools</span><small data-i18n="m.toolsSub">ကိရိယာများ</small></button>
         <button class="menu-item" data-more="webauth"><svg class="ic lg"><use href="#i-lock"/></svg><span data-i18n="m.webauth">Web Auth</span><small data-i18n="m.webauthSub">ဝင်ရောက်ခွင့်စီမံခန့်ခွဲမှု</small></button>
         <button class="menu-item" data-more="wifi"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.wifi">WiFi</span><small data-i18n="m.wifiSub">SSID များ</small></button>
         <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
-        <button class="menu-item" data-more="foreign"><svg class="ic lg"><use href="#i-shield"/></svg><span data-i18n="m.foreign">သူစိမ်း code</span><small data-i18n="m.foreignSub">မသိတဲ့ voucher များ</small></button>
-        <button class="menu-item" data-more="bypass"><svg class="ic lg"><use href="#i-alert"/></svg><span data-i18n="m.bypass">Portal Bypass</span><small data-i18n="m.bypassSub">Code မထည့်ပဲ သုံးနေသူများ</small></button>
-        <button class="menu-item" data-more="history"><svg class="ic lg"><use href="#i-clock"/></svg><span data-i18n="m.history">History</span><small data-i18n="m.historySub">ဝင်ထွက်မှတ်တမ်း</small></button>
         <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
-        <button class="menu-item" data-more="recorder"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.recorder">Recorder</span><small data-i18n="m.recorderSub">Portal လုပ်ဆောင်ချက်မှတ်တမ်း</small></button>
-        <button class="menu-item" data-more="gwrecorder"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.gwrecorder">Gateway Capture</span><small data-i18n="m.gwrecorderSub">Gateway API ဖမ်းယူမှု</small></button>
-        <button class="menu-item" data-more="appdevices" id="more-appdevices" hidden><svg class="ic lg"><use href="#i-lock"/></svg><span data-i18n="m.appdevices">App Devices</span><small data-i18n="m.appdevicesSub">သွင်းထားတဲ့ဖုန်းများ</small></button>
       </div>
       <div id="more-content"></div>
     </section>
@@ -513,7 +508,7 @@
           <label class="switch"><input type="checkbox" id="kick-auto"><span class="track"></span></label>
         </div>
         <div class="set-row">
-          <span class="set-ico" style="--tile:#FF9500"><svg class="ic"><use href="#i-shield"/></svg></span>
+          <span class="set-ico" style="--tile:#FF9500"><span class="emoji">🛡️</span></span>
           <div class="t"><div class="t-main" data-i18n="kick.foreign">သူစိမ်း code အလိုအလျောက် ဖြုတ်မယ်</div><div class="sub" data-i18n="kick.foreignSub">ကိုယ်မထုတ်ထားတဲ့ voucher code သုံးနေတဲ့ client ကို ဖြုတ်မယ်</div></div>
           <label class="switch"><input type="checkbox" id="kick-foreign" checked><span class="track"></span></label>
         </div>
@@ -525,6 +520,11 @@
       <div class="section-title" data-i18n="s.appearance">အသွင်အပြင်</div>
       <div class="set-group">
         <label class="set-row set-field"><span class="fld-label" data-i18n="s.appearance">အသွင်အပြင်</span><select id="set-theme" class="fld-input" data-i18n-aria="s.appearance" aria-label="အသွင်အပြင်"></select></label>
+        <div class="set-row">
+          <span class="set-ico" style="--tile:#5AC8FA"><svg class="ic"><use href="#i-roller"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="s.ripple">ရေလှုပ်အကျိုးသက်ရောက်မှု</div><div class="sub" data-i18n="s.rippleSub">နှိပ်တဲ့အခါ ရေလှိုင်းလို ပြန့်သွားမယ်</div></div>
+          <label class="switch"><input type="checkbox" id="ripple-toggle" checked><span class="track"></span></label>
+        </div>
       </div>
 
       <div class="section-title" data-i18n="s.layout">အပြင်အဆင်</div>

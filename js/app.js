@@ -523,6 +523,16 @@ const I18N = {
   'm.overviewSub': { my: 'အကျဉ်းချုပ်', en: 'Dashboard' },
   'm.qos': { my: 'QoS', en: 'QoS' },
   'm.qosSub': { my: 'ဂိမ်းလိုင်းဦးစားပေး', en: 'Gaming priority' },
+  'm.speedlimit': { my: 'Speed Limit', en: 'Speed Limit' },
+  'm.speedlimitSub': { my: 'မြန်နှုန်းကန့်သတ်ချက်', en: 'Speed controls' },
+  'm.security': { my: 'Security', en: 'Security' },
+  'm.securitySub': { my: 'လုံခြုံရေး စောင့်ကြည့်မှု', en: 'Security monitoring' },
+  'm.tools': { my: 'Tools', en: 'Tools' },
+  'm.toolsSub': { my: 'ကိရိယာများ', en: 'Diagnostic tools' },
+  'm.wqos': { my: 'WQoS', en: 'WQoS' },
+  'm.wqosSub': { my: 'တစ်ယောက်ချင်း မြန်နှုန်းကန့်သတ်ချက်', en: 'Per-user speed limits' },
+  'm.foreign': { my: 'Other Codes', en: 'Other Codes' },
+  'm.foreignSub': { my: 'မသိတဲ့ voucher များ', en: 'Unknown vouchers' },
   'q.title': { my: 'QoS — ဂိမ်းဦးစားပေး', en: 'QoS — Gaming Priority' },
   'q.smart': { my: 'Smart QoS', en: 'Smart QoS' },
   'q.on': { my: 'ဖွင့်', en: 'ON' },
@@ -548,6 +558,32 @@ const I18N = {
   'q.userGroupTab': { my: 'User Group', en: 'User Group' },
   'q.appid': { my: 'App Identification', en: 'App Identification' },
   'q.appidHint': { my: 'DPI — memory 9MB သုံးတယ်။ Gateway offline သွားရင် ပိတ်လိုက်။', en: 'DPI — uses 9MB memory. Turn off if gateway goes offline.' },
+  /* v1.5.205: WQoS (Wireless QoS / per-user speed limits) */
+  'wq.title': { my: 'WQoS', en: 'WQoS' },
+  'wq.sub': { my: 'တစ်ယောက်ချင်း မြန်နှုန်းကန့်သတ်ချက်', en: 'Per-user speed limits' },
+  'wq.toggle': { my: 'WQoS', en: 'WQoS' },
+  'wq.needSso': { my: 'Android app မှာ SSO login ဝင်ထားမှ သုံးလို့ရပါတယ်', en: 'Requires SSO login in the Android app' },
+  'wq.loading': { my: 'ဖတ်နေတယ်…', en: 'Loading…' },
+  'wq.noUsers': { my: 'Speed limit သတ်မှတ်ထားသူ မရှိသေးဘူး', en: 'No per-user limits yet' },
+  'wq.add': { my: '+ Add', en: '+ Add' },
+  'wq.change': { my: 'Change', en: 'Change' },
+  'wq.delete': { my: 'Delete', en: 'Delete' },
+  'wq.mac': { my: 'MAC', en: 'MAC' },
+  'wq.macPh': { my: 'AA:BB:CC:DD:EE:FF', en: 'AA:BB:CC:DD:EE:FF' },
+  'wq.down': { my: 'Download (Mbps)', en: 'Download (Mbps)' },
+  'wq.up': { my: 'Upload (Mbps)', en: 'Upload (Mbps)' },
+  'wq.save': { my: 'သိမ်းမယ်', en: 'Save' },
+  'wq.cancel': { my: 'မလုပ်တော့ဘူး', en: 'Cancel' },
+  'wq.saved': { my: 'သိမ်းပြီးပြီ ✓', en: 'Saved ✓' },
+  'wq.deleted': { my: 'ဖျက်ပြီးပြီ ✓', en: 'Deleted ✓' },
+  'wq.fail': { my: 'မအောင်မြင်ဘူး', en: 'Failed' },
+  'wq.confirmDel': { my: 'ဒီ speed limit ကို ဖျက်မလား?', en: 'Delete this speed limit?' },
+  'wq.invalidMac': { my: 'MAC မှားနေတယ်', en: 'Invalid MAC address' },
+  'wq.tabUser': { my: 'User', en: 'User' },
+  'wq.tabWireless': { my: 'Wireless', en: 'Wireless' },
+  'wq.tabAp': { my: 'AP', en: 'AP' },
+  'wq.tabPacket': { my: 'Packet', en: 'Packet' },
+  'wq.comingSoon': { my: 'ဒီ tab က မကြာခင် ရမယ်', en: 'This tab is coming soon' },
   'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
   'q.confirmApp': { my: 'Key Group သိမ်းမလား?', en: 'Save Key Group?' },
   'q.confirmAppId': { my: 'App Identification ပြောင်းမလား?', en: 'Change App Identification?' },
@@ -924,10 +960,16 @@ const I18N = {
   's.darkmodeSub': { my: 'ညအချိန်အတွက် အနက်ရောင်အပြင်', en: 'Dark theme for night use' },
   's.themeLight': { my: 'Premium', en: 'Premium' },
   's.themeDark': { my: 'Dark', en: 'Dark' },
-  's.themeGlass': { my: 'Liquid Glass', en: 'Liquid Glass' },
+  's.themeIos': { my: 'iOS', en: 'iOS' },
+  's.themeGlassMorph': { my: 'Glass Morphism', en: 'Glass Morphism' },
   's.themeNeo': { my: 'Neumorphism', en: 'Neumorphism' },
+  's.themePneu': { my: 'Pneumorphism', en: 'Pneumorphism' },
   's.themeClay': { my: 'Claymorphism', en: 'Claymorphism' },
   's.themeApple': { my: 'Apple', en: 'Apple' },
+  's.themeSkew': { my: 'Skew Morphism', en: 'Skew Morphism' },
+  's.themeReal': { my: 'Real Object', en: 'Real Object' },
+  's.ripple': { my: 'ရေလှုပ်အကျိုးသက်ရောက်မှု', en: 'Water Ripple Effect' },
+  's.rippleSub': { my: 'နှိပ်တဲ့အခါ ရေလှိုင်းလို ပြန့်သွားမယ်', en: 'Ripple spreads like water when tapped' },
   's.language': { my: 'ဘာသာစကား', en: 'Language' },
   'upd.title': { my: 'အပ်ဒိတ်', en: 'App Update' },
   'upd.check': { my: 'အပ်ဒိတ်စစ်မယ်', en: 'Check for updates' },
@@ -1184,10 +1226,10 @@ async function copyText(text) {
   }
 }
 
-/* ── theme (light/dark/glass/neo/clay) ── */
-const THEMES = ['light', 'dark', 'glass', 'neo', 'clay', 'apple'];
-const THEME_META = { light: '#EDF1F8', dark: '#000000', glass: '#141A3D', neo: '#E0E5EC', clay: '#E9EDF5', apple: '#FFFFFF' };
-const THEME_I18N = { light: 's.themeLight', dark: 's.themeDark', glass: 's.themeGlass', neo: 's.themeNeo', clay: 's.themeClay', apple: 's.themeApple' };
+/* ── theme (7 themes: premium/ios/glass-morphism/clay/pneu/skew/real) ── */
+const THEMES = ['light', 'apple', 'glass', 'clay', 'neo', 'skew', 'real'];
+const THEME_META = { light: '#EDF1F8', apple: '#FFFFFF', glass: '#667EEA', clay: '#E9EDF5', neo: '#E0E5EC', skew: '#FA709A', real: '#1C1C1E' };
+const THEME_I18N = { light: 's.themeLight', apple: 's.themeIos', glass: 's.themeGlassMorph', clay: 's.themeClay', neo: 's.themePneu', skew: 's.themeSkew', real: 's.themeReal' };
 const LAYOUT_I18N = { auto: 's.layoutAuto', phone: 's.layoutPhone', tablet: 's.layoutTablet' };
 /** v1.5.84: theme/layout are iOS bottom-sheet pickers (like Profile/Package) — fill select options in the current language. */
 function fillThemeLayoutSelects() {
@@ -1230,9 +1272,47 @@ function initTheme() {
   let theme = null;
   try { theme = localStorage.getItem('rv-theme'); } catch (e) {}
   if (!THEMES.includes(theme)) {
-    theme = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    theme = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'real' : 'light';
   }
   applyTheme(theme);
+}
+
+/* ── v1.5.206: water ripple touch effect ──
+ * Material-style ripple expanding from the tap point on tappable elements.
+ * Toggle: Settings → Appearance → Water Ripple Effect (default ON).
+ * Persisted in localStorage 'rv-ripple' ('1'/'0'); body.no-ripple disables. */
+function applyRipple(enabled) {
+  try { localStorage.setItem('rv-ripple', enabled ? '1' : '0'); } catch (e) {}
+  document.body.classList.toggle('no-ripple', !enabled);
+  const t = $('ripple-toggle');
+  if (t && t.checked !== !!enabled) t.checked = !!enabled;
+}
+function isRippleEnabled() {
+  try { return localStorage.getItem('rv-ripple') !== '0'; } catch (e) { return true; }
+}
+function initRipple() {
+  applyRipple(isRippleEnabled());
+  const t = $('ripple-toggle');
+  if (t) t.addEventListener('change', () => applyRipple(t.checked));
+  // Global tap handler — creates a ripple at the tap point on tappable elements
+  document.addEventListener('click', e => {
+    if (document.body.classList.contains('no-ripple')) return;
+    const target = e.target.closest('.btn, .menu-item, .user-card, .tab, .set-row, .chip');
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    if (size <= 0) return;
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.width = ripple.style.height = size + 'px';
+    const x = (e.clientX || (rect.left + rect.width / 2)) - rect.left - size / 2;
+    const y = (e.clientY || (rect.top + rect.height / 2)) - rect.top - size / 2;
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    target.classList.add('ripple-effect');
+    target.appendChild(ripple);
+    setTimeout(() => { try { ripple.remove(); } catch (err) {} }, 650);
+  }, { passive: true });
 }
 
 /* ── v1.5.63: layout mode — Auto / Phone / Tablet ──
@@ -2128,6 +2208,7 @@ function initLiquidWobble() {
    * (button, tab, voucher-row, chip, menu-item, link) wobbles now. */
   const SEL = 'button,.tab,.voucher-row,.menu-item,.chip,a,[data-wobble]';
   document.addEventListener('pointerdown', e => {
+    if (document.body.classList.contains('no-ripple')) return; // v1.5.207: wobble obeys the ripple toggle too
     if (e.clientX == null || e.clientY == null || !e.target || !e.target.closest) return;
     const el = e.target.closest(SEL);
     if (!el || !el.getBoundingClientRect) return;
@@ -2177,6 +2258,7 @@ function initTabbarDrag() {
   };
   const wobbleTab = el => {
     if (!el || !el.classList) return;
+    if (document.body.classList.contains('no-ripple')) return; // v1.5.207: respects ripple toggle
     el.classList.remove('liq-wobble');
     void el.offsetWidth;
     el.classList.add('liq-wobble');
@@ -5452,7 +5534,88 @@ async function moreWebAuth() {
   });
 }
 
-/* ── QoS management (More → QoS) · v1.5.150 ──
+/* ── v1.5.205: More → Speed Limit (parent page) ──
+ * Sub-pages: QoS (Smart QoS) and WQoS (per-user speed limits). */
+async function moreSpeedLimit() {
+  S.moreFn = moreSpeedLimit;
+  moreShell('', `
+    <div class="set-group">
+      <button type="button" class="set-row set-action" id="sl-qos">
+        <span class="set-ico" style="--tile:#5AC8FA"><svg class="ic"><use href="#i-signal"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.qos'))}</div><div class="sub">${esc(t('m.qosSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+      <button type="button" class="set-row set-action" id="sl-wqos">
+        <span class="set-ico" style="--tile:#AF52DE"><svg class="ic"><use href="#i-signal"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.wqos'))}</div><div class="sub">${esc(t('m.wqosSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+    </div>`);
+  $('sl-qos').addEventListener('click', () => moreQoS());
+  $('sl-wqos').addEventListener('click', () => moreWqos());
+}
+
+/* ── v1.5.205: More → Security (parent page) ──
+ * Sub-pages: Traffic, Other Codes, Portal Bypass, History. */
+async function moreSecurity() {
+  S.moreFn = moreSecurity;
+  moreShell('', `
+    <div class="set-group">
+      <button type="button" class="set-row set-action" id="sec-traffic">
+        <span class="set-ico" style="--tile:#5AC8FA"><svg class="ic"><use href="#i-chart"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.traffic'))}</div><div class="sub">${esc(t('m.trafficSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+      <button type="button" class="set-row set-action" id="sec-foreign">
+        <span class="set-ico" style="--tile:#AF52DE"><span class="emoji">🔑</span></span>
+        <div class="t"><div class="t-main">${esc(t('m.foreign'))}</div><div class="sub">${esc(t('m.foreignSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+      <button type="button" class="set-row set-action" id="sec-bypass">
+        <span class="set-ico" style="--tile:#FF9F0A"><svg class="ic"><use href="#i-alert"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.bypass'))}</div><div class="sub">${esc(t('m.bypassSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+      <button type="button" class="set-row set-action" id="sec-history">
+        <span class="set-ico" style="--tile:#64D2FF"><span class="emoji">🕐</span></span>
+        <div class="t"><div class="t-main">${esc(t('m.history'))}</div><div class="sub">${esc(t('m.historySub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+    </div>`);
+  $('sec-traffic').addEventListener('click', () => moreTraffic());
+  $('sec-foreign').addEventListener('click', () => moreForeign());
+  $('sec-bypass').addEventListener('click', () => moreBypass());
+  $('sec-history').addEventListener('click', () => moreHistory());
+}
+
+/* ── v1.5.205: More → Tools (parent page) ──
+ * Sub-pages: Recorder, Gateway Capture, App Device. */
+async function moreTools() {
+  S.moreFn = moreTools;
+  moreShell('', `
+    <div class="set-group">
+      <button type="button" class="set-row set-action" id="tl-recorder">
+        <span class="set-ico" style="--tile:#FF453A"><svg class="ic"><use href="#i-monitor"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.recorder'))}</div><div class="sub">${esc(t('m.recorderSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+      <button type="button" class="set-row set-action" id="tl-gwrecorder">
+        <span class="set-ico" style="--tile:#30D158"><svg class="ic"><use href="#i-monitor"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.gwrecorder'))}</div><div class="sub">${esc(t('m.gwrecorderSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+      <button type="button" class="set-row set-action" id="tl-appdevices">
+        <span class="set-ico" style="--tile:#AF52DE"><svg class="ic"><use href="#i-lock"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('m.appdevices'))}</div><div class="sub">${esc(t('m.appdevicesSub'))}</div></div>
+        <svg class="ic chev"><use href="#i-chev"/></svg>
+      </button>
+    </div>`);
+  $('tl-recorder').addEventListener('click', () => startNetworkRecorder());
+  $('tl-gwrecorder').addEventListener('click', () => startGatewayRecorder());
+  $('tl-appdevices').addEventListener('click', () => moreAppDevices());
+}
+
+/* ── QoS management (More → Speed Limit → QoS) · v1.5.150 ──
  * VERIFIED APIs from user's Gateway Capture 2026-10-03.
  * Smart QoS toggle + bandwidth, Application Priority Key Group,
  * App Identification toggle. */
@@ -6087,6 +6250,174 @@ async function loadQoS() {
   } catch (e) {
     body.innerHTML = `<p class="muted">⚠️ ${esc(e.message)}</p>`;
   }
+}
+
+/* ── v1.5.205: WQoS (Wireless QoS / per-user speed limits) ──
+ * VERIFIED APIs from user's portal capture 2026-10-08 (config_other_wqos_menu).
+ * SSO portal bridge (Android only). Limits in Kbps, displayed in Mbps. */
+async function moreWqos() {
+  S.moreFn = moreWqos;
+  moreShell('', `
+    <div class="set-group">
+      <div class="set-row">
+        <span class="set-ico" style="--tile:#AF52DE"><svg class="ic"><use href="#i-signal"/></svg></span>
+        <div class="t"><div class="t-main">${esc(t('wq.toggle'))}</div><div class="sub">${esc(t('wq.sub'))}</div></div>
+        <label class="switch"><input type="checkbox" id="wq-toggle"><span class="track"></span></label>
+      </div>
+    </div>
+    <div class="segmented" id="wq-tabs" role="group" style="margin:8px 0;">
+      <button type="button" data-wqtab="user" class="active">${esc(t('wq.tabUser'))}</button>
+      <button type="button" data-wqtab="wireless">${esc(t('wq.tabWireless'))}</button>
+      <button type="button" data-wqtab="ap">${esc(t('wq.tabAp'))}</button>
+      <button type="button" data-wqtab="packet">${esc(t('wq.tabPacket'))}</button>
+    </div>
+    <div id="wq-body"><p class="muted">${esc(t('wq.loading'))}</p></div>
+    <button type="button" class="btn primary big" id="wq-add" style="margin-top:12px;width:100%">${esc(t('wq.add'))}</button>
+  `);
+  // Tab switching (only User tab implemented for now)
+  document.querySelectorAll('#wq-tabs [data-wqtab]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#wq-tabs [data-wqtab]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    if (b.dataset.wqtab === 'user') loadWqosUsers();
+    else $('wq-body').innerHTML = `<p class="muted">${esc(t('wq.comingSoon'))}</p>`;
+  }));
+  $('wq-add').addEventListener('click', () => wqosAddDialog());
+  $('wq-toggle').addEventListener('change', async (e) => {
+    // Toggle is display-only for now; the switch API is read-only in capture.
+    // Re-read to reflect actual state.
+    toast(t('wq.loading'));
+    await loadWqosUsers();
+  });
+  await loadWqosUsers();
+}
+
+function wqosKbpsToMbps(kbps) {
+  const m = Math.round((Number(kbps) || 0) / 1024 * 10) / 10;
+  return m;
+}
+
+async function loadWqosUsers() {
+  const body = $('wq-body');
+  if (!body) return;
+  if (!Api.ssoLoggedIn || !Api.ssoLoggedIn()) {
+    body.innerHTML = `<p class="muted">⚠️ ${esc(t('wq.needSso'))}</p>`;
+    return;
+  }
+  body.innerHTML = `<p class="muted">${esc(t('wq.loading'))}</p>`;
+  try {
+    const gid = S.projectId || S.groupId;
+    const [sw, users] = await Promise.all([
+      Api.ssoWqosSwitch(gid).catch(() => null),
+      Api.ssoWqosUserBase(gid).catch(() => []),
+    ]);
+    // Reflect toggle state if API provides it
+    const tog = $('wq-toggle');
+    if (tog && sw) {
+      const on = sw.enabled === true || sw.enable === true || sw.status === '1' || sw.on === true;
+      tog.checked = !!on;
+    }
+    const list = Array.isArray(users) ? users : [];
+    if (!list.length) {
+      body.innerHTML = `<p class="muted">${esc(t('wq.noUsers'))}</p>`;
+      return;
+    }
+    body.innerHTML = list.map((u, i) => {
+      const mac = u.mac || u.userMac || '';
+      const name = u.name || u.remark || u.deviceName || mac;
+      const down = wqosKbpsToMbps(u.downLimit || u.downlink || 0);
+      const up = wqosKbpsToMbps(u.upLimit || u.uplink || 0);
+      return `<div class="card" style="margin-bottom:10px;padding:12px;">
+        <div class="row" style="align-items:center;gap:10px;">
+          <div class="avatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#e0e0e0,#c0c0c0);display:flex;align-items:center;justify-content:center;">📱</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:600;">${esc(name)}</div>
+            <div class="muted small" style="font-family:monospace;">${esc(mac)}</div>
+          </div>
+        </div>
+        <div class="row" style="gap:10px;margin-top:10px;">
+          <div style="flex:1;background:var(--bg2,#f2f2f7);border-radius:10px;padding:8px;text-align:center;">
+            <div class="muted" style="font-size:10px;">↓ ${esc(t('wq.down')).replace(' (Mbps)','')}</div>
+            <div style="font-size:14px;font-weight:600;color:#007aff;">${down} Mbps</div>
+          </div>
+          <div style="flex:1;background:var(--bg2,#f2f2f7);border-radius:10px;padding:8px;text-align:center;">
+            <div class="muted" style="font-size:10px;">↑ ${esc(t('wq.up')).replace(' (Mbps)','')}</div>
+            <div style="font-size:14px;font-weight:600;color:#007aff;">${up} Mbps</div>
+          </div>
+        </div>
+        <div class="row" style="gap:8px;margin-top:10px;">
+          <button class="btn small" style="flex:1;" data-wq-edit="${i}">${esc(t('wq.change'))}</button>
+          <button class="btn small danger" style="flex:1;" data-wq-del="${i}">${esc(t('wq.delete'))}</button>
+        </div>
+      </div>`;
+    }).join('');
+    // Wire edit/delete
+    body.querySelectorAll('[data-wq-edit]').forEach(b => b.addEventListener('click', () => {
+      const u = list[+b.dataset.wqEdit];
+      if (u) wqosAddDialog(u);
+    }));
+    body.querySelectorAll('[data-wq-del]').forEach(b => b.addEventListener('click', async () => {
+      const u = list[+b.dataset.wqDel];
+      if (!u) return;
+      const mac = u.mac || u.userMac || '';
+      if (!(await iosConfirm(t('wq.confirmDel'), mac, t('wq.delete'), t('wq.cancel'), true))) return;
+      try {
+        const gid = S.projectId || S.groupId;
+        await Api.ssoWqosSetUserLimit(gid, mac, 0, 0); // 0 = remove limit
+        toast(t('wq.deleted'));
+        loadWqosUsers();
+      } catch (e) { toast(t('wq.fail') + ': ' + e.message); }
+    }));
+    // stash list for dialog
+    S._wqosList = list;
+  } catch (e) {
+    body.innerHTML = `<p class="muted">⚠️ ${esc(e.message)}</p>`;
+  }
+}
+
+async function wqosAddDialog(existing) {
+  const body = $('wq-body');
+  if (!body) return;
+  const mac = existing ? (existing.mac || existing.userMac || '') : '';
+  const downMbps = existing ? wqosKbpsToMbps(existing.downLimit || existing.downlink || 0) : 10;
+  const upMbps = existing ? wqosKbpsToMbps(existing.upLimit || existing.uplink || 0) : 10;
+  // Inline form at top of the list (no Android-style dialog per user rule)
+  const formId = 'wq-form';
+  let form = document.getElementById(formId);
+  if (form) { form.remove(); form = null; }
+  form = document.createElement('div');
+  form.id = formId;
+  form.className = 'card';
+  form.style.cssText = 'margin-bottom:12px;padding:14px;';
+  form.innerHTML = `
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px;">${esc(existing ? t('wq.change') : t('wq.add'))}</div>
+    <label style="display:block;margin-bottom:8px;"><span class="muted small">${esc(t('wq.mac'))}</span>
+      <input id="wq-f-mac" class="fld-input" style="width:100%;margin-top:4px;" value="${esc(mac)}" ${mac ? 'readonly' : ''} placeholder="${esc(t('wq.macPh'))}"></label>
+    <div class="row" style="gap:10px;margin-bottom:10px;">
+      <label style="flex:1;"><span class="muted small">↓ Mbps</span>
+        <input id="wq-f-down" class="fld-input" style="width:100%;margin-top:4px;" type="number" min="1" value="${downMbps}"></label>
+      <label style="flex:1;"><span class="muted small">↑ Mbps</span>
+        <input id="wq-f-up" class="fld-input" style="width:100%;margin-top:4px;" type="number" min="1" value="${upMbps}"></label>
+    </div>
+    <div class="row" style="gap:8px;">
+      <button class="btn primary" id="wq-f-save" style="flex:1;">${esc(t('wq.save'))}</button>
+      <button class="btn" id="wq-f-cancel" style="flex:1;">${esc(t('wq.cancel'))}</button>
+    </div>`;
+  body.prepend(form);
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  $('wq-f-cancel').addEventListener('click', () => form.remove());
+  $('wq-f-save').addEventListener('click', async () => {
+    const m = ($('wq-f-mac') || {}).value || '';
+    const d = parseFloat(($('wq-f-down') || {}).value) || 0;
+    const u = parseFloat(($('wq-f-up') || {}).value) || 0;
+    if (!m || !/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(m.trim())) { toast(t('wq.invalidMac')); return; }
+    if (d <= 0 || u <= 0) { toast(t('wq.fail')); return; }
+    try {
+      const gid = S.projectId || S.groupId;
+      await Api.ssoWqosSetUserLimit(gid, m.trim(), Math.round(u * 1024), Math.round(d * 1024));
+      toast(t('wq.saved'));
+      loadWqosUsers();
+    } catch (e) { toast(t('wq.fail') + ': ' + e.message); }
+  });
 }
 
 async function moreTraffic() {
@@ -9913,6 +10244,7 @@ async function init() {
     try { Tele.err(String((e && e.message) || 'unknown error').slice(0, 200)); Tele.flush(); } catch (x) {}
   });
   initTheme();
+  initRipple(); // v1.5.206: water ripple touch effect
   initLayoutMode(); // v1.5.63: Auto/Phone/Tablet layout override
   initLang();
   initLiquidWobble();
@@ -10221,8 +10553,12 @@ async function init() {
     else if (k === 'devices') moreDevices();
     else if (k === 'firmware') moreFirmware(); // v1.5.145: dedicated firmware screen
     else if (k === 'overview') moreOverview();
-    else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view
-    else if (k === 'qos') moreQoS(); // v1.5.150: QoS management (verified APIs)
+    else if (k === 'traffic') moreTraffic(); // v1.5.78: Flow Table traffic view (now under Security)
+    else if (k === 'qos') moreQoS(); // v1.5.150: QoS management (now under Speed Limit)
+    else if (k === 'speedlimit') moreSpeedLimit(); // v1.5.205: Speed Limit parent page
+    else if (k === 'security') moreSecurity(); // v1.5.205: Security parent page
+    else if (k === 'tools') moreTools(); // v1.5.205: Tools parent page
+    else if (k === 'wqos') moreWqos(); // v1.5.205: WQoS per-user speed limits
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
