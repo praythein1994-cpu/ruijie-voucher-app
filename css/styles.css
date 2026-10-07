@@ -548,6 +548,21 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .chip.active { background: var(--blue); color: #fff; font-weight: 600; }
 .chip.ok { border-color: var(--green); color: var(--green); font-weight: 600; } /* v1.5.78: AdGuard DNS marker */
 .chip:active { transform: scale(.95); }
+/* v1.5.210: phone-only combined stats+filter row (tablet keeps .stat-grid + .toolbar sidebar) */
+#view-vouchers .stats-filter { display: block; background: var(--card); margin: 8px 12px; border-radius: 12px; padding: 3px; box-shadow: var(--shadow-card); }
+#view-vouchers .combined-row { display: flex; background: var(--fill-bg); border-radius: 10px; padding: 2px; gap: 2px; }
+#view-vouchers .combined-tab { flex: 1; border: none; background: transparent; text-align: center; padding: 6px 2px; border-radius: 8px; cursor: pointer; font-family: inherit; color: var(--label); }
+#view-vouchers .combined-tab .tab-num { font-size: 12px; font-weight: 700; display: block; line-height: 1.2; font-variant-numeric: tabular-nums; }
+#view-vouchers .combined-tab .tab-label { font-size: 9px; color: var(--gray); font-weight: 500; line-height: 1.2; display: block; }
+#view-vouchers .combined-tab.active { background: var(--card); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+#view-vouchers .combined-tab.all .tab-num { color: var(--label); }
+#view-vouchers .combined-tab.unused .tab-num { color: var(--green); }
+#view-vouchers .combined-tab.inuse .tab-num { color: var(--orange); }
+#view-vouchers .combined-tab.expired .tab-num { color: var(--gray); }
+#view-vouchers .combined-tab:active { transform: scale(.97); }
+/* phone: hide the old two rows (stats grid + filter chips toolbar) */
+#view-vouchers .stat-grid { display: none; }
+#view-vouchers > .toolbar { display: none; }
 
 #voucher-count { margin: 2px 4px 6px; font-size: 11px; }
 
@@ -881,6 +896,9 @@ html[data-layout="tablet"] .menu-grid { grid-template-columns: repeat(5, 1fr); }
   html:not([data-layout="phone"]) #view-vouchers .chip {
     width: 100%; justify-content: flex-start; text-align: left;
   }
+  /* v1.5.210: tablet hides the phone combined row, restores old rows */
+  html:not([data-layout="phone"]) #view-vouchers .stats-filter { display: none; }
+  html:not([data-layout="phone"]) #view-vouchers > .toolbar { display: block; }
 }
 /* v1.5.63 — forced tablet layout: the wide-screen rules above, without the media query */
 html[data-layout="tablet"] .view { max-width: 980px; }
@@ -944,6 +962,9 @@ html[data-layout="tablet"] #view-vouchers .chips {
 html[data-layout="tablet"] #view-vouchers .chip {
   width: 100%; justify-content: flex-start; text-align: left;
 }
+/* v1.5.210: forced-tablet hides the phone combined row, restores old rows */
+html[data-layout="tablet"] #view-vouchers .stats-filter { display: none; }
+html[data-layout="tablet"] #view-vouchers > .toolbar { display: block; }
 
 @media (min-width: 1100px) {
   html:not([data-layout="phone"]) .view { max-width: 1180px; }
