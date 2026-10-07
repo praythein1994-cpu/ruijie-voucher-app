@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const APP_VERSION = '1.5.172'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
+const APP_VERSION = '1.5.204'; // stamped at build time from VERSION_NAME (build-apk.sh step 1c)
 
 /* ═══════════ I18N (မြန်မာ / English) ═══════════ */
 const I18N = {
@@ -131,6 +131,7 @@ const I18N = {
   'd.curClients': { my: 'လက်ရှိသုံးနေသူ', en: 'Current clients' },
   'd.price': { my: 'ဈေးနှုန်း', en: 'Price' },
   'd.note': { my: 'မှတ်ချက်', en: 'Note' },
+  'd.ip': { my: 'IP', en: 'IP' },
   'd.macbind': { my: 'MAC bind', en: 'MAC bind' },
   'a.copy': { my: 'ကူးမယ်', en: 'Copy' },
   'a.queue': { my: 'Queue ထဲထည့်မယ်', en: 'Add to queue' },
@@ -274,9 +275,13 @@ const I18N = {
   'unbind.unbind': { my: 'ဖြုတ်မယ်', en: 'Unbind' },
   'confirm.signoutBtn': { my: 'ထွက်မယ်', en: 'Sign out' },
   'a.cancel': { my: 'မလုပ်တော့ပါ', en: 'Cancel' },
+  'a.yes': { my: 'ဟုတ်တယ်', en: 'Yes' },
+  'a.no': { my: 'မဟုတ်ဘူး', en: 'No' },
   'v.unknown': { my: 'အဟောင်း/မသိ', en: 'old/unknown' },
   'kick.title': { my: 'Client ဖြုတ်ချခြင်း', en: 'Client Disconnect' },
   'kick.auto': { my: 'Quota ပြည့်ရင် အလိုအလျောက် ဖြုတ်မယ်', en: 'Auto-disconnect when quota is spent' },
+  'kick.foreign': { my: 'သူစိမ်း code အလိုအလျောက် ဖြုတ်မယ်', en: 'Auto-kick foreign codes' },
+  'kick.foreignSub': { my: 'ကိုယ်မထုတ်ထားတဲ့ voucher code သုံးနေတဲ့ client ကို ဖြုတ်မယ်', en: 'Kick clients using voucher codes you did not create' },
   'kick.autoSub': { my: 'Voucher limit ပြည့်ပြီး ဆက်ချိတ်နေတဲ့ client ကို ဖြုတ်ခိုင်းမယ်', en: 'Disconnect clients still online after their voucher quota is spent' },
   'kick.status': { my: 'အခြေအနေ', en: 'Status' },
   'kick.soon': { my: 'Cloud verify ပြီးမှ အလုပ်လုပ်မယ်', en: 'Activates after cloud verification' },
@@ -342,6 +347,7 @@ const I18N = {
   'wifi.badName': { my: 'နာမည် ထည့်ပါ (32 လုံးအထိ)', en: 'Enter a name (up to 32 chars)' },
   'wifi.nameExists': { my: 'ဒီ နာမည် ရှိနေပြီးသား', en: 'This name is already in use' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
+  'kick.confirmName': { my: '{name} ကို ဖြုတ်မှာ သေချာလား?', en: 'Are you sure you want to disconnect {name}?' },
   'kick.warnQuota': { my: 'quota ကျန်သေးတယ်', en: 'quota remains' },
   'kick.warnTime': { my: 'အချိန်ကျန်သေးတယ်', en: 'time remains' },
   'kick.warnRemain': { my: 'သတိ — ဒီ voucher မှာ {parts}။ ဖြုတ်လိုက်ရင် ကျန်တာတွေ သုံးမရတော့ဘူး။\n\nဆက်ဖြုတ်မလား?', en: 'Warning — this voucher still has {parts}. Disconnecting will waste them.\n\nDisconnect anyway?' },
@@ -534,6 +540,12 @@ const I18N = {
   'q.keygrpHint': { my: 'ဒီ app တွေရဲ့ traffic ကို အမြဲဦးစားပေးမယ်', en: 'Traffic from these apps is always prioritized' },
   'q.appPh': { my: 'App နာမည် (ဥပမာ MobileLegends)', en: 'App name (e.g. MobileLegends)' },
   'q.noApps': { my: 'App မရှိသေးဘူး', en: 'No apps yet' },
+  'q.apps': { my: 'App များ', en: 'Apps' },
+  'q.allUsers': { my: 'အသုံးပြုသူအားလုံး', en: 'All users' },
+  'q.userGroup': { my: 'User Group', en: 'User Group' },
+  'q.selUser': { my: 'User ရွေးပါ...', en: 'Select user...' },
+  'q.subnetGroup': { my: 'Subnet Group', en: 'Subnet Group' },
+  'q.userGroupTab': { my: 'User Group', en: 'User Group' },
   'q.appid': { my: 'App Identification', en: 'App Identification' },
   'q.appidHint': { my: 'DPI — memory 9MB သုံးတယ်။ Gateway offline သွားရင် ပိတ်လိုက်။', en: 'DPI — uses 9MB memory. Turn off if gateway goes offline.' },
   'q.confirmSmart': { my: 'Smart QoS ပြောင်းမလား?', en: 'Change Smart QoS?' },
@@ -597,6 +609,23 @@ const I18N = {
   'al.readonly': { my: 'ကြည့်ရန်သာ', en: 'View only' },
   'al.confirm': { my: 'MAC Allowlist ကို gateway မှာ သိမ်းမှာသေချာပါသလား?', en: 'Save the MAC allowlist to the gateway?' },
   'm.clients': { my: 'Online Clients', en: 'Online Clients' },
+  'm.foreign': { my: 'သူစိမ်း code', en: 'Foreign Codes' },
+  'm.foreignSub': { my: 'မသိတဲ့ voucher များ', en: 'Unknown vouchers' },
+  'm.bypass': { my: 'Portal Bypass', en: 'Portal Bypass' },
+  'm.bypassSub': { my: 'Code မထည့်ပဲ သုံးနေသူများ', en: 'Using without a code' },
+  'mf.title': { my: 'သူစိမ်း voucher code စစ်ဆေးမှု', en: 'Foreign Voucher Check' },
+  'mf.desc': { my: 'ကိုယ်မထုတ်ထားတဲ့ voucher code နဲ့ ဝင်သုံးနေတဲ့ client များ', en: 'Clients using voucher codes you did not create' },
+  'mf.scan': { my: 'စစ်ဆေးမယ်', en: 'Scan' },
+  'mf.scanning': { my: 'စစ်ဆေးနေတယ်…', en: 'Scanning…' },
+  'mf.empty': { my: 'သူစိမ်း code မတွေ့ပါ ✅', en: 'No foreign codes found ✅' },
+  'mf.found': { my: 'သူစိမ်း code {n} ခု တွေ့တယ်', en: 'Found {n} foreign codes' },
+  'mf.kick': { my: 'ဖြုတ်မယ်', en: 'Kick' },
+  'mf.kickAll': { my: 'အားလုံးဖြုတ်မယ်', en: 'Kick All' },
+  'mf.online': { my: 'Online', en: 'Online' },
+  'mf.bypass': { my: 'Portal ကျော်နေသူများ', en: 'Portal Bypass' },
+  'mf.bypassDesc': { my: 'Voucher code မထည့်ပဲ 10MB အထက် သုံးနေတဲ့ client များ', en: 'Clients using 10MB+ without a voucher code' },
+  'mf.noBypass': { my: 'Portal ကျော်နေသူ မတွေ့ပါ ✅', en: 'No portal bypass found ✅' },
+  'mf.needSso': { my: 'SSO login လိုအပ်သည်', en: 'SSO login required' },
   'm.history': { my: 'History', en: 'History' },
   'm.historySub': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Auth history' },
   'mh.title': { my: 'ဝင်ထွက်မှတ်တမ်း', en: 'Client History' },
@@ -643,6 +672,8 @@ const I18N = {
   'ad.unknownDevice': { my: 'အမည်မသိ device', en: 'Unknown device' },
   'ad.empty': { my: 'device မရှိသေးပါ', en: 'No devices yet' },
   'ad.confirmBlock': { my: 'ဒီ device ကို ပိတ်မှာလား?', en: 'Block this device?' },
+  'ad.delete': { my: 'ဖျက်', en: 'Delete' },
+  'ad.confirmDelete': { my: 'ဒီ device ကို ဖျက်မှာလား?', en: 'Delete this device?' },
   'rec.done': { my: 'မှတ်တမ်းသိမ်းပြီးပြီ', en: 'Recording saved' },
   'sl.title': { my: 'ရောင်းရငွေစာရင်း', en: 'Sales ledger' },
   'sl.revenue': { my: 'ဝင်ငွေ (ကျပ်)', en: 'Revenue (Ks)' },
@@ -804,6 +835,9 @@ const I18N = {
   'mt.dnsNote': { my: 'AdGuard (94.140.14.14) မသုံးတဲ့ client တွေက DHCP DNS ကို ကျော်သုံးနေတာ (hardcoded DNS / DoT) ဖြစ်နိုင်တယ်။', en: 'Clients not using AdGuard (94.140.14.14) may bypass DHCP DNS with hardcoded DNS / DoT.' },
   'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
+  'mc.select': { my: 'ရွေးမယ်', en: 'Select' },
+  'mc.disconnectSelected': { my: 'ရွေးထားတာဖြုတ်မယ် ({n})', en: 'Disconnect Selected ({n})' },
+  'mc.confirmBatch': { my: 'ရွေးထားတဲ့ client {n} ခု ဖြုတ်မှာလား?', en: 'Disconnect {n} selected clients?' },
   'mc.search': { my: 'Voucher / IP / MAC နဲ့ရှာမယ်', en: 'Search voucher / IP / MAC' },
   'mc.noMatch': { my: 'ရှာမတွေ့ပါ', en: 'No matches' },
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
@@ -899,6 +933,7 @@ const I18N = {
   'upd.check': { my: 'အပ်ဒိတ်စစ်မယ်', en: 'Check for updates' },
   'upd.availTitle': { my: 'အပ်ဒိတ်ရရှိနိုင်ပါတယ်', en: 'Update available' },
   'upd.dlInstall': { my: 'ဒေါင်းလုပ်လုပ် & တင်မယ်', en: 'Download & Install' },
+  'upd.dlUpdate': { my: 'ဒေါင်းလုပ်လုပ် & အပ်ဒိတ်', en: 'Download & update' },
   'upd.auto': { my: 'အော်တိုဒေါင်းလုပ်လုပ်မယ်', en: 'Auto-download updates' },
   'upd.autoSub': { my: 'ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်', en: 'Download new versions automatically' },
   'upd.checking': { my: 'စစ်နေတယ်…', en: 'Checking…' },
@@ -1581,6 +1616,81 @@ function ssoLoginWithProfile(profile) {
     return true;
   } catch (e) { hideIosLoading(); return false; }
 }
+
+/* v1.5.201: Ensure SSO session is active, auto-refreshing if expired.
+ * The Ruijie Cloud SSO session expires after a few hours. Features that
+ * need SSO were just showing "login required" instead of refreshing.
+ * This helper attempts silent re-login and waits for the result.
+ * Returns true if SSO is active, false otherwise. Never throws. */
+async function ensureSso() {
+  try {
+    if (typeof Api === 'undefined' || !Api.ssoLoggedIn) return false;
+    if (Api.ssoLoggedIn()) return true;
+    // Session expired — try silent re-login
+    if (!hasBridge() || !window.RuijieBridge.ssoLoginSilent) return false;
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+      const onEvent = (e) => {
+        if (e.detail === 'login') {
+          document.removeEventListener('ruijie-sso', onEvent);
+          // Give native a moment to update session state
+          setTimeout(() => finish(Api.ssoLoggedIn()), 500);
+        } else if (e.detail === 'cancel') {
+          document.removeEventListener('ruijie-sso', onEvent);
+          finish(false);
+        }
+      };
+      document.addEventListener('ruijie-sso', onEvent);
+      try {
+        showIosLoading();
+        window.RuijieBridge.ssoLoginSilent();
+      } catch (err) {
+        document.removeEventListener('ruijie-sso', onEvent);
+        finish(false);
+        return;
+      }
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        document.removeEventListener('ruijie-sso', onEvent);
+        hideIosLoading();
+        finish(Api.ssoLoggedIn());
+      }, 30000);
+    });
+  } catch (e) { return false; }
+}
+/**
+ * v1.5.201: Detect KICKED_OUT_* errors from official app deep dive.
+ * These indicate the SSO session was invalidated (login elsewhere, etc.)
+ * and trigger automatic re-login via ensureSso().
+ */
+function isKickedOutError(e) {
+  const msg = String((e && e.message) || e || '');
+  return /KICKED_OUT_MULT_ACCOUNT|KICKED_OUT_MULT_DEVICE|KICKED_OUT_REST_API|KICKED_OUT_USERSIG_EXPIRED|KICKED_OUT/i.test(msg);
+}
+/**
+ * v1.5.201: Wrapper for SSO API calls that auto re-logins on KICKED_OUT.
+ * Usage: await ssoCallWithRelogin(() => Api.voucherReset(...));
+ */
+async function ssoCallWithRelogin(fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    if (isKickedOutError(e)) {
+      // v1.5.202: telemetry for login expiry (P1)
+      try { Tele.log('sso.kicked_out', String((e && e.message) || e || '').slice(0, 100)); } catch (_) {}
+      // Session was kicked - try silent re-login once, then retry
+      const ok = await ensureSso();
+      if (ok) {
+        try { Tele.log('sso.relogin.ok', 'Silent re-login succeeded after KICKED_OUT'); } catch (_) {}
+        return await fn();
+      } else {
+        try { Tele.log('sso.relogin.failed', 'Silent re-login failed after KICKED_OUT'); } catch (_) {}
+      }
+    }
+    throw e;
+  }
+}
 async function applyProfile(profile) {
   const cfg = {
     cloud: (profile.cloud || 'https://cloud-as.ruijienetworks.com').replace(/\/+$/, ''),
@@ -1860,6 +1970,16 @@ async function startupSync() {
         const list = await Api.portalClients(pid, { pageSize: 1000, authCount: hasAuth !== false, connectType: '' });
         try { cachePortalVouchers(list || []); } catch (e) { /* cache is best-effort */ }
       } catch (e) { /* portal sync optional */ }
+      // v1.5.175: pre-fetch the WLAN/SSID list in the background at startup
+      // so Voucher VLAN detection is instant when Settings opens — real
+      // detection, just started early. Never displayed as "detected" until
+      // detectVoucherVlan() actually runs on this data.
+      if (!S.ssidList || !S.ssidList.length) {
+        Api.ssidListSso(pid).then(r => {
+          const l = (r && r.list) || [];
+          if (l.length) S.ssidList = l;
+        }).catch(() => {});
+      }
     }
   } catch (e) { /* never break startup */ }
 }
@@ -1920,7 +2040,7 @@ function enterApp() {
   const pp = ($('print-paper').value === '80' ? '58' : $('print-paper').value) || '58';
   document.querySelectorAll('#paper-seg button').forEach(b =>
     b.classList.toggle('active', b.dataset.paper === pp));
-  loadProjects().then(() => { switchView('view-vouchers', false); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; startupSync(); });
+  loadProjects().then(() => { switchView('view-vouchers', 'replace'); try { history.replaceState({ view: 'view-vouchers' }, ''); } catch (e) {} S.currentView = 'view-vouchers'; startupSync(); });
   // Vouchers start immediately with the stored project (in parallel with
   // the project list) instead of waiting for it — the list reconciles after.
   if (S.projectId) loadVouchers();
@@ -1954,8 +2074,15 @@ function switchView(id, push) {
   if (id === 'view-generate') { ensurePackages(); renderRecentGen(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-printer') { renderQueue(); btCacheState(); renderPrinterDots(); }
   if (id === 'view-settings') fillSettings();
-  // SPA back-button support: one back press walks views instead of killing the app.
-  if (push !== false) {
+  // SPA back-button support: tab switches use replaceState (not push) so
+  // back from a top-level tab exits the app instead of walking through
+  // every visited tab. More sub-pages and modals still pushState so back
+  // walks sub-page → More menu correctly.
+  if (push === 'replace') {
+    const st = { view: id };
+    if (id === 'view-more') st.moreDepth = S.moreStack.length;
+    try { history.replaceState(st, ''); } catch (e) {}
+  } else if (push !== false) {
     // v1.5.48: re-entering the More tab while a sub-page is open seeds the
     // More-menu level first and tags the entry with the real sub-page depth —
     // so system back walks sub-page → More menu → previous tab instead of
@@ -2140,7 +2267,10 @@ function closeAnySheet() {
   document.querySelectorAll('.ios-sheet-ov').forEach(ov => ov.remove());
 }
 function closeAnyModal() {
-  document.querySelectorAll('.modal:not(.hidden)').forEach(m => closeModal(m.id));
+  document.querySelectorAll('.modal:not(.hidden)').forEach(m => {
+    if (m.id) closeModal(m.id);
+    else m.remove(); // v1.5.186: dynamically created modals (no id)
+  });
 }
 /* v1.5.92: Back is handled entirely through WebView history.
    Native onBackPressed() just calls goBack(); this handler decides what
@@ -2245,14 +2375,14 @@ async function loadVouchers(opts) {
   S._vouchersLoading = true;
   const listEl = $('voucher-list');
   if (!opts.silent) {
-    $('voucher-count').textContent = '';
+    const vc0 = $('voucher-count'); if (vc0) vc0.textContent = ''; // v1.5.176: null-guard (element removed in v1.5.175)
     // iOS-style skeleton shimmer
     listEl.innerHTML = Array.from({ length: 6 }, () =>
       '<div class="skel"><div class="bar" style="width:52%"></div><div class="bar" style="width:34%"></div></div>').join('');
   }
   try {
     const all = await Api.voucherListAll(S.projectId, (done, total) => {
-      if (!opts.silent && gen === S._voucherGen) $('voucher-count').textContent = `${t('v.loading')} ${done}/${total}`;
+      if (!opts.silent && gen === S._voucherGen) { const vc = $('voucher-count'); if (vc) vc.textContent = `${t('v.loading')} ${done}/${total}`; }
     });
     if (gen !== S._voucherGen) return; // superseded — discard
     S.vouchers = all;
@@ -2326,12 +2456,29 @@ async function liveStatsTick(force) {
 }
 
 function filteredVouchers() {
+  // v1.5.204: server-side search results take priority when active.
+  // The server already filtered by keyword; still apply the status filter
+  // client-side so status tabs keep working on server results.
+  if (S.vUseServerSearch && Array.isArray(S.vServerResults)) {
+    const q = S.vFilter.trim();
+    if (!S.vStatus) return S.vServerResults.slice();
+    return S.vServerResults.filter(v => vEffStatus(v) === S.vStatus);
+  }
   const q = S.vFilter.trim().toLowerCase();
   return S.vouchers.filter(v => {
     // v1.5.66: filter on EFFECTIVE status — spent/kicked vouchers leave
     // "In use" and appear under "Expired" even while Cloud still says 2.
     if (S.vStatus && vEffStatus(v) !== S.vStatus) return false;
-    if (q && !vCode(v).toLowerCase().includes(q) && !(v.comment || '').toLowerCase().includes(q) && !(v.nameRef || '').toLowerCase().includes(q)) return false;
+    if (q) {
+      // v1.5.177: search by IP and MAC too — MAC accepts any format (strip non-hex)
+      const qn = q.replace(/[^0-9a-f]/gi, '');
+      const vMac = normMac(v.bindMac || v.mac || '');
+      const vIp = (v.ip || v.clientIp || '').toLowerCase();
+      const mBasic = vCode(v).toLowerCase().includes(q) || (v.comment || '').toLowerCase().includes(q) || (v.nameRef || '').toLowerCase().includes(q);
+      const mIp = vIp && vIp.includes(q);
+      const mMac = qn.length >= 4 && vMac && vMac.includes(qn.toLowerCase());
+      if (!mBasic && !mIp && !mMac) return false;
+    }
     return true;
   });
 }
@@ -2380,7 +2527,8 @@ function renderVouchers() {
   if (fe) fe.textContent = S.vouchersFetchedAt ? t('v.updated') + ' ' + fmtTime(S.vouchersFetchedAt) : '';
 
   const list = filteredVouchers();
-  $('voucher-count').textContent = S.vFilter || S.vStatus
+  const vcEl = $('voucher-count');
+  if (vcEl) vcEl.textContent = S.vFilter || S.vStatus
     ? tx('v.found', { n: list.length, total: S.vouchers.length })
     : tx('v.total', { n: S.vouchers.length });
   const el = $('voucher-list');
@@ -2537,7 +2685,6 @@ function iosConfirm(title, msg, okText, cancelText, destructive) {
       requestAnimationFrame(() => ov.classList.add('open')));
   });
 }
-
 /* ── Expired-delete cutoff date picker (v1.5.116) ──
  * Returns 'YYYY-MM-DD' or null if the user cancels. */
 function pickExpireDate() {
@@ -2690,19 +2837,50 @@ function extractExpireCount(j) {
   return null;
 }
 
+/* v1.5.198: kick all online clients associated with a voucher code.
+ * Used by Reset (kick first, then reset) so the user never has to press
+ * Disconnect separately. */
+async function kickVoucherClients(v) {
+  const code = String(vCode(v) || '').trim();
+  if (!code) return;
+  const pid = Number(S.projectId);
+  try {
+    const recs = await Api.portalAuthUsers(pid);
+    const mine = recs.filter(r => String(r.account || '').trim() === code);
+    for (const rec of mine) {
+      try { await Api.clientKickSso(pid, rec); } catch (e) {}
+    }
+  } catch (e) {}
+}
+
 /* ═══════════ v1.5.101: Reset selected vouchers (Ruijie Cloud style) ═══════════
    Reset clears a voucher's usage (used time/quota) back to fresh/unused.
    v1.5.104: uses the VERIFIED portal envelope (2026-10-01, from live portal
    JS): POST /intlSamVoucher/voucher/reset with
    params:{recordList:[uuids], voucherCode:"codes"} querys:{group_id}.
-   The portal sends ONE call for all selected vouchers — we do the same. */
+   The portal sends ONE call for all selected vouchers — we do the same.
+   v1.5.198: Reset now kicks associated clients FIRST, then resets, then
+   clears the kicked/expired mark so the voucher shows as Unused. */
 async function resetSelectedVouchers() {
   const uuids = bulkSelectedUuids();
   if (!uuids.length) { toast(t('v.resetNone')); return; }
   const vs = uuids.map(u => S.vouchers.find(x => x.uuid === u)).filter(Boolean);
   if (!(await iosConfirm(tx('v.resetConfirm', { n: vs.length }), '', t('v.reset'), t('a.cancel'), true))) return;
   try {
+    // v1.5.198: kick associated clients first
+    for (const v of vs) {
+      try { await kickVoucherClients(v); } catch (e) {}
+    }
     await Api.voucherResetMany(S.projectId, vs);
+    // v1.5.198: clear kicked/expired marks so vouchers show as Unused
+    for (const v of vs) {
+      clearKickedVoucher(vCode(v));
+      try {
+        v.usedTime = 0; v.usedQuota = 0;
+        const sv = (S.vouchers || []).find(x => x.uuid === v.uuid);
+        if (sv) { sv.usedTime = 0; sv.usedQuota = 0; }
+      } catch (e) {}
+    }
     toast(tx('v.resetDone', { ok: vs.length }));
   } catch (e) {
     toast(tx('v.resetDone', { ok: 0 }) + ` · ${vs.length} ✗`);
@@ -2744,12 +2922,42 @@ function openVoucherDetail(uuid) {
     ['Download limit', v.downloadRateLimit ? v.downloadRateLimit + ' KB/s' : '—'],
     ['Upload limit', v.uploadRateLimit ? v.uploadRateLimit + ' KB/s' : '—'],
     [t('d.price'), v.packagePrice ? esc(v.packagePrice) : '—'],
-    [t('d.note'), esc(v.comment || v.nameRef || '—')],
-    [t('d.macbind'), v.bindMac ? 'Yes' : 'No'],
+    [t('d.ip'), `<span id="vd-ip">—</span>`],
+    [t('d.macbind'), `<span id="vd-mac">${v.bindMac ? t('a.yes') || 'Yes' : (t('a.no') || 'No')}</span>`],
   ];
   $('modal-body').innerHTML = `
   <dl class="kv">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>`;
   $('modal-copy').addEventListener('click', ev => { ev.stopPropagation(); copyText(vCode(v)); });
+  // v1.5.179: fetch bound MACs and IP for display
+  // v1.5.188: IP from online clients (match by MAC) — user suggestion
+  (async () => {
+    try {
+      const tenantName = (() => { try { const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}'); return bi.email || ''; } catch (e) { return ''; } })();
+      const list = await Api.voucherBindMacListSso(S.projectId, v, tenantName, '');
+      let macs = [];
+      if (list && list.length) {
+        macs = list.map(x => x.mac).filter(Boolean);
+        const ips = list.map(x => x.ip || x.ipAddr || x.ipAddress || x.userIp || x.clientIp).filter(Boolean);
+        const macEl = $('vd-mac');
+        if (macEl && macs.length) macEl.textContent = macs.join(', ');
+        const ipEl = $('vd-ip');
+        if (ipEl && ips.length) ipEl.textContent = ips.join(', ');
+        // If no IP from bind list, try online clients
+        if (ipEl && !ips.length && macs.length) {
+          try {
+            const clients = await Api.allOnlineClients(S.projectId);
+            const normMacs = macs.map(m => normMac(m));
+            const matched = (clients || []).filter(c => {
+              const cm = normMac(c.mac || c.clientMac || c.staMac || '');
+              return cm && normMacs.includes(cm);
+            });
+            const clientIps = matched.map(c => c.ip || c.clientIp || c.ipAddress || c.userIp).filter(Boolean);
+            if (clientIps.length) ipEl.textContent = clientIps.join(', ');
+          } catch (e2) {}
+        }
+      }
+    } catch (e) {}
+  })();
   // v1.5.68: Disconnect on EVERY voucher preview (user request) — it takes
   // Print's spot for all vouchers, not just In use. (Queue / top-bar print
   // paths remain for printing.)
@@ -4103,7 +4311,8 @@ function moreHome() {
  * level from the history entry's moreDepth. */
 function moreShell(title, inner) {
   $('more-menu').classList.add('hidden');
-  $('more-content').innerHTML = `<div class="card"><h2>${title}</h2>${inner}</div>`;
+  // v1.5.175: no big in-page titles (user rule) — title param ignored, kept for API compat.
+  $('more-content').innerHTML = `<div class="card">${inner}</div>`;
   // The caller sets S.moreFn just before calling moreShell — capture it as
   // this level's re-renderer. Same-level re-renders (language refresh,
   // post-reboot refresh) don't push a duplicate entry.
@@ -4259,7 +4468,8 @@ function renderUserGroupForm(editP) {
       const c = $('ugc-' + id), x = $('ugx-' + id);
       if (c) c.hidden = s.value !== 'custom';
       if (x && s.value === 'custom') x.value = sv;
-      if (typeof s.refreshIosPicker === 'function') { try { s.refreshIosPicker(); } catch (e) {} }
+      // v1.5.183: sync the iOS picker button (setSel doesn't fire change event)
+      if (typeof syncIosPickerBtn === 'function') { try { syncIosPickerBtn(s); } catch (e) {} }
     };
     setSel('devices', pv('noOfDevice') === '' ? '0' : pv('noOfDevice'));
     const isDaily = Number(pv('durationCtrlType')) === 1 || (pNum('timePeriodDaily') > 0 && pNum('timePeriod') === 0);
@@ -4367,10 +4577,12 @@ function ssoDeadSession(e) {
 function ssoQueueRetry(fn) {
   ssoPendingRetry = fn; // at most one pending retry; a newer failure replaces it
 }
-function ssoSilentReauth() {
+function ssoSilentReauth(force) {
   if (!hasSso()) return;
   const now = Date.now();
-  if (now - ssoLastReauth < 5 * 60 * 1000) return;
+  // v1.5.173: user-initiated refresh bypasses the 5-min cooldown — if the
+  // last silent re-auth failed, manual refresh must work immediately.
+  if (!force && now - ssoLastReauth < 5 * 60 * 1000) return;
   let info = null;
   try { info = JSON.parse(window.RuijieBridge.ssoAccountInfo() || '{}'); } catch (e) {}
   if (!info || !info.has || !info.autoLogin) return;
@@ -4460,10 +4672,13 @@ async function moreDevices() {
     // v1.5.53: dead session → queue a one-shot retry of this exact load and
     // silently re-authenticate. The retry fires on the next successful login;
     // genuine errors still render as before.
+    // v1.5.173: force=true — user tapped into this page, so bypass the
+    // 5-min cooldown. If the last silent re-auth failed, manual navigation
+    // must trigger a fresh login attempt immediately.
     if (deadSession && sso) {
       const retryType = type;
       ssoQueueRetry(() => load(retryType));
-      ssoSilentReauth();
+      ssoSilentReauth(true);
     }
     let cliByAp = null, apNames = null;
     const clients = await clientP;
@@ -4520,6 +4735,8 @@ async function moreDevices() {
           const ncliShow = ncli > 0 ? ncli : ncliLocal;
           const showCli = isApRow && sn && (ncliShow > 0 || !d.local);
           const cb = showCli ? `<button class="btn" data-apclients="${esc(sn)}" data-apname="${esc(nm)}" data-aplocal="${d.local ? '1' : ''}" title="${esc(t('ac.title'))}">${ic('user', 'sm')}<span>${ncliShow}</span></button>` : '';
+          // v1.5.197: device performance button — shows CPU/Memory via Cloud API
+          const pb = sn ? `<button class="btn" data-perf="${esc(sn)}" data-name="${esc(nm)}" title="CPU/Memory">${ic('chart', 'sm')}</button>` : '';
           return `<tr><td>${esc(nm)}${localTag}<br><small class="muted">${esc(sn || d.mac || '')}</small>${(() => {
             // Cloud device list carries the management IP as `localIp`
             // (verified from the portal's own device-list JS bundle);
@@ -4529,17 +4746,45 @@ async function moreDevices() {
           })()}</td>
           <td>${esc(d.productClass || d.model || d.productModel || '')}</td>
           <td><span class="st-dot ${st.cls}"></span>${esc(st.label)}</td>
-          <td>${rb}${cb}</td></tr>`;
+          <td>${rb}${cb}${pb}</td></tr>`;
         }).join('')}
         </table></div>`;
     document.querySelectorAll('#md-list [data-reboot]').forEach(b => b.addEventListener('click', () => rebootDevice(b.dataset.reboot, b.dataset.name, b.dataset.local === '1')));
     document.querySelectorAll('#md-list [data-apclients]').forEach(b => b.addEventListener('click', () => apClientsView(b.dataset.apclients, b.dataset.apname, apNames, b.dataset.aplocal === '1')));
+    document.querySelectorAll('#md-list [data-perf]').forEach(b => b.addEventListener('click', () => showDevicePerf(b.dataset.perf, b.dataset.name)));
   };
   document.querySelectorAll('#md-chips .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#md-chips .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active'); load(c.dataset.t);
   }));
   load('');
+}
+
+/* v1.5.197: Device CPU/Memory performance popup (Cloud API 2.6.6) */
+async function showDevicePerf(sn, name) {
+  const ov = document.createElement('div');
+  ov.className = 'modal'; ov.style.display = 'flex';
+  ov.innerHTML = `<div class="modal-box" style="max-width:320px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b>${esc(name || sn)}</b>
+      <button type="button" class="btn small" id="perf-close">✕</button>
+    </div>
+    <div id="perf-body"><p class="muted">${t('more.loading')}</p></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#perf-close').addEventListener('click', () => ov.remove());
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+  try {
+    const d = await Api.devicePerf(sn);
+    const data = d.data || d;
+    ov.querySelector('#perf-body').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">
+        <div><div style="font-size:24px;font-weight:bold">${data.cpuRate != null ? data.cpuRate + '%' : '—'}</div><div class="muted small">CPU</div></div>
+        <div><div style="font-size:24px;font-weight:bold">${data.memoryRate != null ? data.memoryRate + '%' : '—'}</div><div class="muted small">Memory</div></div>
+      </div>`;
+  } catch (e) {
+    ov.querySelector('#perf-body').innerHTML = `<p class="err">${esc(e.message || e)}</p>`;
+  }
 }
 
 /* ── Device reboot (v1.5.13 SSO portal · v1.5.78 gateway-local) ──
@@ -5133,37 +5378,17 @@ async function moreWebAuth() {
   const gNum = (k, ph) => `<input id="wg-${k}" type="number" min="0" inputmode="numeric" class="ug-input" value="${esc(String(glob[k] ?? ''))}" placeholder="${esc(ph)}">`;
   gEl.innerHTML = `
   <div class="ug-card" style="margin-top:12px">
-    <div class="ug-sect">${esc(t('wg.title'))}</div>
-    <div class="segmented ug-seg" id="wg-proto">
-      <button type="button" data-p="http" class="${String(glob.proto) === 'http' ? 'active' : ''}">http</button>
-      <button type="button" data-p="https" class="${String(glob.proto) === 'https' ? 'active' : ''}">https</button>
-    </div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.stateUrl'))}</span>
-      <input id="wg-user_state_url" type="text" class="ug-input" value="${esc(String(glob.user_state_url || ''))}"></div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.remindDays'))}</span>
-      <div class="ug-inline">${gNum('remind_days', '1')}<span class="ug-unit">${esc(t('wg.days'))}</span></div></div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.remindInterval'))}</span>
-      <div class="ug-inline">${gNum('remind_interval', '1')}<span class="ug-unit">${esc(t('wg.hours'))}</span></div></div>
-    <div class="ug-field"><span class="ug-lab">${esc(t('wg.idle'))}</span>
-      <div class="ug-inline">${gNum('flow_detect_time', '15')}<span class="ug-unit">${esc(t('wa.min'))}</span></div></div>
     <div class="ug-field"><span class="ug-lab">${esc(t('wg.httpCheck'))}</span>
       <label class="switch"><input id="wg-http_host_check" type="checkbox" ${gOn('http_host_check') ? 'checked' : ''}><span class="track"></span></label></div>
     <div class="row" style="margin-top:14px"><button class="btn primary" id="wg-save">${t('wa.save')}</button></div>
   </div>`;
-  $('wg-proto').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    $('wg-proto').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
-  });
+  // v1.5.175: Global Config fields removed — only HTTP Injection Prevention remains.
+  // Save sends back the full object that was read (untouched fields survive).
   $('wg-save').addEventListener('click', async () => {
     if (!(await iosConfirm(t('wg.confirm'), '', t('a.save'), t('a.cancel'), false))) return;
     const g = S._waGlob;
-    const act = $('wg-proto').querySelector('button.active');
-    g.proto = act ? act.dataset.p : String(g.proto || 'http');
-    g.user_state_url = $('wg-user_state_url').value.trim();
-    g.remind_days = String($('wg-remind_days').value || '0');
-    g.remind_interval = String($('wg-remind_interval').value || '0');
-    g.flow_detect_time = String($('wg-flow_detect_time').value || '0');
-    g.http_host_check = $('wg-http_host_check').checked ? '1' : '0';
+    const hhc = $('wg-http_host_check');
+    if (hhc) g.http_host_check = hhc.checked ? '1' : '0';
     try {
       await GwApi.globalAuthSet(g);
       toast(t('wa.saved'));
@@ -5482,8 +5707,16 @@ async function loadQoS() {
         <b>${esc(isNew ? t('q.addPol') : t('q.editPol'))}</b>
         <label style="display:block;margin-top:10px">${esc(t('q.polName'))}<br>
           <input type="text" id="pe-name" value="${esc(p.comment || '')}" style="width:100%"></label>
+        <div class="ug-row" style="margin-top:10px"><span class="ug-lab">Enable</span>
+          <label class="switch"><input type="checkbox" id="pe-enable" ${p.effective !== '0' ? ' checked' : ''}><span class="track"></span></label></div>
+        <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.userGroup') || 'User Group')}</div>
+          <button type="button" id="pe-ug-btn" class="btn" style="width:100%;text-align:left">${esc(t('q.selUser') || 'Select user...')}</button>
+          <div id="pe-ug-chips" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"></div></div>
         <label style="display:block;margin-top:8px">${esc(t('q.polIp'))}<br>
           <input type="text" id="pe-ip" value="${esc(p.ipRange || '')}" placeholder="192.168.30.1-192.168.30.254" style="width:100%"></label>
+        <div style="margin-top:8px"><div style="font-size:13px;margin-bottom:4px">${esc(t('q.apps') || 'Apps')}</div>
+          <button type="button" id="pe-app-btn" class="btn" style="width:100%;text-align:left">${esc(t('q.selApp') || 'Select app...')}</button>
+          <div id="pe-app-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>
         <div class="row" style="margin-top:8px">
           <label style="flex:1">${esc(t('q.upLimit'))} (Mbps)<br>
             <input type="number" id="pe-up" value="${esc(k2m(p.upRate || p.allUpRate))}" step="0.1" min="0"></label>
@@ -5497,16 +5730,232 @@ async function loadQoS() {
       </div>`;
       document.body.appendChild(ov);
       ov.querySelector('#pe-cancel').addEventListener('click', () => ov.remove());
+      // v1.5.177: App Speed Limit — multi-select apps from tree with chip preview
+      const appBtn = ov.querySelector('#pe-app-btn');
+      const chipBox = ov.querySelector('#pe-app-chips');
+      let selApps = Array.isArray(p.appList) ? [...p.appList] : [];
+      let allApps = [];
+      const renderChips = () => {
+        chipBox.innerHTML = selApps.map((a, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(a)} <b data-i="${i}" style="cursor:pointer">×</b></span>`).join('');
+        chipBox.querySelectorAll('b').forEach(b => b.addEventListener('click', () => { selApps.splice(Number(b.dataset.i), 1); renderChips(); updateAppBtn(); }));
+      };
+      const updateAppBtn = () => {
+        appBtn.textContent = selApps.length ? `${selApps.length} selected` : (t('q.selApp') || 'Select app...');
+      };
+      // v1.5.190: App selector modal with APPS/App Group tabs (matches gateway UI)
+      const openAppModal = async () => {
+        const mOv = document.createElement('div');
+        mOv.className = 'modal'; mOv.style.display = 'flex';
+        mOv.innerHTML = `<div class="modal-box" style="max-width:440px;max-height:80vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <b>Select Application</b>
+            <button type="button" class="btn small" id="appm-close">✕</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="text" id="appm-search" placeholder="Please enter" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd">
+            <span id="appm-count" style="align-self:center;font-size:13px;color:#007AFF">${selApps.length} Selected</span>
+          </div>
+          <div style="display:flex;gap:16px;border-bottom:1px solid #eee;margin-bottom:12px">
+            <button type="button" class="btn small" id="appm-tab-apps" style="border-bottom:2px solid #007AFF">APPS</button>
+            <button type="button" class="btn small" id="appm-tab-group">App Group</button>
+          </div>
+          <div id="appm-apps-list"></div>
+          <div id="appm-group-list" style="display:none"><p class="muted" style="text-align:center;padding:40px">No Data</p></div>
+          <div style="display:flex;gap:12px;margin-top:16px;align-items:center">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="appm-select-all"> Select All
+            </label>
+            <button type="button" class="btn primary" id="appm-ok" style="flex:1">OK</button>
+          </div>
+        </div>`;
+        document.body.appendChild(mOv);
+        const appsList = mOv.querySelector('#appm-apps-list');
+        const groupList = mOv.querySelector('#appm-group-list');
+        const searchInput = mOv.querySelector('#appm-search');
+        const countSpan = mOv.querySelector('#appm-count');
+        let tempSel = [...selApps];
+        const updateCount = () => { countSpan.textContent = `${tempSel.length} Selected`; };
+        const renderApps = (filter) => {
+          const f = (filter || '').toLowerCase();
+          const filtered = f ? allApps.filter(x => x.name.toLowerCase().includes(f)) : allApps;
+          // v1.5.193: Clear checkmarks like Voucher UI — selected items show blue check
+          appsList.innerHTML = filtered.map((x, idx) => {
+            const isSel = tempSel.includes(x.name);
+            return `
+            <label style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;${isSel ? 'background:#E8F0FE;' : ''}">
+              <span style="flex:1">${esc(x.name)}</span>
+              <span style="width:24px;height:24px;border-radius:50%;border:2px solid ${isSel ? '#007AFF' : '#ccc'};background:${isSel ? '#007AFF' : 'transparent'};display:flex;align-items:center;justify-content:center;color:white;font-size:14px">${isSel ? '✓' : ''}</span>
+              <input type="checkbox" value="${esc(x.name)}" ${isSel ? 'checked' : ''} style="display:none">
+            </label>`;
+          }).join('') || '<p class="muted" style="text-align:center;padding:20px">No apps found</p>';
+          appsList.querySelectorAll('label').forEach((label, idx) => {
+            label.addEventListener('click', (e) => {
+              e.preventDefault();
+              const cb = label.querySelector('input[type="checkbox"]');
+              const val = cb.value;
+              if (tempSel.includes(val)) { tempSel = tempSel.filter(a => a !== val); }
+              else { tempSel.push(val); }
+              renderApps(searchInput.value); updateCount();
+            });
+          });
+        };
+        // Load apps
+        try {
+          const items = await GwApi.qosAppTree();
+          allApps = items || [];
+          renderApps('');
+        } catch (e) {
+          appsList.innerHTML = '<p class="muted">Failed to load apps</p>';
+        }
+        searchInput.addEventListener('input', () => renderApps(searchInput.value));
+        // Tab switching
+        mOv.querySelector('#appm-tab-apps').addEventListener('click', (e) => {
+          appsList.style.display = ''; groupList.style.display = 'none';
+          e.target.style.borderBottom = '2px solid #007AFF';
+          mOv.querySelector('#appm-tab-group').style.borderBottom = 'none';
+        });
+        mOv.querySelector('#appm-tab-group').addEventListener('click', (e) => {
+          appsList.style.display = 'none'; groupList.style.display = '';
+          e.target.style.borderBottom = '2px solid #007AFF';
+          mOv.querySelector('#appm-tab-apps').style.borderBottom = 'none';
+        });
+        // Select All
+        mOv.querySelector('#appm-select-all').addEventListener('change', (e) => {
+          if (e.target.checked) { tempSel = allApps.map(x => x.name); }
+          else { tempSel = []; }
+          renderApps(searchInput.value); updateCount();
+        });
+        // OK
+        mOv.querySelector('#appm-ok').addEventListener('click', () => {
+          selApps = [...tempSel];
+          renderChips(); updateAppBtn();
+          mOv.remove();
+        });
+        mOv.querySelector('#appm-close').addEventListener('click', () => mOv.remove());
+        mOv.addEventListener('click', (e) => { if (e.target === mOv) mOv.remove(); });
+      };
+      if (appBtn) appBtn.addEventListener('click', openAppModal);
+      renderChips(); updateAppBtn();
+      appSel.addEventListener('change', () => {
+        const idx = appSel.value;
+        if (idx === '') return;
+        const name = treeItems[Number(idx)] && treeItems[Number(idx)].name;
+        if (name && !selApps.includes(name)) { selApps.push(name); renderChips(); }
+        appSel.value = '';
+      });
+      renderChips();
+      // v1.5.182: User Group selector — fetch from gateway
+      const ugBtn = ov.querySelector('#pe-ug-btn');
+      const ugChips = ov.querySelector('#pe-ug-chips');
+      let selUGs = Array.isArray(p.userGroups) ? [...p.userGroups] : (Array.isArray(p.user_group_list) ? [...p.user_group_list] : []);
+      let allUGs = [];
+      let selSubnet = p.subnetGroup || ''; // v1.5.190: Subnet Group selection
+      const renderUGChips = () => {
+        const chips = [];
+        if (selSubnet) chips.push(`<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(selSubnet)} <b data-s="1" style="cursor:pointer">×</b></span>`);
+        chips.push(...selUGs.map((g, i) => `<span style="background:#E8F0FE;border-radius:12px;padding:4px 10px;font-size:13px">${esc(g)} <b data-i="${i}" style="cursor:pointer">×</b></span>`));
+        ugChips.innerHTML = chips.join('');
+        ugChips.querySelectorAll('b').forEach(b => b.addEventListener('click', () => {
+          if (b.dataset.s) { selSubnet = ''; } else { selUGs.splice(Number(b.dataset.i), 1); }
+          renderUGChips(); updateUGBtn();
+        }));
+      };
+      const updateUGBtn = () => {
+        const parts = [];
+        if (selSubnet) parts.push(selSubnet);
+        parts.push(...selUGs);
+        ugBtn.textContent = parts.length ? parts.join(', ') : (t('q.selUser') || 'Select user...');
+      };
+      // v1.5.190: User selector modal with Subnet Group + User Group tabs (matches gateway UI)
+      const openUGModal = async () => {
+        try {
+        const mOv = document.createElement('div');
+        mOv.className = 'modal'; mOv.style.display = 'flex'; mOv.style.zIndex = '9999';
+        // Subnet groups (from gateway screenshot)
+        const subnets = [
+          { name: 'WIFI CODE', range: '192.168.20.1-192.168.21.254' },
+          { name: 'VLAN30', range: '192.168.30.1-192.168.31.254' },
+          { name: 'VLAN233', range: '192.168.110.1-192.168.111.254' },
+        ];
+        mOv.innerHTML = `<div class="modal-box" style="max-width:440px;max-height:80vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <b>${esc(t('q.userGroup') || 'User')}</b>
+            <button type="button" class="btn small" id="ugm-close">✕</button>
+          </div>
+          <div style="display:flex;gap:16px;border-bottom:1px solid #eee;margin-bottom:12px">
+            <button type="button" class="btn small" id="ugm-tab-subnet" style="border-bottom:2px solid #007AFF">${esc(t('q.subnetGroup'))}</button>
+            <button type="button" class="btn small" id="ugm-tab-user">${esc(t('q.userGroupTab'))}</button>
+          </div>
+          <div id="ugm-subnet-list"></div>
+          <div id="ugm-user-list" style="display:none"></div>
+          <div style="margin-top:16px"><button type="button" class="btn primary" id="ugm-ok" style="width:100%">OK</button></div>
+        </div>`;
+        document.body.appendChild(mOv);
+        const subnetList = mOv.querySelector('#ugm-subnet-list');
+        const userList = mOv.querySelector('#ugm-user-list');
+        // Render subnet groups
+        subnetList.innerHTML = subnets.map(s => `
+          <label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">
+            <input type="radio" name="ugm-subnet" value="${esc(s.name)}" ${selSubnet === s.name ? 'checked' : ''}>
+            <div><div style="font-weight:500">${esc(s.name)}</div><div style="font-size:12px;color:#888">${esc(s.range)}</div></div>
+          </label>`).join('');
+        // Render user groups (fetch from gateway)
+        try {
+          const groups = await GwApi.qosUserGroupList();
+          allUGs = groups || [];
+          // Add "All Users" at top (gateway has this)
+          const allUsersOpt = { name: 'All Users', path: '' };
+          const displayGroups = [allUsersOpt, ...allUGs];
+          userList.innerHTML = displayGroups.map(g => `
+            <label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0;cursor:pointer">
+              <input type="checkbox" value="${esc(g.path)}" data-name="${esc(g.name)}" ${selUGs.includes(g.path) ? 'checked' : ''}>
+              <div style="font-weight:500">${esc(g.name)}</div>
+            </label>`).join('');
+        } catch (e) {
+          userList.innerHTML = `<p class="muted">Failed to load user groups</p>`;
+        }
+        // Tab switching
+        const tabSubnet = mOv.querySelector('#ugm-tab-subnet');
+        const tabUser = mOv.querySelector('#ugm-tab-user');
+        tabSubnet.addEventListener('click', () => {
+          subnetList.style.display = ''; userList.style.display = 'none';
+          tabSubnet.style.borderBottom = '2px solid #007AFF'; tabUser.style.borderBottom = 'none';
+        });
+        tabUser.addEventListener('click', () => {
+          subnetList.style.display = 'none'; userList.style.display = '';
+          tabUser.style.borderBottom = '2px solid #007AFF'; tabSubnet.style.borderBottom = 'none';
+        });
+        // OK button
+        mOv.querySelector('#ugm-ok').addEventListener('click', () => {
+          const selSub = mOv.querySelector('input[name="ugm-subnet"]:checked');
+          selSubnet = selSub ? selSub.value : '';
+          selUGs = Array.from(mOv.querySelectorAll('#ugm-user-list input[type="checkbox"]:checked')).map(cb => cb.value).filter(Boolean);
+          // If "All Users" checked (empty path), clear others
+          if (mOv.querySelector('#ugm-user-list input[value=""]:checked')) selUGs = [];
+          renderUGChips(); updateUGBtn();
+          mOv.remove();
+        });
+        mOv.querySelector('#ugm-close').addEventListener('click', () => mOv.remove());
+        mOv.addEventListener('click', (e) => { if (e.target === mOv) mOv.remove(); });
+        } catch (err) { console.error('UG modal error:', err); toast('Error: ' + err.message, true); }
+      };
+      if (ugBtn) ugBtn.addEventListener('click', openUGModal);
+      renderUGChips(); updateUGBtn();
       ov.querySelector('#pe-save').addEventListener('click', async () => {
         const np = isNew ? {
           policy_id: '10', ip_group: 'fc_rule_' + Date.now(),
-          type: 'macc_cst', mode: 'share', intf: 'br-wan', tcPri: '1',
+          // v1.5.190: Match working Limit3 policy (from gateway capture)
+          type: 'web', mode: 'per_ip', intf: 'br-wan', tcPri: '1',
           tr_effective: '1', tr_group: '所有时段', wholeWan: '0',
           idyc_version: 'V3', effective: '-1', appList: [],
           user_group_list: [], vlanList: [], tr_range: [], intfGrpList: [],
         } : p;
         np.comment = ov.querySelector('#pe-name').value.trim();
+        // v1.5.181: "All users" checkbox — empty ipRange means all IPs
         np.ipRange = ov.querySelector('#pe-ip').value.trim();
+        np.appList = selApps; // v1.5.177: App Speed Limit
+        np.userGroups = selUGs; // v1.5.182: User Group selector
+        np.user_group_list = selUGs; // gateway field
         // v1.5.154: UI is Mbps, gateway stores Kbps — convert with m2k
         const uv = m2k(ov.querySelector('#pe-up').value.trim());
         const dv = m2k(ov.querySelector('#pe-dn').value.trim());
@@ -5645,10 +6094,37 @@ async function moreTraffic() {
   moreShell(`${ic('chart', 'sm')} ${esc(t('mt.title'))}`, `
     ${GwApi.loggedIn() ? '' : `<p class="muted small">${t('md.needGw')}</p>`}
     <div><button class="btn" id="mt-refresh">${ic('refresh', 'sm')}<span>${t('mt.refresh')}</span></button>
+    <button class="btn" id="mt-cloud-apps">${ic('chart', 'sm')}<span>App Traffic (Cloud)</span></button>
     <span class="muted small" id="mt-meta"></span></div>
     <div id="mt-body" style="margin-top:10px"><p class="muted">${t('mt.hint')}</p></div>`);
   $('mt-refresh').addEventListener('click', loadTraffic);
+  $('mt-cloud-apps').addEventListener('click', loadCloudAppTraffic);
   if (GwApi.loggedIn()) loadTraffic();
+}
+
+/* v1.5.195: Cloud App Traffic Statistics (2.6.10) — per-app up/down from Cloud API */
+async function loadCloudAppTraffic() {
+  const body = $('mt-body'), meta = $('mt-meta');
+  if (!body) return;
+  body.innerHTML = `<p class="muted">${t('more.loading')}</p>`;
+  try {
+    const groupId = S.projectId;
+    const devices = await Api.deviceListSso(groupId).catch(() => []);
+    const gw = (devices || []).find(d => d.commonType === 'GATEWAY' || d.productType === 'EGW');
+    if (!gw) { body.innerHTML = '<p class="muted">No gateway found</p>'; return; }
+    const sn = gw.serialNumber || gw.sn;
+    const list = await Api.appTrafficStats(groupId, sn);
+    if (!list.length) { body.innerHTML = '<p class="muted">No app traffic data</p>'; return; }
+    const fmt = (b) => b > 1048576 ? (b/1048576).toFixed(1) + ' MB' : (b/1024).toFixed(1) + ' KB';
+    body.innerHTML = `<div class="card"><b>App Traffic (Cloud)</b><div style="margin-top:8px">
+      ${list.map(a => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span><b>${esc(a.appName || '?')}</b> <span class="muted small">${esc(a.appGroupName || '')}</span></span>
+        <span class="small">↓ ${fmt(a.downFlow || 0)} ↑ ${fmt(a.upFlow || 0)}</span>
+      </div>`).join('')}</div></div>`;
+    if (meta) meta.textContent = `${list.length} apps`;
+  } catch (e) {
+    body.innerHTML = `<p class="err">${esc(e.message || e)}</p>`;
+  }
 }
 
 async function loadTraffic() {
@@ -5709,14 +6185,13 @@ function renderTraffic(body, meta, agg, rates, count, now) {
    Traffic is manual-refresh only (one flow-table poll ≈ 166 kB). */
 async function moreOverview() {
   S.moreFn = moreOverview;
-  moreShell(`${ic('chart', 'sm')} ${esc(t('ov.title'))}`, `
-    <div><button class="btn" id="ov-refresh">${ic('refresh', 'sm')}<span>${t('ov.refresh')}</span></button>
-    <span class="muted small" id="ov-meta"></span></div>
+  // v1.5.175: header card (title + Refresh row) removed per user request.
+  // Data loads on entry; pull-to-refresh not needed.
+  moreShell('', `
     <div class="grid-2" style="margin-top:10px">
       <section class="ov-panel"><div class="section-title">${esc(t('ov.trafficRanking'))}</div><div id="ov-traffic"><p class="muted">${t('more.loading')}</p></div></section>
       <section class="ov-panel"><div class="section-title">${esc(t('ov.newClients'))}</div><div id="ov-new"><p class="muted">${t('more.loading')}</p></div></section>
     </div>`);
-  $('ov-refresh').addEventListener('click', loadOverview);
   loadOverview();
 }
 
@@ -5752,13 +6227,17 @@ async function loadOverview() {
     try { vmap = await apClientVoucherMap(pid, false); } catch (e) { /* voucher enrichment optional */ }
   }
 
-  // IP → {name, voucher} for traffic-ranking labels.
+  // IP → {name, voucher, totalBytes} for traffic-ranking labels.
+  // v1.5.175: include the portal's cumulative flowUpDown so each row shows
+  // THAT CLIENT's data total, not just live flow-table bytes.
   const ipInfo = new Map();
   list.forEach(c => {
     const f = mcFields(c, viaPortal, vmap);
     const ip = String(f.ip || '').trim();
     if (ip && ip !== '—' && !ipInfo.has(ip)) {
-      ipInfo.set(ip, { name: f.name && f.name !== '—' ? f.name : ip, voucher: f.acct || '' });
+      const tot = Number(c.flowUpDown);
+      ipInfo.set(ip, { name: f.name && f.name !== '—' ? f.name : ip, voucher: f.acct || '',
+        totalBytes: Number.isFinite(tot) && tot > 0 ? tot : 0 });
     }
   });
   renderOvTraffic(tEl, agg, ipInfo, gwOk);
@@ -5776,11 +6255,17 @@ async function loadOverview() {
 
 function renderOvTraffic(el, agg, ipInfo, gwOk) {
   if (!agg.length) { el.innerHTML = `<p class="muted">${esc(t(gwOk ? 'ov.noTraffic' : 'mt.hint'))}</p>`; return; }
-  const topTotal = agg[0].upBytes + agg[0].downBytes;
-  el.innerHTML = agg.slice(0, 10).map(c => {
-    const total = c.upBytes + c.downBytes;
-    const pct = topTotal > 0 ? Math.max(3, Math.round(total / topTotal * 100)) : 0;
+  // v1.5.175: each row shows THAT CLIENT's data total (portal cumulative
+  // flowUpDown when known), not just live flow-table bytes. Never invented:
+  // unknown totals fall back to the flow-table figure.
+  const rows = agg.map(c => {
     const info = ipInfo.get(c.ip) || {};
+    const total = (info.totalBytes > 0) ? info.totalBytes : (c.upBytes + c.downBytes);
+    return { c, info, total };
+  }).sort((a, b) => b.total - a.total);
+  const topTotal = rows.length ? rows[0].total : 0;
+  el.innerHTML = rows.slice(0, 10).map(({ c, info, total }) => {
+    const pct = topTotal > 0 ? Math.max(3, Math.round(total / topTotal * 100)) : 0;
     const name = info.name || c.ip;
     const sub = [c.ip, info.voucher ? `${t('ov.voucher')}: ${info.voucher}` : ''].filter(Boolean).join(' · ');
     return `<div class="ov-rank">
@@ -6155,6 +6640,17 @@ function markKickedVoucher(code) {
   m[code] = Date.now();
   try { Store.save({ kickedVouchers: m }); } catch (e) {}
 }
+/* v1.5.198: clear the kicked/expired mark for a voucher (after reset) —
+ * the voucher becomes Unused again, not Expired. */
+function clearKickedVoucher(code) {
+  code = String(code || '').trim();
+  if (!code) return;
+  const m = kickedVoucherMarks();
+  if (m[code]) {
+    delete m[code];
+    try { Store.save({ kickedVouchers: m }); } catch (e) {}
+  }
+}
 /* v1.5.74: warn before Disconnect when the voucher still has quota or time
  * left. Only claims what is known: quota>0 and not fully spent, or
  * timePeriod>0 and not fully used. Unlimited/missing fields → no claim. */
@@ -6523,13 +7019,13 @@ function onKickToggle() {
   const on = !!(tg && tg.checked);
   Store.save({ kickAuto: on });
   if (hasAutoKickBg()) {
-    try {
-      if (on) {
-        syncAutoKickConfig();
-        window.RuijieBridge.monitorRequestPermission(); // same notif permission
-      }
-      window.RuijieBridge.autoKickSetEnabled(on);
-    } catch (e) {}
+    // v1.5.175: never let a sync failure block the actual scheduling —
+    // each step is guarded independently so the job always gets (re)scheduled.
+    if (on) {
+      try { syncAutoKickConfig(); } catch (e) {}
+      try { window.RuijieBridge.monitorRequestPermission(); } catch (e) {}
+    }
+    try { window.RuijieBridge.autoKickSetEnabled(on); } catch (e) {}
     setTimeout(refreshKickStatus, 400);
   } else {
     refreshKickStatus();
@@ -6558,6 +7054,25 @@ function initKickSettings() {
   if (tg) {
     tg.checked = !!Store.load().kickAuto;
     tg.addEventListener('change', onKickToggle);
+  }
+  // v1.5.199: foreign code auto-kick toggle
+  const tf = $('kick-foreign');
+  if (tf) {
+    tf.checked = Store.load().kickForeign !== false; // default ON
+    tf.addEventListener('change', () => {
+      Store.save({ kickForeign: tf.checked });
+    });
+  }
+  // v1.5.175: self-heal — if the toggle is ON but the native job isn't
+  // scheduled (e.g. after an update), re-push config and re-schedule now.
+  if (Store.load().kickAuto && hasAutoKickBg()) {
+    try {
+      const info = JSON.parse(window.RuijieBridge.autoKickInfo() || '{}');
+      if (!info.scheduled) {
+        try { syncAutoKickConfig(); } catch (e) {}
+        try { window.RuijieBridge.autoKickSetEnabled(true); } catch (e) {}
+      }
+    } catch (e) {}
   }
   // voucher VLAN for scoping the "suspicious" flag — picked from the
   // Ruijie Cloud WLAN list; the captive-portal VLAN is auto-selected.
@@ -6657,9 +7172,13 @@ async function updLatestRelease() {
   const tag = String(j.tag_name || '').trim();
   const apk = (j.assets || []).find(a => /\.apk$/i.test(String(a.name || '')));
   if (!tag || !apk || !apk.browser_download_url) throw new Error('no-apk');
+  /* v1.5.192: Skip the HEAD redirect resolution — it was blocked by CORS in
+   * WebView (origin 'null'). The native DownloadManager follows the 302
+   * redirect itself, so pass the original browser_download_url directly. */
+  let dlUrl = apk.browser_download_url;
   /* v1.5.137: capture the release notes too — the UPDATE Ready card shows
    * them in an expandable "what's new" section. */
-  return { tag, name: String(apk.name || 'update.apk'), url: apk.browser_download_url,
+  return { tag, name: String(apk.name || 'update.apk'), url: dlUrl,
            notes: String(j.body || '').trim() };
 }
 function updSetStatus(msg) {
@@ -6711,14 +7230,8 @@ function updRefreshInstallUI() {
     updDlHide(); // v1.5.139: no download running — ring stays out of the way
   }
   if (st === 'ready') {
-    row.hidden = false;
-    /* v1.5.137: UPDATE Ready card — version line + collapsed-by-default
-     * release notes (textContent only, never HTML). */
-    const p = updPendingLoad();
-    const ver = $('upd-ready-ver');
-    if (ver) ver.textContent = (p && p.tag) ? p.tag : '';
-    const notes = $('upd-ready-notes');
-    if (notes) notes.textContent = (p && p.notes) ? p.notes : t('upd.noNotes');
+    // v1.5.181: UPDATE Ready card removed — the main button already shows "Install"
+    row.hidden = true;
   } else {
     row.hidden = true;
   }
@@ -6729,6 +7242,14 @@ function updOnDownloadDone(rel, ok, id) {
   if (ok) {
     updPendingSave({ id, tag: rel.tag, name: rel.name, notes: rel.notes || '' });
     updSetStatus(t('upd.downloaded'));
+    // v1.5.178: button becomes "Install"
+    const btn = $('upd-check-btn');
+    const label = $('upd-btn-label');
+    if (btn) {
+      btn.textContent = t('upd.install') || 'Install';
+      if (label) label.textContent = btn.textContent;
+      btn.onclick = () => updInstallApk(id);
+    }
     updRefreshInstallUI();
     updBannerShow(rel.tag, true); // v1.5.138: banner upgrades to UPDATE Ready
     updDlDone(); // v1.5.139: ring celebrates, then the UPDATE Ready card takes over
@@ -6824,22 +7345,22 @@ async function checkAppUpdate(manual) {
     return null;
   }
 }
-/* v1.5.171: GlassVPN-style update available card */
+/* v1.5.178: single-button update flow — the Check button itself changes state.
+ * "Check for updates" -> (found) "Download & update" -> (done) "Install". */
 function updShowAvail(rel) {
-  const card = $('upd-avail');
-  if (!card) return;
-  const ver = $('upd-avail-ver');
-  if (ver) ver.textContent = rel.tag || '';
-  const notes = $('upd-avail-notes');
-  if (notes) notes.textContent = (rel.notes || '').trim() || t('upd.noNotes');
-  card.hidden = false;
-  const btn = $('upd-dl-btn');
-  if (btn) {
-    btn.onclick = () => {
-      card.hidden = true;
-      updStartDownload(rel, false);
-    };
-  }
+  const btn = $('upd-check-btn');
+  const label = $('upd-btn-label');
+  if (!btn) return;
+  // Show available version in the status line
+  updSetStatus((rel.tag || '') + (rel.notes ? ' — ' + rel.notes.split('\n')[0] : ''));
+  // Change button to "Download & update"
+  btn.textContent = t('upd.dlUpdate') || 'Download & update';
+  if (label) label.textContent = btn.textContent;
+  btn.onclick = () => {
+    btn.textContent = t('upd.check') || 'Check for updates';
+    if (label) label.textContent = btn.textContent;
+    updStartDownload(rel, false);
+  };
   // Hide the bar if it was showing from a previous download
   const bw = $('upd-bar-wrap');
   if (bw) bw.hidden = true;
@@ -6872,7 +7393,7 @@ function updBannerDismiss() {
   updBannerHide();
 }
 function updBannerGo() {
-  try { switchView('view-settings', false); } catch (e) { return; }
+  try { switchView('view-settings', 'replace'); } catch (e) { return; }
   setTimeout(() => {
     const card = $('upd-card');
     if (!card) return;
@@ -7158,7 +7679,8 @@ async function adRender() {
         : '') +
         (st !== 'blocked'
           ? `<button type="button" class="btn small danger-ghost" data-ad="block" data-id="${esc(d.id)}"${isMe ? ' disabled' : ''}>${esc(t('ad.block'))}</button>`
-          : '');
+          : '') +
+        `<button type="button" class="btn small danger-ghost" data-ad="delete" data-id="${esc(d.id)}"${isMe ? ' disabled' : ''}>${esc(t('ad.delete'))}</button>`;
     return `<div class="set-row"><div class="t"><div class="t-main">${esc(name)}${isMe ? ` <span class="ad-me">${esc(t('ad.thisDevice'))}</span>` : ''}</div>` +
       (sub ? `<div class="sub">${esc(sub)}</div>` : '') +
       `<div class="sub">${esc(t('ad.lastSeen'))}: ${esc(adFmtDate(d.lastSeen))}</div>` +
@@ -7169,12 +7691,20 @@ async function adRender() {
   listBox.querySelectorAll('[data-ad]').forEach(b => b.addEventListener('click', async () => {
     const id = b.dataset.id, act = b.dataset.ad;
     if (act === 'block' && !(await iosConfirm(t('ad.confirmBlock'), '', t('ad.block'), t('a.cancel'), true))) return;
+    if (act === 'delete' && !(await iosConfirm(t('ad.confirmDelete'), '', t('ad.delete'), t('a.cancel'), true))) return;
     b.disabled = true;
     try {
-      await adApi('/api/devices/set', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, status: act === 'block' ? 'blocked' : 'allowed', by: myId }),
-      });
+      if (act === 'delete') {
+        await adApi('/api/devices/delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, by: myId }),
+        });
+      } else {
+        await adApi('/api/devices/set', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: devAdminProfile(), deviceId: id, status: act === 'block' ? 'blocked' : 'allowed', by: myId }),
+        });
+      }
       toast(t('ad.saved'));
     } catch (e) { toast(t('ad.saveFail'), true); }
     adRender();
@@ -7231,12 +7761,290 @@ function initUpdateSettings() {
 function autoKickScan(list) {
   if (!KICK_VERIFIED) return;
   if (!Store.load().kickAuto) return;
+  // v1.5.199: build known voucher set for foreign code detection
+  const known = new Set();
+  try {
+    for (const v of (S.vouchers || [])) {
+      const code = String(vCode(v) || '').trim();
+      if (code) known.add(code);
+    }
+  } catch (e) {}
+  const kickForeign = Store.load().kickForeign !== false; // default ON
   (list || []).forEach(c => {
-    const st = clientStatusOf(String(c.account || c.authAccount || '').trim(), mcCache && mcCache.vmap);
+    const code = String(c.account || c.authAccount || '').trim();
+    const st = clientStatusOf(code, mcCache && mcCache.vmap);
     // v1.5.62: skip clients kicked within the cooldown (manual or auto) —
     // prevents a kick → refresh → still-sticky → kick loop.
     if ((st === 'datalimit' || st === 'timeup') && autoKickDue(c)) requestKick(c, { auto: true });
+    // v1.5.199: auto-kick foreign voucher codes (user request)
+    if (kickForeign && code && !known.has(code) && autoKickDue(c)) {
+      requestKick(c, { auto: true });
+    }
   });
+}
+
+/* v1.5.198: Foreign voucher code detection — finds clients using voucher
+ * codes NOT in our voucher list (stolen/foreign codes, per Time Code Manager
+ * page report 2026-10-06). Compares portal auth records (authType "15") against
+ * known voucher codes. */
+async function moreForeign() {
+  S.moreFn = moreForeign;
+  moreShell(`${ic('shield', 'sm')} ${esc(t('mf.title'))}`,
+    `<p class="muted">${esc(t('mf.desc'))}</p>
+     <div style="margin:12px 0"><button class="btn primary" id="mf-scan">${esc(t('mf.scan'))}</button></div>
+     <div id="mf-list"><p class="muted">${esc(t('mf.scanning'))}</p></div>`);
+  $('mf-scan').addEventListener('click', scanForeignVouchers);
+  // v1.5.199: auto-scan on page open (user request)
+  scanForeignVouchers();
+}
+
+async function scanForeignVouchers() {
+  const listEl = $('mf-list');
+  // v1.5.201: auto-refresh expired SSO session instead of just showing "need SSO"
+  const ssoOk = await ensureSso();
+  if (!ssoOk) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
+  listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
+  try {
+    // Build set of known voucher codes
+    const known = new Set();
+    for (const v of (S.vouchers || [])) {
+      const code = String(vCode(v) || '').trim();
+      if (code) known.add(code);
+    }
+    // Get auth records
+    // Get auth records (MAC → voucher code mapping for cloud clients)
+    const recs = await Api.portalAuthUsers(Number(S.projectId));
+    // v1.5.199: combine ALL THREE online-client sources (user instruction):
+    // 1) Gateway app_auth_get_user_online — has voucher code DIRECTLY (userName)
+    // 2) Cloud sta_users currentUser — match MAC to auth records
+    // 3) (gateway user_list is all users, not just voucher — skip for voucher check)
+    const foreign = [];
+    const seen = new Set();
+    // v1.5.199: track device history — currently online + last used time
+    const addForeign = (code, mac, ip, name, lastTime, isOnline) => {
+      code = String(code || '').trim();
+      mac = String(mac || '').trim();
+      if (!code || known.has(code)) return;
+      const key = normMac(mac) || code;
+      if (seen.has(key)) {
+        // Merge: update online status and time if this source is newer
+        const ex = foreign.find(f => (normMac(f.mac) || f.code) === key);
+        if (ex) {
+          if (isOnline) ex.isOnline = true;
+          if (lastTime && (!ex.lastTime || lastTime > ex.lastTime)) ex.lastTime = lastTime;
+          if (ip && !ex.ip) ex.ip = ip;
+          if (name && !ex.name) ex.name = name;
+        }
+        return;
+      }
+      seen.add(key);
+      foreign.push({ code, mac, ip: ip || '', name: name || '', lastTime: lastTime || '', isOnline: !!isOnline });
+    };
+    // Build MAC → {code, lastTime} from auth records (for history)
+    const macHistory = {};
+    for (const r of (recs || [])) {
+      const authType = String(r.authType || r.auth_type || '');
+      if (authType !== '15') continue;
+      const mac = normMac(r.userMac || r.mac || '');
+      const code = String(r.account || '').trim();
+      if (!mac || !code) continue;
+      const lt = r.loginTime || r.createTime || r.authTime || '';
+      if (!macHistory[mac] || (lt && lt > (macHistory[mac].lastTime || ''))) {
+        macHistory[mac] = { code, lastTime: lt };
+      }
+    }
+    // Source 1: Gateway authenticated users (direct voucher code)
+    try {
+      const gw = await Api.authOnlineUsers() || {};
+      for (const u of (gw.list || [])) {
+        const mac = normMac(u.mac || '');
+        const hist = macHistory[mac] || {};
+        addForeign(u.voucher || u.userName, u.mac, u.ip, u.hostname || u.deviceName,
+          hist.lastTime, true);
+      }
+    } catch (e) {}
+    // Source 2: Cloud online clients (MAC → auth record → voucher code)
+    try {
+      const online = await Api.allOnlineClients(Number(S.projectId)) || [];
+      const macToCode = {};
+      for (const r of (recs || [])) {
+        const authType = String(r.authType || r.auth_type || '');
+        if (authType !== '15') continue;
+        const mac = normMac(r.userMac || r.mac || '');
+        const code = String(r.account || '').trim();
+        if (mac && code) macToCode[mac] = code;
+      }
+      for (const c of online) {
+        const mac = normMac(c.mac || c.userMac || '');
+        if (!mac) continue;
+        const hist = macHistory[mac] || {};
+        addForeign(macToCode[mac] || '', c.mac || c.userMac, c.ip || c.userIp,
+          c.hostname || c.deviceName || c.userName, hist.lastTime, true);
+      }
+    } catch (e) {}
+    if (!foreign.length) {
+      listEl.innerHTML = `<p class="ok">${esc(t('mf.empty'))}</p>`;
+      return;
+    }
+    listEl.innerHTML = `
+      <p class="warn">${esc(tx('mf.found', { n: foreign.length }))}</p>
+      <div style="margin:8px 0"><button class="btn danger" id="mf-kickall">${esc(t('mf.kickAll'))}</button></div>
+      <div class="mc-list">${foreign.map((f, i) => `
+        <div class="mc-row" style="border-left:3px solid var(--red)">
+          <div><b>${esc(f.code)}</b> ${f.isOnline ? `<span class="badge ok">${esc(t('mf.online') || 'Online')}</span>` : ''}</div>
+          <div class="muted small">${esc(f.mac || '—')} · ${esc(f.ip || '—')}</div>
+          <div class="muted small">${esc(f.name || '')}</div>
+          ${f.lastTime ? `<div class="muted small">🕐 ${esc(fmtDate(f.lastTime))}</div>` : ''}
+          <button class="btn sm danger" data-mf-kick="${i}">${esc(t('mf.kick'))}</button>
+        </div>`).join('')}</div>`;
+    // Wire kick buttons
+    listEl.querySelectorAll('[data-mf-kick]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const f = foreign[Number(btn.dataset.mfKick)];
+        if (!f) return;
+        btn.disabled = true;
+        try {
+          await kickForeignClient(f);
+          btn.textContent = '✓';
+        } catch (e) {
+          toast(String((e && e.message) || e), true);
+          btn.disabled = false;
+        }
+      });
+    });
+    $('mf-kickall').addEventListener('click', async () => {
+      if (!(await iosConfirm(tx('mf.found', { n: foreign.length }), '', t('mf.kickAll'), t('a.cancel'), true))) return;
+      for (const f of foreign) {
+        try { await kickForeignClient(f); } catch (e) {}
+      }
+      scanForeignVouchers(); // refresh
+    });
+  } catch (e) {
+    listEl.innerHTML = `<p class="err">${esc(String((e && e.message) || e))}</p>`;
+  }
+}
+
+/* v1.5.200: Portal Bypass page — standalone (user request).
+ * Finds clients on the voucher VLAN without voucher auth using 10MB+. */
+async function moreBypass() {
+  S.moreFn = moreBypass;
+  moreShell(`${ic('alert', 'sm')} ${esc(t('m.bypass'))}`,
+    `<p class="muted">${esc(t('mf.bypassDesc'))}</p>
+     <div style="margin:12px 0"><button class="btn primary" id="mb-scan">${esc(t('mf.scan'))}</button></div>
+     <div id="mb-list"><p class="muted">${esc(t('mf.scanning'))}</p></div>`);
+  $('mb-scan').addEventListener('click', scanPortalBypassPage);
+  // v1.5.201: catch auto-scan errors so they never break back-button navigation
+  try { await scanPortalBypassPage(); } catch (e) {
+    const listEl = $('mb-list');
+    if (listEl) listEl.innerHTML = `<p class="err">${esc(String((e && e.message) || e))}</p>`;
+  }
+}
+
+async function scanPortalBypassPage() {
+  const listEl = $('mb-list');
+  if (!listEl) return;
+  // v1.5.201: auto-refresh expired SSO session instead of just showing "need SSO"
+  listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
+  const ssoOk = await ensureSso();
+  if (!ssoOk) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
+  listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
+  // Reuse the bypass scanner, rendering into our own container
+  const tmp = document.createElement('div');
+  try {
+    await scanPortalBypass(tmp);
+    listEl.innerHTML = tmp.innerHTML;
+    // Move any appended children
+    while (tmp.firstChild) listEl.appendChild(tmp.firstChild);
+  } catch (e) {
+    listEl.innerHTML = `<p class="err">${esc(String((e && e.message) || e))}</p>`;
+  }
+}
+
+/* v1.5.200: Portal bypass detection — finds clients on the voucher VLAN
+ * without voucher auth who have used 10MB+ (portal-only traffic should be <5MB).
+ * These are devices getting internet without entering a code. */
+async function scanPortalBypass(listEl) {
+  const pid = Number(S.projectId);
+  const vVlan = voucherVlan(Store.load());
+  if (!vVlan) return; // no voucher VLAN configured
+  const BYPASS_THRESHOLD = 10 * 1048576; // 10MB in bytes
+  // Get portal clients (has VLAN + flowUpDown)
+  let clients = [];
+  try {
+    clients = await Api.portalClients(pid, { pageSize: 1000 }) || [];
+  } catch (e) { return; }
+  // Get authenticated MACs (have voucher auth) — THREE sources for certainty:
+  // 1) Portal auth records, 2) Gateway authenticated list, 3) Portal clients account field
+  const authMacs = new Set();
+  try {
+    const recs = await Api.portalAuthUsers(pid);
+    for (const r of (recs || [])) {
+      const mac = normMac(r.userMac || r.mac || '');
+      if (mac) authMacs.add(mac);
+    }
+  } catch (e) {}
+  try {
+    const gw = await Api.authOnlineUsers() || {};
+    for (const u of (gw.list || [])) {
+      const mac = normMac(u.mac || '');
+      if (mac) authMacs.add(mac);
+    }
+  } catch (e) {}
+  // 3) Portal clients with account field set = has voucher auth
+  const clientAccts = new Map();
+  for (const c of clients) {
+    const mac = normMac(c.mac || c.userMac || '');
+    const acct = String(c.account || c.authAccount || c.authName || '').trim();
+    if (mac && acct) {
+      authMacs.add(mac);
+      clientAccts.set(mac, acct);
+    }
+  }
+  // Find bypass suspects
+  const bypass = [];
+  for (const c of clients) {
+    const vlan = String(c.vlan || c.vlanId || '').trim();
+    if (vlan !== String(vVlan).trim()) continue;
+    const mac = normMac(c.mac || c.userMac || '');
+    if (!mac || authMacs.has(mac)) continue; // has voucher auth
+    const flow = Number(c.flowUpDown || 0);
+    if (flow < BYPASS_THRESHOLD) continue;
+    bypass.push({
+      mac: c.mac || c.userMac || '',
+      ip: c.ip || c.userIp || '',
+      name: c.hostname || c.deviceName || c.userName || '',
+      flow,
+    });
+  }
+  // Render bypass section
+  const div = document.createElement('div');
+  div.style.marginTop = '24px';
+  if (!bypass.length) {
+    div.innerHTML = `<p class="ok">${esc(t('mf.noBypass'))}</p>`;
+  } else {
+    div.innerHTML = `
+      <h3 style="color:var(--red)">${esc(t('mf.bypass'))} (${bypass.length})</h3>
+      <p class="muted small">${esc(t('mf.bypassDesc'))}</p>
+      <div class="mc-list">${bypass.map(b => `
+        <div class="mc-row" style="border-left:3px solid var(--orange)">
+          <div><b>${esc(b.mac)}</b></div>
+          <div class="muted small">${esc(b.ip || '—')} · ${esc(fmtBytes(b.flow))}</div>
+          <div class="muted small">${esc(b.name || '')}</div>
+        </div>`).join('')}</div>`;
+  }
+  listEl.appendChild(div);
+}
+
+/* Kick a foreign voucher client: resolve auth record, kick, mark voucher. */
+async function kickForeignClient(f) {
+  const pid = Number(S.projectId);
+  const recs = await Api.portalAuthUsers(pid);
+  const rec = recs.find(r => String(r.account || '').trim() === f.code &&
+    normMac(r.userMac) === normMac(f.mac));
+  if (!rec) throw new Error('Record not found');
+  await Api.clientKickSso(pid, rec);
+  markKickedVoucher(f.code);
+  toast(t('kick.done') || 'Kicked');
 }
 
 /* Online-Clients render cache: fetch once per visit, re-render locally on
@@ -7270,7 +8078,15 @@ async function moreClients() {
       viaPortal = true;
       try { cachePortalVouchers(list); } catch (e) { /* voucher cache is best-effort */ }
       if (hasAuth === false) srcNote = t('ac.noAuthCfg');
-    } catch (e) { srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140); }
+    } catch (e) {
+      srcNote = t('ac.portalErr') + ': ' + String((e && e.message) || e || '').slice(0, 140);
+      // v1.5.173: portal dead session → queue retry + force silent re-auth
+      // (bypass 5-min cooldown on user navigation), same as Devices page.
+      if (ssoDeadSession(e)) {
+        ssoQueueRetry(() => { try { moreClients(); } catch (err) {} });
+        ssoSilentReauth(true);
+      }
+    }
   } else {
     srcNote = t('ac.needSso');
   }
@@ -7350,6 +8166,8 @@ async function moreClients() {
     filter: (mcCache && mcCache.filter) || 'all',
     q: (mcCache && mcCache.q) || '', // v1.5.67: search text survives refresh
     showNames: Store.load().clientShowNames !== false,
+    selectMode: (mcCache && mcCache.selectMode) || false, // v1.5.203: batch select
+    selected: (mcCache && mcCache.selected) || new Set(), // v1.5.203: selected MACs
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
   renderMcList(); // rebuilds #mc-list innerHTML — the .mc-sync spinner goes with it
@@ -7522,7 +8340,10 @@ function renderMcList() {
   const searchHtml = `<div class="mc-search">${ic('search', 'sm')}<input id="mc-q" type="search" value="${esc(mcCache.q || '')}" placeholder="${esc(t('mc.search'))}" autocomplete="off" aria-label="${esc(t('mc.search'))}"></div>`;
   $('mc-list').innerHTML =
     `<div class="mc-head"><p class="mc-sub">${esc(tx('mc.total', { n: list.length }))} · ${srcLine}</p>` +
-    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button></div>` +
+    `<div style="display:flex;gap:8px">` +
+    `<button type="button" id="mc-select" class="ios-text-btn">${mcCache.selectMode ? '✕ ' + esc(t('a.cancel')) : '☑ ' + esc(t('mc.select'))}</button>` +
+    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button>` +
+    `</div></div>` +
     searchHtml +
     segHtml +
     `<div id="mc-cells"></div>`;
@@ -7537,8 +8358,64 @@ function renderMcList() {
     Store.save({ clientShowNames: mcCache.showNames });
     renderMcList();
   });
+  // v1.5.203: batch disconnect select mode (P1)
+  const sb = $('mc-select');
+  if (sb) sb.addEventListener('click', () => {
+    mcCache.selectMode = !mcCache.selectMode;
+    if (!mcCache.selectMode) mcCache.selected = new Set();
+    renderMcList();
+  });
   const qi = $('mc-q');
   if (qi) qi.addEventListener('input', () => { mcCache.q = qi.value; renderMcCells(); });
+  updateBatchBar();
+}
+/**
+ * v1.5.203: Update batch disconnect bar (P1)
+ * Shows when in select mode with selections
+ */
+function updateBatchBar() {
+  let bar = $('mc-batch-bar');
+  const n = mcCache && mcCache.selected ? mcCache.selected.size : 0;
+  const show = mcCache && mcCache.selectMode && n > 0;
+  if (show) {
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'mc-batch-bar';
+      bar.className = 'mc-batch-bar';
+      $('mc-list').appendChild(bar);
+    }
+    bar.innerHTML = `<button class="btn danger" id="mc-batch-go" style="flex:1">${esc(tx('mc.disconnectSelected', { n }))}</button>`;
+    $('mc-batch-go').addEventListener('click', batchDisconnectSelected);
+  } else if (bar) {
+    bar.remove();
+  }
+}
+/**
+ * v1.5.203: Batch disconnect selected clients with per-client results (P1)
+ */
+async function batchDisconnectSelected() {
+  const macs = [...(mcCache.selected || [])];
+  if (!macs.length) return;
+  if (!(await iosConfirm(tx('mc.confirmBatch', { n: macs.length }), '', t('kick.kick'), t('a.cancel'), true))) return;
+  const list = mcCache.list || [];
+  let ok = 0, fail = 0;
+  const errors = [];
+  for (const mac of macs) {
+    const c = list.find(x => normMac(x.mac || x.userMac) === mac);
+    if (!c) { fail++; continue; }
+    try {
+      await requestKick({ account: c.acct || c.voucherCode || '', mac: c.mac }, { auto: false, silent: true });
+      ok++;
+    } catch (e) {
+      fail++;
+      errors.push(mac + ': ' + String((e && e.message) || e).slice(0, 50));
+    }
+  }
+  try { Tele.log('client.batch_disconnect', `OK:${ok} Fail:${fail}`, { total: macs.length }); } catch (_) {}
+  mcCache.selected = new Set();
+  mcCache.selectMode = false;
+  renderMcList();
+  toast(tx('mc.disconnectSelected', { n: ok }) + (fail ? ` (${fail} failed)` : ''));
 }
 /* fix7: voucher-VLAN-scoped "suspicious" flag. Pure and unit-testable.
  * voucherVlan(store) — Settings "Voucher VLAN" -> '20' or '';
@@ -7683,6 +8560,8 @@ function renderMcCells() {
     const foot = (flags.length || kickBtn)
       ? `<div class="mc-foot"><span>${flags.map(flagHtml).join('')}</span>${kickBtn}</div>` : '';
     cells += `<div class="set-row mc-row" data-mc="${i}" role="button" tabindex="0">` +
+      // v1.5.203: checkbox in select mode (batch disconnect)
+      (mcCache.selectMode ? `<span class="mc-check${mcCache.selected.has(normMac(f.mac)) ? ' checked' : ''}" data-mccheck="${esc(normMac(f.mac))}">${mcCache.selected.has(normMac(f.mac)) ? '✓' : ''}</span>` : '') +
       `<span class="set-ico mc-ico cst-${st}">${ic(clientIcon(f), '')}</span>` +
       `<div class="t"><div class="mc-top"><span class="t-main">${esc(title)}</span>` +
       `<span class="mc-badge cst-${st}">${esc(t(CST_META[st].key))}</span></div>` +
@@ -7702,6 +8581,18 @@ function renderMcCells() {
     const open = () => openMcDetail(Number(row.dataset.mc));
     row.addEventListener('click', e => {
       if (e.target.closest('[data-kick]')) return;
+      // v1.5.203: in select mode, tap toggles checkbox instead of opening detail
+      if (mcCache.selectMode) {
+        const chk = row.querySelector('[data-mccheck]');
+        if (chk) {
+          const mac = chk.dataset.mccheck;
+          if (mcCache.selected.has(mac)) mcCache.selected.delete(mac);
+          else mcCache.selected.add(mac);
+          renderMcCells();
+          updateBatchBar();
+        }
+        return;
+      }
       open();
     });
     row.addEventListener('keydown', e => {
@@ -8456,8 +9347,7 @@ async function moreSales() {
        <label style="flex:1">${t('sl.to')} <input type="date" id="sl-to" value="${todayStr}"></label>
      </div>
      <div id="sl-list" style="margin-top:10px"><p class="muted">${t('more.loading')}</p></div>
-     <div class="row"><button class="btn" id="sl-refresh">${ic('refresh', 'sm')}<span>${t('sl.refreshV')}</span></button></div>
-     <p class="muted small">${t('sl.dateNote2')}</p>`);
+          <p class="muted small">${t('sl.dateNote2')}</p>`);
   await ensurePackages();
   const priceByPkg = {};
   S.packages.forEach(p => { const nm = pkgName(p); if (nm && !(nm in priceByPkg)) priceByPkg[nm] = pkgPriceNum(p); });
@@ -8527,7 +9417,7 @@ async function moreSales() {
   }));
   $('sl-from').addEventListener('change', render);
   $('sl-to').addEventListener('change', render);
-  $('sl-refresh').addEventListener('click', async () => { await loadVouchers(); render(); });
+  const slr = $('sl-refresh'); if (slr) slr.addEventListener('click', async () => { await loadVouchers(); render(); });
   render();
 }
 
@@ -9082,21 +9972,21 @@ async function init() {
   const bss = $('btn-sync-settings');
   if (bss) bss.addEventListener('click', async () => {
     const st = $('sync-status');
+    const sw = $('sync-status-wrap');
+    const setSt = (txt) => { if (st) st.textContent = txt; if (sw) sw.hidden = !txt || txt === '—'; };
     try {
-      if (st) st.textContent = 'Syncing…';
+      setSt('Syncing…');
       // v1.5.124: pull FIRST (get other phone's changes), then push (send our changes)
       const pullR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.pull() : { ok: false };
       if (pullR.ok && pullR.applied && typeof refreshSyncedUI === 'function') {
         try { refreshSyncedUI(Store.load()); } catch (e) {}
       }
       const pushR = (typeof SettingsSync !== 'undefined') ? await SettingsSync.push() : { ok: false };
-      if (st) {
-        if (pushR.ok && pullR.ok) st.textContent = '✓ Synced ' + new Date().toLocaleTimeString();
-        else st.textContent = '✗ ' + (pullR.reason || pushR.reason || 'failed');
-      }
-    } catch (e) { if (st) st.textContent = '✗ error'; }
+      if (pushR.ok && pullR.ok) setSt('✓ Synced ' + new Date().toLocaleTimeString());
+      else setSt('✗ ' + (pullR.reason || pushR.reason || 'failed'));
+    } catch (e) { setSt('✗ error'); }
   });
-  document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view, false)));
+  document.querySelectorAll('.tab').forEach(tb => tb.addEventListener('click', () => switchView(tb.dataset.view, 'replace')));
   $('project-select').addEventListener('change', onProjectChange);
 
   // v1.5.53: search opens ONLY on magnifier tap; toggles closed.
@@ -9109,30 +9999,70 @@ async function init() {
     else {
       searchInput.value = ''; S.vFilter = '';
       searchWrap.classList.remove('has-text');
+      S.vUseServerSearch = false; S.vServerResults = null; // v1.5.204: drop server results
       renderVouchers(); searchInput.blur();
     }
   };
+  /* v1.5.204: server-side voucher search with client-side fallback.
+   * Debounced 500ms; tries SSO server search first (Android only), falls back
+   * to client-side filtering on failure or when SSO is unavailable. */
+  let vSearchDebounce = null;
+  let vSearchSeq = 0;
   searchInput.addEventListener('input', e => {
+    const keyword = e.target.value.trim();
     S.vFilter = e.target.value;
     searchWrap.classList.toggle('has-text', !!e.target.value);
-    renderVouchers();
+    clearTimeout(vSearchDebounce);
+    if (!keyword) {
+      // cleared -> drop server results, show all (client-side)
+      S.vUseServerSearch = false;
+      S.vServerResults = null;
+      renderVouchers();
+      return;
+    }
+    vSearchDebounce = setTimeout(async () => {
+      const mySeq = ++vSearchSeq;
+      // Try server-side via SSO (Android app only)
+      if (typeof hasSso === 'function' && hasSso()) {
+        try {
+          const email = (() => { try { const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}'); return bi.email || ''; } catch (err) { return ''; } })();
+          if (email && S.projectId) {
+            const { list } = await Api.ssoVoucherSearch(email, S.projectId, keyword, 0, 200);
+            if (mySeq !== vSearchSeq) return; // superseded by newer input
+            S.vServerResults = list;
+            S.vUseServerSearch = true;
+            renderVouchers();
+            return;
+          }
+        } catch (err) {
+          // Fall through to client-side
+          if (window.console && console.warn) console.warn('Server search failed, using client-side:', err && err.message);
+        }
+      }
+      // Fallback: client-side filter
+      if (mySeq !== vSearchSeq) return;
+      S.vUseServerSearch = false;
+      S.vServerResults = null;
+      renderVouchers();
+    }, 500);
   });
   searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') setSearchOpen(false); });
   searchBtn.addEventListener('click', () => {
-    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', false);
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', 'replace');
     setSearchOpen(!isSearchOpen());
   });
   $('search-clear').addEventListener('click', () => {
     if (searchInput.value) {
       searchInput.value = ''; S.vFilter = '';
       searchWrap.classList.remove('has-text');
+      S.vUseServerSearch = false; S.vServerResults = null; // v1.5.204: drop server results
       renderVouchers(); searchInput.focus();
     } else setSearchOpen(false); // X on empty field closes the search
   });
   // v1.5.53: topbar printer icon → printer view
-  $('btn-printer-top').addEventListener('click', () => switchView('view-printer', false));
+  $('btn-printer-top').addEventListener('click', () => switchView('view-printer', 'replace'));
   $('btn-refresh-vouchers').addEventListener('click', function () {
-    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', false);
+    if ($('view-vouchers').classList.contains('hidden')) switchView('view-vouchers', 'replace');
     this.classList.add('spinning');
     loadVouchers().finally(() => this.classList.remove('spinning'));
   });
@@ -9163,7 +10093,10 @@ async function init() {
   $('modal-disconnect').addEventListener('click', async () => {
     if (!modalVoucher) return;
     const w = kickRemainWarning(modalVoucher);
-    if (!(await iosConfirm(w || t('kick.confirm'), '', t('kick.kick'), t('a.cancel'), true))) return;
+    // v1.5.201: Include client/voucher name in confirm (official app pattern)
+    const vName = vCode(modalVoucher) || '';
+    const confirmMsg = vName ? tx('kick.confirmName', { name: vName }) : (w || t('kick.confirm'));
+    if (!(await iosConfirm(confirmMsg, '', t('kick.kick'), t('a.cancel'), true))) return;
     const ok = await requestKick({ account: vCode(modalVoucher) }, { auto: false });
     if (ok) { modalVoucher = null; closeModal('modal'); loadVouchers(); }
   });
@@ -9200,7 +10133,11 @@ async function init() {
     const v = modalVoucher;
     if (!(await iosConfirm(tx('v.resetConfirm', { n: 1 }), vCode(v), t('v.reset'), t('a.cancel'), true))) return;
     try {
+      // v1.5.198: kick associated clients first, then reset
+      try { await kickVoucherClients(v); } catch (e) {}
       await Api.voucherReset(S.projectId, v);
+      // v1.5.198: clear kicked/expired mark so voucher shows as Unused
+      clearKickedVoucher(vCode(v));
       // v1.5.129: optimistically clear usage so status updates immediately
       try {
         v.usedTime = 0; v.usedQuota = 0;
@@ -9210,6 +10147,8 @@ async function init() {
       toast(t('v.resetDone', { ok: 1 }));
       modalVoucher = null; closeModal('modal'); loadVouchers();
     } catch (e) {
+      // v1.5.202: telemetry for failed voucher writes (P1)
+      try { Tele.log('voucher.reset.failed', String((e && e.message) || e || ''), { code: vCode(v) }); } catch (_) {}
       toast(String((e && e.message) || e || ''), true);
     }
   });
@@ -9287,6 +10226,8 @@ async function init() {
     else if (k === 'webauth') moreWebAuth(); // v1.5.96 Fix13: gateway Web Authentication editor
     else if (k === 'wifi') moreWifi(); // v1.5.87: SSID list / create / password change
     else if (k === 'clients') moreClients();
+    else if (k === 'foreign') moreForeign(); // v1.5.198: foreign voucher code detection
+    else if (k === 'bypass') moreBypass(); // v1.5.200: portal bypass detection
     else if (k === 'history') moreHistory(); // v1.5.54
     else if (k === 'networks') moreNetworks();
   else if (k === 'sales') moreSales();

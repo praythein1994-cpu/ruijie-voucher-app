@@ -347,6 +347,7 @@ const I18N = {
   'wifi.badName': { my: 'နာမည် ထည့်ပါ (32 လုံးအထိ)', en: 'Enter a name (up to 32 chars)' },
   'wifi.nameExists': { my: 'ဒီ နာမည် ရှိနေပြီးသား', en: 'This name is already in use' },
   'kick.confirm': { my: 'ဒီ client ကို ဖြုတ်မလား?', en: 'Disconnect this client?' },
+  'kick.confirmName': { my: '{name} ကို ဖြုတ်မှာ သေချာလား?', en: 'Are you sure you want to disconnect {name}?' },
   'kick.warnQuota': { my: 'quota ကျန်သေးတယ်', en: 'quota remains' },
   'kick.warnTime': { my: 'အချိန်ကျန်သေးတယ်', en: 'time remains' },
   'kick.warnRemain': { my: 'သတိ — ဒီ voucher မှာ {parts}။ ဖြုတ်လိုက်ရင် ကျန်တာတွေ သုံးမရတော့ဘူး။\n\nဆက်ဖြုတ်မလား?', en: 'Warning — this voucher still has {parts}. Disconnecting will waste them.\n\nDisconnect anyway?' },
@@ -834,6 +835,9 @@ const I18N = {
   'mt.dnsNote': { my: 'AdGuard (94.140.14.14) မသုံးတဲ့ client တွေက DHCP DNS ကို ကျော်သုံးနေတာ (hardcoded DNS / DoT) ဖြစ်နိုင်တယ်။', en: 'Clients not using AdGuard (94.140.14.14) may bypass DHCP DNS with hardcoded DNS / DoT.' },
   'md.needSso': { my: 'ပြန်ဖွင့်ဖို့အတွက် Ruijie အကောင့်နဲ့ ဝင်ထားဖို့လိုပါတယ် (ဆက်တင် → Ruijie အကောင့်)', en: 'Reboot needs Ruijie account login (Settings → Ruijie account)' },
   'mc.title': { my: 'Online Clients', en: 'Online Clients' },
+  'mc.select': { my: 'ရွေးမယ်', en: 'Select' },
+  'mc.disconnectSelected': { my: 'ရွေးထားတာဖြုတ်မယ် ({n})', en: 'Disconnect Selected ({n})' },
+  'mc.confirmBatch': { my: 'ရွေးထားတဲ့ client {n} ခု ဖြုတ်မှာလား?', en: 'Disconnect {n} selected clients?' },
   'mc.search': { my: 'Voucher / IP / MAC နဲ့ရှာမယ်', en: 'Search voucher / IP / MAC' },
   'mc.noMatch': { my: 'ရှာမတွေ့ပါ', en: 'No matches' },
   'mc.detail': { my: 'အသေးစိတ်', en: 'Details' },
@@ -1612,6 +1616,81 @@ function ssoLoginWithProfile(profile) {
     return true;
   } catch (e) { hideIosLoading(); return false; }
 }
+
+/* v1.5.201: Ensure SSO session is active, auto-refreshing if expired.
+ * The Ruijie Cloud SSO session expires after a few hours. Features that
+ * need SSO were just showing "login required" instead of refreshing.
+ * This helper attempts silent re-login and waits for the result.
+ * Returns true if SSO is active, false otherwise. Never throws. */
+async function ensureSso() {
+  try {
+    if (typeof Api === 'undefined' || !Api.ssoLoggedIn) return false;
+    if (Api.ssoLoggedIn()) return true;
+    // Session expired — try silent re-login
+    if (!hasBridge() || !window.RuijieBridge.ssoLoginSilent) return false;
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+      const onEvent = (e) => {
+        if (e.detail === 'login') {
+          document.removeEventListener('ruijie-sso', onEvent);
+          // Give native a moment to update session state
+          setTimeout(() => finish(Api.ssoLoggedIn()), 500);
+        } else if (e.detail === 'cancel') {
+          document.removeEventListener('ruijie-sso', onEvent);
+          finish(false);
+        }
+      };
+      document.addEventListener('ruijie-sso', onEvent);
+      try {
+        showIosLoading();
+        window.RuijieBridge.ssoLoginSilent();
+      } catch (err) {
+        document.removeEventListener('ruijie-sso', onEvent);
+        finish(false);
+        return;
+      }
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        document.removeEventListener('ruijie-sso', onEvent);
+        hideIosLoading();
+        finish(Api.ssoLoggedIn());
+      }, 30000);
+    });
+  } catch (e) { return false; }
+}
+/**
+ * v1.5.201: Detect KICKED_OUT_* errors from official app deep dive.
+ * These indicate the SSO session was invalidated (login elsewhere, etc.)
+ * and trigger automatic re-login via ensureSso().
+ */
+function isKickedOutError(e) {
+  const msg = String((e && e.message) || e || '');
+  return /KICKED_OUT_MULT_ACCOUNT|KICKED_OUT_MULT_DEVICE|KICKED_OUT_REST_API|KICKED_OUT_USERSIG_EXPIRED|KICKED_OUT/i.test(msg);
+}
+/**
+ * v1.5.201: Wrapper for SSO API calls that auto re-logins on KICKED_OUT.
+ * Usage: await ssoCallWithRelogin(() => Api.voucherReset(...));
+ */
+async function ssoCallWithRelogin(fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    if (isKickedOutError(e)) {
+      // v1.5.202: telemetry for login expiry (P1)
+      try { Tele.log('sso.kicked_out', String((e && e.message) || e || '').slice(0, 100)); } catch (_) {}
+      // Session was kicked - try silent re-login once, then retry
+      const ok = await ensureSso();
+      if (ok) {
+        try { Tele.log('sso.relogin.ok', 'Silent re-login succeeded after KICKED_OUT'); } catch (_) {}
+        return await fn();
+      } else {
+        try { Tele.log('sso.relogin.failed', 'Silent re-login failed after KICKED_OUT'); } catch (_) {}
+      }
+    }
+    throw e;
+  }
+}
 async function applyProfile(profile) {
   const cfg = {
     cloud: (profile.cloud || 'https://cloud-as.ruijienetworks.com').replace(/\/+$/, ''),
@@ -2377,6 +2456,14 @@ async function liveStatsTick(force) {
 }
 
 function filteredVouchers() {
+  // v1.5.204: server-side search results take priority when active.
+  // The server already filtered by keyword; still apply the status filter
+  // client-side so status tabs keep working on server results.
+  if (S.vUseServerSearch && Array.isArray(S.vServerResults)) {
+    const q = S.vFilter.trim();
+    if (!S.vStatus) return S.vServerResults.slice();
+    return S.vServerResults.filter(v => vEffStatus(v) === S.vStatus);
+  }
   const q = S.vFilter.trim().toLowerCase();
   return S.vouchers.filter(v => {
     // v1.5.66: filter on EFFECTIVE status — spent/kicked vouchers leave
@@ -2598,7 +2685,6 @@ function iosConfirm(title, msg, okText, cancelText, destructive) {
       requestAnimationFrame(() => ov.classList.add('open')));
   });
 }
-
 /* ── Expired-delete cutoff date picker (v1.5.116) ──
  * Returns 'YYYY-MM-DD' or null if the user cancels. */
 function pickExpireDate() {
@@ -7714,7 +7800,9 @@ async function moreForeign() {
 
 async function scanForeignVouchers() {
   const listEl = $('mf-list');
-  if (!Api.ssoLoggedIn()) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
+  // v1.5.201: auto-refresh expired SSO session instead of just showing "need SSO"
+  const ssoOk = await ensureSso();
+  if (!ssoOk) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
   listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
   try {
     // Build set of known voucher codes
@@ -7845,13 +7933,20 @@ async function moreBypass() {
      <div style="margin:12px 0"><button class="btn primary" id="mb-scan">${esc(t('mf.scan'))}</button></div>
      <div id="mb-list"><p class="muted">${esc(t('mf.scanning'))}</p></div>`);
   $('mb-scan').addEventListener('click', scanPortalBypassPage);
-  scanPortalBypassPage(); // auto-scan on open
+  // v1.5.201: catch auto-scan errors so they never break back-button navigation
+  try { await scanPortalBypassPage(); } catch (e) {
+    const listEl = $('mb-list');
+    if (listEl) listEl.innerHTML = `<p class="err">${esc(String((e && e.message) || e))}</p>`;
+  }
 }
 
 async function scanPortalBypassPage() {
   const listEl = $('mb-list');
   if (!listEl) return;
-  if (!Api.ssoLoggedIn()) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
+  // v1.5.201: auto-refresh expired SSO session instead of just showing "need SSO"
+  listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
+  const ssoOk = await ensureSso();
+  if (!ssoOk) { listEl.innerHTML = `<p class="muted">${esc(t('mf.needSso'))}</p>`; return; }
   listEl.innerHTML = `<p class="muted">${esc(t('mf.scanning'))}</p>`;
   // Reuse the bypass scanner, rendering into our own container
   const tmp = document.createElement('div');
@@ -8071,6 +8166,8 @@ async function moreClients() {
     filter: (mcCache && mcCache.filter) || 'all',
     q: (mcCache && mcCache.q) || '', // v1.5.67: search text survives refresh
     showNames: Store.load().clientShowNames !== false,
+    selectMode: (mcCache && mcCache.selectMode) || false, // v1.5.203: batch select
+    selected: (mcCache && mcCache.selected) || new Set(), // v1.5.203: selected MACs
   };
   S.clientsFetchedAt = Date.now(); // v1.5.54: last-fetched timestamp
   renderMcList(); // rebuilds #mc-list innerHTML — the .mc-sync spinner goes with it
@@ -8243,7 +8340,10 @@ function renderMcList() {
   const searchHtml = `<div class="mc-search">${ic('search', 'sm')}<input id="mc-q" type="search" value="${esc(mcCache.q || '')}" placeholder="${esc(t('mc.search'))}" autocomplete="off" aria-label="${esc(t('mc.search'))}"></div>`;
   $('mc-list').innerHTML =
     `<div class="mc-head"><p class="mc-sub">${esc(tx('mc.total', { n: list.length }))} · ${srcLine}</p>` +
-    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button></div>` +
+    `<div style="display:flex;gap:8px">` +
+    `<button type="button" id="mc-select" class="ios-text-btn">${mcCache.selectMode ? '✕ ' + esc(t('a.cancel')) : '☑ ' + esc(t('mc.select'))}</button>` +
+    `<button type="button" id="mc-names" class="ios-text-btn${showNames ? ' on' : ''}">👤 ${esc(t('ac.names'))}</button>` +
+    `</div></div>` +
     searchHtml +
     segHtml +
     `<div id="mc-cells"></div>`;
@@ -8258,8 +8358,64 @@ function renderMcList() {
     Store.save({ clientShowNames: mcCache.showNames });
     renderMcList();
   });
+  // v1.5.203: batch disconnect select mode (P1)
+  const sb = $('mc-select');
+  if (sb) sb.addEventListener('click', () => {
+    mcCache.selectMode = !mcCache.selectMode;
+    if (!mcCache.selectMode) mcCache.selected = new Set();
+    renderMcList();
+  });
   const qi = $('mc-q');
   if (qi) qi.addEventListener('input', () => { mcCache.q = qi.value; renderMcCells(); });
+  updateBatchBar();
+}
+/**
+ * v1.5.203: Update batch disconnect bar (P1)
+ * Shows when in select mode with selections
+ */
+function updateBatchBar() {
+  let bar = $('mc-batch-bar');
+  const n = mcCache && mcCache.selected ? mcCache.selected.size : 0;
+  const show = mcCache && mcCache.selectMode && n > 0;
+  if (show) {
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'mc-batch-bar';
+      bar.className = 'mc-batch-bar';
+      $('mc-list').appendChild(bar);
+    }
+    bar.innerHTML = `<button class="btn danger" id="mc-batch-go" style="flex:1">${esc(tx('mc.disconnectSelected', { n }))}</button>`;
+    $('mc-batch-go').addEventListener('click', batchDisconnectSelected);
+  } else if (bar) {
+    bar.remove();
+  }
+}
+/**
+ * v1.5.203: Batch disconnect selected clients with per-client results (P1)
+ */
+async function batchDisconnectSelected() {
+  const macs = [...(mcCache.selected || [])];
+  if (!macs.length) return;
+  if (!(await iosConfirm(tx('mc.confirmBatch', { n: macs.length }), '', t('kick.kick'), t('a.cancel'), true))) return;
+  const list = mcCache.list || [];
+  let ok = 0, fail = 0;
+  const errors = [];
+  for (const mac of macs) {
+    const c = list.find(x => normMac(x.mac || x.userMac) === mac);
+    if (!c) { fail++; continue; }
+    try {
+      await requestKick({ account: c.acct || c.voucherCode || '', mac: c.mac }, { auto: false, silent: true });
+      ok++;
+    } catch (e) {
+      fail++;
+      errors.push(mac + ': ' + String((e && e.message) || e).slice(0, 50));
+    }
+  }
+  try { Tele.log('client.batch_disconnect', `OK:${ok} Fail:${fail}`, { total: macs.length }); } catch (_) {}
+  mcCache.selected = new Set();
+  mcCache.selectMode = false;
+  renderMcList();
+  toast(tx('mc.disconnectSelected', { n: ok }) + (fail ? ` (${fail} failed)` : ''));
 }
 /* fix7: voucher-VLAN-scoped "suspicious" flag. Pure and unit-testable.
  * voucherVlan(store) — Settings "Voucher VLAN" -> '20' or '';
@@ -8404,6 +8560,8 @@ function renderMcCells() {
     const foot = (flags.length || kickBtn)
       ? `<div class="mc-foot"><span>${flags.map(flagHtml).join('')}</span>${kickBtn}</div>` : '';
     cells += `<div class="set-row mc-row" data-mc="${i}" role="button" tabindex="0">` +
+      // v1.5.203: checkbox in select mode (batch disconnect)
+      (mcCache.selectMode ? `<span class="mc-check${mcCache.selected.has(normMac(f.mac)) ? ' checked' : ''}" data-mccheck="${esc(normMac(f.mac))}">${mcCache.selected.has(normMac(f.mac)) ? '✓' : ''}</span>` : '') +
       `<span class="set-ico mc-ico cst-${st}">${ic(clientIcon(f), '')}</span>` +
       `<div class="t"><div class="mc-top"><span class="t-main">${esc(title)}</span>` +
       `<span class="mc-badge cst-${st}">${esc(t(CST_META[st].key))}</span></div>` +
@@ -8423,6 +8581,18 @@ function renderMcCells() {
     const open = () => openMcDetail(Number(row.dataset.mc));
     row.addEventListener('click', e => {
       if (e.target.closest('[data-kick]')) return;
+      // v1.5.203: in select mode, tap toggles checkbox instead of opening detail
+      if (mcCache.selectMode) {
+        const chk = row.querySelector('[data-mccheck]');
+        if (chk) {
+          const mac = chk.dataset.mccheck;
+          if (mcCache.selected.has(mac)) mcCache.selected.delete(mac);
+          else mcCache.selected.add(mac);
+          renderMcCells();
+          updateBatchBar();
+        }
+        return;
+      }
       open();
     });
     row.addEventListener('keydown', e => {
@@ -9829,13 +9999,52 @@ async function init() {
     else {
       searchInput.value = ''; S.vFilter = '';
       searchWrap.classList.remove('has-text');
+      S.vUseServerSearch = false; S.vServerResults = null; // v1.5.204: drop server results
       renderVouchers(); searchInput.blur();
     }
   };
+  /* v1.5.204: server-side voucher search with client-side fallback.
+   * Debounced 500ms; tries SSO server search first (Android only), falls back
+   * to client-side filtering on failure or when SSO is unavailable. */
+  let vSearchDebounce = null;
+  let vSearchSeq = 0;
   searchInput.addEventListener('input', e => {
+    const keyword = e.target.value.trim();
     S.vFilter = e.target.value;
     searchWrap.classList.toggle('has-text', !!e.target.value);
-    renderVouchers();
+    clearTimeout(vSearchDebounce);
+    if (!keyword) {
+      // cleared -> drop server results, show all (client-side)
+      S.vUseServerSearch = false;
+      S.vServerResults = null;
+      renderVouchers();
+      return;
+    }
+    vSearchDebounce = setTimeout(async () => {
+      const mySeq = ++vSearchSeq;
+      // Try server-side via SSO (Android app only)
+      if (typeof hasSso === 'function' && hasSso()) {
+        try {
+          const email = (() => { try { const bi = JSON.parse((window.RuijieBridge && window.RuijieBridge.ssoAccountInfo()) || '{}'); return bi.email || ''; } catch (err) { return ''; } })();
+          if (email && S.projectId) {
+            const { list } = await Api.ssoVoucherSearch(email, S.projectId, keyword, 0, 200);
+            if (mySeq !== vSearchSeq) return; // superseded by newer input
+            S.vServerResults = list;
+            S.vUseServerSearch = true;
+            renderVouchers();
+            return;
+          }
+        } catch (err) {
+          // Fall through to client-side
+          if (window.console && console.warn) console.warn('Server search failed, using client-side:', err && err.message);
+        }
+      }
+      // Fallback: client-side filter
+      if (mySeq !== vSearchSeq) return;
+      S.vUseServerSearch = false;
+      S.vServerResults = null;
+      renderVouchers();
+    }, 500);
   });
   searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') setSearchOpen(false); });
   searchBtn.addEventListener('click', () => {
@@ -9846,6 +10055,7 @@ async function init() {
     if (searchInput.value) {
       searchInput.value = ''; S.vFilter = '';
       searchWrap.classList.remove('has-text');
+      S.vUseServerSearch = false; S.vServerResults = null; // v1.5.204: drop server results
       renderVouchers(); searchInput.focus();
     } else setSearchOpen(false); // X on empty field closes the search
   });
@@ -9883,7 +10093,10 @@ async function init() {
   $('modal-disconnect').addEventListener('click', async () => {
     if (!modalVoucher) return;
     const w = kickRemainWarning(modalVoucher);
-    if (!(await iosConfirm(w || t('kick.confirm'), '', t('kick.kick'), t('a.cancel'), true))) return;
+    // v1.5.201: Include client/voucher name in confirm (official app pattern)
+    const vName = vCode(modalVoucher) || '';
+    const confirmMsg = vName ? tx('kick.confirmName', { name: vName }) : (w || t('kick.confirm'));
+    if (!(await iosConfirm(confirmMsg, '', t('kick.kick'), t('a.cancel'), true))) return;
     const ok = await requestKick({ account: vCode(modalVoucher) }, { auto: false });
     if (ok) { modalVoucher = null; closeModal('modal'); loadVouchers(); }
   });
@@ -9934,6 +10147,8 @@ async function init() {
       toast(t('v.resetDone', { ok: 1 }));
       modalVoucher = null; closeModal('modal'); loadVouchers();
     } catch (e) {
+      // v1.5.202: telemetry for failed voucher writes (P1)
+      try { Tele.log('voucher.reset.failed', String((e && e.message) || e || ''), { code: vCode(v) }); } catch (_) {}
       toast(String((e && e.message) || e || ''), true);
     }
   });

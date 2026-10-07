@@ -594,7 +594,7 @@ const GwApi = {
         out.push({ name: s, leaf: true, id: s });
       };
       const walk = (node, depth) => {
-        if (!node || depth > 6) return;
+        if (!node || depth > 10) return; // v1.5.177: PUBG at depth 8 was cut off
         if (typeof node === 'string') { addName(node); return; }
         if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
         if (typeof node === 'object') {
@@ -627,6 +627,35 @@ const GwApi = {
       if (gwAuthFailed(j)) throw new Error('Gateway session expired');
       const d = (j && j.data) || {};
       return { list: Array.isArray(d.list) ? d.list : [], raw: d };
+    });
+  },
+
+  /** Get gateway user groups for QoS policy. Returns array of {name, path}. */
+  async qosUserGroupList() {
+    return this._withAutoRelogin(async () => {
+      const body = {
+        method: 'devSta.get',
+        params: { module: 'user_group', data: { type: 'all' }, device: 'pc' },
+      };
+      const j = await gwCall('cmd', this.session.ip, this.session.sid, JSON.stringify(body));
+      if (gwAuthFailed(j)) throw new Error('Gateway session expired');
+      const d = (j && j.data) || {};
+      const list = Array.isArray(d.list) ? d.list : (Array.isArray(d.groups) ? d.groups : []);
+      return list.map(g => {
+        // v1.5.186: Try multiple fields for friendly name; fall back to cleaned path
+        let name = g.name || g.groupName || g.displayName || g.title || '';
+        const path = g.path || g.id || '';
+        if (!name && path) {
+          // Clean up path: "/auth_root/1hour" -> "1hour", "auth_root" -> "auth_root"
+          const parts = path.split('/').filter(Boolean);
+          name = parts.length ? parts[parts.length - 1] : path;
+        }
+        return {
+          name: name || path || 'Unknown',
+          path: path || name || '',
+          raw: g,
+        };
+      }).filter(g => g.name && g.name !== 'Unknown');
     });
   },
 
@@ -1620,6 +1649,42 @@ const Api = {
       throw new Error(j.msg || j.message || ('Unbind မရပါ (code ' + c + ')'));
     }
     return j;
+  },
+
+  /**
+   * v1.5.204: SSO voucher search (server-side).
+   * Uses portal bridge: GET /intlSamVoucher/getList/{email}/{groupId} with name param.
+   * VERIFIED 2026-10-08 from user's portal capture (portal-capture-20261008-020829.txt):
+   *   [101] querys: {start:0, pageSize:10, name:"6388830", userMac:"", createBegin:"",
+   *          createEnd:"", status:"", lang:"en", cloudType:"smb"} — name filters server-side.
+   * Only works in Android app with SSO session. Throws on portal error.
+   * Returns {list, count}.
+   */
+  async ssoVoucherSearch(email, groupId, keyword, start = 0, pageSize = 50) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    if (!email) throw new Error('SSO account email မရှိပါ');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    const api = '/intlSamVoucher/getList/' + encodeURIComponent(email) + '/' + groupId;
+    const querys = {
+      start, pageSize,
+      name: keyword || '',
+      userMac: '', createBegin: '', createEnd: '', status: '',
+      lang: 'en', cloudType: 'smb',
+    };
+    const env = {
+      api,
+      authParams: { api, method: 'GET' },
+      method: 'GET',
+      module: 'default',
+      querys,
+    };
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('ရှာမရပါ (code ' + c + ')'));
+    }
+    const inner = (j && j.voucherData) || j || {};
+    return { list: inner.list || [], count: inner.count || 0 };
   },
 
   /* ── SSID management (Cloud webproxy, SSO session) ──
@@ -2626,6 +2691,24 @@ const Api = {
     const j = await this.call('POST', '/logbizagent/logbiz/api/sta/sta_users', {}, { groupId, pageIndex: 0, pageSize: 100, staType: 'onofflineUserHistory', mac });
     const d = this.unwrap(j);
     return d.list || d.data || [];
+  },
+
+  /* ── New Cloud APIs (2024-08-20 doc) ── */
+
+  /* 2.6.10: Get Application Traffic Statistics — per-app up/down flow on gateway.
+   * Path: /logbizagent/logbiz/api/eg/appflow/statistic/data-minute/appname */
+  async appTrafficStats(groupId, sn, endTime = Date.now(), pageIndex = 0, pageSize = 50) {
+    const j = await this.call('POST', '/logbizagent/logbiz/api/eg/appflow/statistic/data-minute/appname', {},
+      { groupId, sn, endTime, pageIndex, pageSize });
+    const d = this.unwrap(j);
+    return d.list || d.data || [];
+  },
+
+  /* 2.6.6: Get Device CPU and Memory.
+   * Path: /logbizagent/logbiz/api/sys/current_performance */
+  async devicePerf(sn) {
+    const j = await this.call('GET', '/logbizagent/logbiz/api/sys/current_performance', { sn });
+    return this.unwrap(j);
   },
 };
 

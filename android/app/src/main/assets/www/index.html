@@ -2,7 +2,7 @@
 <html lang="my" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0A72E8">
 <title>P Manager</title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -291,7 +291,6 @@
           <button class="chip" data-s="3"><span class="dot" style="background:var(--muted)"></span><span data-i18n="chip.s3">သက်တမ်းကုန်</span></button>
         </div>
       </div>
-      <div class="row" style="justify-content:space-between;align-items:center"><div id="voucher-count" class="muted small"></div><div id="voucher-fetched" class="muted small"></div></div>
       <div class="row voucher-actions" style="justify-content:space-between;align-items:center;position:relative"><button id="btn-bulk-select" class="btn small"><span data-i18n="v.select">ရွေးမယ်</span></button><div class="row" id="bulk-inline" style="gap:8px;display:none;align-items:center"><button id="btn-bulk-delete" class="pdel-mini" disabled data-i18n-aria="v.bulkDelete"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><b class="pdel-n" id="bulk-count">0</b></button><button id="btn-bulk-print" class="btn small pbtn-mini" disabled data-i18n-aria="v.bulkPrint"><svg class="ic sm" aria-hidden="true"><use href="#i-printer"/></svg></button></div><button id="btn-voucher-more" class="btn small" aria-label="More">More</button><div id="voucher-more-menu" class="more-menu hidden"><button id="btn-del-expired"><svg class="ic sm"><use href="#i-trash"/></svg><span data-i18n="v.delExpired">သက်တမ်းကုန်တွေ ဖျက်မယ်</span></button><button id="btn-reset-selected"><svg class="ic sm"><use href="#i-refresh"/></svg><span data-i18n="v.reset">Reset</span></button></div></div>
       <div id="voucher-list" class="list"></div>
       <div id="voucher-loading" class="loading hidden"></div>
@@ -405,11 +404,13 @@
         <button class="menu-item" data-more="devices"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.devices">Devices</span><small data-i18n="m.devicesSub">စက်များ</small></button>
         <button class="menu-item" data-more="firmware"><svg class="ic lg"><use href="#i-up"/></svg><span data-i18n="m.firmware">Firmware update</span><small data-i18n="m.firmwareSub">စက်အပ်ဒိတ်များ</small></button>
         <button class="menu-item" data-more="overview"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.overview">Overview</span><small data-i18n="m.overviewSub">အကျဉ်းချုပ်</small></button>
-        <button class="menu-item" data-more="traffic"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.traffic">Traffic</span><small data-i18n="m.trafficSub">ဒေတာစီးဆင်းမှု</small></button>
+        <button class="menu-item" data-more="traffic" hidden><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.traffic">Traffic</span><small data-i18n="m.trafficSub">ဒေတာစီးဆင်းမှု</small></button>
         <button class="menu-item" data-more="qos"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.qos">QoS</span><small data-i18n="m.qosSub">ဂိမ်းလိုင်းဦးစားပေး</small></button>
         <button class="menu-item" data-more="webauth"><svg class="ic lg"><use href="#i-lock"/></svg><span data-i18n="m.webauth">Web Auth</span><small data-i18n="m.webauthSub">ဝင်ရောက်ခွင့်စီမံခန့်ခွဲမှု</small></button>
         <button class="menu-item" data-more="wifi"><svg class="ic lg"><use href="#i-signal"/></svg><span data-i18n="m.wifi">WiFi</span><small data-i18n="m.wifiSub">SSID များ</small></button>
         <button class="menu-item" data-more="clients"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.clients">Online Clients</span><small data-i18n="m.clientsSub">ချိတ်ထားသူများ</small></button>
+        <button class="menu-item" data-more="foreign"><svg class="ic lg"><use href="#i-shield"/></svg><span data-i18n="m.foreign">သူစိမ်း code</span><small data-i18n="m.foreignSub">မသိတဲ့ voucher များ</small></button>
+        <button class="menu-item" data-more="bypass"><svg class="ic lg"><use href="#i-alert"/></svg><span data-i18n="m.bypass">Portal Bypass</span><small data-i18n="m.bypassSub">Code မထည့်ပဲ သုံးနေသူများ</small></button>
         <button class="menu-item" data-more="history"><svg class="ic lg"><use href="#i-clock"/></svg><span data-i18n="m.history">History</span><small data-i18n="m.historySub">ဝင်ထွက်မှတ်တမ်း</small></button>
         <button class="menu-item" data-more="sales"><svg class="ic lg"><use href="#i-chart"/></svg><span data-i18n="m.sales">ရောင်းရငွေ</span><small data-i18n="m.salesSub">ရောင်းရငွေစာရင်း</small></button>
         <button class="menu-item" data-more="recorder"><svg class="ic lg"><use href="#i-monitor"/></svg><span data-i18n="m.recorder">Recorder</span><small data-i18n="m.recorderSub">Portal လုပ်ဆောင်ချက်မှတ်တမ်း</small></button>
@@ -422,10 +423,6 @@
     <!-- SETTINGS -->
     <section id="view-settings" class="view hidden">
       <div class="set-group">
-        <div class="set-row">
-          <span class="set-ico" style="--tile:#8E8E93"><svg class="ic"><use href="#i-user"/></svg></span>
-          <div class="t"><div class="t-main" data-i18n="s.account">အကောင့်အချက်အလက်</div></div>
-        </div>
         <div class="set-pad" id="account-info"></div>
       </div>
 
@@ -435,7 +432,7 @@
 
       <div class="set-group">
         <button type="button" class="set-row set-action" id="btn-sync-settings"><span class="set-ico" style="--tile:#34C759"><svg class="ic"><use href="#i-refresh"/></svg></span><span>Settings Sync (ဖုန်းချင်း)</span></button>
-        <div class="set-pad"><span class="muted small" id="sync-status">—</span></div>
+        <div class="set-pad" id="sync-status-wrap" hidden><span class="muted small" id="sync-status">—</span></div>
       </div>
 
       <div class="section-title" data-i18n="live.title">ဗောက်ချာ တိုက်ရိုက်စာရင်း</div>
@@ -516,9 +513,9 @@
           <label class="switch"><input type="checkbox" id="kick-auto"><span class="track"></span></label>
         </div>
         <div class="set-row">
-          <span class="set-ico" style="--tile:#8E8E93"><svg class="ic"><use href="#i-alert"/></svg></span>
-          <div class="t"><div class="t-main" data-i18n="kick.status">အခြေအနေ</div><div class="sub" data-i18n="kick.soon">Cloud verify ပြီးမှ အလုပ်လုပ်မယ်</div></div>
-          <span class="set-val" id="kick-status">…</span>
+          <span class="set-ico" style="--tile:#FF9500"><svg class="ic"><use href="#i-shield"/></svg></span>
+          <div class="t"><div class="t-main" data-i18n="kick.foreign">သူစိမ်း code အလိုအလျောက် ဖြုတ်မယ်</div><div class="sub" data-i18n="kick.foreignSub">ကိုယ်မထုတ်ထားတဲ့ voucher code သုံးနေတဲ့ client ကို ဖြုတ်မယ်</div></div>
+          <label class="switch"><input type="checkbox" id="kick-foreign" checked><span class="track"></span></label>
         </div>
         <label class="set-row set-field"><span class="fld-label" data-i18n="kick.vlan">Voucher VLAN</span><select id="kick-vlan" class="fld-input"></select></label>
         <label class="set-row set-field"><span class="fld-label" data-i18n="kick.interval">ဘယ်နှစ်မိနစ်တစ်ခါ စစ်မလဲ</span><input id="kick-interval" class="fld-input" type="number" min="1" step="1" value="15" style="width:80px"></label>
@@ -543,49 +540,13 @@
 
       <div class="section-title" data-i18n="upd.title">အပ်ဒိတ်</div>
       <div class="set-group" id="upd-card">
-        <div class="upd-ver-row">
-          <div class="t"><div class="t-main">P Manager</div><div class="sub" id="upd-cur-ver"></div></div>
-        </div>
         <div class="set-row upd-action">
-          <div class="t"><div class="t-main" data-i18n="upd.check">အပ်ဒိတ်စစ်မယ်</div><div class="sub" id="upd-status"></div></div>
+          <div class="t"><div class="t-main" id="upd-btn-label" data-i18n="upd.check">အပ်ဒိတ်စစ်မယ်</div><div class="sub" id="upd-status"></div></div>
           <button type="button" class="btn small" id="upd-check-btn" data-i18n="upd.check">အပ်ဒိတ်စစ်မယ်</button>
-        </div>
-        <!-- GlassVPN-style update available card -->
-        <div class="upd-avail" id="upd-avail" hidden>
-          <div class="upd-avail-head">
-            <div class="t">
-              <div class="t-main"><span aria-hidden="true">⬆️</span> <span data-i18n="upd.availTitle">Update available</span></div>
-              <div class="sub" id="upd-avail-ver"></div>
-            </div>
-            <button type="button" class="upd-dl-link" id="upd-dl-btn"><span data-i18n="upd.dlInstall">Download &amp; Install</span></button>
-          </div>
-          <div class="upd-avail-notes" id="upd-avail-notes"></div>
-        </div>
-        <!-- GlassVPN-style horizontal download progress -->
-        <div class="upd-bar-wrap" id="upd-bar-wrap" hidden>
-          <div class="t-main" id="upd-bar-label">Downloading... 0%</div>
-          <div class="upd-bar"><div class="upd-bar-fill" id="upd-bar-fill" style="width:0%"></div></div>
         </div>
         <div class="set-row">
           <div class="t"><div class="t-main" data-i18n="upd.auto">အော်တိုဒေါင်းလုပ်လုပ်မယ်</div><div class="sub" data-i18n="upd.autoSub">ဗားရှင်းအသစ်တွေ့ရင် အလိုအလို ဒေါင်းလုပ်မယ်</div></div>
           <label class="switch"><input type="checkbox" id="upd-auto"><span class="track"></span></label>
-        </div>
-        <div class="upd-dl" id="upd-dl" hidden>
-          <div class="upd-ring">
-            <svg viewBox="0 0 72 72" aria-hidden="true">
-              <defs>
-                <linearGradient id="updRingGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#0A84FF"/>
-                  <stop offset="1" stop-color="#5E5CE6"/>
-                </linearGradient>
-              </defs>
-              <circle class="upd-ring-bg" cx="36" cy="36" r="30"/>
-              <circle class="upd-ring-fg" id="upd-ring-fg" cx="36" cy="36" r="30"/>
-            </svg>
-            <span class="upd-ring-icon" id="upd-ring-icon"></span>
-          </div>
-          <span class="upd-dl-pct" id="upd-dl-pct">0%</span>
-          <div class="upd-dl-label" id="upd-dl-label"></div>
         </div>
         <div class="upd-ready" id="upd-install-row" hidden>
           <div class="upd-ready-head">

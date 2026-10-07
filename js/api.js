@@ -1651,6 +1651,42 @@ const Api = {
     return j;
   },
 
+  /**
+   * v1.5.204: SSO voucher search (server-side).
+   * Uses portal bridge: GET /intlSamVoucher/getList/{email}/{groupId} with name param.
+   * VERIFIED 2026-10-08 from user's portal capture (portal-capture-20261008-020829.txt):
+   *   [101] querys: {start:0, pageSize:10, name:"6388830", userMac:"", createBegin:"",
+   *          createEnd:"", status:"", lang:"en", cloudType:"smb"} — name filters server-side.
+   * Only works in Android app with SSO session. Throws on portal error.
+   * Returns {list, count}.
+   */
+  async ssoVoucherSearch(email, groupId, keyword, start = 0, pageSize = 50) {
+    if (!this.ssoLoggedIn()) throw new Error('SSO_REQUIRED');
+    if (!email) throw new Error('SSO account email မရှိပါ');
+    if (!groupId) throw new Error('Project ID မရှိပါ');
+    const api = '/intlSamVoucher/getList/' + encodeURIComponent(email) + '/' + groupId;
+    const querys = {
+      start, pageSize,
+      name: keyword || '',
+      userMac: '', createBegin: '', createEnd: '', status: '',
+      lang: 'en', cloudType: 'smb',
+    };
+    const env = {
+      api,
+      authParams: { api, method: 'GET' },
+      method: 'GET',
+      module: 'default',
+      querys,
+    };
+    const j = await ssoCall(env.api, env);
+    const c = j && typeof j.code !== 'undefined' ? j.code : 0;
+    if (c !== 0 && c !== 200) {
+      throw new Error(j.msg || j.message || ('ရှာမရပါ (code ' + c + ')'));
+    }
+    const inner = (j && j.voucherData) || j || {};
+    return { list: inner.list || [], count: inner.count || 0 };
+  },
+
   /* ── SSID management (Cloud webproxy, SSO session) ──
    * Source: portal's own JS (SeniorIndex-D70dfrR8.js, presetConf-CFOiaIt9.js),
    * read-only inspection 2026-09-30. Nothing was created/modified in the portal.

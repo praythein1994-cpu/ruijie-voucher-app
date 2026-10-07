@@ -453,6 +453,11 @@ tr.cst-unknown td:first-child { border-left-color: #a78bfa; }
 .segmented.seg-scroll button { flex: none; padding: 8px 14px; white-space: nowrap; }
 .set-group.mc-list { margin-top: 2px; }
 .mc-row { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+/* v1.5.203: batch select checkbox */
+.mc-check { width: 24px; height: 24px; border: 2px solid #007AFF; border-radius: 7px; margin-right: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; cursor: pointer; }
+.mc-check.checked { background: #007AFF; }
+/* v1.5.203: batch disconnect bar */
+.mc-batch-bar { position: sticky; bottom: 0; background: white; padding: 12px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 10; }
 .mc-ico.cst-active { --tile: #22c55e; }
 .mc-ico.cst-timeup { --tile: #f59e0b; }
 .mc-ico.cst-datalimit { --tile: #ef4444; }
