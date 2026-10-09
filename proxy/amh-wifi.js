@@ -267,24 +267,25 @@ function pageHtml(ssidLabel, isTest) {
     },
   };
   return `<!DOCTYPE html><html lang="my"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>${T.my.title}</title>
 <style>
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.card{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
-h1{font-size:20px;margin:0 0 4px}.sub{color:#94a3b8;font-size:13px;margin:0 0 20px}
-.ssid{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:18px}
-.ssid .lbl{font-size:11px;color:#94a3b8;margin-bottom:4px}.ssid .val{font-size:17px;font-weight:600}
-label{display:block;font-size:13px;color:#cbd5e1;margin:12px 0 6px}
-input{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#fff;font-size:16px}
-.pw-toggle-row{text-align:right;margin-top:6px}
-.pw-toggle{background:none;border:0;color:#60a5fa;font-size:13px;cursor:pointer;padding:4px 2px}
-.hint{font-size:11px;color:#64748b;margin-top:6px}
-button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
-button:disabled{background:#475569;cursor:default}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0a0a12;color:#e8e8f0}
+.card{background:#12121c;border:1px solid #2a2a3e;border-radius:20px;padding:30px;width:100%;max-width:380px;box-shadow:0 0 40px rgba(0,255,200,.07)}
+h1{font-size:20px;margin:0 0 4px;background:linear-gradient(90deg,#00ffc8,#00a8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800}
+.sub{color:#8a8a9e;font-size:13px;margin:0 0 20px}
+.ssid{background:#1a1a28;border:1px solid #2e2e45;border-radius:12px;padding:14px;margin-bottom:18px}
+.ssid .lbl{font-size:11px;color:#7a7a90;margin-bottom:4px}.ssid .val{font-size:18px;font-weight:700;color:#00ffc8}
+label{display:block;font-size:12px;color:#9a9ab0;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.5px}
+input{width:100%;padding:14px;border-radius:12px;border:1px solid #2e2e45;background:#0d0d16;color:#fff;font-size:16px;outline:none}
+input:focus{border-color:#00ffc8;box-shadow:0 0 0 3px rgba(0,255,200,.12)}
+.shbtn{width:100%;margin-top:10px;padding:12px;background:#1e1e30;border:1px solid #33334d;color:#00ffc8;font-size:14px;font-weight:600;cursor:pointer;border-radius:12px}
+.hint{font-size:11px;color:#5a5a70;margin-top:8px}
+button.go{width:100%;margin-top:20px;padding:15px;border:0;border-radius:14px;background:linear-gradient(90deg,#00d4a8,#00a8ff);color:#04110d;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 24px rgba(0,255,200,.25)}
+button.go:disabled{opacity:.5;cursor:default;box-shadow:none}
 .msg{margin-top:14px;font-size:14px;min-height:20px;text-align:center}
-.msg.ok{color:#4ade80}.msg.err{color:#f87171}
-.lang{position:absolute;top:14px;right:14px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer}
+.msg.ok{color:#00ffc8}.msg.err{color:#ff5a7a}
+.lang{position:absolute;top:14px;right:14px;background:#1a1a28;border:1px solid #33334d;color:#e8e8f0;border-radius:20px;padding:8px 14px;font-size:13px;cursor:pointer}
 </style></head><body>
 <button class="lang" id="langBtn">English</button>
 <div class="card">
@@ -292,9 +293,9 @@ button:disabled{background:#475569;cursor:default}
 <div class="ssid"><div class="lbl" id="t_cur"></div><div class="val" id="ssidName">…</div></div>
 <label id="t_npw"></label>
 <input type="password" id="npw" autocomplete="new-password">
-<div class="pw-toggle-row"><button type="button" class="pw-toggle" id="pwToggle"></button></div>
+<button type="button" class="shbtn" id="pwToggle">Show</button>
 <div class="hint" id="t_hint"></div>
-<button id="btn"></button>
+<button class="go" id="btn"></button>
 <div class="msg" id="msg"></div>
 </div>
 <script>
@@ -309,7 +310,7 @@ function apply(){
   
   document.getElementById('t_hint').textContent=t.hint;
   document.getElementById('btn').textContent=t.btn;
-  document.getElementById('pwToggle').textContent=t.show;
+  document.getElementById('pwToggle').textContent='Show';
   document.getElementById('langBtn').textContent=lang==='my'?'English':'မြန်မာ';
   document.documentElement.lang=lang==='my'?'my':'en';
 }
@@ -320,7 +321,7 @@ document.getElementById('pwToggle').onclick=()=>{
   const inp=document.getElementById('npw');
   const show=inp.type==='password';
   inp.type=show?'text':'password';
-  document.getElementById('pwToggle').textContent=show?T[lang].hide:T[lang].show;
+  document.getElementById('pwToggle').textContent=show?'Hide':'Show';
 };
 const PAGE_SSID=${JSON.stringify(ssidLabel || '')};
 const PAGE_IS_TEST=${isTest ? 'true' : 'false'};
