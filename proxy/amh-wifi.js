@@ -186,7 +186,9 @@ async function setSsidPassword(newPassword) {
   }
   const reqBody = {
     groupId: Number(GROUP_ID),
-    wifiGrpSsid: true,
+    // v1.0.40: trying wifiGrpSsid=false (original) + ssidId inside entity.
+    // Doc: ssidId present = edit. wifiGrpSsid=true did not help.
+    wifiGrpSsid: false,
     ssidId: Number(SSID_ID),
     wirelessConfEntity: entity,
   };
