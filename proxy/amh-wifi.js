@@ -167,11 +167,26 @@ const AMH_FULL_CONF = {
 
 async function setSsidPassword(newPassword) {
   if (!SSID_ID) throw new Error('Target SSID not configured (AMH_SSID_ID)');
+  // Read-modify-write (fix 2026-10-09 for Ruijie 7301): fetch the LIVE config
+  // first, change only the password. The hardcoded AMH_FULL_CONF snapshot
+  // goes stale when portal settings change, and the API then treats the
+  // request as a duplicate create (error 7301).
+  let entity;
+  try {
+    const live = await getSsidConf(SSID_ID);
+    const base = live.wirelessConfEntity || live;
+    // Strip read-only/meta keys that must not be sent back
+    const { ssidId, id, ssidIds, ...rest } = base;
+    entity = { ...rest, password: newPassword };
+  } catch (e) {
+    // Fallback to the pinned snapshot if live fetch fails
+    entity = { ...AMH_FULL_CONF, password: newPassword };
+  }
   return openApi('/service/api/open/v1/wifi', {
     groupId: Number(GROUP_ID),
     wifiGrpSsid: false,
     ssidId: Number(SSID_ID),
-    wirelessConfEntity: { ...AMH_FULL_CONF, password: newPassword },
+    wirelessConfEntity: entity,
   });
 }
 
