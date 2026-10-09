@@ -173,14 +173,16 @@ async function setSsidPassword(newPassword) {
   try {
     const live = await getSsidConf(SSID_ID);
     const base = live.wirelessConfEntity || live;
-    // Strip read-only/meta keys that must not be sent back
-    const { ssidId, id, ssidIds, ...rest } = base;
-    entity = { ...rest, password: newPassword };
+    // v1.0.39 fix 2026-10-10: KEEP ssidId inside the entity. The API ignores
+    // top-level ssidId for edit detection; without ssidId in wirelessConfEntity
+    // it treats the request as CREATE → 7301. (PUT is not supported: 405.)
+    const { id, ssidIds, ...rest } = base;
+    entity = { ...rest, ssidId: Number(SSID_ID), password: newPassword };
     liveOk = true;
   } catch (e) {
     liveErr = String(e.message || e).slice(0, 120);
-    // Fallback to the pinned snapshot if live fetch fails
-    entity = { ...AMH_FULL_CONF, password: newPassword };
+    // Fallback: pinned snapshot + ssidId inside entity
+    entity = { ...AMH_FULL_CONF, ssidId: Number(SSID_ID), password: newPassword };
   }
   const reqBody = {
     groupId: Number(GROUP_ID),
@@ -189,13 +191,10 @@ async function setSsidPassword(newPassword) {
     wirelessConfEntity: entity,
   };
   try {
-    // v1.0.38 fix 2026-10-10: EDIT requires PUT, not POST. POST is the CREATE
-    // endpoint (hence 7301 duplicate). Matches portal API pattern:
-    // POST /conf/template/{id}/ssid (create) vs PUT .../ssid/{ssid_id} (edit).
-    return await openApi('/service/api/open/v1/wifi', reqBody, true, 'PUT');
+    // POST (PUT → 405). ssidId is now inside wirelessConfEntity too.
+    return await openApi('/service/api/open/v1/wifi', reqBody, true, 'POST');
   } catch (e) {
-    // Full diagnostic (user 2026-10-10: no more guessing) — never leaks password
-    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, method=PUT, ssidId=${SSID_ID}, entityKeys=${Object.keys(entity).join(',')}]`;
+    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, method=POST, ssidId=${SSID_ID}, entityKeys=${Object.keys(entity).join(',')}]`;
     throw new Error(String(e.message || e).slice(0, 400) + dbg);
   }
 }
