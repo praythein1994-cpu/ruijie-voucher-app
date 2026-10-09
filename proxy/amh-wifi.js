@@ -184,7 +184,11 @@ async function setSsidPassword(newPassword) {
   }
   return openApi('/service/api/open/v1/wifi', {
     groupId: Number(GROUP_ID),
-    wifiGrpSsid: false,
+    // v1.0.37 fix 2026-10-10 for Ruijie 7301: the AMH SSID lives under a WiFi
+    // GROUP (verified from portal /conf/wifi_grp/wifi snapshot), so wifiGrpSsid
+    // must be true. With false, the API could not find the SSID by ssidId,
+    // treated the request as a CREATE, and rejected it as duplicate (7301).
+    wifiGrpSsid: true,
     ssidId: Number(SSID_ID),
     wirelessConfEntity: entity,
   });
@@ -270,6 +274,9 @@ h1{font-size:20px;margin:0 0 4px}.sub{color:#94a3b8;font-size:13px;margin:0 0 20
 .ssid .lbl{font-size:11px;color:#94a3b8;margin-bottom:4px}.ssid .val{font-size:17px;font-weight:600}
 label{display:block;font-size:13px;color:#cbd5e1;margin:12px 0 6px}
 input{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#fff;font-size:16px}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:46px}
+.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:0;color:#94a3b8;font-size:19px;cursor:pointer;padding:8px;line-height:1}
 .hint{font-size:11px;color:#64748b;margin-top:6px}
 button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
 button:disabled{background:#475569;cursor:default}
@@ -281,7 +288,8 @@ button:disabled{background:#475569;cursor:default}
 <div class="card">
 <h1 id="t_title"></h1><p class="sub" id="t_sub"></p>
 <div class="ssid"><div class="lbl" id="t_cur"></div><div class="val" id="ssidName">…</div></div>
-<label id="t_npw"></label><input type="password" id="npw" autocomplete="new-password">
+<label id="t_npw"></label>
+<div class="pw-wrap"><input type="password" id="npw" autocomplete="new-password"><button type="button" class="pw-eye" id="pwEye">👁️</button></div>
 <div class="hint" id="t_hint"></div>
 <button id="btn"></button>
 <div class="msg" id="msg"></div>
@@ -303,6 +311,13 @@ function apply(){
 }
 document.getElementById('langBtn').onclick=()=>{lang=lang==='my'?'en':'my';localStorage.setItem('amh-lang',lang);apply();};
 apply();
+// eye toggle: show/hide the typed password
+document.getElementById('pwEye').onclick=()=>{
+  const inp=document.getElementById('npw');
+  const show=inp.type==='password';
+  inp.type=show?'text':'password';
+  document.getElementById('pwEye').textContent=show?'🙈':'👁️';
+};
 const PAGE_SSID=${JSON.stringify(ssidLabel || '')};
 const PAGE_IS_TEST=${isTest ? 'true' : 'false'};
 if(PAGE_IS_TEST){
