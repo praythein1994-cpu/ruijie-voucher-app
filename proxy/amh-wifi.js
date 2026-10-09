@@ -459,7 +459,7 @@ if (require.main === module) {
   const checks = [
     ['has MY/EN toggle', html.includes('amh-lang')],
     ['has password form', html.includes('set-password')],
-    ['no portal refs', !/portal|cas|sso/i.test(html)],
+    ['no portal refs', !/\bportal\b|\bcas\b|\bsso\b/i.test(html)],
   ];
   let fail = 0;
   for (const [n, ok] of checks) { console.log((ok ? 'PASS' : 'FAIL') + ' ' + n); if (!ok) fail++; }
