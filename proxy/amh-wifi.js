@@ -166,37 +166,33 @@ const AMH_FULL_CONF = {
 };
 
 async function setSsidPassword(newPassword) {
-  if (!SSID_ID) throw new Error('Target SSID not configured (AMH_SSID_ID)');
-  // Read-modify-write: fetch the LIVE config first, change only the password.
+  // v1.0.41 fix 2026-10-10: portal capture proves the correct ssidId is 16477645
+  // (not 16325319). Portal uses POST /conf/template/ssid with ssidId=16477645,
+  // confTemplateId=1641053, wifiGrpSsid=false, and id=16477645 inside entity.
+  // The open API was given the wrong ssidId, so it never found the SSID → 7301.
+  const CORRECT_SSID_ID = 16477645;
   let entity;
   let liveOk = false, liveErr = '';
   try {
-    const live = await getSsidConf(SSID_ID);
+    const live = await getSsidConf(CORRECT_SSID_ID);
     const base = live.wirelessConfEntity || live;
-    // v1.0.39 fix 2026-10-10: KEEP ssidId inside the entity. The API ignores
-    // top-level ssidId for edit detection; without ssidId in wirelessConfEntity
-    // it treats the request as CREATE → 7301. (PUT is not supported: 405.)
     const { id, ssidIds, ...rest } = base;
-    entity = { ...rest, ssidId: Number(SSID_ID), password: newPassword };
+    entity = { ...rest, id: CORRECT_SSID_ID, ssidId: CORRECT_SSID_ID, password: newPassword };
     liveOk = true;
   } catch (e) {
     liveErr = String(e.message || e).slice(0, 120);
-    // Fallback: pinned snapshot + ssidId inside entity
-    entity = { ...AMH_FULL_CONF, ssidId: Number(SSID_ID), password: newPassword };
+    entity = { ...AMH_FULL_CONF, id: CORRECT_SSID_ID, ssidId: CORRECT_SSID_ID, password: newPassword };
   }
   const reqBody = {
     groupId: Number(GROUP_ID),
-    // v1.0.40: trying wifiGrpSsid=false (original) + ssidId inside entity.
-    // Doc: ssidId present = edit. wifiGrpSsid=true did not help.
     wifiGrpSsid: false,
-    ssidId: Number(SSID_ID),
+    ssidId: CORRECT_SSID_ID,
     wirelessConfEntity: entity,
   };
   try {
-    // POST (PUT → 405). ssidId is now inside wirelessConfEntity too.
     return await openApi('/service/api/open/v1/wifi', reqBody, true, 'POST');
   } catch (e) {
-    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, method=POST, ssidId=${SSID_ID}, entityKeys=${Object.keys(entity).join(',')}]`;
+    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, ssidId=${CORRECT_SSID_ID}]`;
     throw new Error(String(e.message || e).slice(0, 400) + dbg);
   }
 }
