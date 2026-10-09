@@ -103,17 +103,17 @@ async function getToken(forceRefresh = false) {
   finally { tokenInflight = null; }
 }
 
-async function openApi(path, body, retry = true) {
+async function openApi(path, body, retry = true, method = 'POST') {
   const tok = await getToken();
   const url = `${CLOUD}${path}?access_token=${encodeURIComponent(tok)}`;
-  const { status, json } = await httpsJson(url, 'POST', body);
+  const { status, json } = await httpsJson(url, method, body);
   if (json && json.code === 0) return json;
   // token expired/invalid -> refresh once and retry
   const msg = (json && json.msg) || '';
   if (retry && /token|expire|invalid|login/i.test(msg)) {
     const tok2 = await getToken(true);
     const url2 = `${CLOUD}${path}?access_token=${encodeURIComponent(tok2)}`;
-    const r2 = await httpsJson(url2, 'POST', body);
+    const r2 = await httpsJson(url2, method, body);
     if (r2.json && r2.json.code === 0) return r2.json;
     throw new Error('Ruijie API error: ' + JSON.stringify(r2.json).slice(0, 300));
   }
@@ -167,31 +167,37 @@ const AMH_FULL_CONF = {
 
 async function setSsidPassword(newPassword) {
   if (!SSID_ID) throw new Error('Target SSID not configured (AMH_SSID_ID)');
-  // Read-modify-write (fix 2026-10-09 for Ruijie 7301): fetch the LIVE config
-  // first, change only the password. The hardcoded AMH_FULL_CONF snapshot
-  // goes stale when portal settings change, and the API then treats the
-  // request as a duplicate create (error 7301).
+  // Read-modify-write: fetch the LIVE config first, change only the password.
   let entity;
+  let liveOk = false, liveErr = '';
   try {
     const live = await getSsidConf(SSID_ID);
     const base = live.wirelessConfEntity || live;
     // Strip read-only/meta keys that must not be sent back
     const { ssidId, id, ssidIds, ...rest } = base;
     entity = { ...rest, password: newPassword };
+    liveOk = true;
   } catch (e) {
+    liveErr = String(e.message || e).slice(0, 120);
     // Fallback to the pinned snapshot if live fetch fails
     entity = { ...AMH_FULL_CONF, password: newPassword };
   }
-  return openApi('/service/api/open/v1/wifi', {
+  const reqBody = {
     groupId: Number(GROUP_ID),
-    // v1.0.37 fix 2026-10-10 for Ruijie 7301: the AMH SSID lives under a WiFi
-    // GROUP (verified from portal /conf/wifi_grp/wifi snapshot), so wifiGrpSsid
-    // must be true. With false, the API could not find the SSID by ssidId,
-    // treated the request as a CREATE, and rejected it as duplicate (7301).
     wifiGrpSsid: true,
     ssidId: Number(SSID_ID),
     wirelessConfEntity: entity,
-  });
+  };
+  try {
+    // v1.0.38 fix 2026-10-10: EDIT requires PUT, not POST. POST is the CREATE
+    // endpoint (hence 7301 duplicate). Matches portal API pattern:
+    // POST /conf/template/{id}/ssid (create) vs PUT .../ssid/{ssid_id} (edit).
+    return await openApi('/service/api/open/v1/wifi', reqBody, true, 'PUT');
+  } catch (e) {
+    // Full diagnostic (user 2026-10-10: no more guessing) — never leaks password
+    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, method=PUT, ssidId=${SSID_ID}, entityKeys=${Object.keys(entity).join(',')}]`;
+    throw new Error(String(e.message || e).slice(0, 400) + dbg);
+  }
 }
 
 /* ── TEST SSID (AMH-TEST-HIDDEN, id 16537267) ────────────────────────── */
@@ -253,14 +259,14 @@ function pageHtml(ssidLabel, isTest) {
       cur: 'လက်ရှိ WiFi နာမည်', npw: 'စကားဝှက် အသစ်', cpw: 'စကားဝှက် အသစ် (အတည်ပြု)',
       btn: 'ချိန်းမယ်', hint: 'အနည်းဆုံး ၈ လုံး။ ခွင့်ပြုသော စာလုံးများ: A-Z a-z 0-9 @<=>[]!#$*().',
       ok: 'စကားဝှက် ချိန်းပြီးပါပြီ ✅', mismatch: 'စကားဝှက် နှစ်ခု မတူပါ', bad: 'စကားဝှက် ပုံစံ မမှန်ပါ',
-      err: 'ချိန်းမရပါ။ ထပ်ကြိုးစားကြည့်ပါ', wait: 'ချိန်းနေသည်…',
+      err: 'ချိန်းမရပါ။ ထပ်ကြိုးစားကြည့်ပါ', wait: 'ချိန်းနေသည်…', show: 'ပြ', hide: 'ဖျောက်',
     },
     en: {
       title: 'Change WiFi Password', sub: 'Change your WiFi password right here',
       cur: 'Current WiFi name', npw: 'New password', cpw: 'New password (confirm)',
       btn: 'Change', hint: 'Minimum 8 characters. Allowed: A-Z a-z 0-9 @<=>[]!#$*().',
       ok: 'Password changed ✅', mismatch: 'Passwords do not match', bad: 'Invalid password format',
-      err: 'Change failed. Please try again', wait: 'Changing…',
+      err: 'Change failed. Please try again', wait: 'Changing…', show: 'Show', hide: 'Hide',
     },
   };
   return `<!DOCTYPE html><html lang="my"><head><meta charset="utf-8">
@@ -274,9 +280,8 @@ h1{font-size:20px;margin:0 0 4px}.sub{color:#94a3b8;font-size:13px;margin:0 0 20
 .ssid .lbl{font-size:11px;color:#94a3b8;margin-bottom:4px}.ssid .val{font-size:17px;font-weight:600}
 label{display:block;font-size:13px;color:#cbd5e1;margin:12px 0 6px}
 input{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#fff;font-size:16px}
-.pw-wrap{position:relative}
-.pw-wrap input{padding-right:46px}
-.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:0;color:#94a3b8;font-size:19px;cursor:pointer;padding:8px;line-height:1}
+.pw-toggle-row{text-align:right;margin-top:6px}
+.pw-toggle{background:none;border:0;color:#60a5fa;font-size:13px;cursor:pointer;padding:4px 2px}
 .hint{font-size:11px;color:#64748b;margin-top:6px}
 button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
 button:disabled{background:#475569;cursor:default}
@@ -289,7 +294,8 @@ button:disabled{background:#475569;cursor:default}
 <h1 id="t_title"></h1><p class="sub" id="t_sub"></p>
 <div class="ssid"><div class="lbl" id="t_cur"></div><div class="val" id="ssidName">…</div></div>
 <label id="t_npw"></label>
-<div class="pw-wrap"><input type="password" id="npw" autocomplete="new-password"><button type="button" class="pw-eye" id="pwEye">👁️</button></div>
+<input type="password" id="npw" autocomplete="new-password">
+<div class="pw-toggle-row"><button type="button" class="pw-toggle" id="pwToggle"></button></div>
 <div class="hint" id="t_hint"></div>
 <button id="btn"></button>
 <div class="msg" id="msg"></div>
@@ -306,17 +312,18 @@ function apply(){
   
   document.getElementById('t_hint').textContent=t.hint;
   document.getElementById('btn').textContent=t.btn;
+  document.getElementById('pwToggle').textContent=t.show;
   document.getElementById('langBtn').textContent=lang==='my'?'English':'မြန်မာ';
   document.documentElement.lang=lang==='my'?'my':'en';
 }
 document.getElementById('langBtn').onclick=()=>{lang=lang==='my'?'en':'my';localStorage.setItem('amh-lang',lang);apply();};
 apply();
-// eye toggle: show/hide the typed password
-document.getElementById('pwEye').onclick=()=>{
+// show/hide toggle for the typed password
+document.getElementById('pwToggle').onclick=()=>{
   const inp=document.getElementById('npw');
   const show=inp.type==='password';
   inp.type=show?'text':'password';
-  document.getElementById('pwEye').textContent=show?'🙈':'👁️';
+  document.getElementById('pwToggle').textContent=show?T[lang].hide:T[lang].show;
 };
 const PAGE_SSID=${JSON.stringify(ssidLabel || '')};
 const PAGE_IS_TEST=${isTest ? 'true' : 'false'};
