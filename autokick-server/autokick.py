@@ -154,7 +154,8 @@ def fetch_vouchers():
     out = []
     start, page_size, total = 0, 200, float("inf")
     while start < total:
-        url = (f"{CLOUD}/service/api/open/auth/voucher/getList/{ACCT["group_id"]}"
+        gid = ACCT['group_id']
+        url = (f"{CLOUD}/service/api/open/auth/voucher/getList/{gid}"
                f"?start={start}&pageSize={page_size}&access_token={token}")
         r = requests.get(url, timeout=30)
         r.raise_for_status()
