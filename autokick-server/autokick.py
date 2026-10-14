@@ -241,7 +241,7 @@ def process_account(acct):
         jar = sso_login()
     except Exception as e:
         log(f"FATAL: SSO login failed: {e}")
-        return 0, 0, 0, [f"login: {e}"]
+        return 0, 0, 0, [f"login: {e}"], []
     session = requests.Session()
     session.cookies.update(jar)
     session.headers["User-Agent"] = (
@@ -249,7 +249,7 @@ def process_account(acct):
 
     if not is_sso_alive(session):
         log("FATAL: SSO login failed - session not alive")
-        return 0, 0, 0, ["SSO session not alive"]
+        return 0, 0, 0, ["SSO session not alive"], []
     log("SSO session alive")
 
     # 2. vouchers
@@ -257,16 +257,17 @@ def process_account(acct):
         vouchers = fetch_vouchers()
     except Exception as e:
         log(f"FATAL: voucher fetch failed: {e}")
-        return 0, 0, 0, [f"voucher fetch: {e}"]
+        return 0, 0, 0, [f"voucher fetch: {e}"], []
 
     spent = [v for v in vouchers
              if v.get("voucherCode", "").strip() and is_spent(v)]
     log(f"Spent vouchers: {len(spent)}")
     if not spent:
-        return len(vouchers), 0, 0, []
+        return len(vouchers), 0, 0, [], []
 
     # 3+4. kick each
     kicked = 0
+    kicked_codes = []
     for v in spent:
         code = v["voucherCode"].strip()
         try:
@@ -275,11 +276,12 @@ def process_account(acct):
                 continue
             if kick(session, rec):
                 kicked += 1
+                kicked_codes.append(code)
                 log(f"  {code}: KICKED")
         except Exception as e:
             errors.append(f"{code}: {e}")
     log(f"--- {name}: {kicked}/{len(spent)} kicked ---")
-    return len(vouchers), len(spent), kicked, errors
+    return len(vouchers), len(spent), kicked, errors, kicked_codes
 
 
 def main():
@@ -295,11 +297,12 @@ def main():
     results = []
     for acct in accounts:
         try:
-            v, s, k, e = process_account(acct)
+            v, s, k, e, codes = process_account(acct)
             results.append({
                 "name": acct.get("name", "default"),
                 "vouchers": v, "spent": s, "kicked": k,
                 "errors": e[:5],
+                "kicked_codes": codes,
             })
         except Exception as e:
             log(f"Account {acct.get('name')} failed: {e}")
@@ -307,6 +310,7 @@ def main():
                 "name": acct.get("name", "default"),
                 "vouchers": 0, "spent": 0, "kicked": 0,
                 "errors": [str(e)[:200]],
+                "kicked_codes": [],
             })
 
     total_kicked = sum(r["kicked"] for r in results)
