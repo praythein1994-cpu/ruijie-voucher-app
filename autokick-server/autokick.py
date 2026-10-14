@@ -4,14 +4,16 @@ Server-side Auto-Kick for P Manager (GitHub Actions).
 Runs on schedule, kicks quota-spent / time-expired voucher clients.
 
 Env vars (GitHub Secrets):
-  RUIJIE_EMAIL      - Ruijie Cloud account email (for SSO/CAS login)
-  RUIJIE_PASSWORD   - Ruijie Cloud account password
-  RUIJIE_APPID      - Cloud Open API App ID (for voucher fetch)
-  RUIJIE_SECRET     - Cloud Open API App Secret
-  RUIJIE_GROUP_ID   - Project/Group ID
+  RUIJIE_ACCOUNTS   - JSON list of accounts: [{"email","password","appid","secret","group_id","name"}]
+                      (preferred for multi-account)
+  RUIJIE_EMAIL      - Single account email (fallback if RUIJIE_ACCOUNTS not set)
+  RUIJIE_PASSWORD   - Single account password
+  RUIJIE_APPID      - Single account App ID
+  RUIJIE_SECRET     - Single account App Secret
+  RUIJIE_GROUP_ID   - Single account Group ID
   RUIJIE_CLOUD      - Cloud base URL (default: https://cloud-as.ruijienetworks.com)
 
-Flow:
+Flow (per account):
   1. Playwright: CAS login via https://cloud-as.ruijienetworks.com/webproxy/sso/back
      -> captures SSO session cookies
   2. Cloud Open API: fetch vouchers
@@ -28,13 +30,39 @@ import requests
 from datetime import datetime, timezone
 
 CLOUD = os.environ.get("RUIJIE_CLOUD", "https://cloud-as.ruijienetworks.com")
-EMAIL = os.environ["RUIJIE_EMAIL"]
-PASSWORD = os.environ["RUIJIE_PASSWORD"]
-APPID = os.environ["RUIJIE_APPID"]
-SECRET = os.environ["RUIJIE_SECRET"]
-GROUP_ID = os.environ["RUIJIE_GROUP_ID"]
-
 WEBPROXY = f"{CLOUD}/webproxy/common/api"
+ACCT = {}  # current account being processed
+
+
+def get_accounts():
+    """Load accounts from RUIJIE_ACCOUNTS JSON, or fallback to single-account secrets."""
+    multi = os.environ.get("RUIJIE_ACCOUNTS", "").strip()
+    if multi:
+        try:
+            accounts = json.loads(multi)
+            if isinstance(accounts, list) and accounts:
+                return accounts
+        except Exception as e:
+            print(f"RUIJIE_ACCOUNTS parse failed: {e}", flush=True)
+    # fallback: single account from individual secrets
+    return [{
+        "name": "default",
+        "email": os.environ["RUIJIE_EMAIL"],
+        "password": os.environ["RUIJIE_PASSWORD"],
+        "appid": os.environ["RUIJIE_APPID"],
+        "secret": os.environ["RUIJIE_SECRET"],
+        "group_id": os.environ["RUIJIE_GROUP_ID"],
+    }]
+
+
+def check_enabled():
+    """Check autokick-server/config.json for enabled flag."""
+    try:
+        with open("autokick-server/config.json") as f:
+            cfg = json.load(f)
+            return cfg.get("enabled", True)
+    except Exception:
+        return True  # default enabled if no config
 
 
 def log(msg):
@@ -57,9 +85,9 @@ def sso_login():
         log(f"Login page URL: {page.url[:80]}")
 
         # Fill the official CAS fields and click login
-        page.fill("#username", EMAIL)
+        page.fill("#username", ACCT["email"])
         # The cover approach: fill #originalPassword, let Ruijie's JS encrypt
-        page.fill("#originalPassword", PASSWORD)
+        page.fill("#originalPassword", ACCT["password"])
         page.click("#J_userLogin_btn")
         # Wait for redirect back to /webproxy/sso/back (ticket callback)
         try:
@@ -97,7 +125,7 @@ def webproxy(session, api_path, method="POST", params=None):
 def is_sso_alive(session):
     try:
         d = webproxy(session, "/samTransfer/authuserinfos/bypage?cloudType=smb",
-                     "POST", {"group_id": int(GROUP_ID), "page": 1, "pageSize": 1})
+                     "POST", {"group_id": int(ACCT["group_id"]), "page": 1, "pageSize": 1})
         return d.get("code") == 0
     except Exception as e:
         log(f"SSO check failed: {e}")
@@ -111,7 +139,7 @@ FIXED_TOKEN_PARAM = "d63dss0a81e4415a889ac5b78fsc904a"
 def get_access_token():
     """Same as CloudApiClient.getToken()."""
     url = f"{CLOUD}/service/api/oauth20/client/access_token?token={FIXED_TOKEN_PARAM}"
-    r = requests.post(url, json={"appid": APPID, "secret": SECRET}, timeout=30)
+    r = requests.post(url, json={"appid": ACCT["appid"], "secret": ACCT["secret"]}, timeout=30)
     r.raise_for_status()
     d = r.json()
     token = d.get("accessToken", "")
@@ -126,7 +154,7 @@ def fetch_vouchers():
     out = []
     start, page_size, total = 0, 200, float("inf")
     while start < total:
-        url = (f"{CLOUD}/service/api/open/auth/voucher/getList/{GROUP_ID}"
+        url = (f"{CLOUD}/service/api/open/auth/voucher/getList/{ACCT["group_id"]}"
                f"?start={start}&pageSize={page_size}&access_token={token}")
         r = requests.get(url, timeout=30)
         r.raise_for_status()
@@ -163,7 +191,7 @@ def find_auth_record(session, code):
     fetched = 0
     while page <= 20:
         d = webproxy(session, "/samTransfer/authuserinfos/bypage?cloudType=smb",
-                     "POST", {"group_id": int(GROUP_ID), "page": page, "size": 100})
+                     "POST", {"group_id": int(ACCT["group_id"]), "page": page, "size": 100})
         if d.get("code", -1) != 0:
             return None
         data = d.get("data") or {}
@@ -189,7 +217,7 @@ def kick(session, rec):
     auth_type = rec.get("authType") or rec.get("auth_type") or ""
     mac = (rec.get("userMac") or rec.get("mac") or "").lower()
     params = {
-        "group_id": int(GROUP_ID),
+        "group_id": int(ACCT["group_id"]),
         "account": rec.get("account", ""),
         "auth_type": auth_type,
         "mac": mac,
@@ -199,11 +227,20 @@ def kick(session, rec):
     return d.get("code") == 0
 
 
-def main():
-    log("=== Server Auto-Kick starting ===")
+def process_account(acct):
+    """Run auto-kick for one account. Returns (vouchers, spent, kicked, errors)."""
+    global ACCT
+    ACCT = acct
+    name = acct.get("name", "default")
+    log(f"--- Account: {name} ---")
+    errors = []
 
     # 1. SSO login
-    jar = sso_login()
+    try:
+        jar = sso_login()
+    except Exception as e:
+        log(f"FATAL: SSO login failed: {e}")
+        return 0, 0, 0, [f"login: {e}"]
     session = requests.Session()
     session.cookies.update(jar)
     session.headers["User-Agent"] = (
@@ -211,7 +248,7 @@ def main():
 
     if not is_sso_alive(session):
         log("FATAL: SSO login failed - session not alive")
-        sys.exit(1)
+        return 0, 0, 0, ["SSO session not alive"]
     log("SSO session alive")
 
     # 2. vouchers
@@ -219,14 +256,13 @@ def main():
         vouchers = fetch_vouchers()
     except Exception as e:
         log(f"FATAL: voucher fetch failed: {e}")
-        sys.exit(1)
+        return 0, 0, 0, [f"voucher fetch: {e}"]
 
     spent = [v for v in vouchers
              if v.get("voucherCode", "").strip() and is_spent(v)]
     log(f"Spent vouchers: {len(spent)}")
     if not spent:
-        log("Nothing to kick")
-        return
+        return len(vouchers), 0, 0, []
 
     # 3+4. kick each
     kicked = 0
@@ -235,23 +271,53 @@ def main():
         try:
             rec = find_auth_record(session, code)
             if not rec:
-                log(f"  {code}: no portal record, skip")
                 continue
             if kick(session, rec):
                 kicked += 1
                 log(f"  {code}: KICKED")
-            else:
-                log(f"  {code}: kick rejected")
         except Exception as e:
-            log(f"  {code}: error {e}")
-    log(f"=== Done: {kicked}/{len(spent)} kicked ===")
-    # v1.6.49: write summary for app display
+            errors.append(f"{code}: {e}")
+    log(f"--- {name}: {kicked}/{len(spent)} kicked ---")
+    return len(vouchers), len(spent), kicked, errors
+
+
+def main():
+    log("=== Server Auto-Kick starting ===")
+
+    if not check_enabled():
+        log("Disabled via config.json - skipping")
+        return
+
+    accounts = get_accounts()
+    log(f"Accounts: {len(accounts)}")
+
+    results = []
+    for acct in accounts:
+        try:
+            v, s, k, e = process_account(acct)
+            results.append({
+                "name": acct.get("name", "default"),
+                "vouchers": v, "spent": s, "kicked": k,
+                "errors": e[:5],
+            })
+        except Exception as e:
+            log(f"Account {acct.get('name')} failed: {e}")
+            results.append({
+                "name": acct.get("name", "default"),
+                "vouchers": 0, "spent": 0, "kicked": 0,
+                "errors": [str(e)[:200]],
+            })
+
+    total_kicked = sum(r["kicked"] for r in results)
+    total_spent = sum(r["spent"] for r in results)
+    log(f"=== Done: {total_kicked}/{total_spent} kicked across {len(accounts)} accounts ===")
+
+    # write summary for app display
     summary = {
         "time": datetime.now(timezone.utc).isoformat(),
-        "vouchers": len(vouchers),
-        "spent": len(spent),
-        "kicked": kicked,
-        "errors": errors[:10],
+        "accounts": results,
+        "total_kicked": total_kicked,
+        "total_spent": total_spent,
     }
     with open("autokick-server/last-run.json", "w") as f:
         json.dump(summary, f)
@@ -259,9 +325,11 @@ def main():
 
 
 if __name__ == "__main__":
-    for k in ("RUIJIE_EMAIL", "RUIJIE_PASSWORD", "RUIJIE_APPID",
-              "RUIJIE_SECRET", "RUIJIE_GROUP_ID"):
-        if k not in os.environ:
-            print(f"Missing env: {k}", file=sys.stderr)
-            sys.exit(2)
+    # Need either RUIJIE_ACCOUNTS or the 5 single-account secrets
+    if not os.environ.get("RUIJIE_ACCOUNTS"):
+        for k in ("RUIJIE_EMAIL", "RUIJIE_PASSWORD", "RUIJIE_APPID",
+                  "RUIJIE_SECRET", "RUIJIE_GROUP_ID"):
+            if k not in os.environ:
+                print(f"Missing env: {k}", file=sys.stderr)
+                sys.exit(2)
     main()
