@@ -22,9 +22,7 @@ Flow:
 
 import os
 import sys
-import json
 import time
-import hashlib
 import requests
 
 CLOUD = os.environ.get("RUIJIE_CLOUD", "https://cloud-as.ruijienetworks.com")
@@ -104,23 +102,44 @@ def is_sso_alive(session):
         return False
 
 
-# ── Step 2: fetch vouchers via Cloud Open API ──
-def fetch_vouchers():
-    # Ruijie Cloud Open API: signed request
-    ts = str(int(time.time() * 1000))
-    sign_str = APPID + SECRET + ts
-    sign = hashlib.md5(sign_str.encode()).hexdigest()
-    url = f"{CLOUD}/openapi/voucher/list"
-    # NOTE: adjust path/params to match the app's CloudApiClient if different
-    r = requests.post(url, json={
-        "appid": APPID, "timestamp": ts, "sign": sign,
-        "groupId": GROUP_ID,
-    }, timeout=30)
+# ── Step 2: fetch vouchers via Cloud Open API (same as CloudApiClient) ──
+FIXED_TOKEN_PARAM = "d63dss0a81e4415a889ac5b78fsc904a"
+
+
+def get_access_token():
+    """Same as CloudApiClient.getToken()."""
+    url = f"{CLOUD}/service/api/oauth20/client/access_token?token={FIXED_TOKEN_PARAM}"
+    r = requests.post(url, json={"appid": APPID, "secret": SECRET}, timeout=30)
     r.raise_for_status()
     d = r.json()
-    vouchers = d.get("data", d.get("vouchers", []))
-    log(f"Fetched {len(vouchers)} vouchers")
-    return vouchers
+    token = d.get("accessToken", "")
+    if d.get("code", -1) != 0 or not token:
+        raise Exception(f"Token request failed: {str(d)[:200]}")
+    return token
+
+
+def fetch_vouchers():
+    """Same as CloudApiClient.getVouchers(): paginated GET."""
+    token = get_access_token()
+    out = []
+    start, page_size, total = 0, 200, float("inf")
+    while start < total:
+        url = (f"{CLOUD}/service/api/open/auth/voucher/getList/{GROUP_ID}"
+               f"?start={start}&pageSize={page_size}&access_token={token}")
+        r = requests.get(url, timeout=30)
+        r.raise_for_status()
+        d = r.json()
+        if d.get("code", -1) != 0:
+            raise Exception(f"Voucher list failed: {d.get('msg', d.get('code'))}")
+        vd = d.get("voucherData") or {}
+        total = vd.get("count", 0)
+        lst = vd.get("list") or []
+        out.extend(lst)
+        start += len(lst)
+        if not lst:
+            break
+    log(f"Fetched {len(out)} vouchers")
+    return out
 
 
 def is_spent(v):
