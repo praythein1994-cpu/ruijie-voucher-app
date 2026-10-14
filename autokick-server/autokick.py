@@ -156,26 +156,29 @@ def is_spent(v):
 
 # ── Step 3+4: find auth record & kick ──
 def find_auth_record(session, code):
+    """Same as AutoKickJob.findAuthRecord(): match rec.account == code."""
     page = 1
+    fetched = 0
     while page <= 20:
         d = webproxy(session, "/samTransfer/authuserinfos/bypage?cloudType=smb",
-                     "POST", {"group_id": int(GROUP_ID), "page": page, "pageSize": 100})
-        data = d.get("data")
-        if isinstance(data, dict):
-            rows = data.get("rows") or []
-        elif isinstance(data, list):
-            rows = data
-        else:
-            rows = []
-        if not rows:
-            break
-        for rec in rows:
+                     "POST", {"group_id": int(GROUP_ID), "page": page, "size": 100})
+        if d.get("code", -1) != 0:
+            return None
+        data = d.get("data") or {}
+        res = data.get("result") or {}
+        lst = res.get("list") or []
+        if not lst:
+            return None
+        for rec in lst:
             if not isinstance(rec, dict):
                 continue
-            # match voucher code against likely fields
-            for f in ("voucherCode", "account", "userName"):
-                if str(rec.get(f, "")).strip() == code:
-                    return rec
+            acct = str(rec.get("account", "")).strip()
+            if code == acct and rec.get("id", 0) != 0 and acct:
+                return rec
+        fetched += len(lst)
+        total = res.get("total", fetched)
+        if fetched >= total:
+            break
         page += 1
     return None
 
