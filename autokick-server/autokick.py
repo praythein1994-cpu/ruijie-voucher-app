@@ -23,7 +23,9 @@ Flow:
 import os
 import sys
 import time
+import json
 import requests
+from datetime import datetime, timezone
 
 CLOUD = os.environ.get("RUIJIE_CLOUD", "https://cloud-as.ruijienetworks.com")
 EMAIL = os.environ["RUIJIE_EMAIL"]
@@ -243,6 +245,17 @@ def main():
         except Exception as e:
             log(f"  {code}: error {e}")
     log(f"=== Done: {kicked}/{len(spent)} kicked ===")
+    # v1.6.49: write summary for app display
+    summary = {
+        "time": datetime.now(timezone.utc).isoformat(),
+        "vouchers": len(vouchers),
+        "spent": len(spent),
+        "kicked": kicked,
+        "errors": errors[:10],
+    }
+    with open("autokick-server/last-run.json", "w") as f:
+        json.dump(summary, f)
+    log("Summary written to last-run.json")
 
 
 if __name__ == "__main__":
