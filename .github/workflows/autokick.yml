@@ -1,4 +1,5 @@
 name: Server Auto-Kick
+# schedule-reset: 2026-10-15 — re-trigger scheduler
 on:
   schedule:
     - cron: "*/15 * * * *"
