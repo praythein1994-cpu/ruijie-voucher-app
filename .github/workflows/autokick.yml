@@ -1,9 +1,11 @@
 name: Server Auto-Kick
-
 on:
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   autokick:
@@ -26,8 +28,8 @@ jobs:
           RUIJIE_APPID: ${{ secrets.RUIJIE_APPID }}
           RUIJIE_SECRET: ${{ secrets.RUIJIE_SECRET }}
           RUIJIE_GROUP_ID: ${{ secrets.RUIJIE_GROUP_ID }}
+          RUIJIE_ACCOUNTS: ${{ secrets.RUIJIE_ACCOUNTS }}
         run: python autokick-server/autokick.py
-
       - name: Commit run summary
         run: |
           git config user.name "github-actions[bot]"
