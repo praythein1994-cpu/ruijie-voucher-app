@@ -160,10 +160,18 @@ def find_auth_record(session, code):
     while page <= 20:
         d = webproxy(session, "/samTransfer/authuserinfos/bypage?cloudType=smb",
                      "POST", {"group_id": int(GROUP_ID), "page": page, "pageSize": 100})
-        rows = (d.get("data") or {}).get("rows", d.get("data", []))
+        data = d.get("data")
+        if isinstance(data, dict):
+            rows = data.get("rows") or []
+        elif isinstance(data, list):
+            rows = data
+        else:
+            rows = []
         if not rows:
             break
         for rec in rows:
+            if not isinstance(rec, dict):
+                continue
             # match voucher code against likely fields
             for f in ("voucherCode", "account", "userName"):
                 if str(rec.get(f, "")).strip() == code:
