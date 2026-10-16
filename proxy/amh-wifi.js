@@ -201,6 +201,8 @@ async function setSsidPassword(newPassword) {
 /* Read-modify-write: fetch live config, change only the password. */
 async function getSsidConf(ssidId) {
   const tok = await getToken();
+  // v1.0.44 debug 2026-10-16: log GROUP_ID value explicitly (env may be wrong)
+  const gidDbg = 'GROUP_ID=' + JSON.stringify(GROUP_ID);
   const url = `${CLOUD}/service/api/open/v1/wifi?access_token=${encodeURIComponent(tok)}&group_id=${GROUP_ID}`;
   let r = await httpsJson(url, 'GET', null);
   let { json, status } = r;
@@ -221,7 +223,7 @@ async function getSsidConf(ssidId) {
   const dbgShape = arr.length === 0 ? ' dataType=' + (json.data === null ? 'null' : typeof json.data) + ' dataKeys=' + (json.data && typeof json.data === 'object' ? Object.keys(json.data).join(',') : 'n/a') + ' raw=' + JSON.stringify(json).slice(0, 200) : '';
   const ids = arr.map(s => String(s.ssidId || s.id)).join(',');
   const found = arr.find(s => String(s.ssidId || s.id) === String(ssidId));
-  if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (group=' + GROUP_ID + ')' + dbgShape);
+  if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (' + gidDbg + ')' + dbgShape);
   return found;
 }
 
