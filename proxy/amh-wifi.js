@@ -166,11 +166,9 @@ const AMH_FULL_CONF = {
 };
 
 async function setSsidPassword(newPassword) {
-  // v1.0.41 fix 2026-10-10: portal capture proves the correct ssidId is 16477645
-  // (not 16325319). Portal uses POST /conf/template/ssid with ssidId=16477645,
-  // confTemplateId=1641053, wifiGrpSsid=false, and id=16477645 inside entity.
-  // The open API was given the wrong ssidId, so it never found the SSID → 7301.
-  const CORRECT_SSID_ID = 16477645;
+  // v1.0.47 fix 2026-10-16: ssidId changed 16477645 -> 16739821 after VLAN 30 rebuild.
+  // Also, getSsidConf now finds by ssidName "AMH" as fallback since IDs can change.
+  const CORRECT_SSID_ID = 16739821;
   let entity;
   let liveOk = false, liveErr = '';
   try {
@@ -217,12 +215,16 @@ async function getSsidConf(ssidId) {
     json = r.json; status = r.status;
   }
   if (!json || json.code !== 0) throw new Error('list failed: http=' + status + ' code=' + (json && json.code) + ' msg=' + (json && json.msg) + ' dataKeys=' + (json && json.data ? Object.keys(json.data).join(',') : 'none'));
-  const list = json.data && (json.data.list || json.data);
+  // v1.0.47 fix 2026-10-16: API returns ssidList at top level (not under data).
+  // Also find by ssidName as fallback since ssidId can change (VLAN rebuild changed 16477645 -> 16739821).
+  const list = (json.ssidList) || (json.data && (json.data.list || json.data.ssidList || json.data)) || [];
   const arr = Array.isArray(list) ? list : [];
   // v1.0.43 debug 2026-10-16: include response shape when list is empty
   const dbgShape = arr.length === 0 ? ' dataType=' + (json.data === null ? 'null' : typeof json.data) + ' dataKeys=' + (json.data && typeof json.data === 'object' ? Object.keys(json.data).join(',') : 'n/a') + ' raw=' + JSON.stringify(json).slice(0, 200) : '';
   const ids = arr.map(s => String(s.ssidId || s.id)).join(',');
-  const found = arr.find(s => String(s.ssidId || s.id) === String(ssidId));
+  // Find by ID first, then by name (AMH) as fallback
+  let found = arr.find(s => String(s.ssidId || s.id) === String(ssidId));
+  if (!found) found = arr.find(s => String(s.ssidName || '').toUpperCase() === 'AMH');
   if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (' + gidDbg + ')' + dbgShape);
   return found;
 }
