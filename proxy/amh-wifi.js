@@ -217,9 +217,11 @@ async function getSsidConf(ssidId) {
   if (!json || json.code !== 0) throw new Error('list failed: http=' + status + ' code=' + (json && json.code) + ' msg=' + (json && json.msg) + ' dataKeys=' + (json && json.data ? Object.keys(json.data).join(',') : 'none'));
   const list = json.data && (json.data.list || json.data);
   const arr = Array.isArray(list) ? list : [];
+  // v1.0.43 debug 2026-10-16: include response shape when list is empty
+  const dbgShape = arr.length === 0 ? ' dataType=' + (json.data === null ? 'null' : typeof json.data) + ' dataKeys=' + (json.data && typeof json.data === 'object' ? Object.keys(json.data).join(',') : 'n/a') + ' raw=' + JSON.stringify(json).slice(0, 200) : '';
   const ids = arr.map(s => String(s.ssidId || s.id)).join(',');
   const found = arr.find(s => String(s.ssidId || s.id) === String(ssidId));
-  if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (group=' + GROUP_ID + ')');
+  if (!found) throw new Error('SSID ' + ssidId + ' not in [' + ids + '] (group=' + GROUP_ID + ')' + dbgShape);
   return found;
 }
 
