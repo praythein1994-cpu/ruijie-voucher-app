@@ -35,14 +35,14 @@ jobs:
       - name: Commit run summary
         run: |
           git config user.name "github-actions[bot]"
-git config user.email "github-actions[bot]@users.noreply.github.com"
-cp autokick-server/last-run.json /tmp/lastrun.json
-for i in 1 2 3; do
-  git fetch origin main
-  git reset --hard origin/main
-  cp /tmp/lastrun.json autokick-server/last-run.json
-  git add autokick-server/last-run.json
-  git diff --cached --quiet || git commit -m "Update auto-kick summary [skip ci]"
-  git push origin main && break
-  sleep 10
-done
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp autokick-server/last-run.json /tmp/lastrun.json
+          for i in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/lastrun.json autokick-server/last-run.json
+            git add autokick-server/last-run.json
+            git diff --cached --quiet || git commit -m "Update auto-kick summary [skip ci]"
+            git push origin main && break
+            sleep 10
+          done
