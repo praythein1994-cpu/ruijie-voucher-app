@@ -180,7 +180,7 @@ async function setSsidPassword(newPassword) {
     entity = { ...rest, id: CORRECT_SSID_ID, ssidId: CORRECT_SSID_ID, password: newPassword };
     liveOk = true;
   } catch (e) {
-    liveErr = String(e.message || e).slice(0, 120);
+    liveErr = String(e.message || e).slice(0, 300);
     entity = { ...AMH_FULL_CONF, id: CORRECT_SSID_ID, ssidId: CORRECT_SSID_ID, password: newPassword };
   }
   const reqBody = {
