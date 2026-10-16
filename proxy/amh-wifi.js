@@ -202,7 +202,18 @@ async function setSsidPassword(newPassword) {
 async function getSsidConf(ssidId) {
   const tok = await getToken();
   const url = `${CLOUD}/service/api/open/v1/wifi?access_token=${encodeURIComponent(tok)}&group_id=${GROUP_ID}`;
-  const { json, status } = await httpsJson(url, 'GET', null);
+  let r = await httpsJson(url, 'GET', null);
+  let { json, status } = r;
+  // v1.0.42 fix 2026-10-16: retry with a fresh token if the list call failed.
+  // The cached token may be stale (code=3); openApi() already retries on
+  // token errors but getSsidConf() did not, causing a fallback to the
+  // hardcoded config which no longer matches the live SSID -> 7301.
+  if (!json || json.code !== 0) {
+    const tok2 = await getToken(true);
+    const url2 = `${CLOUD}/service/api/open/v1/wifi?access_token=${encodeURIComponent(tok2)}&group_id=${GROUP_ID}`;
+    r = await httpsJson(url2, 'GET', null);
+    json = r.json; status = r.status;
+  }
   if (!json || json.code !== 0) throw new Error('list failed: http=' + status + ' code=' + (json && json.code) + ' msg=' + (json && json.msg) + ' dataKeys=' + (json && json.data ? Object.keys(json.data).join(',') : 'none'));
   const list = json.data && (json.data.list || json.data);
   const arr = Array.isArray(list) ? list : [];
