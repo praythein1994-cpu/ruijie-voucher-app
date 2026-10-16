@@ -434,7 +434,7 @@ async function handle(req, res, u) {
         return res.end(JSON.stringify({ ok: true }));
       } catch (e) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ ok: false, msg: String(e.message || e).slice(0, 200) }));
+        return res.end(JSON.stringify({ ok: false, msg: String(e.message || e).slice(0, 600) }));
       }
     });
     return;
@@ -457,7 +457,7 @@ async function handle(req, res, u) {
         return res.end(JSON.stringify({ ok: true }));
       } catch (e) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ ok: false, msg: String(e.message || e).slice(0, 200) }));
+        return res.end(JSON.stringify({ ok: false, msg: String(e.message || e).slice(0, 600) }));
       }
     });
     return;
