@@ -214,6 +214,35 @@ def find_auth_record(session, code):
     return None
 
 
+def fetch_all_auth_records(session):
+    """Fetch the auth-user list ONCE, return {account_code: rec} (first match wins)."""
+    by_account = {}
+    page = 1
+    fetched = 0
+    while page <= 20:
+        d = webproxy(session, "/samTransfer/authuserinfos/bypage?cloudType=smb",
+                     "POST", {"group_id": int(ACCT["group_id"]), "page": page, "size": 100})
+        if d.get("code", -1) != 0:
+            break
+        data = d.get("data") or {}
+        res = data.get("result") or {}
+        lst = res.get("list") or []
+        if not lst:
+            break
+        for rec in lst:
+            if not isinstance(rec, dict):
+                continue
+            acct = str(rec.get("account", "")).strip()
+            if acct and rec.get("id", 0) != 0 and acct not in by_account:
+                by_account[acct] = rec
+        fetched += len(lst)
+        total = res.get("total", fetched)
+        if fetched >= total:
+            break
+        page += 1
+    return by_account
+
+
 def kick(session, rec):
     auth_type = rec.get("authType") or rec.get("auth_type") or ""
     mac = (rec.get("userMac") or rec.get("mac") or "").lower()
@@ -265,13 +294,15 @@ def process_account(acct):
     if not spent:
         return len(vouchers), 0, 0, [], []
 
-    # 3+4. kick each
+    # 3+4. kick each (auth list fetched ONCE, not per-voucher)
+    auth_by_account = fetch_all_auth_records(session)
+    log(f"Auth records fetched: {len(auth_by_account)}")
     kicked = 0
     kicked_codes = []
     for v in spent:
         code = v["voucherCode"].strip()
         try:
-            rec = find_auth_record(session, code)
+            rec = auth_by_account.get(code)
             if not rec:
                 continue
             if kick(session, rec):
