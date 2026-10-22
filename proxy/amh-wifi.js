@@ -166,16 +166,23 @@ const AMH_FULL_CONF = {
 };
 
 async function setSsidPassword(newPassword) {
-  // v1.0.47 fix 2026-10-16: ssidId changed 16477645 -> 16739821 after VLAN 30 rebuild.
-  // Also, getSsidConf now finds by ssidName "AMH" as fallback since IDs can change.
-  const CORRECT_SSID_ID = 16739821;
+  // 2026-10-22 fix: ssidId changed 16739821 -> 16845377 (SSID recreated again).
+  // Root cause of the repeat breakage: the Oct 16 fix added a by-name fallback
+  // for FETCHING the SSID, but the EDIT still sent the hardcoded pinned ID —
+  // so every recreation broke the save with code 46. Now the edit uses the
+  // live-found ID (matched by pinned ID first, then by ssidName "AMH"), so a
+  // future recreation no longer breaks the save. The pinned value below is
+  // only the first lookup hint.
+  const CORRECT_SSID_ID = 16845377;
   let entity;
   let liveOk = false, liveErr = '';
+  let liveId = CORRECT_SSID_ID;
   try {
     const live = await getSsidConf(CORRECT_SSID_ID);
+    liveId = Number(live.ssidId || live.id || CORRECT_SSID_ID);
     const base = live.wirelessConfEntity || live;
     const { id, ssidIds, ...rest } = base;
-    entity = { ...rest, id: CORRECT_SSID_ID, ssidId: CORRECT_SSID_ID, password: newPassword };
+    entity = { ...rest, id: liveId, ssidId: liveId, password: newPassword };
     liveOk = true;
   } catch (e) {
     liveErr = String(e.message || e).slice(0, 300);
@@ -184,13 +191,13 @@ async function setSsidPassword(newPassword) {
   const reqBody = {
     groupId: Number(GROUP_ID),
     wifiGrpSsid: false,
-    ssidId: CORRECT_SSID_ID,
+    ssidId: liveId,
     wirelessConfEntity: entity,
   };
   try {
     return await openApi('/service/api/open/v1/wifi', reqBody, true, 'POST');
   } catch (e) {
-    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, ssidId=${CORRECT_SSID_ID}]`;
+    const dbg = ` [dbg: liveFetch=${liveOk ? 'ok' : 'fallback(' + liveErr + ')'}, ssidId=${liveId}]`;
     throw new Error(String(e.message || e).slice(0, 400) + dbg);
   }
 }
