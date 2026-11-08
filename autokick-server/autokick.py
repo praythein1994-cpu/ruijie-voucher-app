@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Server-side Auto-Kick for P Manager (GitHub Actions).
-Runs on schedule, kicks quota-spent / time-expired voucher clients.
+Runs on schedule, kicks quota-spent / time-expired voucher clients,
+plus foreign voucher codes (clients using a code NOT in our voucher list).
 
 Env vars (GitHub Secrets):
   RUIJIE_ACCOUNTS   - JSON list of accounts: [{"email","password","appid","secret","group_id","name"}]
@@ -13,6 +14,10 @@ Env vars (GitHub Secrets):
   RUIJIE_GROUP_ID   - Single account Group ID
   RUIJIE_CLOUD      - Cloud base URL (default: https://cloud-as.ruijienetworks.com)
 
+Config (autokick-server/config.json):
+  enabled      - false pauses all kicking (existing flag)
+  kick_foreign - false disables foreign-code kicking only (default true)
+
 Flow (per account):
   1. Playwright: CAS login via https://cloud-as.ruijienetworks.com/webproxy/sso/back
      -> captures SSO session cookies
@@ -20,6 +25,11 @@ Flow (per account):
   3. Find spent (status=="2" and (quota used up or time used up))
   4. Webproxy (with SSO cookies): find auth record per voucher, kick via
      /samTransfer/kick/user/offline
+  5. Foreign codes: every auth record (authType "15") whose account code is
+     set and NOT in the known voucher set is kicked via the same kick path.
+     HARD GUARD: if the voucher fetch failed OR the known set is empty,
+     ALL foreign kicking is skipped (a failed fetch must mean "do nothing",
+     or every legit client would look foreign and get mass-kicked).
 """
 
 import os
@@ -63,6 +73,20 @@ def check_enabled():
             return cfg.get("enabled", True)
     except Exception:
         return True  # default enabled if no config
+
+
+def read_config():
+    """Read autokick-server/config.json; {} when missing/unreadable."""
+    try:
+        with open("autokick-server/config.json") as f:
+            return json.load(f) or {}
+    except Exception:
+        return {}
+
+
+def kick_foreign_enabled():
+    """Foreign-code auto-kick flag. Default True; honors kick_foreign=false."""
+    return bool(read_config().get("kick_foreign", True))
 
 
 def log(msg):
@@ -258,7 +282,9 @@ def kick(session, rec):
 
 
 def process_account(acct):
-    """Run auto-kick for one account. Returns (vouchers, spent, kicked, errors)."""
+    """Run auto-kick for one account.
+    Returns (vouchers, spent, kicked, errors, kicked_codes,
+             foreign_kicked, foreign_kicked_codes)."""
     global ACCT
     ACCT = acct
     name = acct.get("name", "default")
@@ -270,7 +296,7 @@ def process_account(acct):
         jar = sso_login()
     except Exception as e:
         log(f"FATAL: SSO login failed: {e}")
-        return 0, 0, 0, [f"login: {e}"], []
+        return 0, 0, 0, [f"login: {e}"], [], 0, []
     session = requests.Session()
     session.cookies.update(jar)
     session.headers["User-Agent"] = (
@@ -278,7 +304,7 @@ def process_account(acct):
 
     if not is_sso_alive(session):
         log("FATAL: SSO login failed - session not alive")
-        return 0, 0, 0, ["SSO session not alive"], []
+        return 0, 0, 0, ["SSO session not alive"], [], 0, []
     log("SSO session alive")
 
     # 2. vouchers
@@ -286,17 +312,33 @@ def process_account(acct):
         vouchers = fetch_vouchers()
     except Exception as e:
         log(f"FATAL: voucher fetch failed: {e}")
-        return 0, 0, 0, [f"voucher fetch: {e}"], []
+        return 0, 0, 0, [f"voucher fetch: {e}"], [], 0, []
+
+    # Known voucher-code set: the reference for BOTH spent and foreign.
+    known = {str(v.get("voucherCode", "")).strip() for v in vouchers}
+    known.discard("")
+    log(f"Known voucher codes: {len(known)}")
 
     spent = [v for v in vouchers
              if v.get("voucherCode", "").strip() and is_spent(v)]
     log(f"Spent vouchers: {len(spent)}")
-    if not spent:
-        return len(vouchers), 0, 0, [], []
+
+    # HARD GUARD (foreign kick): only when the voucher list loaded
+    # successfully AND the known set is non-empty. A failed/empty fetch
+    # must mean "do nothing" — otherwise every legit client would look
+    # foreign and get mass-kicked.
+    foreign_on = bool(known) and kick_foreign_enabled()
+    if not foreign_on:
+        if not known:
+            log("Foreign kick SKIPPED: known voucher set is empty (guard)")
+        else:
+            log("Foreign kick disabled via config.json kick_foreign=false")
 
     # 3+4. kick each (auth list fetched ONCE, not per-voucher)
-    auth_by_account = fetch_all_auth_records(session)
-    log(f"Auth records fetched: {len(auth_by_account)}")
+    need_auth = bool(spent) or foreign_on
+    auth_by_account = fetch_all_auth_records(session) if need_auth else {}
+    if need_auth:
+        log(f"Auth records fetched: {len(auth_by_account)}")
     kicked = 0
     kicked_codes = []
     for v in spent:
@@ -311,8 +353,29 @@ def process_account(acct):
                 log(f"  {code}: KICKED")
         except Exception as e:
             errors.append(f"{code}: {e}")
-    log(f"--- {name}: {kicked}/{len(spent)} kicked ---")
-    return len(vouchers), len(spent), kicked, errors, kicked_codes
+
+    # 5. Foreign codes: auth records (voucher auth, authType "15") whose
+    # account code is set and NOT in the known voucher set, kicked via
+    # the same kick path. APP-1 parity (moreForeign, v1.5.198/199).
+    foreign_kicked = 0
+    foreign_kicked_codes = []
+    if foreign_on:
+        for code, rec in auth_by_account.items():
+            if not code or code in known or code in kicked_codes:
+                continue
+            auth_type = str(rec.get("authType") or rec.get("auth_type") or "")
+            if auth_type != "15":
+                continue
+            try:
+                if kick(session, rec):
+                    foreign_kicked += 1
+                    foreign_kicked_codes.append(code)
+                    log(f"  {code}: FOREIGN KICKED")
+            except Exception as e:
+                errors.append(f"{code} (foreign): {e}")
+    log(f"--- {name}: {kicked}/{len(spent)} kicked, {foreign_kicked} foreign kicked ---")
+    return (len(vouchers), len(spent), kicked, errors, kicked_codes,
+            foreign_kicked, foreign_kicked_codes)
 
 
 def main():
@@ -328,25 +391,31 @@ def main():
     results = []
     for acct in accounts:
         try:
-            v, s, k, e, codes = process_account(acct)
+            v, s, k, e, codes, fk, fk_codes = process_account(acct)
             results.append({
                 "name": acct.get("name", "default"),
                 "vouchers": v, "spent": s, "kicked": k,
+                "foreign_kicked": fk,
                 "errors": e[:5],
                 "kicked_codes": codes,
+                "foreign_kicked_codes": fk_codes,
             })
         except Exception as e:
             log(f"Account {acct.get('name')} failed: {e}")
             results.append({
                 "name": acct.get("name", "default"),
                 "vouchers": 0, "spent": 0, "kicked": 0,
+                "foreign_kicked": 0,
                 "errors": [str(e)[:200]],
                 "kicked_codes": [],
+                "foreign_kicked_codes": [],
             })
 
     total_kicked = sum(r["kicked"] for r in results)
     total_spent = sum(r["spent"] for r in results)
-    log(f"=== Done: {total_kicked}/{total_spent} kicked across {len(accounts)} accounts ===")
+    total_foreign_kicked = sum(r["foreign_kicked"] for r in results)
+    log(f"=== Done: {total_kicked}/{total_spent} kicked, "
+        f"{total_foreign_kicked} foreign kicked across {len(accounts)} accounts ===")
 
     # write summary for app display
     summary = {
@@ -354,6 +423,7 @@ def main():
         "accounts": results,
         "total_kicked": total_kicked,
         "total_spent": total_spent,
+        "total_foreign_kicked": total_foreign_kicked,
     }
     with open("autokick-server/last-run.json", "w") as f:
         json.dump(summary, f)
