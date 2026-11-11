@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install requests playwright
-          playwright install chromium --with-deps
+          for i in 1 2 3; do playwright install chromium && break; echo "Playwright install attempt $i failed, retrying..."; if [ "$i" -eq 3 ]; then exit 1; fi; sleep 30; done
       - name: Run auto-kick
         env:
           RUIJIE_EMAIL: ${{ secrets.RUIJIE_EMAIL }}
