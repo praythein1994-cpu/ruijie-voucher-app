@@ -387,6 +387,74 @@ async function handleSettingsPut(req, res, u) {
   return send(res, req, 200, { ok: true, source: 'render', github, updatedAt: entry.updatedAt });
 }
 
+
+/* ── P Manager V2 app settings sync (v0322) ─────────────────────────
+ * Same shape as the APP-1 /api/settings/:name handlers, but a
+ * SEPARATE `settingsV2` map: V2 and APP-1 both push FULL settings
+ * objects, so sharing one blob would let one app clobber the
+ * other's keys. Body: { settings: {...}, updatedAt, key } — key
+ * gated by PROFILES_KEY (403 code -6). Conflict: last-write-wins
+ * by updatedAt. The V2 client sends per-prefs-file groups, so
+ * sanitizeSettings only strips the APP-1 secret keys as defense. */
+async function handleSettingsV2Get(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  const segs = u.pathname.split('/');
+  const name = Profiles.normName(decodeURIComponent(segs[segs.length - 1] || ''));
+  if (!name) return send(res, req, 400, { code: -1, msg: 'Invalid profile name' });
+  const disk = profilesReadDisk();
+  const entry = disk.settingsV2 && disk.settingsV2[name];
+  if (entry) {
+    return send(res, req, 200, { ok: true, source: 'render', settings: sanitizeSettings(entry.settings), updatedAt: entry.updatedAt || 0 });
+  }
+  try {
+    const gh = await githubFile('GET');
+    if (gh && gh.store.settingsV2 && gh.store.settingsV2[name]) {
+      const merged = Profiles.mergeStores(disk, gh.store);
+      try { profilesWriteDisk(merged); } catch (e) {}
+      const e2 = merged.settingsV2[name];
+      return send(res, req, 200, { ok: true, source: 'github', settings: sanitizeSettings(e2.settings), updatedAt: e2.updatedAt || 0 });
+    }
+  } catch (e) {}
+  return send(res, req, 404, { ok: false, code: -7, msg: 'Settings not found' });
+}
+async function handleSettingsV2Put(req, res, u) {
+  if (!checkRate(req)) return send(res, req, 429, { code: -4, msg: 'Rate limit exceeded, slow down' });
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch (e) { return send(res, req, 400, { code: -1, msg: 'Invalid JSON body' }); }
+  if (PROFILES_KEY && payload.key !== PROFILES_KEY) {
+    return send(res, req, 403, { code: -6, msg: 'Forbidden: bad sync key' });
+  }
+  const segs = u.pathname.split('/');
+  const urlName = Profiles.normName(decodeURIComponent(segs[segs.length - 1] || ''));
+  if (!urlName || !payload.settings || typeof payload.settings !== 'object') {
+    return send(res, req, 400, { code: -1, msg: 'Invalid settings payload' });
+  }
+  const entry = { settings: sanitizeSettings(payload.settings), updatedAt: Number(payload.updatedAt) || Date.now() };
+  const disk = profilesReadDisk();
+  const cur = disk.settingsV2 && disk.settingsV2[urlName];
+  if (cur && cur.updatedAt > entry.updatedAt) {
+    return send(res, req, 200, { ok: true, source: 'render', kept: 'server-newer', settings: sanitizeSettings(cur.settings), updatedAt: cur.updatedAt });
+  }
+  disk.settingsV2 = disk.settingsV2 || {};
+  disk.settingsV2[urlName] = entry;
+  try { profilesWriteDisk(disk); }
+  catch (e) { return send(res, req, 500, { code: -9, msg: 'Could not save settings on server' }); }
+  let github = 'skipped';
+  if (GH_TOKEN && GH_REPO) {
+    try {
+      const cur2 = await githubFile('GET');
+      const storeObj = Profiles.mergeStores({ profiles: {}, settings: {}, settingsV2: {} }, cur2 ? cur2.store : { profiles: {}, settings: {}, settingsV2: {} });
+      storeObj.settingsV2 = storeObj.settingsV2 || {};
+      storeObj.settingsV2[urlName] = entry;
+      if (cur2 && cur2.sha) storeObj.__sha = cur2.sha;
+      const sha = await githubFile('PUT', storeObj);
+      github = sha ? 'ok' : 'error';
+    } catch (e) { github = 'error'; }
+  }
+  return send(res, req, 200, { ok: true, source: 'render', github, updatedAt: entry.updatedAt });
+}
+
 /* ── App install device registry (v1.5.143) ────────────────────────
  * The owner sees which devices installed the app, caps the count, can
  * require approval for new devices, and blocks unknown ones. Register +
@@ -637,6 +705,8 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname.startsWith('/api/profiles/') && req.method === 'PUT') return handleProfilePut(req, res, u);
     if (u.pathname.startsWith('/api/settings/') && req.method === 'GET') return handleSettingsGet(req, res, u);
     if (u.pathname.startsWith('/api/settings/') && req.method === 'PUT') return handleSettingsPut(req, res, u);
+    if (u.pathname.startsWith('/api/settings-v2/') && req.method === 'GET') return handleSettingsV2Get(req, res, u);
+    if (u.pathname.startsWith('/api/settings-v2/') && req.method === 'PUT') return handleSettingsV2Put(req, res, u);
     // v1.5.143: app install device registry
     if (u.pathname === '/api/devices/register' && req.method === 'POST') return handleDeviceRegister(req, res);
     if (u.pathname === '/api/devices/check' && req.method === 'GET') return handleDeviceCheck(req, res, u);
