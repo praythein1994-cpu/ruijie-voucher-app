@@ -23,6 +23,8 @@
  *  GET  /api/pc/queue?key=... — the PC polls & drains pending commands
  *  POST /api/pc/result { key, id, output, exit } — the PC posts a command result
  *  GET  /api/pc/result/<id>?key=... — owner polls for a command result
+ *  Chat4AI shared room: GET /chat4ai/:roomId (room page), POST /api/chat4ai/rooms,
+ *  GET/POST /api/chat4ai/:roomId/messages — no login, link is the access control
  *
  * - Tokens are cached in memory per (cloud, appid) and auto-refreshed.
  * - App secrets are NEVER written to disk or logs; tokens live only in RAM.
@@ -56,6 +58,7 @@ const { URL } = require('url');
 const Profiles = require('./profiles');
 const AmhWifi = require('./amh-wifi');
 const Devices = require('./devices'); // v1.5.143: app install device registry
+const Chat4AI = require('./chat4ai'); // Chat4AI shared room (2026-11-21, isolated module)
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim());
@@ -717,6 +720,10 @@ const server = http.createServer(async (req, res) => {
     // AMH customer self-service WiFi password (v1.5.89): capability-URL page,
     // server-side portal CAS login, only the VLAN-30 SSID can be changed.
     if (u.pathname.startsWith('/amh-wifi/')) return AmhWifi.handle(req, res, u);
+    // Chat4AI shared chat room (2026-11-21): the user + multiple Muse AIs in
+    // one room, no login — access is the unguessable room link. Isolated
+    // module; no existing endpoint is touched.
+    if (u.pathname === '/chat4ai' || u.pathname.startsWith('/chat4ai/') || u.pathname.startsWith('/api/chat4ai/')) return Chat4AI.handle(req, res, u, { send, readBody, checkRate });
     return send(res, req, 404, { code: -5, msg: 'Not found' });
   } catch (e) {
     return send(res, req, 500, { code: -9, msg: 'Proxy error: ' + String(e.message || e) });
